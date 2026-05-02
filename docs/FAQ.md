@@ -34,6 +34,8 @@ Template or catalog changes require coordinated upgrades ([GOVERNANCE.md](GOVERN
 
 Round **frequency** defaults to **`LEMMA_VALIDATOR_ROUND_INTERVAL_S`** (wall-clock). Use **`LEMMA_VALIDATOR_ALIGN_ROUNDS_TO_EPOCH=1`** if you want cadence tied to chain epochs instead.
 
+**Five-minute defaults (`300` s)** keep miner responses and sandbox verification in a predictable band; they favor capable setups but increase timeouts on slow proofs or cold caches. Operators typically align **`DENDRITE_TIMEOUT_S`**, **`LEAN_VERIFY_TIMEOUT_S`**, **`LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`**, and template difficulty together ([GOVERNANCE.md](GOVERNANCE.md)).
+
 ## What can exceed 5 minutes?
 
 - **`LEAN_VERIFY_TIMEOUT_S`** covers **sandbox CPU time** (`lake build`, axiom scan): cold caches, huge imports, or very large generated terms can push compilation near the limit — not “thinking time,” mostly elaboration.
@@ -41,22 +43,21 @@ Round **frequency** defaults to **`LEMMA_VALIDATOR_ROUND_INTERVAL_S`** (wall-clo
 
 Whether to **keep** very heavy templates is a **subnet governance** choice: harder problems stress miners and verification; easier buckets improve reliability under tight timeouts. Tune timeouts and catalogs together ([GOVERNANCE.md](GOVERNANCE.md)).
 
-## Do validators stay in sync on the same theorem?
+## Do validators stay in sync? Do miners get different problems?
 
-Validators choose **`problem = sample(seed=get_current_block())`** at the **start** of each `run_epoch` ([`epoch.py`](../lemma/validator/epoch.py)). So:
+**One validator, one round:** every miner this validator **queries** receives the **same** synapse (same theorem). Miners do **not** get different challenges within the same broadcast.
 
-- Everyone running the **same code**, **`LEMMA_PROBLEM_SOURCE`**, and **registry** agrees on the **mapping** from block → theorem.
-- **Different validators can still see different blocks** if their rounds start at different wall-clock moments (chain head advances ~every ~12 s on Finney). They are **not guaranteed** identical challenge IDs across validators every round unless operators coordinate timing or the subnet fixes a rule (e.g. committed block at epoch).
+**Across validators:** Lemma maps **`problem_seed_block = (chain_head // N) * N`** with **`LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`** (default **25** ≈ ~5 minutes of Finney blocks). Anyone reading chain head in that window picks the **same** theorem seed ([`epoch.py`](../lemma/validator/epoch.py)). Set **`N=1`** to disable quantization (not recommended for multi-validator subnets).
 
-Within **one** validator process: a round **finishes** query → verify → judge → `set_weights` (if applicable) **before** the next sleep `LEMMA_VALIDATOR_ROUND_INTERVAL_S`, so the next round does not start until the previous pipeline completes.
+Within **one** validator process: a round **finishes** query → verify → judge → `set_weights` (if applicable) **before** the next sleep **`LEMMA_VALIDATOR_ROUND_INTERVAL_S`**, so the **next** round does not start until the previous pipeline completes.
 
 ## CLI: current theorem and fingerprints
 
 | Command | Purpose |
 | ------- | ------- |
-| **`lemma status`** | Chain head block, sampled theorem id/name (same rule as validators), hints for next commands. |
-| **`lemma problems show --current`** | **`Challenge.lean`** for the current block seed. |
-| **`lemma problems show --block N`** | Same for an arbitrary block height. |
+| **`lemma status`** | Chain head, **`problem_seed_block`**, theorem id (same rule as validators). |
+| **`lemma problems show --current`** | **`Challenge.lean`** after quantizing current head (matches validators). |
+| **`lemma problems show --block N`** | Treat **`N`** as chain head height; quantize then sample. |
 | **`lemma meta`** | Judge + generated-registry hashes for subnet alignment. |
 | **`lemma problems list`** | Only for **`frozen`** catalog mode (enumerate rows). |
 

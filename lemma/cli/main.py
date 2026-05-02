@@ -63,7 +63,8 @@ def meta_cmd() -> None:
 
 @main.command("status")
 def status_cmd() -> None:
-    """Chain head + theorem sampled at that block (same rule as validators in ``run_epoch``)."""
+    """Chain head + theorem seed (same rule as validators in ``run_epoch``)."""
+    from lemma.common.problem_seed import problem_sample_seed_block
     from lemma.common.subtensor import get_subtensor
 
     settings = LemmaSettings()
@@ -76,15 +77,18 @@ def status_cmd() -> None:
             err=True,
         )
         click.echo(
-            "Validators use seed = block height at the start of each round "
-            "(see docs/FAQ.md — validator alignment).",
+            "Validators map chain_head → problem_seed_block using LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS "
+            "(see docs/FAQ.md).",
             err=True,
         )
         raise SystemExit(2) from e
 
-    p = src.sample(seed=block)
+    seed_block = problem_sample_seed_block(block, settings.problem_seed_quantize_blocks)
+    p = src.sample(seed=seed_block)
     click.echo(f"problem_source={settings.problem_source}")
+    click.echo(f"LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS={settings.problem_seed_quantize_blocks}")
     click.echo(f"chain_head_block={block}")
+    click.echo(f"problem_seed_block={seed_block}")
     click.echo(f"sampled_theorem_id={p.id}")
     click.echo(f"theorem_name={p.theorem_name}")
     click.echo(f"split_bucket={p.split}")
@@ -93,7 +97,6 @@ def status_cmd() -> None:
         click.echo(f"template_fn={extra.get('template_fn')}")
     click.echo("")
     click.echo("Print Challenge.lean:")
-    click.echo(f"  lemma problems show --block {block}")
     click.echo("  lemma problems show --current")
     click.echo("")
     click.echo("Subnet fingerprints (align validators):")
@@ -372,25 +375,28 @@ def problems_list() -> None:
     "--current",
     "-c",
     is_flag=True,
-    help="Use the current chain head block as seed (same selection as validators: sample(block)).",
+    help="Use current chain head → quantize → sample (same as validators).",
 )
 @click.option(
     "--block",
     type=int,
     default=None,
-    help="Use this block height as seed (same selection validators use at that height).",
+    help="Treat N as chain head height; quantize with LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS then sample.",
 )
 def problems_show(problem_id: str | None, current: bool, block: int | None) -> None:
     """Print Challenge.lean source for one problem.
 
-    Validators pick problems with ``problem_source.sample(seed=current_block)``. For
-    ``LEMMA_PROBLEM_SOURCE=generated``, that matches id ``gen/<block>``. For ``frozen``,
-    the seed chooses a deterministic row from the catalog (not necessarily id ``gen/...``).
+    Validators use ``problem_seed_block = (chain_head // Q) * Q`` then ``sample(seed=…)``.
+    For ``generated``, theorem ids look like ``gen/<problem_seed_block>``. Set ``Q`` via
+    ``LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`` (default 25).
 
     Provide exactly one of: PROBLEM_ID, --current, or --block N.
     """
+    from lemma.common.problem_seed import problem_sample_seed_block
+
     settings = LemmaSettings()
     src = get_problem_source(settings)
+    q = settings.problem_seed_quantize_blocks
 
     n_sel = sum([bool(problem_id and problem_id.strip()), current, block is not None])
     if n_sel != 1:
@@ -399,15 +405,18 @@ def problems_show(problem_id: str | None, current: bool, block: int | None) -> N
     if current:
         from lemma.common.subtensor import get_subtensor
 
-        seed = int(get_subtensor(settings).get_current_block())
+        head = int(get_subtensor(settings).get_current_block())
+        seed = problem_sample_seed_block(head, q)
         p = src.sample(seed=seed)
-        click.echo(f"# block={seed} theorem_id={p.id}\n")
+        click.echo(f"# chain_head_block={head} problem_seed_block={seed} theorem_id={p.id}\n")
         click.echo(p.challenge_source())
         return
 
     if block is not None:
-        p = src.sample(seed=block)
-        click.echo(f"# block={block} theorem_id={p.id}\n")
+        head = int(block)
+        seed = problem_sample_seed_block(head, q)
+        p = src.sample(seed=seed)
+        click.echo(f"# chain_head_block={head} problem_seed_block={seed} theorem_id={p.id}\n")
         click.echo(p.challenge_source())
         return
 

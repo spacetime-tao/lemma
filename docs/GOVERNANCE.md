@@ -42,7 +42,7 @@ Optional binary hook ([COMPARATOR.md](COMPARATOR.md)). If any validator enables 
 
 ## Shared validator settings
 
-Document **`DENDRITE_TIMEOUT_S`**, **`LEAN_VERIFY_TIMEOUT_S`**, **`EMPTY_EPOCH_WEIGHTS_POLICY`**, **`LEAN_SANDBOX_*`**, **`JUDGE_*`**, **`OPENAI_*`**, **`LEMMA_COMPARATOR_*`**. **`DENDRITE_TIMEOUT_S`** should match across validators (not enforced on-chain).
+Document **`DENDRITE_TIMEOUT_S`**, **`LEAN_VERIFY_TIMEOUT_S`**, **`LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`** (same **`N`** across validators), **`EMPTY_EPOCH_WEIGHTS_POLICY`**, **`LEAN_SANDBOX_*`**, **`JUDGE_*`**, **`OPENAI_*`**, **`LEMMA_COMPARATOR_*`**. **`DENDRITE_TIMEOUT_S`** should match across validators (not enforced on-chain).
 
 ### Parity checklist
 

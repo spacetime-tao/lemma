@@ -24,6 +24,19 @@ class LemmaSettings(BaseSettings):
         validation_alias=AliasChoices("LEMMA_PROBLEM_SOURCE", "problem_source"),
         description="generated = seed-expanded templates; frozen = minif2f_frozen.json catalog.",
     )
+    problem_seed_quantize_blocks: int = Field(
+        default=25,
+        ge=1,
+        le=1_000_000,
+        validation_alias=AliasChoices(
+            "LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS",
+            "problem_seed_quantize_blocks",
+        ),
+        description=(
+            "Validators use problem_seed = (chain_head // N) * N. Default 25 ≈ 5 min of "
+            "Finney blocks (~12 s each), keeping peers on the same theorem within that window."
+        ),
+    )
     minif2f_catalog_path: Path | None = Field(
         default=None,
         validation_alias=AliasChoices("LEMMA_MINIF2F_CATALOG_PATH", "minif2f_catalog_path"),
