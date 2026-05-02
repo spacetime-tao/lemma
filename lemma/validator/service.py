@@ -46,21 +46,35 @@ class ValidatorService:
         subtensor = get_subtensor(s)
         source = get_problem_source(s)
         logger.info("problem_source={}", s.problem_source)
-        while True:
-            bu = subtensor.blocks_until_next_epoch(s.netuid)
-            if bu is None:
-                await asyncio.sleep(12)
-                continue
-            if bu <= 1:
+        if s.validator_align_rounds_to_epoch:
+            logger.info("validator rounds aligned to chain epochs (LEMMA_VALIDATOR_ALIGN_ROUNDS_TO_EPOCH=1)")
+            while True:
+                bu = subtensor.blocks_until_next_epoch(s.netuid)
+                if bu is None:
+                    await asyncio.sleep(12)
+                    continue
+                if bu <= 1:
+                    try:
+                        await ep.run_epoch(s, source, dry_run=self.dry_run)
+                    except Exception as e:  # noqa: BLE001
+                        logger.exception("epoch failed: {}", e)
+                    await asyncio.sleep(2)
+                    continue
+                wait_s = min(float(bu) * 12.0, 600.0)
+                logger.info("Sleeping {:.0f}s (~{} blocks to epoch)", wait_s, bu)
+                await asyncio.sleep(wait_s)
+        else:
+            interval = float(s.validator_round_interval_s)
+            logger.info(
+                "validator rounds every {:.0f}s (LEMMA_VALIDATOR_ROUND_INTERVAL_S); not waiting for epoch",
+                interval,
+            )
+            while True:
                 try:
                     await ep.run_epoch(s, source, dry_run=self.dry_run)
                 except Exception as e:  # noqa: BLE001
-                    logger.exception("epoch failed: {}", e)
-                await asyncio.sleep(2)
-                continue
-            wait_s = min(float(bu) * 12.0, 600.0)
-            logger.info("Sleeping {:.0f}s (~{} blocks to epoch)", wait_s, bu)
-            await asyncio.sleep(wait_s)
+                    logger.exception("round failed: {}", e)
+                await asyncio.sleep(interval)
 
     def run_blocking(self) -> None:
         asyncio.run(self.run_forever())

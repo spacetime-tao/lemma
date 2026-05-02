@@ -2,6 +2,8 @@
 
 Full walkthrough: [GETTING_STARTED.md](GETTING_STARTED.md) — **`lemma setup`** (role **validator** or **both**) configures judge + **`LEAN_SANDBOX_IMAGE`** via prompts (no manual **`.env`** edits).
 
+By default the validator runs a **new round every `LEMMA_VALIDATOR_ROUND_INTERVAL_S`** (300 s), independent of chain epochs. Use **`LEMMA_VALIDATOR_ALIGN_ROUNDS_TO_EPOCH=1`** for epoch-bound cadence.
+
 **Judge inference:** Chutes is recommended when prompted; Anthropic and custom OpenAI-compatible URLs are optional.
 
 ---

@@ -19,10 +19,27 @@ from lemma.common.logging import setup_logging
 from lemma.problems.factory import get_problem_source, resolve_problem
 
 
-@click.group()
+@click.group(invoke_without_command=True)
+@click.pass_context
 @click.version_option(version=__version__)
-def main() -> None:
-    """Lemma subnet — Lean proofs + reasoning traces."""
+def main(ctx: click.Context) -> None:
+    """Lemma subnet — Lean proofs + reasoning traces.
+
+    Run with no subcommand to open the START HERE menu (`lemma start`).
+    """
+    if ctx.invoked_subcommand is None:
+        from lemma.cli.start_screen import show_start_here
+
+        show_start_here(ctx, group=main)
+
+
+@main.command("start")
+@click.pass_context
+def start_cmd(ctx: click.Context) -> None:
+    """STEP-BY-STEP onboarding (same as running `lemma` with no arguments)."""
+    from lemma.cli.start_screen import show_start_here
+
+    show_start_here(ctx, group=main)
 
 
 @main.command("meta")

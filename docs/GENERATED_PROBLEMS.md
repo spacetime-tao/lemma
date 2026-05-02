@@ -12,7 +12,7 @@ Easy templates suit automation (`rfl`, `norm_num`, …); medium templates resemb
 
 ## Timeouts
 
-The generator does not embed a time limit. **`DENDRITE_TIMEOUT_S`** limits the validator→miner HTTP wait for that challenge (default **3600** s). **`LEAN_VERIFY_TIMEOUT_S`** limits sandbox build time (default **3600** s). Validators should agree on both ([GOVERNANCE.md](GOVERNANCE.md)).
+The generator does not embed a time limit. **`DENDRITE_TIMEOUT_S`** limits the validator→miner HTTP wait for that challenge (default **300** s). **`LEAN_VERIFY_TIMEOUT_S`** limits sandbox build time (default **300** s). Validators should agree on both ([GOVERNANCE.md](GOVERNANCE.md)).
 
 Hard templates often fail or time out under tight budgets depending on model and hardware.
 

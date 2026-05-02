@@ -72,12 +72,12 @@ class LemmaSettings(BaseSettings):
         validation_alias=AliasChoices("LEAN_SANDBOX_IMAGE", "lean_sandbox_image"),
     )
     lean_verify_timeout_s: int = Field(
-        default=3600,
+        default=300,
         ge=1,
         validation_alias=AliasChoices("LEAN_VERIFY_TIMEOUT_S", "lean_verify_timeout_s"),
         description=(
             "Seconds for Docker/host lake build + axiom check per miner submission. "
-            "Default 3600 (60m) to align headroom with DENDRITE_TIMEOUT_S on heavy proofs."
+            "Default 300 (5m); raise for heavy Mathlib builds if timeouts are false positives."
         ),
     )
     lean_sandbox_cpu: float = Field(
@@ -156,12 +156,35 @@ class LemmaSettings(BaseSettings):
 
     # Validator — dendrite query / chain writes
     dendrite_timeout_s: float = Field(
-        default=3600.0,
+        default=300.0,
         gt=0,
         validation_alias=AliasChoices("DENDRITE_TIMEOUT_S", "dendrite_timeout_s"),
         description=(
-            "Seconds to wait for miner HTTP responses per challenge (prover wall-clock). "
-            "Default 3600 (60m); subnet operators should match across validators."
+            "Seconds for miner HTTP response per challenge (synapse deadline). "
+            "Default 300 (5m); subnet operators should match across validators."
+        ),
+    )
+    validator_round_interval_s: float = Field(
+        default=300.0,
+        gt=0,
+        validation_alias=AliasChoices(
+            "LEMMA_VALIDATOR_ROUND_INTERVAL_S",
+            "validator_round_interval_s",
+        ),
+        description=(
+            "Seconds between validator rounds when not aligning to chain epochs. "
+            "Default 300 (5m)."
+        ),
+    )
+    validator_align_rounds_to_epoch: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "LEMMA_VALIDATOR_ALIGN_ROUNDS_TO_EPOCH",
+            "validator_align_rounds_to_epoch",
+        ),
+        description=(
+            "If true, wait for subnet epoch boundaries before each round (legacy). "
+            "If false (default), sleep validator_round_interval_s between rounds."
         ),
     )
     set_weights_max_retries: int = Field(

@@ -27,8 +27,10 @@ Template or catalog changes require coordinated upgrades ([GOVERNANCE.md](GOVERN
 
 | Variable | Meaning |
 | -------- | ------- |
-| `DENDRITE_TIMEOUT_S` | HTTP wait for one miner response per challenge (default **3600** s in shipped config). |
-| `LEAN_VERIFY_TIMEOUT_S` | Sandbox `lake build` budget after receipt (default **3600** s). |
+| `DENDRITE_TIMEOUT_S` | HTTP wait for one miner response per challenge (default **300** s ≈ 5 min). |
+| `LEAN_VERIFY_TIMEOUT_S` | Sandbox `lake build` budget after receipt (default **300** s). |
+| `LEMMA_VALIDATOR_ROUND_INTERVAL_S` | Seconds between validator rounds when not aligning to epochs (default **300**). |
+| `LEMMA_VALIDATOR_ALIGN_ROUNDS_TO_EPOCH` | `1` = wait for chain epoch before each round; default **`0`** (timer-based rounds). |
 
 Round **frequency** is set by **subnet tempo**, not these variables.
 

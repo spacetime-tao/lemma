@@ -1,5 +1,7 @@
 # Getting started
 
+**First command (after `uv sync --extra dev`):** run **`lemma`** with no arguments, or **`lemma start`**. You get the START HERE screen and an interactive **Next step** prompt (`lemma setup`, miner/validator dry-runs, `lemma meta`, etc.).
+
 Goal: install deps, create keys with **`btcli`**, paste LLM API keys at prompts, run Lemma — **without hand-editing `.env`**.
 
 Recommended inference for miners and validators: **[Chutes](https://chutes.ai)** OpenAI-compatible API at **`https://llm.chutes.ai/v1`** (subnet default model in `.env.example`). Anthropic and self-hosted OpenAI-compatible stacks are supported as secondary options via the same prompts.

@@ -22,9 +22,11 @@ Single-machine guidance; scale up for many validators or large local models.
 | Docker | Required for production verification (`lemma/lean-sandbox` image). Host-only Lean possible with **`LEMMA_USE_DOCKER=0`** for debugging. |
 | Judge | Default Chutes OpenAI-compatible endpoint; alternative vLLM ([MODELS.md](MODELS.md)). |
 
-## Epochs and timeouts
+## Rounds and timeouts
 
-Each epoch samples **one** problem; miners answer within **`DENDRITE_TIMEOUT_S`** (default **3600** s). Subnet **tempo** controls how often epochs occur. Hard problems may often timeout — governance may tune timeouts or catalogs (**`EMPTY_EPOCH_WEIGHTS_POLICY`** in [`.env.example`](../.env.example)).
+Validators issue challenges on a **timer** by default (**`LEMMA_VALIDATOR_ROUND_INTERVAL_S`**, default **300** s), not tied to chain epochs. Set **`LEMMA_VALIDATOR_ALIGN_ROUNDS_TO_EPOCH=1`** to restore epoch-bound rounds.
+
+Each round samples **one** problem; miners answer within **`DENDRITE_TIMEOUT_S`** (default **300** s ≈ 5 min). **`LEAN_VERIFY_TIMEOUT_S`** defaults to **300** s for sandbox verification — raise either if Mathlib builds legitimately exceed that. Governance may tune timeouts or **`EMPTY_EPOCH_WEIGHTS_POLICY`** ([`.env.example`](../.env.example)).
 
 ## Related
 

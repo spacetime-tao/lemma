@@ -18,7 +18,8 @@ Prerequisites: [GETTING_STARTED.md](GETTING_STARTED.md).
 
 - Prefer **`reasoning_steps`** + **`proof_script`**; legacy **`reasoning_trace`** supported.
 - Cap size with **`SYNAPSE_MAX_TRACE_CHARS`**.
-- Align **`DENDRITE_TIMEOUT_S`** across validators (default 3600 s in shipped config).
+- Align **`DENDRITE_TIMEOUT_S`** and **`LEAN_VERIFY_TIMEOUT_S`** across validators (defaults **300** s in shipped config).
+- Decide **`LEMMA_VALIDATOR_ROUND_INTERVAL_S`** vs **`LEMMA_VALIDATOR_ALIGN_ROUNDS_TO_EPOCH`** for your subnet’s weight cadence and chain limits.
 
 ## Catalogs
 
