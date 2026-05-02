@@ -15,48 +15,58 @@ def show_start_here(ctx: click.Context | None = None, *, group: click.Group | No
    Lemma — START HERE
  ======================================================================
 
-   First-time path (copy-paste from your clone root):
+   New install (from repo root):
 
      uv sync --extra dev
-     ./scripts/lemma-run lemma setup
+     lemma
 
-   (Or activate .venv, then `lemma setup` — same thing.)
-
- ----------------------------------------------------------------------
-   Steps (details: docs/GETTING_STARTED.md)
- ----------------------------------------------------------------------
-   1. Dependencies       uv sync --extra dev
-   2. Configure env       lemma setup          (prompts; no manual .env)
-   3. Wallets (manual)    btcli wallet new_coldkey / new_hotkey
-   4. Register / fund     btcli subnet register … (per subnet)
-   5. Miner               lemma miner
-   6. Validator           bash scripts/prebuild_lean_image.sh
-                          lemma validator
-
-   Inspect chain / theorem (same sampling rule as validators):
-                          lemma status
-                          lemma problems show --current
+   Or: activate .venv, run `lemma setup` when prompted.
 
  ----------------------------------------------------------------------
-   Defaults (subnet tuning)
+   Reference: docs/GETTING_STARTED.md
  ----------------------------------------------------------------------
-   • ~5 min per challenge: DENDRITE_TIMEOUT_S / LEAN_VERIFY_TIMEOUT_S (300 s).
-   • Theorem seed: LEMMA_PROBLEM_SEED_MODE=subnet_epoch (Tempo; default) vs quantize (N blocks).
-   • Validator rounds on a timer (LEMMA_VALIDATOR_ROUND_INTERVAL_S), not chain epochs,
-     unless LEMMA_VALIDATOR_ALIGN_ROUNDS_TO_EPOCH=1.
+   uv sync --extra dev
+   lemma setup              (prompts → .env)
+   btcli                    coldkey / hotkey, then subnet register
+   lemma miner | lemma validator
+
+   Same sampling as validators:  lemma status
+                                   lemma problems show --current
+
+   lemma doctor | lemma docs
+
+ ----------------------------------------------------------------------
+   Defaults
+ ----------------------------------------------------------------------
+   Time limits: subnet operator publishes DENDRITE_TIMEOUT_S / LEAN_VERIFY_TIMEOUT_S (defaults
+   often 300 s each). Everyone runs the same policy (see docs/FAQ.md, GOVERNANCE.md).
+
+   Theorem seed: LEMMA_PROBLEM_SEED_MODE=subnet_epoch (default) or quantize.
+
+   Rounds: LEMMA_VALIDATOR_ROUND_INTERVAL_S (timer), unless
+   LEMMA_VALIDATOR_ALIGN_ROUNDS_TO_EPOCH=1.
 
  ======================================================================
 """
     )
 
     if ctx is None or group is None or not sys.stdin.isatty():
-        click.echo("Tip: run `lemma start` anytime for this menu. Next: `lemma setup`")
+        click.echo("Tip: run `lemma start` for this menu. Next: `lemma setup`")
         return
 
     choice = click.prompt(
         "Next step",
         type=click.Choice(
-            ["setup", "status", "miner-dry", "validator-dry", "meta", "quit"],
+            [
+                "setup",
+                "doctor",
+                "docs",
+                "status",
+                "miner-dry",
+                "validator-dry",
+                "meta",
+                "quit",
+            ],
             case_sensitive=False,
         ),
         default="setup",
@@ -68,6 +78,8 @@ def show_start_here(ctx: click.Context | None = None, *, group: click.Group | No
 
     spec: dict[str, tuple[str, dict[str, object]]] = {
         "setup": ("setup", {}),
+        "doctor": ("doctor", {}),
+        "docs": ("docs", {}),
         "status": ("status", {}),
         "miner-dry": ("miner", {"dry_run": True}),
         "validator-dry": ("validator", {"dry_run": True}),

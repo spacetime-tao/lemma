@@ -1,26 +1,20 @@
 # Getting started
 
-**First command (after `uv sync --extra dev`):** run **`lemma`** with no arguments, or **`lemma start`**. You get the START HERE screen and an interactive **Next step** prompt (`lemma setup`, **`lemma status`**, miner/validator dry-runs, `lemma meta`, etc.).
+1. Install [uv](https://docs.astral.sh/uv/getting-started/installation/), clone this repo, run `uv sync --extra dev`.
+2. Run `lemma` or `lemma start` — interactive menu (`lemma setup`, `lemma doctor`, `lemma docs`, `lemma status`, dry-runs, `lemma meta`).
+3. Create cold/hot keys with `btcli`, then `lemma setup` to merge settings into `.env` (no hand-editing required).
 
-**See what validators would sample at the current chain head:** **`lemma status`** — then **`lemma problems show --current`** for full **`Challenge.lean`**. More detail under **CLI: current theorem and fingerprints** in [FAQ.md](FAQ.md).
+Inference for miners/validators: [Chutes](https://chutes.ai) OpenAI-compatible API at `https://llm.chutes.ai/v1` (default model in `.env.example`). Other OpenAI-compatible stacks work via the same env vars.
 
-Goal: install deps, create keys with **`btcli`**, paste LLM API keys at prompts, run Lemma — **without hand-editing `.env`**.
+See what validators would sample: `lemma status`, then `lemma problems show --current`. More: [FAQ.md](FAQ.md).
 
-Recommended inference for miners and validators: **[Chutes](https://chutes.ai)** OpenAI-compatible API at **`https://llm.chutes.ai/v1`** (subnet default model in `.env.example`). Anthropic and self-hosted OpenAI-compatible stacks are supported as secondary options via the same prompts.
-
----
-
-## 1. Install uv
+## Install uv
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-Windows: [uv installation](https://docs.astral.sh/uv/getting-started/installation/).
-
----
-
-## 2. Clone and install Python packages
+## Clone and sync
 
 ```bash
 git clone <repository-url>
@@ -28,144 +22,89 @@ cd lemma
 uv sync --extra dev
 ```
 
-This creates **`.venv/`** and installs **`lemma`** (CLI), **`bittensor`**, and **`btcli`** (`bittensor[cli]`).
+Creates `.venv/` and installs `lemma`, `bittensor`, `btcli`.
 
----
-
-## 3. Save a one-line command: `lemma-run`
-
-Use **`scripts/lemma-run`** so you never type **`uv run`** or **`source .venv`** for every command. It **`cd`**s to the repo, activates **`.venv`**, then runs whatever you pass:
+## Optional: `lemma-run` wrapper
 
 ```bash
-cd lemma
 chmod +x scripts/lemma-run
 ./scripts/lemma-run lemma --help
-./scripts/lemma-run lemma miner --dry-run
 ```
 
-**Optional — reuse from anywhere:** pick an absolute path once and add an alias (replace the path):
+From anywhere (replace path):
 
 ```bash
 echo 'alias lemma-run='"'"'/ABS/PATH/TO/lemma/scripts/lemma-run'"'"'' >> ~/.zshrc
-source ~/.zshrc
-lemma-run lemma --help
 ```
 
-Linux/bash users can append to **`~/.bashrc`** instead.
+## Keys (`btcli`)
 
----
-
-## 4. Create coldkey and hotkey (`btcli`)
-
-These wallet names are what you will type into **`lemma setup`** in the next section. Keys live under **`~/.bittensor/wallets/`**.
-
-**Create a cold wallet** (replace **`my_wallet`** with your name):
+Names you will enter in `lemma setup`. Keys live under `~/.bittensor/wallets/`.
 
 ```bash
 ./scripts/lemma-run btcli wallet new_coldkey --wallet.name my_wallet --n_words 12
-```
-
-**Create a hotkey** on that cold wallet (replace **`miner`** with your hotkey name):
-
-```bash
 ./scripts/lemma-run btcli wallet new_hotkey --wallet.name my_wallet --wallet.hotkey miner
-```
-
-**Check balance** (after funding):
-
-```bash
 ./scripts/lemma-run btcli wallet balance --wallet.name my_wallet
 ```
 
-More commands (subnet registration, stake): [Bittensor CLI docs](https://docs.learnbittensor.org/) and your subnet operator docs.
+Registration and stake: [Bittensor CLI](https://docs.learnbittensor.org/).
 
----
+## Configure (`lemma setup`)
 
-## 5. Configure Lemma (no file editing)
-
-**`lemma setup`** asks for **`NETUID`**, chain endpoint, **cold/hot wallet names**, API keys, axon port (miners), judge + Lean image settings (validators). Everything is merged into **`.env`** in the repo root. If **`.env`** does not exist yet, it is seeded from **`.env.example`** automatically.
+Prompts for `NETUID`, chain, wallet names, API keys, axon port, judge and Lean image settings. Seeds from `.env.example` if `.env` is missing.
 
 ```bash
-cd lemma
 ./scripts/lemma-run lemma setup
 ```
 
-Choose **miner**, **validator**, or **both**. Pick **Chutes** when asked for the inference backend unless you use Anthropic or a custom OpenAI-compatible endpoint — only your API key is required for Chutes.
+Incremental: `lemma configure chain`, `configure prover`, `configure judge`, `configure axon`, `configure lean-image`.
 
-**Incremental changes later** (same idea — prompts only):
+## Register on-chain
 
-```bash
-./scripts/lemma-run lemma configure chain
-./scripts/lemma-run lemma configure prover
-./scripts/lemma-run lemma configure judge
-./scripts/lemma-run lemma configure axon
-./scripts/lemma-run lemma configure lean-image
-```
-
----
-
-## 6. Fund and register on-chain
-
-Use **`btcli`** with your **`NETUID`** and the same **`--wallet.name`** / **`--wallet.hotkey`** you configured. Exact flow depends on subnet rules (burn vs PoW registration). Examples:
+Match `--network` / endpoints to `lemma configure chain` (default finney).
 
 ```bash
 ./scripts/lemma-run btcli subnet show --netuid <NETUID> --network finney
 ./scripts/lemma-run btcli subnet register --netuid <NETUID> --wallet.name my_wallet --wallet.hotkey miner
 ```
 
-Use **`--network`** / endpoints consistent with **`lemma configure chain`** (default **finney**).
-
----
-
-## 7. Miner: check axon, then run
+## Miner
 
 ```bash
 ./scripts/lemma-run lemma miner --dry-run
 ./scripts/lemma-run lemma miner
 ```
 
-Open inbound **`AXON_PORT`** on your firewall. If **`AXON_EXTERNAL_IP`** is unset, Lemma discovers your public IPv4 at startup when **`AXON_DISCOVER_EXTERNAL_IP=true`** (default).
+Open inbound `AXON_PORT`. If `AXON_EXTERNAL_IP` is unset, discovery runs when `AXON_DISCOVER_EXTERNAL_IP=true` (default).
 
----
+## Validator
 
-## 8. Validator: Lean Docker image, then run
-
-Build the sandbox image (large download on first build):
+Build sandbox image (first build is large):
 
 ```bash
-cd lemma
 bash scripts/prebuild_lean_image.sh
-```
-
-If **`lemma setup`** already set **`LEAN_SANDBOX_IMAGE=lemma/lean-sandbox:latest`**, that matches the script’s extra tag.
-
-```bash
 ./scripts/lemma-run lemma validator --dry-run
 ./scripts/lemma-run lemma validator
 ```
 
-Fingerprints for subnet parity: **`./scripts/lemma-run lemma meta`** — [GOVERNANCE.md](GOVERNANCE.md).
+Parity: `./scripts/lemma-run lemma meta` — [GOVERNANCE.md](GOVERNANCE.md).
 
----
+## Problem source
 
-## 9. Problem source modes
+- `LEMMA_PROBLEM_SOURCE=generated` (default): block height seeds templates.
+- `frozen`: catalog JSON — [CATALOG_SOURCES.md](CATALOG_SOURCES.md).
 
-- **`LEMMA_PROBLEM_SOURCE=generated`** (default): block height seeds templates.
-- **`frozen`**: catalog JSON — [CATALOG_SOURCES.md](CATALOG_SOURCES.md).
-
-Advanced tuning still lives in **`.env.example`** for operators who need it; prefer **`lemma configure`** subcommands when possible.
-
----
+More tuning: `.env.example` and `lemma configure` where possible.
 
 ## Checklist
 
-| Step | Action |
-| ---- | ------ |
-| Install | **`uv sync --extra dev`** |
-| Keys | **`btcli wallet new_coldkey`**, **`new_hotkey`** |
-| Env | **`lemma setup`** (no manual `.env` edits) |
-| Chain | Fund + **`btcli subnet register`** (or subnet-specific steps) |
-| Miner | **`lemma miner`** |
-| Validator | **`prebuild_lean_image.sh`**, **`lemma validator`** |
+| Step | Command / action |
+| ---- | ---------------- |
+| Deps | `uv sync --extra dev` |
+| Keys | `btcli` coldkey + hotkey |
+| Env | `lemma setup` |
+| Chain | Fund + `btcli subnet register` |
+| Miner | `lemma miner` |
+| Validator | `prebuild_lean_image.sh`, `lemma validator` |
 
-More detail: [MINER.md](MINER.md), [VALIDATOR.md](VALIDATOR.md), [MODELS.md](MODELS.md), [TESTING.md](TESTING.md).
+[MINER.md](MINER.md), [VALIDATOR.md](VALIDATOR.md), [MODELS.md](MODELS.md), [TESTING.md](TESTING.md).

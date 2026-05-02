@@ -6,6 +6,7 @@ import json
 from typing import Protocol
 
 from anthropic import AsyncAnthropic
+from loguru import logger
 from openai import AsyncOpenAI
 
 from lemma.common.config import LemmaSettings
@@ -72,9 +73,16 @@ class LLMProver:
             for block in msg.content:
                 if hasattr(block, "text"):
                     text += block.text
+        if self._settings.miner_log_forwards:
+            tail = text if len(text) <= 16_000 else text[:8000] + "\n... [truncated] ...\n" + text[-8000:]
+            logger.debug("prover raw model output:\n{}", tail)
         try:
             data = _extract_json_obj(text)
         except (json.JSONDecodeError, ValueError):
+            logger.warning(
+                "prover JSON parse error; raw excerpt:\n{}",
+                text[:6000] if text else "<empty>",
+            )
             return ("parse_error", "-- prover JSON parse error\n", None)
         return _normalize_prover_payload(data)
 

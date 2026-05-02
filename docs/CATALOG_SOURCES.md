@@ -1,6 +1,6 @@
 # Catalog sources (`frozen` mode)
 
-Validators using **`LEMMA_PROBLEM_SOURCE=frozen`** read **`lemma/problems/minif2f_frozen.json`**. Rebuild with:
+Validators with `LEMMA_PROBLEM_SOURCE=frozen` read `lemma/problems/minif2f_frozen.json`. Rebuild with:
 
 ```bash
 uv sync --extra catalog   # FormalMATH sources only
@@ -21,12 +21,12 @@ python scripts/load_minif2f.py --out lemma/problems/minif2f_frozen.json   # yang
 | `formalmath_*` | HF [FormalMATH-Lite](https://huggingface.co/datasets/SphereLab/FormalMATH-Lite) / [FormalMATH-All](https://huggingface.co/datasets/SphereLab/FormalMATH-All) |
 | `mathlib` | Local mathlib clone via `--mathlib-root` |
 
-[openai/miniF2F](https://github.com/openai/miniF2F) `lean/` is Lean **3** — use Lean 4 forks above.
+[openai/miniF2F](https://github.com/openai/miniF2F) `lean/` is Lean 3 — use Lean 4 forks above.
 
 ## Extra inputs
 
-- **`--merge-json`**: append compatible JSON fragments (repeat flag allowed).
-- **`--extra-repo URL REF PREFIX`**: clone public repos; miniF2F layout or loose scan for `theorem … := by sorry`.
+- `--merge-json`: append compatible JSON fragments (repeat allowed).
+- `--extra-repo URL REF PREFIX`: clone public repos; miniF2F layout or loose scan for `theorem … := by sorry`.
 
 ## Not ingested
 
@@ -38,8 +38,8 @@ python scripts/load_minif2f.py --out lemma/problems/minif2f_frozen.json   # yang
 
 ## IDs and metadata
 
-Merged IDs use prefixes (`yk/`, `dm/`, …). Builder sets **`topic`** where absent ([`Problem.extra`](../lemma/problems/base.py)).
+Merged IDs use prefixes (`yk/`, `dm/`, …). Builder sets `topic` where absent ([`Problem.extra`](../lemma/problems/base.py)).
 
 ## Toolchain
 
-Row **`lean_toolchain`** / **`mathlib_rev`** must match [**`compose/lean.Dockerfile`**](../compose/lean.Dockerfile).
+Row `lean_toolchain` / `mathlib_rev` must match [`compose/lean.Dockerfile`](../compose/lean.Dockerfile).

@@ -185,6 +185,43 @@ class LemmaSettings(BaseSettings):
             "Default 300 (5m); subnet operators should match across validators."
         ),
     )
+    timeout_scale_by_split: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "LEMMA_TIMEOUT_SCALE_BY_SPLIT",
+            "timeout_scale_by_split",
+        ),
+        description=(
+            "If true, multiply dendrite deadline and LEAN_VERIFY_TIMEOUT_S by easy/medium/hard multipliers."
+        ),
+    )
+    timeout_split_easy_mult: float = Field(
+        default=1.0,
+        ge=0.1,
+        le=50.0,
+        validation_alias=AliasChoices(
+            "LEMMA_TIMEOUT_SPLIT_EASY_MULT",
+            "timeout_split_easy_mult",
+        ),
+    )
+    timeout_split_medium_mult: float = Field(
+        default=1.5,
+        ge=0.1,
+        le=50.0,
+        validation_alias=AliasChoices(
+            "LEMMA_TIMEOUT_SPLIT_MEDIUM_MULT",
+            "timeout_split_medium_mult",
+        ),
+    )
+    timeout_split_hard_mult: float = Field(
+        default=2.0,
+        ge=0.1,
+        le=50.0,
+        validation_alias=AliasChoices(
+            "LEMMA_TIMEOUT_SPLIT_HARD_MULT",
+            "timeout_split_hard_mult",
+        ),
+    )
     validator_round_interval_s: float = Field(
         default=300.0,
         gt=0,
@@ -270,6 +307,16 @@ class LemmaSettings(BaseSettings):
         default=False,
         validation_alias=AliasChoices("MINER_PRIORITY_BY_STAKE", "miner_priority_by_stake"),
         description="Use validator stake as axon priority (requires periodic metagraph sync).",
+    )
+    miner_log_forwards: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("LEMMA_MINER_LOG_FORWARDS", "miner_log_forwards"),
+        description="Log reasoning trace and proof_script for each forward (excerpts at INFO).",
+    )
+    miner_local_verify: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("LEMMA_MINER_LOCAL_VERIFY", "miner_local_verify"),
+        description="Run Lean sandbox on Submission.lean after prover returns (same Docker/host as validators).",
     )
     synapse_max_statement_chars: int = Field(
         default=500_000,

@@ -1,13 +1,13 @@
 # Lemma
 
-Bittensor subnet: miners submit **Lean 4 proofs** and **reasoning traces**; validators verify proofs in Docker and score traces with an LLM judge.
+Bittensor subnet: miners submit Lean 4 proofs and reasoning traces; validators verify in Docker and score traces with an LLM judge.
 
-## Install (what gets installed)
+## Install
 
-| Source | Installs |
-| ------ | -------- |
-| `git clone` | Repository source only. |
-| `uv sync` (from repo root) | **`.venv`**, editable **`lemma`** package (CLI entrypoint `lemma`), **`bittensor`** Python library, and **`btcli`** (wallet/chain CLI via the `bittensor[cli]` extra from PyPI). Optional: `--extra dev` for tests and linters. |
+| What | You get |
+| ---- | ------- |
+| `git clone` | Source only. |
+| `uv sync` from repo root | `.venv`, editable `lemma` package (CLI `lemma`), `bittensor`, `btcli`. Add `--extra dev` for tests/linters. |
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -16,12 +16,15 @@ cd lemma
 uv sync --extra dev
 source .venv/bin/activate
 lemma --help
-btcli --help
 ```
 
-Equivalent: `python -m venv .venv && pip install -e ".[dev]"`. Optional extras: `catalog`, `wandb` (`uv sync --all-extras` if all are required).
+Equivalent: `python -m venv .venv && pip install -e ".[dev]"`. Extras: `catalog`, `wandb` (`uv sync --all-extras` if you need everything).
 
-**Start here:** after **`uv sync --extra dev`**, run **`lemma`** (no arguments) or **`lemma start`** — roadmap + interactive next steps. **`chmod +x scripts/lemma-run`** and **`./scripts/lemma-run lemma setup`** fill **`.env`** via prompts (no manual editing). **`scripts/lemma-run`** activates **`.venv`** so you skip **`uv run`** each time. Create cold/hot keys with **`btcli`** first; **[Getting started](docs/GETTING_STARTED.md)** has copy-paste **`btcli`** commands and recommends **Chutes** for LLM keys.
+## New here
+
+After `uv sync --extra dev`, run `lemma` (no args) or `lemma start`. The CLI walks setup: env via `lemma setup`, health via `lemma doctor`, doc paths via `lemma docs`. Optional: `chmod +x scripts/lemma-run` and `./scripts/lemma-run lemma setup` so the wrapper activates `.venv` for you.
+
+Wallet keys: create with `btcli` first. Details: [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md).
 
 ## Documentation
 

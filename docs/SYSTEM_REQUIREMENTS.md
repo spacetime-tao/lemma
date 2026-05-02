@@ -1,15 +1,15 @@
 # System requirements
 
-Single-machine guidance; scale up for many validators or large local models.
+Rough guidance for one machine; scale for heavy workloads.
 
 ## Miner
 
 | Resource | Notes |
 | -------- | ----- |
-| CPU | Few cores; work is mostly remote inference or GPU elsewhere. |
+| CPU | Few cores; inference often remote. |
 | RAM | 4–8 GB typical. |
-| Disk | Few GB for Python env and logs; Lean toolchain only if proving locally. |
-| Network | Inbound **`AXON_PORT`** (default **8091**); outbound to prover API. |
+| Disk | Small env + logs; Lean toolchain only if proving locally. |
+| Network | Inbound `AXON_PORT` (default 8091); outbound to prover API. |
 | Docker | Not required for consensus. |
 
 ## Validator
@@ -19,14 +19,14 @@ Single-machine guidance; scale up for many validators or large local models.
 | CPU | 2+ cores. |
 | RAM | ≥ 8 GB; 16 GB if Docker + local judge LLM. |
 | Disk | ≥ 20 GB for images and caches. |
-| Docker | Required for production verification (`lemma/lean-sandbox` image). Host-only Lean possible with **`LEMMA_USE_DOCKER=0`** for debugging. |
-| Judge | Default Chutes OpenAI-compatible endpoint; alternative vLLM ([MODELS.md](MODELS.md)). |
+| Docker | Production verification uses the lean-sandbox image. `LEMMA_USE_DOCKER=0` for host-only debugging. |
+| Judge | Default Chutes; vLLM alternative ([MODELS.md](MODELS.md)). |
 
 ## Rounds and timeouts
 
-Validators issue challenges on a **timer** by default (**`LEMMA_VALIDATOR_ROUND_INTERVAL_S`**, default **300** s), not tied to chain epochs. Set **`LEMMA_VALIDATOR_ALIGN_ROUNDS_TO_EPOCH=1`** to restore epoch-bound rounds.
+Timer-based rounds by default (`LEMMA_VALIDATOR_ROUND_INTERVAL_S`, 300 s). `LEMMA_VALIDATOR_ALIGN_ROUNDS_TO_EPOCH=1` ties rounds to chain epochs.
 
-Each round samples **one** problem; miners answer within **`DENDRITE_TIMEOUT_S`** (default **300** s ≈ 5 min). **`LEAN_VERIFY_TIMEOUT_S`** defaults to **300** s for sandbox verification — raise either if Mathlib builds legitimately exceed that. Governance may tune timeouts or **`EMPTY_EPOCH_WEIGHTS_POLICY`** ([`.env.example`](../.env.example)).
+Each round samples one problem; miners answer within `DENDRITE_TIMEOUT_S` (default 300 s). `LEAN_VERIFY_TIMEOUT_S` defaults to 300 s for sandbox — raise if Mathlib builds legitimately exceed that. Governance may tune timeouts or `EMPTY_EPOCH_WEIGHTS_POLICY` (`.env.example`).
 
 ## Related
 

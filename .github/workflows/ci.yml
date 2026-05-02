@@ -18,7 +18,8 @@ jobs:
       - name: Ruff
         run: uv run ruff check lemma tests
       - name: Pytest
-        run: uv run pytest tests/ -q
+        # Docker golden runs only in docker-lean-sandbox (needs image + disk).
+        run: uv run pytest tests/ -q --ignore=tests/test_docker_golden.py
 
   docker-lean-sandbox:
     runs-on: ubuntu-latest

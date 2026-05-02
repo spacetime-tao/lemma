@@ -11,6 +11,7 @@ import bittensor as bt
 from loguru import logger
 
 from lemma.common.problem_seed import resolve_problem_seed
+from lemma.common.split_timeout import split_timeout_multiplier
 from lemma.common.subtensor import get_subtensor
 from lemma.common.uids import axon_list_for_uids
 from lemma.judge.anthropic_judge import AnthropicJudge
@@ -80,7 +81,9 @@ async def run_epoch(
         logger.warning("Validator wallet has no UID on subnet {}; skipping epoch", netuid)
         return {}
 
-    timeout = float(dendrite_timeout if dendrite_timeout is not None else settings.dendrite_timeout_s)
+    base_dendrite_timeout = float(
+        dendrite_timeout if dendrite_timeout is not None else settings.dendrite_timeout_s
+    )
 
     uids = [u for u in range(n) if my_uid is None or u != my_uid]
     if not uids:
@@ -97,6 +100,19 @@ async def run_epoch(
         subtensor=subtensor,
     )
     problem = problem_source.sample(seed=problem_seed)
+    if settings.timeout_scale_by_split:
+        sm = split_timeout_multiplier(
+            problem.split,
+            settings.timeout_split_easy_mult,
+            settings.timeout_split_medium_mult,
+            settings.timeout_split_hard_mult,
+        )
+        timeout = base_dendrite_timeout * sm
+        verify_timeout_s = max(1, int(round(float(settings.lean_verify_timeout_s) * sm)))
+    else:
+        timeout = base_dendrite_timeout
+        verify_timeout_s = settings.lean_verify_timeout_s
+
     synapse = LemmaChallenge(
         theorem_id=problem.id,
         theorem_statement=problem.challenge_source(),
@@ -116,7 +132,7 @@ async def run_epoch(
         image=settings.lean_sandbox_image,
         cpu=settings.lean_sandbox_cpu,
         mem_mb=settings.lean_sandbox_mem_mb,
-        timeout_s=settings.lean_verify_timeout_s,
+        timeout_s=verify_timeout_s,
         network_mode=settings.lean_sandbox_network,
         use_docker=os.environ.get("LEMMA_USE_DOCKER", "1") != "0",
     )
@@ -184,11 +200,13 @@ async def run_epoch(
 
     elapsed = time.perf_counter() - t_epoch
     logger.info(
-        "lemma_epoch_summary chain_head_block={} problem_seed={} problem_seed_tag={} theorem_id={} "
-        "verified={} scored={} pareto_entries={} judge_errors={} skip_set_weights={} seconds={:.2f}",
+        "lemma_epoch_summary chain_head_block={} problem_seed={} problem_seed_tag={} split={} "
+        "theorem_id={} verified={} scored={} pareto_entries={} judge_errors={} skip_set_weights={} "
+        "seconds={:.2f}",
         cur_block,
         problem_seed,
         problem_seed_tag,
+        problem.split,
         problem.id,
         len(verified),
         len(scored),

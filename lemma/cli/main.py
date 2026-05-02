@@ -42,6 +42,53 @@ def start_cmd(ctx: click.Context) -> None:
     show_start_here(ctx, group=main)
 
 
+@main.command("doctor")
+def doctor_cmd() -> None:
+    """Quick checks: venv, config load, optional chain RPC."""
+    ok = True
+    root = Path.cwd()
+    if (root / ".venv").is_dir():
+        click.echo("OK .venv present (uv sync --extra dev)")
+    else:
+        click.echo("MISSING .venv — run: uv sync --extra dev", err=True)
+        ok = False
+    try:
+        s = LemmaSettings()
+        click.echo(f"OK config NETUID={s.netuid} problem_source={s.problem_source}")
+    except Exception as e:  # noqa: BLE001
+        click.echo(f"CONFIG ERROR: {e}", err=True)
+        raise SystemExit(1) from e
+    try:
+        from lemma.common.subtensor import get_subtensor
+
+        head = int(get_subtensor(s).get_current_block())
+        click.echo(f"OK chain RPC head_block={head}")
+    except Exception as e:  # noqa: BLE001
+        click.echo(f"SKIP chain RPC (offline OK): {e}")
+    click.echo("")
+    click.echo("START HERE: `lemma` or `lemma start`  ·  Doc paths: `lemma docs`")
+    if not ok:
+        raise SystemExit(1)
+    click.echo("doctor: OK")
+
+
+@main.command("docs")
+def docs_cmd() -> None:
+    """Print paths to main documentation files in this repository."""
+    repo = Path(__file__).resolve().parents[2]
+    click.echo("Open or preview these files:")
+    for rel in (
+        "docs/GETTING_STARTED.md",
+        "docs/FAQ.md",
+        "docs/MINER.md",
+        "docs/VALIDATOR.md",
+        "docs/MODELS.md",
+        "docs/TESTING.md",
+    ):
+        path = repo / rel
+        click.echo(f"  {path}" if path.is_file() else f"  {rel} (not found)")
+
+
 @main.command("meta")
 def meta_cmd() -> None:
     """Print canonical fingerprints (problem registry + judge rubric/profile for validator parity)."""
