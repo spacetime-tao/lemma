@@ -1,0 +1,21 @@
+services:
+  validator:
+    build: .
+    image: lemma/runtime:latest
+    env_file: .env
+    volumes:
+      - ${HOME}/.bittensor/wallets:/root/.bittensor/wallets:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: ["validator"]
+    restart: unless-stopped
+
+  miner:
+    build: .
+    image: lemma/runtime:latest
+    env_file: .env
+    volumes:
+      - ${HOME}/.bittensor/wallets:/root/.bittensor/wallets:ro
+    command: ["miner"]
+    restart: unless-stopped
+    ports:
+      - "${AXON_PORT:-8091}:8091"
