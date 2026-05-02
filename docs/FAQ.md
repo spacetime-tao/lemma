@@ -32,7 +32,33 @@ Template or catalog changes require coordinated upgrades ([GOVERNANCE.md](GOVERN
 | `LEMMA_VALIDATOR_ROUND_INTERVAL_S` | Seconds between validator rounds when not aligning to epochs (default **300**). |
 | `LEMMA_VALIDATOR_ALIGN_ROUNDS_TO_EPOCH` | `1` = wait for chain epoch before each round; default **`0`** (timer-based rounds). |
 
-Round **frequency** is set by **subnet tempo**, not these variables.
+Round **frequency** defaults to **`LEMMA_VALIDATOR_ROUND_INTERVAL_S`** (wall-clock). Use **`LEMMA_VALIDATOR_ALIGN_ROUNDS_TO_EPOCH=1`** if you want cadence tied to chain epochs instead.
+
+## What can exceed 5 minutes?
+
+- **`LEAN_VERIFY_TIMEOUT_S`** covers **sandbox CPU time** (`lake build`, axiom scan): cold caches, huge imports, or very large generated terms can push compilation near the limit — not “thinking time,” mostly elaboration.
+- **`DENDRITE_TIMEOUT_S`** covers **miner HTTP latency** (prover producing `Submission.lean`). Hard problems need more model reasoning tokens; that wall-clock can grow even when Lean verification would be fast once the script exists.
+
+Whether to **keep** very heavy templates is a **subnet governance** choice: harder problems stress miners and verification; easier buckets improve reliability under tight timeouts. Tune timeouts and catalogs together ([GOVERNANCE.md](GOVERNANCE.md)).
+
+## Do validators stay in sync on the same theorem?
+
+Validators choose **`problem = sample(seed=get_current_block())`** at the **start** of each `run_epoch` ([`epoch.py`](../lemma/validator/epoch.py)). So:
+
+- Everyone running the **same code**, **`LEMMA_PROBLEM_SOURCE`**, and **registry** agrees on the **mapping** from block → theorem.
+- **Different validators can still see different blocks** if their rounds start at different wall-clock moments (chain head advances ~every ~12 s on Finney). They are **not guaranteed** identical challenge IDs across validators every round unless operators coordinate timing or the subnet fixes a rule (e.g. committed block at epoch).
+
+Within **one** validator process: a round **finishes** query → verify → judge → `set_weights` (if applicable) **before** the next sleep `LEMMA_VALIDATOR_ROUND_INTERVAL_S`, so the next round does not start until the previous pipeline completes.
+
+## CLI: current theorem and fingerprints
+
+| Command | Purpose |
+| ------- | ------- |
+| **`lemma status`** | Chain head block, sampled theorem id/name (same rule as validators), hints for next commands. |
+| **`lemma problems show --current`** | **`Challenge.lean`** for the current block seed. |
+| **`lemma problems show --block N`** | Same for an arbitrary block height. |
+| **`lemma meta`** | Judge + generated-registry hashes for subnet alignment. |
+| **`lemma problems list`** | Only for **`frozen`** catalog mode (enumerate rows). |
 
 ## Chutes and billing
 
@@ -94,7 +120,7 @@ Logs: **`lemma_epoch_summary`**; optional JSONL export. No built-in dashboard ([
 
 ## Throughput
 
-One **sampled** problem per epoch (generated or frozen), not “thousands per minute.” **`DENDRITE_TIMEOUT_S`** bounds a single response.
+One **sampled** problem per **validator round** (generated or frozen), not “thousands per minute.” **`DENDRITE_TIMEOUT_S`** bounds a single miner response; round spacing is **`LEMMA_VALIDATOR_ROUND_INTERVAL_S`** (or epoch-aligned if configured above).
 
 ## `lemma --help` and Bittensor
 

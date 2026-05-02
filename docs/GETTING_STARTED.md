@@ -1,6 +1,8 @@
 # Getting started
 
-**First command (after `uv sync --extra dev`):** run **`lemma`** with no arguments, or **`lemma start`**. You get the START HERE screen and an interactive **Next step** prompt (`lemma setup`, miner/validator dry-runs, `lemma meta`, etc.).
+**First command (after `uv sync --extra dev`):** run **`lemma`** with no arguments, or **`lemma start`**. You get the START HERE screen and an interactive **Next step** prompt (`lemma setup`, **`lemma status`**, miner/validator dry-runs, `lemma meta`, etc.).
+
+**See what validators would sample at the current chain head:** **`lemma status`** — then **`lemma problems show --current`** for full **`Challenge.lean`**. More detail under **CLI: current theorem and fingerprints** in [FAQ.md](FAQ.md).
 
 Goal: install deps, create keys with **`btcli`**, paste LLM API keys at prompts, run Lemma — **without hand-editing `.env`**.
 

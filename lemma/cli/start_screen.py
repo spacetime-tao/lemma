@@ -33,6 +33,10 @@ def show_start_here(ctx: click.Context | None = None, *, group: click.Group | No
    6. Validator           bash scripts/prebuild_lean_image.sh
                           lemma validator
 
+   Inspect chain / theorem (same sampling rule as validators):
+                          lemma status
+                          lemma problems show --current
+
  ----------------------------------------------------------------------
    Defaults (subnet tuning)
  ----------------------------------------------------------------------
@@ -51,7 +55,7 @@ def show_start_here(ctx: click.Context | None = None, *, group: click.Group | No
     choice = click.prompt(
         "Next step",
         type=click.Choice(
-            ["setup", "miner-dry", "validator-dry", "meta", "quit"],
+            ["setup", "status", "miner-dry", "validator-dry", "meta", "quit"],
             case_sensitive=False,
         ),
         default="setup",
@@ -63,6 +67,7 @@ def show_start_here(ctx: click.Context | None = None, *, group: click.Group | No
 
     spec: dict[str, tuple[str, dict[str, object]]] = {
         "setup": ("setup", {}),
+        "status": ("status", {}),
         "miner-dry": ("miner", {"dry_run": True}),
         "validator-dry": ("validator", {"dry_run": True}),
         "meta": ("meta", {}),

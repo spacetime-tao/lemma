@@ -61,6 +61,45 @@ def meta_cmd() -> None:
     click.echo("judge_profile_json=" + json.dumps(judge_profile_dict(s), sort_keys=True))
 
 
+@main.command("status")
+def status_cmd() -> None:
+    """Chain head + theorem sampled at that block (same rule as validators in ``run_epoch``)."""
+    from lemma.common.subtensor import get_subtensor
+
+    settings = LemmaSettings()
+    src = get_problem_source(settings)
+    try:
+        block = int(get_subtensor(settings).get_current_block())
+    except Exception as e:  # noqa: BLE001 — RPC/network misconfig
+        click.echo(
+            f"Could not read chain head ({e}). Check SUBTENSOR_* and RPC connectivity.",
+            err=True,
+        )
+        click.echo(
+            "Validators use seed = block height at the start of each round "
+            "(see docs/FAQ.md — validator alignment).",
+            err=True,
+        )
+        raise SystemExit(2) from e
+
+    p = src.sample(seed=block)
+    click.echo(f"problem_source={settings.problem_source}")
+    click.echo(f"chain_head_block={block}")
+    click.echo(f"sampled_theorem_id={p.id}")
+    click.echo(f"theorem_name={p.theorem_name}")
+    click.echo(f"split_bucket={p.split}")
+    extra = p.extra or {}
+    if isinstance(extra, dict) and extra.get("template_fn"):
+        click.echo(f"template_fn={extra.get('template_fn')}")
+    click.echo("")
+    click.echo("Print Challenge.lean:")
+    click.echo(f"  lemma problems show --block {block}")
+    click.echo("  lemma problems show --current")
+    click.echo("")
+    click.echo("Subnet fingerprints (align validators):")
+    click.echo("  lemma meta")
+
+
 @main.command("miner", help="Run the miner axon")
 @click.option("--dry-run", is_flag=True, help="Log config only (does not start axon)")
 @click.option(
