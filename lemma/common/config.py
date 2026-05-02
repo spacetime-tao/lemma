@@ -33,8 +33,16 @@ class LemmaSettings(BaseSettings):
             "problem_seed_quantize_blocks",
         ),
         description=(
-            "Validators use problem_seed = (chain_head // N) * N. Default 25 ≈ 5 min of "
-            "Finney blocks (~12 s each), keeping peers on the same theorem within that window."
+            "Used when LEMMA_PROBLEM_SEED_MODE=quantize: problem_seed = (chain_head // N) * N. "
+            "Also subnet_epoch fallback if Tempo query fails."
+        ),
+    )
+    problem_seed_mode: Literal["quantize", "subnet_epoch"] = Field(
+        default="subnet_epoch",
+        validation_alias=AliasChoices("LEMMA_PROBLEM_SEED_MODE", "problem_seed_mode"),
+        description=(
+            "subnet_epoch: seed from subnet Tempo stride (same chain head => same seed; recommended). "
+            "quantize: fixed N-block windows from LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS."
         ),
     )
     minif2f_catalog_path: Path | None = Field(

@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 import bittensor as bt
 from loguru import logger
 
-from lemma.common.problem_seed import problem_sample_seed_block
+from lemma.common.problem_seed import resolve_problem_seed
 from lemma.common.subtensor import get_subtensor
 from lemma.common.uids import axon_list_for_uids
 from lemma.judge.anthropic_judge import AnthropicJudge
@@ -89,8 +89,14 @@ async def run_epoch(
 
     logger.debug("canonical judge rubric sha256={}", rubric_sha256())
 
-    seed_block = problem_sample_seed_block(int(cur_block), settings.problem_seed_quantize_blocks)
-    problem = problem_source.sample(seed=seed_block)
+    problem_seed, problem_seed_tag = resolve_problem_seed(
+        chain_head_block=int(cur_block),
+        netuid=netuid,
+        mode=settings.problem_seed_mode,
+        quantize_blocks=settings.problem_seed_quantize_blocks,
+        subtensor=subtensor,
+    )
+    problem = problem_source.sample(seed=problem_seed)
     synapse = LemmaChallenge(
         theorem_id=problem.id,
         theorem_statement=problem.challenge_source(),
@@ -98,7 +104,7 @@ async def run_epoch(
         lean_toolchain=problem.lean_toolchain,
         mathlib_rev=problem.mathlib_rev,
         deadline_unix=int(time.time()) + int(timeout),
-        metronome_id=str(seed_block),
+        metronome_id=str(problem_seed),
         timeout=timeout,
     )
 
@@ -178,10 +184,11 @@ async def run_epoch(
 
     elapsed = time.perf_counter() - t_epoch
     logger.info(
-        "lemma_epoch_summary chain_head_block={} problem_seed_block={} theorem_id={} verified={} "
-        "scored={} pareto_entries={} judge_errors={} skip_set_weights={} seconds={:.2f}",
+        "lemma_epoch_summary chain_head_block={} problem_seed={} problem_seed_tag={} theorem_id={} "
+        "verified={} scored={} pareto_entries={} judge_errors={} skip_set_weights={} seconds={:.2f}",
         cur_block,
-        seed_block,
+        problem_seed,
+        problem_seed_tag,
         problem.id,
         len(verified),
         len(scored),

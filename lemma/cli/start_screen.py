@@ -41,6 +41,7 @@ def show_start_here(ctx: click.Context | None = None, *, group: click.Group | No
    Defaults (subnet tuning)
  ----------------------------------------------------------------------
    • ~5 min per challenge: DENDRITE_TIMEOUT_S / LEAN_VERIFY_TIMEOUT_S (300 s).
+   • Theorem seed: LEMMA_PROBLEM_SEED_MODE=subnet_epoch (Tempo; default) vs quantize (N blocks).
    • Validator rounds on a timer (LEMMA_VALIDATOR_ROUND_INTERVAL_S), not chain epochs,
      unless LEMMA_VALIDATOR_ALIGN_ROUNDS_TO_EPOCH=1.
 

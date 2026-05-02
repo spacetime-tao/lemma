@@ -1,6 +1,6 @@
 # Generated problems (default)
 
-When **`LEMMA_PROBLEM_SOURCE=generated`**, each validator round maps **`chain_head → problem_seed_block = (chain_head // N) * N`** ( **`LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`**, default **25** ), then uses that integer seed to select **one** theorem from a fixed template list in [`lemma/problems/generated.py`](../lemma/problems/generated.py). Identical code + seed ⇒ identical `Problem`.
+When **`LEMMA_PROBLEM_SOURCE=generated`**, each validator round maps **`chain_head → problem_seed`** via **`LEMMA_PROBLEM_SEED_MODE`**: default **`subnet_epoch`** uses subnet **Tempo** (same bucketing as chain epochs); **`quantize`** uses **`LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`**. The integer seed selects **one** theorem from [`lemma/problems/generated.py`](../lemma/problems/generated.py). Identical code + seed ⇒ identical `Problem`.
 
 ## Template mix
 

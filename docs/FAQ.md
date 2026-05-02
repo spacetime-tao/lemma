@@ -43,11 +43,17 @@ Round **frequency** defaults to **`LEMMA_VALIDATOR_ROUND_INTERVAL_S`** (wall-clo
 
 Whether to **keep** very heavy templates is a **subnet governance** choice: harder problems stress miners and verification; easier buckets improve reliability under tight timeouts. Tune timeouts and catalogs together ([GOVERNANCE.md](GOVERNANCE.md)).
 
+## Difficulty vs timeouts — does “hard” get more time?
+
+Not by default. **`DENDRITE_TIMEOUT_S`** and **`LEAN_VERIFY_TIMEOUT_S`** are **one size for all** sampled problems unless you change config or add custom logic. Template **difficulty** changes *what* is asked, not the built-in timer wiring.
+
 ## Do validators stay in sync? Do miners get different problems?
 
 **One validator, one round:** every miner this validator **queries** receives the **same** synapse (same theorem). Miners do **not** get different challenges within the same broadcast.
 
-**Across validators:** Lemma maps **`problem_seed_block = (chain_head // N) * N`** with **`LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`** (default **25** ≈ ~5 minutes of Finney blocks). Anyone reading chain head in that window picks the **same** theorem seed ([`epoch.py`](../lemma/validator/epoch.py)). Set **`N=1`** to disable quantization (not recommended for multi-validator subnets).
+**Across validators:** default **`LEMMA_PROBLEM_SEED_MODE=subnet_epoch`** derives the integer seed from **subnet Tempo** (stride **`tempo + 1`**, consistent with Bittensor’s epoch stepping). **All honest nodes that see the same chain head and the same `NETUID` compute the same seed**; peers whose rounds fall between the same Tempo boundaries also match ([`epoch.py`](../lemma/validator/epoch.py)).
+
+**`quantize`** mode uses **`(chain_head // N) * N`** via **`LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`** instead. **100% chain-identical** alignment still requires the same **code**, **`LEMMA_PROBLEM_SOURCE`**, registry hashes, and matching env — and RPCs that report a consistent head.
 
 Within **one** validator process: a round **finishes** query → verify → judge → `set_weights` (if applicable) **before** the next sleep **`LEMMA_VALIDATOR_ROUND_INTERVAL_S`**, so the **next** round does not start until the previous pipeline completes.
 
@@ -55,9 +61,9 @@ Within **one** validator process: a round **finishes** query → verify → judg
 
 | Command | Purpose |
 | ------- | ------- |
-| **`lemma status`** | Chain head, **`problem_seed_block`**, theorem id (same rule as validators). |
-| **`lemma problems show --current`** | **`Challenge.lean`** after quantizing current head (matches validators). |
-| **`lemma problems show --block N`** | Treat **`N`** as chain head height; quantize then sample. |
+| **`lemma status`** | Chain head, **`LEMMA_PROBLEM_SEED_MODE`**, resolved **`problem_seed`**, theorem id. |
+| **`lemma problems show --current`** | **`Challenge.lean`** with the same seed resolution as validators. |
+| **`lemma problems show --block N`** | Treat **`N`** as chain head; resolve seed like validators. |
 | **`lemma meta`** | Judge + generated-registry hashes for subnet alignment. |
 | **`lemma problems list`** | Only for **`frozen`** catalog mode (enumerate rows). |
 

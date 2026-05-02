@@ -64,31 +64,39 @@ def meta_cmd() -> None:
 @main.command("status")
 def status_cmd() -> None:
     """Chain head + theorem seed (same rule as validators in ``run_epoch``)."""
-    from lemma.common.problem_seed import problem_sample_seed_block
+    from lemma.common.problem_seed import resolve_problem_seed
     from lemma.common.subtensor import get_subtensor
 
     settings = LemmaSettings()
     src = get_problem_source(settings)
     try:
-        block = int(get_subtensor(settings).get_current_block())
+        subtensor = get_subtensor(settings)
+        block = int(subtensor.get_current_block())
     except Exception as e:  # noqa: BLE001 — RPC/network misconfig
         click.echo(
             f"Could not read chain head ({e}). Check SUBTENSOR_* and RPC connectivity.",
             err=True,
         )
         click.echo(
-            "Validators map chain_head → problem_seed_block using LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS "
-            "(see docs/FAQ.md).",
+            "Problem seeds follow LEMMA_PROBLEM_SEED_MODE (see docs/FAQ.md).",
             err=True,
         )
         raise SystemExit(2) from e
 
-    seed_block = problem_sample_seed_block(block, settings.problem_seed_quantize_blocks)
-    p = src.sample(seed=seed_block)
+    problem_seed, seed_tag = resolve_problem_seed(
+        chain_head_block=block,
+        netuid=settings.netuid,
+        mode=settings.problem_seed_mode,
+        quantize_blocks=settings.problem_seed_quantize_blocks,
+        subtensor=subtensor,
+    )
+    p = src.sample(seed=problem_seed)
     click.echo(f"problem_source={settings.problem_source}")
+    click.echo(f"LEMMA_PROBLEM_SEED_MODE={settings.problem_seed_mode}")
     click.echo(f"LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS={settings.problem_seed_quantize_blocks}")
     click.echo(f"chain_head_block={block}")
-    click.echo(f"problem_seed_block={seed_block}")
+    click.echo(f"problem_seed_tag={seed_tag}")
+    click.echo(f"problem_seed={problem_seed}")
     click.echo(f"sampled_theorem_id={p.id}")
     click.echo(f"theorem_name={p.theorem_name}")
     click.echo(f"split_bucket={p.split}")
@@ -375,28 +383,26 @@ def problems_list() -> None:
     "--current",
     "-c",
     is_flag=True,
-    help="Use current chain head → quantize → sample (same as validators).",
+    help="Use current chain head + LEMMA_PROBLEM_SEED_MODE (same as validators).",
 )
 @click.option(
     "--block",
     type=int,
     default=None,
-    help="Treat N as chain head height; quantize with LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS then sample.",
+    help="Treat N as chain head height; resolve seed like validators (see LEMMA_PROBLEM_SEED_MODE).",
 )
 def problems_show(problem_id: str | None, current: bool, block: int | None) -> None:
     """Print Challenge.lean source for one problem.
 
-    Validators use ``problem_seed_block = (chain_head // Q) * Q`` then ``sample(seed=…)``.
-    For ``generated``, theorem ids look like ``gen/<problem_seed_block>``. Set ``Q`` via
-    ``LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`` (default 25).
+    Seed resolution matches ``run_epoch`` (``LEMMA_PROBLEM_SEED_MODE``): ``subnet_epoch`` uses subnet
+    Tempo stride; ``quantize`` uses ``LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS``.
 
     Provide exactly one of: PROBLEM_ID, --current, or --block N.
     """
-    from lemma.common.problem_seed import problem_sample_seed_block
+    from lemma.common.problem_seed import resolve_problem_seed
 
     settings = LemmaSettings()
     src = get_problem_source(settings)
-    q = settings.problem_seed_quantize_blocks
 
     n_sel = sum([bool(problem_id and problem_id.strip()), current, block is not None])
     if n_sel != 1:
@@ -405,18 +411,34 @@ def problems_show(problem_id: str | None, current: bool, block: int | None) -> N
     if current:
         from lemma.common.subtensor import get_subtensor
 
-        head = int(get_subtensor(settings).get_current_block())
-        seed = problem_sample_seed_block(head, q)
+        subtensor = get_subtensor(settings)
+        head = int(subtensor.get_current_block())
+        seed, tag = resolve_problem_seed(
+            chain_head_block=head,
+            netuid=settings.netuid,
+            mode=settings.problem_seed_mode,
+            quantize_blocks=settings.problem_seed_quantize_blocks,
+            subtensor=subtensor,
+        )
         p = src.sample(seed=seed)
-        click.echo(f"# chain_head_block={head} problem_seed_block={seed} theorem_id={p.id}\n")
+        click.echo(f"# chain_head_block={head} problem_seed={seed} tag={tag} theorem_id={p.id}\n")
         click.echo(p.challenge_source())
         return
 
     if block is not None:
+        from lemma.common.subtensor import get_subtensor
+
+        subtensor = get_subtensor(settings)
         head = int(block)
-        seed = problem_sample_seed_block(head, q)
+        seed, tag = resolve_problem_seed(
+            chain_head_block=head,
+            netuid=settings.netuid,
+            mode=settings.problem_seed_mode,
+            quantize_blocks=settings.problem_seed_quantize_blocks,
+            subtensor=subtensor,
+        )
         p = src.sample(seed=seed)
-        click.echo(f"# chain_head_block={head} problem_seed_block={seed} theorem_id={p.id}\n")
+        click.echo(f"# chain_head_block={head} problem_seed={seed} tag={tag} theorem_id={p.id}\n")
         click.echo(p.challenge_source())
         return
 
