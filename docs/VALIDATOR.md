@@ -1,29 +1,84 @@
 # Validator
 
-Setup: [GETTING_STARTED.md](GETTING_STARTED.md).
+Install → Lean image → judge keys → wallets → run.
 
-## Requirements
+---
 
-1. Wallets registered on `NETUID` (`btcli`; [Bittensor docs](https://docs.learnbittensor.org/)).
-2. Lean sandbox image:
-
-   ```bash
-   bash scripts/prebuild_lean_image.sh
-   ```
-
-3. Judge HTTP API (default Chutes `Qwen/Qwen3-32B-TEE`; **`OPENAI_API_KEY`**). vLLM: `OPENAI_BASE_URL=http://127.0.0.1:8000/v1`. **`LEMMA_FAKE_JUDGE=1`** disables real judging for tests. From Docker to host inference use **`host.docker.internal`** (macOS/Windows) or the Docker bridge IP on Linux ([MODELS.md](MODELS.md)).
-
-## Configuration
-
-Copy [`.env.example`](../.env.example) → `.env`: `NETUID`, `SUBTENSOR_*`, `BT_WALLET_*`, `LEAN_SANDBOX_IMAGE`, judge vars, `DENDRITE_TIMEOUT_S`, `EMPTY_EPOCH_WEIGHTS_POLICY`, `SET_WEIGHTS_*`. Publish **`uv run lemma meta`** hashes ([GOVERNANCE.md](GOVERNANCE.md)).
-
-## Commands
+## 1. Install and shell
 
 ```bash
+git clone <repository-url>
+cd lemma
 uv sync --extra dev
-uv run lemma validator --dry-run
-uv run lemma validator
+source .venv/bin/activate
 ```
+
+---
+
+## 2. Base `.env`
+
+```bash
+cp .env.example .env
+```
+
+Set **`NETUID`**, **`SUBTENSOR_*`**, **`BT_WALLET_COLD`**, **`BT_WALLET_HOT`**, **`LEAN_SANDBOX_IMAGE`**, **`DENDRITE_TIMEOUT_S`**, **`EMPTY_EPOCH_WEIGHTS_POLICY`**, **`SET_WEIGHTS_*`** as needed ([`.env.example`](../.env.example)).
+
+---
+
+## 3. Judge API keys (interactive)
+
+Put secrets into **`.env`** without editing keys by hand:
+
+```bash
+cd lemma
+source .venv/bin/activate
+lemma configure judge
+```
+
+1. Choose **openai** (OpenAI-compatible HTTP client — default stack targets Chutes / vLLM; see [MODELS.md](MODELS.md)) or **anthropic**.
+2. Paste the API key when prompted (hidden).
+3. Optionally set **`OPENAI_BASE_URL`** for self-hosted vLLM.
+
+This writes **`JUDGE_PROVIDER`** and **`OPENAI_*`** or **`ANTHROPIC_*`**. Tune **`OPENAI_MODEL`**, **`JUDGE_*`** tokens/temperature in **`.env`** afterward if needed.
+
+**Smoke without paid APIs**
+
+```bash
+export LEMMA_FAKE_JUDGE=1
+lemma validator --dry-run
+```
+
+---
+
+## 4. Lean sandbox image
+
+```bash
+cd lemma
+bash scripts/prebuild_lean_image.sh
+```
+
+Point **`LEAN_SANDBOX_IMAGE`** in **`.env`** at the tag you built. From Docker to host inference, see **[MODELS.md](MODELS.md)** (**`host.docker.internal`** on macOS/Windows, bridge IP on Linux).
+
+---
+
+## 5. Fingerprints (subnet parity)
+
+```bash
+lemma meta
+```
+
+Publish / pin **`JUDGE_PROFILE_SHA256_EXPECTED`** if your subnet uses it ([GOVERNANCE.md](GOVERNANCE.md)).
+
+---
+
+## 6. Run
+
+```bash
+lemma validator --dry-run
+lemma validator
+```
+
+---
 
 ## Compose
 
@@ -31,6 +86,8 @@ uv run lemma validator
 docker compose -f docker-compose.yml -f docker-compose.local.yml up validator
 ```
 
+---
+
 ## Behavior
 
-Waits until `blocks_until_next_epoch(netuid) <= 1` before rounds. **`LEAN_SANDBOX_NETWORK=bridge`** only if bootstrap needs outbound network; otherwise **`none`** with a warm image. Operations checklist: [PRODUCTION.md](PRODUCTION.md).
+Waits until **`blocks_until_next_epoch(netuid) <= 1`** before rounds. Prefer **`LEAN_SANDBOX_NETWORK=none`** with a warm image; use **`bridge`** only if bootstrap needs outbound network. Ops: [PRODUCTION.md](PRODUCTION.md).

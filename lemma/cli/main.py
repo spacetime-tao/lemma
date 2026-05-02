@@ -15,6 +15,7 @@ import click
 
 from lemma import __version__
 from lemma.common.config import LemmaSettings
+from lemma.common.env_file import merge_dotenv
 from lemma.common.logging import setup_logging
 from lemma.common.subtensor import get_subtensor
 from lemma.problems.factory import get_problem_source, resolve_problem
@@ -63,9 +64,112 @@ def miner_cmd(dry_run: bool, max_forwards_per_day: int | None) -> None:
     settings = LemmaSettings()
     setup_logging(settings.log_level)
     if dry_run:
-        click.echo(f"netuid={settings.netuid} port={settings.axon_port}")
+        click.echo(f"netuid={settings.netuid} axon_port={settings.axon_port}")
+        ext = (settings.axon_external_ip or "").strip() or None
+        if ext:
+            click.echo(f"axon_external_ip={ext} (from AXON_EXTERNAL_IP)")
+        elif settings.axon_discover_external_ip:
+            from lemma.miner.public_ip import discover_public_ipv4
+
+            discovered = discover_public_ipv4()
+            if discovered:
+                click.echo(
+                    f"axon_external_ip={discovered} "
+                    "(auto-discovered at startup if AXON_EXTERNAL_IP stays unset)"
+                )
+            else:
+                click.echo(
+                    "axon_external_ip=<discovery failed — set AXON_EXTERNAL_IP to your public IPv4 "
+                    f"and ensure port {settings.axon_port} is reachable>"
+                )
+        else:
+            click.echo(
+                "axon_external_ip=<unset; set AXON_EXTERNAL_IP or enable AXON_DISCOVER_EXTERNAL_IP>"
+            )
         return
     MinerService(settings).run()
+
+
+@main.group("configure")
+def configure_grp() -> None:
+    """Interactive prompts to merge secrets into a `.env` file (run from repo root)."""
+
+
+@configure_grp.command("judge")
+@click.option(
+    "--env-file",
+    "env_path",
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=None,
+    help="Default: ./.env",
+)
+def configure_judge(env_path: Path | None) -> None:
+    """Set validator judge provider and API key (writes OPENAI_* or ANTHROPIC_* plus JUDGE_PROVIDER)."""
+    path = env_path or Path.cwd() / ".env"
+    click.echo(f"Merging into {path}")
+    provider = click.prompt(
+        "Judge provider",
+        type=click.Choice(["openai", "anthropic"], case_sensitive=False),
+    )
+    updates: dict[str, str] = {"JUDGE_PROVIDER": provider}
+    if provider == "openai":
+        key = click.prompt("OpenAI-compatible API key", hide_input=True).strip()
+        if not key:
+            raise click.UsageError("API key is required.")
+        updates["OPENAI_API_KEY"] = key
+        url = click.prompt(
+            "OPENAI_BASE_URL (optional; Enter for default Chutes/vLLM later in .env)",
+            default="",
+            show_default=False,
+        ).strip()
+        if url:
+            updates["OPENAI_BASE_URL"] = url
+    else:
+        key = click.prompt("Anthropic API key", hide_input=True).strip()
+        if not key:
+            raise click.UsageError("API key is required.")
+        updates["ANTHROPIC_API_KEY"] = key
+    merge_dotenv(path, updates)
+    click.echo("Done. Run `lemma meta` after edits that affect judge routing.")
+
+
+@configure_grp.command("prover")
+@click.option(
+    "--env-file",
+    "env_path",
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=None,
+    help="Default: ./.env",
+)
+def configure_prover(env_path: Path | None) -> None:
+    """Set miner prover provider and API key (PROVER_PROVIDER + OPENAI_* or ANTHROPIC_*)."""
+    path = env_path or Path.cwd() / ".env"
+    click.echo(f"Merging into {path}")
+    provider = click.prompt(
+        "Prover provider",
+        type=click.Choice(["openai", "anthropic"], case_sensitive=False),
+    )
+    pl = provider.lower()
+    updates: dict[str, str] = {"PROVER_PROVIDER": pl}
+    if pl == "openai":
+        key = click.prompt("OPENAI_API_KEY", hide_input=True).strip()
+        if not key:
+            raise click.UsageError("API key is required.")
+        updates["OPENAI_API_KEY"] = key
+        url = click.prompt(
+            "OPENAI_BASE_URL (optional)",
+            default="",
+            show_default=False,
+        ).strip()
+        if url:
+            updates["OPENAI_BASE_URL"] = url
+    else:
+        key = click.prompt("ANTHROPIC_API_KEY", hide_input=True).strip()
+        if not key:
+            raise click.UsageError("API key is required.")
+        updates["ANTHROPIC_API_KEY"] = key
+    merge_dotenv(path, updates)
+    click.echo("Done. Use `lemma miner --dry-run` to confirm axon settings.")
 
 
 @main.command("validator")

@@ -1,18 +1,8 @@
 # Getting started
 
-Install order: **uv** → **clone** → **`uv sync`** → **`.env`** → **wallets** → **run**.
+Follow the sections in order. Each block is copy-pasteable.
 
-## Dependencies from `uv sync`
-
-`pyproject.toml` declares **`bittensor[cli]`** (Python SDK + **`btcli`**) and this repo as an editable package (console script **`lemma`**). Cloning does not install them; **`uv sync`** writes everything under **`.venv/`**.
-
-| Artifact | Role |
-| -------- | ---- |
-| **`lemma`** | CLI for miner, validator, `meta`, `verify`, … (`pyproject.toml` `[project.scripts]`). |
-| **`bittensor`** | Subtensor client library used by miner/validator code. |
-| **`btcli`** | Wallet and subnet registration CLI (from `bittensor[cli]`). |
-
-Run with **`uv run lemma`** / **`uv run btcli`** or activate **`.venv`**.
+---
 
 ## 1. Install uv
 
@@ -22,7 +12,9 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 Windows: [uv installation](https://docs.astral.sh/uv/getting-started/installation/).
 
-## 2. Clone and sync
+---
+
+## 2. Clone and install Python deps
 
 ```bash
 git clone <repository-url>
@@ -30,69 +22,161 @@ cd lemma
 uv sync --extra dev
 ```
 
-Optional extras: **`catalog`** (catalog builders — [CATALOG_SOURCES.md](CATALOG_SOURCES.md)), **`wandb`**.
+**What you get:** editable package **`lemma`** (CLI), **`bittensor`**, and **`btcli`** via **`bittensor[cli]`** in `pyproject.toml`. Nothing runs until **`uv sync`** creates **`.venv/`**.
 
-## 3. Environment file
+Optional extras: **`catalog`**, **`wandb`** ([CATALOG_SOURCES.md](CATALOG_SOURCES.md)).
 
-Copy **[`.env.example`](../.env.example)** to **`.env`**. The file is gitignored; do not commit secrets.
+---
 
-## 4. Chain and wallets
+## 3. Run `lemma` without typing `uv run` every time
 
-1. Create cold/hot wallets (`btcli`; keys under `~/.bittensor/wallets/`).
-2. Fund and register on the target **`NETUID`** per [Bittensor docs](https://docs.learnbittensor.org/).
+After **`uv sync`**, activate the project venv. Then **`lemma`** and **`btcli`** are on your **`PATH`** for that shell.
 
-Set in **`.env`**: `SUBTENSOR_NETWORK`, `SUBTENSOR_CHAIN_ENDPOINT` (if needed), `NETUID`, `BT_WALLET_COLD`, `BT_WALLET_HOT`.
-
-## 5. Operator-specific variables
-
-**All roles:** `LOG_LEVEL`.
-
-**Miner:** `AXON_PORT`, `AXON_EXTERNAL_IP` (reachable from validators); prover: `PROVER_PROVIDER`, `ANTHROPIC_*` / `OPENAI_*`, optional `PROVER_MODEL`.
-
-**Validator:** build Lean image (step 6); `LEAN_SANDBOX_IMAGE`; judge: `JUDGE_PROVIDER`, `OPENAI_*` / Chutes or vLLM — align subnet-wide; optional `JUDGE_PROFILE_SHA256_EXPECTED`. Run **`uv run lemma meta`** and publish hashes ([GOVERNANCE.md](GOVERNANCE.md)).
-
-**Testing without LLM APIs:** `LEMMA_FAKE_JUDGE=1` (validators).
-
-## 6. Lean Docker image (validators)
+**Linux / macOS**
 
 ```bash
+cd lemma
+source .venv/bin/activate
+lemma --help
+btcli --help
+```
+
+**Windows (cmd)**
+
+```cmd
+cd lemma
+.venv\Scripts\activate.bat
+lemma --help
+```
+
+**Windows (PowerShell)**
+
+```powershell
+cd lemma
+.\.venv\Scripts\Activate.ps1
+lemma --help
+```
+
+From here on, examples use **`lemma`**; if you skip activation, prefix with **`uv run`** (e.g. **`uv run lemma miner`**).
+
+---
+
+## 4. Environment file
+
+```bash
+cd lemma
+cp .env.example .env
+```
+
+Edit **`.env`** (gitignored). Never commit secrets.
+
+---
+
+## 5. Paste API keys (optional helpers)
+
+Merge keys into **`.env`** without editing by hand:
+
+**Validator — judge (OpenAI-compatible or Anthropic)**
+
+```bash
+cd lemma
+source .venv/bin/activate
+lemma configure judge
+```
+
+You choose **openai** or **anthropic**, then paste the key when prompted (hidden). For OpenAI-compatible stacks you can add **`OPENAI_BASE_URL`** in the same flow.
+
+**Miner — prover LLM**
+
+```bash
+lemma configure prover
+```
+
+Same idea: provider + key → **`PROVER_PROVIDER`** and **`OPENAI_*`** or **`ANTHROPIC_*`**.
+
+---
+
+## 6. Chain and wallets
+
+1. Create cold/hot wallets with **`btcli`** (keys under **`~/.bittensor/wallets/`**).
+2. Fund and register on your target **`NETUID`** ([Bittensor docs](https://docs.learnbittensor.org/)).
+
+In **`.env`** set **`SUBTENSOR_NETWORK`**, **`SUBTENSOR_CHAIN_ENDPOINT`** if needed, **`NETUID`**, **`BT_WALLET_COLD`**, **`BT_WALLET_HOT`**.
+
+---
+
+## 7. Miner: axon IP and port
+
+Validators must reach your miner at **`AXON_EXTERNAL_IP:AXON_PORT`**.
+
+- If **`AXON_EXTERNAL_IP`** is **unset** and **`AXON_DISCOVER_EXTERNAL_IP=true`** (default), Lemma discovers your public IPv4 over HTTPS when the miner starts—no extra setup for many home/datacenter setups.
+- Override with **`AXON_EXTERNAL_IP`** if discovery is wrong (NAT, multihomed host).
+- Local-only testing: e.g. **`AXON_EXTERNAL_IP=127.0.0.1`**.
+
+**See what would be used (safe; does not open the axon):**
+
+```bash
+cd lemma
+source .venv/bin/activate
+lemma miner --dry-run
+```
+
+Open inbound **`AXON_PORT`** (default **8091**) on your firewall / cloud security group.
+
+**Run the miner**
+
+```bash
+lemma miner --dry-run
+lemma miner
+```
+
+---
+
+## 8. Validator: Lean Docker image
+
+Validators need the sandbox image for **`lake build`** verification.
+
+```bash
+cd lemma
 bash scripts/prebuild_lean_image.sh
 ```
 
-Miners do not require Docker for consensus; validators use the sandbox image for `lake build`.
+Set **`LEAN_SANDBOX_IMAGE`** in **`.env`** to match what you built (see script output).
 
-Optional Compose: `docker compose -f docker-compose.yml -f docker-compose.local.yml up miner` or `... up validator`.
-
-## 7. Run
+**Run the validator**
 
 ```bash
-uv run lemma miner --dry-run
-uv run lemma miner
-
-uv run lemma validator --dry-run
-uv run lemma validator
+lemma validator --dry-run
+lemma validator
 ```
 
-## Problem source modes
+---
 
-- **`LEMMA_PROBLEM_SOURCE=generated`** (default): block seed → one theorem from [`generated.py`](../lemma/problems/generated.py); ids `gen/<block>`.
-- **`frozen`**: `minif2f_frozen.json`; rebuild with [CATALOG_SOURCES.md](CATALOG_SOURCES.md).
+## 9. Problem source modes
 
-## Economics (mining)
+- **`LEMMA_PROBLEM_SOURCE=generated`** (default): block height seeds templates; ids like **`gen/<block>`**.
+- **`frozen`**: **`minif2f_frozen.json`** — see [CATALOG_SOURCES.md](CATALOG_SOURCES.md).
 
-Inference cost scales with **challenges answered** × **tokens** × **provider price**. Epoch spacing follows **subnet tempo**, not `DENDRITE_TIMEOUT_S` (HTTP answer deadline; default 3600s in shipped config). Cap forwards: `MINER_MAX_FORWARDS_PER_DAY` or `lemma miner --max-forwards-per-day`.
+---
 
-## Comparator
+## 10. Economics and ops
 
-Default off; Lean + axioms suffice for v1. If enabled, all validators must share the same comparator settings ([COMPARATOR.md](COMPARATOR.md)).
+Inference cost scales with challenges × tokens × provider price. Epoch cadence follows subnet tempo, not **`DENDRITE_TIMEOUT_S`** (HTTP answer deadline). Cap miner spend: **`MINER_MAX_FORWARDS_PER_DAY`** or **`lemma miner --max-forwards-per-day`**.
+
+**Comparator:** default off; see [COMPARATOR.md](COMPARATOR.md).
+
+**Governance / hashes:** **`lemma meta`** — [GOVERNANCE.md](GOVERNANCE.md).
+
+---
 
 ## Checklist
 
-| Item | Miner | Validator |
+| Step | Miner | Validator |
 | ---- | ----- | --------- |
-| `uv sync` | ✓ | ✓ |
-| Wallets + `NETUID` | ✓ | ✓ |
-| `.env` | Prover, axon | Judge, `lemma meta`, Lean image |
+| **`uv sync`** | ✓ | ✓ |
+| **`.env`** | Prover keys, axon | Judge keys, **`LEAN_SANDBOX_IMAGE`** |
+| Wallets + **`NETUID`** | ✓ | ✓ |
 | Docker | Optional | Required for production verify |
+| **`lemma configure`** | `configure prover` | `configure judge` |
 
-Tests: [TESTING.md](TESTING.md).
+More detail: [MINER.md](MINER.md), [VALIDATOR.md](VALIDATOR.md), [TESTING.md](TESTING.md).

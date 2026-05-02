@@ -44,7 +44,7 @@ def _find_seed_per_builder() -> dict[int, int]:
     return found
 
 
-def _lake_build_only(work: Path, image: str, timeout_s: float) -> tuple[int, str]:
+def _lake_build_only(work: Path, image: str) -> tuple[int, str]:
     """Return (exit_code, combined_output)."""
     inner = (
         "set -euo pipefail; "
@@ -58,6 +58,8 @@ def _lake_build_only(work: Path, image: str, timeout_s: float) -> tuple[int, str
         raise RuntimeError("docker SDK required") from e
 
     client = docker.from_env()
+    # docker-py's containers.run forwards kwargs to create(); demux and timeout are invalid (docker-py>=7).
+    # Workflow job timeout still caps wall-clock; omit Docker-level timeout.
     try:
         out = client.containers.run(
             image,
@@ -68,8 +70,6 @@ def _lake_build_only(work: Path, image: str, timeout_s: float) -> tuple[int, str
             remove=True,
             stdout=True,
             stderr=True,
-            demux=False,
-            timeout=int(timeout_s),
             user="0:0",
         )
         text = out.decode("utf-8", errors="replace") if isinstance(out, bytes) else str(out)
@@ -89,7 +89,6 @@ def main() -> int:
         return 0
 
     image = os.environ.get("LEAN_SANDBOX_IMAGE", "lemma/lean-sandbox:latest")
-    timeout_s = float(os.environ.get("LEMMA_TEMPLATE_CI_TIMEOUT_S", "2400"))
 
     from lemma.lean.workspace import materialize_workspace
     from lemma.problems.generated import GeneratedProblemSource
@@ -105,7 +104,7 @@ def main() -> int:
         tmp = Path(tempfile.mkdtemp(prefix="lemma-tpl-ci-"))
         try:
             materialize_workspace(tmp, p, stub)
-            code, out = _lake_build_only(tmp, image, timeout_s)
+            code, out = _lake_build_only(tmp, image)
             if code != 0:
                 failures.append(
                     f"builder_index={bi} seed={seed} template_fn={p.extra.get('template_fn')} "
