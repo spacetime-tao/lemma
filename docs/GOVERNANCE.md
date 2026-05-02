@@ -9,7 +9,7 @@ Validators expand each epoch’s block seed into **one** theorem using [`lemma/p
 Fingerprints (share off-chain like the judge profile):
 
 ```bash
-lemma meta
+uv run lemma meta
 # prints generated_registry_sha256=... and generated_registry_json=...
 ```
 
@@ -31,7 +31,7 @@ Use this path only when **`LEMMA_PROBLEM_SOURCE=frozen`**. Otherwise see **Gener
 Rubric text lives in `lemma/judge/prompts.py`. Canonical fingerprints:
 
 ```bash
-lemma meta
+uv run lemma meta
 # prints problem_source=..., generated_registry_* (generated mode), judge_rubric_sha256=..., judge_profile_sha256=..., ...
 ```
 
@@ -47,7 +47,7 @@ Affine-style fairness needs **one** grading model everyone uses; Lemma does not 
 1. Pick **one** open-weight instruct model and **one** serving stack (e.g. [vLLM](https://github.com/vllm-project/vllm) OpenAI server).
 2. Defaults ship as **`JUDGE_PROVIDER=openai`**, **`OPENAI_MODEL=Qwen/Qwen3-32B-TEE`**, **`OPENAI_BASE_URL=https://llm.chutes.ai/v1`** (Chutes). Override when switching stacks (e.g. self-hosted vLLM); **`OPENAI_API_KEY`** is whatever the host requires (Chutes API key or a placeholder locally).
 3. Align **`JUDGE_TEMPERATURE`** / **`JUDGE_MAX_TOKENS`** subnet-wide.
-4. Run **`lemma meta`** on a reference machine, distribute **`judge_profile_sha256`** + **`judge_profile_json`**, set **`JUDGE_PROFILE_SHA256_EXPECTED`** on each validator.
+4. Run **`uv run lemma meta`** on a reference machine, distribute **`judge_profile_sha256`** + **`judge_profile_json`**, set **`JUDGE_PROFILE_SHA256_EXPECTED`** on each validator.
 
 **Tamper resistance** is operational: you cannot prove a remote validator runs unmodified code from the chain alone. Mitigations are **reproducible releases** (pinned Git tag + Docker image digest), **published constitution** (profile hash + subnet announcement), and **social verification**. The profile hash catches accidental misconfiguration; deliberate cheating is an incentive / monitoring problem outside this repo.
 
@@ -71,11 +71,11 @@ Lemma **cannot** cryptographically prove two remote validators run identical cod
 
 1. **Pin one release** — same **Git tag** (and ideally same **Docker image digest** if you ship containers). Everyone deploys from that artifact only.
 2. **Publish one env template** — a subnet-managed `.env` or matrix that fixes **`LEMMA_PROBLEM_SOURCE`**, **`DENDRITE_TIMEOUT_S`**, **`LEAN_VERIFY_TIMEOUT_S`**, **`LEAN_SANDBOX_*`**, **`JUDGE_*`**, **`OPENAI_*`**, optional **`LEMMA_COMPARATOR_*`**, and **`EMPTY_EPOCH_WEIGHTS_POLICY`**. Treat drift like a bug.
-3. **Pin hashes from `lemma meta`** on that release branch:
+3. **Pin hashes from `uv run lemma meta`** on that release branch:
    - **`JUDGE_PROFILE_SHA256_EXPECTED`** — same judge model, URL, temperature, max tokens, rubric.
    - **`LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED`** when using **generated** templates (same `generated.py` registry).
 4. **Announce upgrades** — changelog + “cutover” note so all validators bump together; miners see fewer inconsistent rounds.
-5. **Detect mistakes** — optional CI on the repo tag that runs **`lemma meta`** and fails if outputs drift from published JSON; community monitoring if a validator’s weights look uncorrelated (social layer).
+5. **Detect mistakes** — optional CI on the repo tag that runs **`uv run lemma meta`** and fails if outputs drift from published JSON; community monitoring if a validator’s weights look uncorrelated (social layer).
 
 **What this does *not* solve:** a malicious validator could still run different software off-chain. Mitigations are **stake / reputation**, **open-source audits**, and **economic incentives** — same as other subnets. The hashes mainly stop **accidental** misconfiguration.
 

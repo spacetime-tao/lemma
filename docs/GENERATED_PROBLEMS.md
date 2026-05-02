@@ -29,7 +29,7 @@ The generator does **not** encode a time limit. **`DENDRITE_TIMEOUT_S`** is how 
 
 ## Wall-clock budget — expectations
 
-**Qualitative expectation:** with a fixed window of a few minutes, **easy and many medium** templates are often **plausible** to close if the prover and Mathlib usage are strong. **Hard** templates will **often** cause timeouts or failed builds in that same window unless the stack is very capable or specialized—so *empirical* success rates depend on model, prompts, and hardware. The point of reporting the **7 / 11 / 4** split is so operators and miners know the **draw is mixed**, not uniformly “toy” or uniformly “olympiad.”
+**Qualitative expectation:** under the subnet’s **answer deadline** (**`DENDRITE_TIMEOUT_S`**; shipped default **60 minutes**), **easy and many medium** templates are often **plausible** to close if the prover and Mathlib usage are strong. **Hard** templates will **often** cause timeouts or failed builds in that same window unless the stack is very capable or specialized—so *empirical* success rates depend on model, prompts, and hardware. The point of reporting the **7 / 11 / 4** split is so operators and miners know the **draw is mixed**, not uniformly “toy” or uniformly “olympiad.”
 
 ## One way to read the subnet
 

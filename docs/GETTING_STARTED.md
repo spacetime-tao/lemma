@@ -8,7 +8,7 @@ This page is for someone who has never run Lemma before: what to install, in wha
 | ---- | ---------- |
 | **`lemma`** | The Lemma **CLI** for this repo. There is no separate `lemma-cli` package—the console script is declared in `pyproject.toml` as `lemma`. After setup you run `lemma --help`, `lemma miner`, `lemma validator`. |
 | **`uv`** | Fast Python installer/env manager ([Astral uv](https://docs.astral.sh/uv/)). Use it instead of juggling `pip` + `venv` by hand. |
-| **`btcli`** | Bittensor **wallet + chain** CLI. It ships with the `bittensor` dependency; invoke it as `uv run btcli` from this project (or activate the venv first). |
+| **`btcli`** | Bittensor **wallet + chain** CLI. It is installed when **`uv sync`** resolves **`bittensor[cli]`** (PyPI); it is **not** a separate clone step. Invoke **`uv run btcli`** from this repo (or activate `.venv` first). |
 
 ## 1. Install uv
 
@@ -20,7 +20,9 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 Follow any post-install notes so `uv` is on your `PATH`. On Windows, see the [uv install docs](https://docs.astral.sh/uv/getting-started/installation/).
 
-You do **not** need a separate `pip` install of Lemma if you use `uv sync` inside the repo (next step). If you prefer classic tooling: create a `python -m venv .venv`, activate it, then `pip install -e ".[dev]"` from the repo root—the `lemma` command is installed the same way.
+You do **not** download Bittensor or **`btcli`** by cloning alone—that happens when **`uv sync`** installs **`pyproject.toml`** dependencies into **`.venv`**.
+
+You do **not** need a separate `pip` install of Lemma if you use **`uv sync`** inside the repo (next step). If you prefer classic tooling: create **`python -m venv .venv`**, activate it, then **`pip install -e ".[dev]"`** from the repo root—the **`lemma`** and **`btcli`** commands land in that venv the same way.
 
 ## 2. Get the Lemma code and Python env
 
@@ -30,14 +32,25 @@ cd lemma
 uv sync --extra dev
 ```
 
-Optional: activate the virtualenv so you can type `lemma` instead of `uv run lemma`:
+**What each step does**
+
+| Step | Result |
+| ---- | ------ |
+| **`git clone`** | Source tree only (no Python packages yet). |
+| **`uv sync --extra dev`** | Creates **`.venv`**, installs **`lemma`** (editable), **`bittensor[cli]`** (library + **`btcli`**), and dev tools (**`pytest`**, **`ruff`**, …). |
+
+Optional groups: **`catalog`** (large catalog builds — see [CATALOG_SOURCES.md](CATALOG_SOURCES.md)), **`wandb`**. Use **`uv sync --all-extras`** only if you need every optional extra.
+
+**Secrets:** copy **[`.env.example`](../.env.example)** to **`.env`** and fill in keys. **`.env`** is gitignored — never **`git add -f .env`**; share only **`.env.example`** or subnet ops templates.
+
+Optional: activate the virtualenv so you can type **`lemma`** instead of **`uv run lemma`**:
 
 ```bash
 source .venv/bin/activate   # Linux/macOS
 lemma --help
 ```
 
-You should see Click commands: `miner`, `validator`, `meta`, `verify`, etc.
+You should see Click commands: **`miner`**, **`validator`**, **`meta`**, **`verify`**, etc. Contributors: run **`uv run pytest`** / **`uv run ruff`** as in [TESTING.md](TESTING.md).
 
 ## 3. Bittensor wallet and subnet registration
 
@@ -60,7 +73,7 @@ Exact flows change over time; follow the current **[Bittensor docs](https://docs
 
 ## 4. Configure environment variables
 
-Lemma reads **[`.env.example`](../.env.example)** → `.env` in the project root.
+Lemma reads **`.env`** in the project root (copy from **[`.env.example`](../.env.example)** if you have not already — see step 2).
 
 **Everyone:**
 
@@ -75,7 +88,7 @@ Lemma reads **[`.env.example`](../.env.example)** → `.env` in the project root
 **Validators** (grading side):
 
 - **`LEAN_SANDBOX_IMAGE`** after you build the Lean image (step 5).
-- **Judge LLM** (scores reasoning traces): **`JUDGE_PROVIDER`**, **`OPENAI_BASE_URL`**, **`OPENAI_MODEL`**, **`JUDGE_TEMPERATURE`**, **`JUDGE_MAX_TOKENS`**. Default expectation is a **single pinned stack** for every validator on the subnet (run `lemma meta` and share the hashes—see [GOVERNANCE.md](GOVERNANCE.md)).
+- **Judge LLM** (scores reasoning traces): **`JUDGE_PROVIDER`**, **`OPENAI_BASE_URL`**, **`OPENAI_MODEL`**, **`JUDGE_TEMPERATURE`**, **`JUDGE_MAX_TOKENS`**. Default expectation is a **single pinned stack** for every validator on the subnet (run **`uv run lemma meta`** and share the hashes—see [GOVERNANCE.md](GOVERNANCE.md)).
 - Optional: **`JUDGE_PROFILE_SHA256_EXPECTED`** so your validator refuses to start if you typo a model name.
 
 ### API keys—two different roles
@@ -133,7 +146,7 @@ uv run lemma validator --dry-run
 uv run lemma validator
 ```
 
-Share **`lemma meta`** output with other operators so everyone pins the same judge profile where required.
+Share **`uv run lemma meta`** output with other operators so everyone pins the same judge profile where required.
 
 ## Is “open miner model + strict validator judge” a good idea?
 
@@ -177,6 +190,6 @@ See [COMPARATOR.md](COMPARATOR.md). Short version:
 | ---- | ----- | --------- |
 | `uv sync` | ✓ | ✓ |
 | Wallet + `NETUID` | ✓ | ✓ |
-| `.env` | Prover keys, axon port/IP | Judge stack, `lemma meta`, Lean image |
+| `.env` | Prover keys, axon port/IP | Judge stack, **`uv run lemma meta`**, Lean image |
 | Docker | Optional | Strongly recommended |
 | `lemma miner` / `lemma validator` | ✓ | ✓ |

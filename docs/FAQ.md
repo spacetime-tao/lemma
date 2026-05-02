@@ -196,7 +196,7 @@ Lemma cannot dial your wallets remotely. **You** run:
 1. Install Lemma (`uv sync`), configure `.env`: **`SUBTENSOR_NETWORK`**, **`SUBTENSOR_CHAIN_ENDPOINT`** (testnet), **`NETUID=467`**, wallets (**cold/hot names** — your `lemma`/`lemmahot` miner and `test`/`testhot` validator).
 2. Register keys on the subnet (`btcli`) per [Bittensor wallets / subnets](https://docs.learnbittensor.org/).
 3. **Miner:** `lemma miner` with axon reachable; **prover** keys or local model.
-4. **Validator:** build Lean image (`scripts/prebuild_lean_image.sh`), set judge (`lemma meta`), run `lemma validator` (start with `--dry-run` / `LEMMA_FAKE_JUDGE=1` if iterating).
+4. **Validator:** build Lean image (`scripts/prebuild_lean_image.sh`), align judge via **`uv run lemma meta`**, run **`uv run lemma validator`** (start with **`--dry-run`** / **`LEMMA_FAKE_JUDGE=1`** if iterating).
 5. Watch logs for **`lemma_epoch_summary`** and verify **`set_weights`** when ready.
 
 Exact endpoints and faucet TAO for testnet change over time — follow current [Bittensor local/testnet docs](https://docs.learnbittensor.org/).
@@ -232,9 +232,9 @@ Not quite. **Affine** routes validator evaluation through **miners’ models on 
 
 **Lemma** uses a **small LLM judge** only for **reasoning-trace quality**, after **Lean** passes. Supporting Anthropic **or** OpenAI is **operator choice** (keys, cost); for **fair, comparable scores across miners**, subnet operators should **pin one `JUDGE_PROVIDER` + model + `JUDGE_TEMPERATURE` / `JUDGE_MAX_TOKENS`** for all validators—same idea as “one grader,” even though the code allows two backends.
 
-## Five minutes vs “thousands of problems”
+## Answer deadline vs “thousands of problems”
 
-**`DENDRITE_TIMEOUT_S`** is **one HTTP timeout per challenge** (miners responding to **one** theorem broadcast). Each **chain epoch**, the validator samples **one** problem (**generated** from the block seed by default; **frozen** walks JSON). Throughput is **one problem per scoring epoch**, not thousands per wall-clock minute.
+**`DENDRITE_TIMEOUT_S`** is **one HTTP timeout per challenge** (miners responding to **one** theorem broadcast; shipped default **60 minutes**). Each **chain epoch**, the validator samples **one** problem (**generated** from the block seed by default; **frozen** walks JSON). Throughput is **one problem per scoring epoch**, not thousands per wall-clock minute.
 
 ### Why not millions of rows forever?
 

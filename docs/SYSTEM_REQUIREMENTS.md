@@ -22,9 +22,9 @@ Rough guidance for single-machine setups. Scale up if you run many validators or
 | **Docker** | **Yes, for production verification** of miner proofs: untrusted Lean runs in the **`lemma/lean-sandbox`** image ([VALIDATOR.md](VALIDATOR.md)). Without Docker you’d only use host Lean for **your own** testing (`LEMMA_USE_DOCKER=0`). |
 | **Judge stack** | Default design is **[Chutes](https://chutes.ai/)** OpenAI-compatible HTTP (`Qwen/Qwen3-32B-TEE`): reliable outbound network and API key. Self-hosted **vLLM** remains supported if you prefer a local GPU. Details: [MODELS.md](MODELS.md). |
 
-## Five-minute window vs hard problems
+## Epochs and answer deadlines vs hard problems
 
-Each epoch samples **one** problem and miners get **`DENDRITE_TIMEOUT_S`** (default **3600 s** / 60 minutes in shipped config) to answer **that one** challenge—not the whole catalog in one sitting. Over many epochs, easy and hard theorems both appear; **some problems will rarely be solved** in time. That’s expected. Mitigations are subnet governance: tune timeouts, **curate or stratify** the catalog (`topic`, difficulty tags), and avoid weight games when nobody verifies—see **`EMPTY_EPOCH_WEIGHTS_POLICY`** in [.env.example](../.env.example).
+Each epoch samples **one** problem and miners get **`DENDRITE_TIMEOUT_S`** (default **3600 s** / 60 minutes in shipped config) to answer **that one** challenge—not the whole catalog in one sitting. **Round frequency** (how often scoring runs) follows **Bittensor subnet tempo**, not this timeout. Over many epochs, easy and hard theorems both appear; **some problems will rarely be solved** in time. That’s expected. Mitigations are subnet governance: tune timeouts, **curate or stratify** the catalog (`topic`, difficulty tags), and avoid weight games when nobody verifies—see **`EMPTY_EPOCH_WEIGHTS_POLICY`** in [.env.example](../.env.example).
 
 ## Related
 

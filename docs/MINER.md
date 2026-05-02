@@ -1,5 +1,7 @@
 # Miner operations
 
+First-time install (clone, **`uv sync`**, **`btcli`** wallets, **`.env`**): [GETTING_STARTED.md](GETTING_STARTED.md).
+
 ## Prerequisites
 
 - Registered hotkey on the subnet.

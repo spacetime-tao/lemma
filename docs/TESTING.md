@@ -1,5 +1,7 @@
 # Testing Lemma
 
+From a **[cloned](../README.md) repo** with dependencies installed (**`uv sync --extra dev`** — see [GETTING_STARTED.md](GETTING_STARTED.md)).
+
 ## Default (CI / quick)
 
 ```bash

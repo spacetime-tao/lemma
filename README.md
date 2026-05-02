@@ -4,18 +4,28 @@ Decentralized Bittensor subnet: miners submit **Lean 4 proofs** plus **reasoning
 
 ## Quick start
 
+`git clone` only copies this repository. Python dependencies (including **Bittensor**, the **`btcli`** tool from the `bittensor[cli]` extra, and the **`lemma` CLI** from this package) are installed by **`uv sync`** into `.venv`.
+
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
-uv sync --all-extras
+git clone <this-repository-url>
+cd lemma
+uv sync --extra dev
 source .venv/bin/activate
 lemma --help
+uv run btcli --help
 ```
+
+For **`pip`** instead of **uv**: create a venv, then `pip install -e ".[dev]"` from the repo root (same console scripts). Optional extras: **`catalog`** (catalog builders), **`wandb`** — use `uv sync --all-extras` only if you need everything.
+
+Full setup (wallets, `.env`, Docker for validators): [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md).
 
 ## Docs
 
-- [Getting started (layman guide: uv, wallets, miner vs validator)](docs/GETTING_STARTED.md)
+- [Getting started (uv, clone vs sync, wallets, miner vs validator)](docs/GETTING_STARTED.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Production checklist](docs/PRODUCTION.md)
+- [Governance & upgrades](docs/GOVERNANCE.md)
 - [Comparator hook](docs/COMPARATOR.md)
 - [Validator](docs/VALIDATOR.md)
 - [Miner](docs/MINER.md)
@@ -24,6 +34,7 @@ lemma --help
 - [System requirements (miner vs validator)](docs/SYSTEM_REQUIREMENTS.md)
 - [Models & Chutes recommendations](docs/MODELS.md)
 - [Generated problems (difficulty mix, timeouts)](docs/GENERATED_PROBLEMS.md)
+- [Catalog sources (building `minif2f_frozen.json`)](docs/CATALOG_SOURCES.md)
 
 ## References
 

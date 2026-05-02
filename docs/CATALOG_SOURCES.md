@@ -5,7 +5,8 @@ Validators sample challenges from ``lemma/problems/minif2f_frozen.json`` (any me
 ```bash
 # merged catalog (recommended)
 uv sync --extra catalog    # only needed for FormalMATH (--sources formalmath_lite / formalmath_all)
-python scripts/build_lemma_catalog.py --out lemma/problems/minif2f_frozen.json \\
+python scripts/build_lemma_catalog.py \
+  --out lemma/problems/minif2f_frozen.json \
   --sources yangky,dm,putnam
 
 # single-repo shortcut (yangky11 miniF2F-lean4 only)

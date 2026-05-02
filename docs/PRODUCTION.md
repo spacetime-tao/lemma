@@ -1,6 +1,6 @@
 # Production readiness (Lemma)
 
-Use this as an operator checklist when moving from dev to a live subnet.
+Use this as an operator checklist when moving from dev to a live subnet. First-time machine setup (clone, **`uv sync`**, wallets, **`.env`**): [GETTING_STARTED.md](GETTING_STARTED.md).
 
 ## Objective gate (Lean)
 
@@ -10,7 +10,7 @@ Use this as an operator checklist when moving from dev to a live subnet.
 
 ## Subjective gate (judge)
 
-- Run **`lemma meta`** on a reference machine; distribute **`judge_rubric_sha256`** and **`judge_profile_sha256`**.
+- Run **`uv run lemma meta`** on a reference machine; distribute **`judge_rubric_sha256`** and **`judge_profile_sha256`**.
 - Set **`JUDGE_PROFILE_SHA256_EXPECTED`** on validators so configuration drift fails fast.
 - Default judge stack targets **[Chutes](https://chutes.ai/)** (`OPENAI_BASE_URL=https://llm.chutes.ai/v1`, `OPENAI_MODEL=Qwen/Qwen3-32B-TEE`). For self-hosted vLLM, point **`OPENAI_BASE_URL`** at your server; from Dockerized validators use a host-reachable URL (e.g. `host.docker.internal`), not bare `127.0.0.1`.
 

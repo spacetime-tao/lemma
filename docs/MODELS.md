@@ -14,7 +14,7 @@ Use the returned **`id`** string as **`OPENAI_MODEL`** (judge or miner prover). 
 
 ## Validators (judge)
 
-**Requirement:** every validator on a subnet should share **one** pinned stack (`lemma meta` → **`judge_profile_sha256`** → optional **`JUDGE_PROFILE_SHA256_EXPECTED`**).
+**Requirement:** every validator on a subnet should share **one** pinned stack (**`uv run lemma meta`** → **`judge_profile_sha256`** → optional **`JUDGE_PROFILE_SHA256_EXPECTED`**).
 
 **Recommended default:** **`Qwen/Qwen3-32B-TEE`** on **`https://llm.chutes.ai/v1`**.
 
@@ -41,4 +41,4 @@ Set **`PROVER_PROVIDER=openai`**, point **`OPENAI_BASE_URL`** at Chutes, set **`
 
 ## Self-hosted vLLM
 
-Defaults in this repo target **Chutes** first. If you instead run [vLLM](https://github.com/vllm-project/vllm) locally, set **`OPENAI_BASE_URL=http://127.0.0.1:8000/v1`** (or `host.docker.internal` from Docker) and **`OPENAI_MODEL`** to whatever id your server loads—then realign **`lemma meta`** with your operators.
+Defaults in this repo target **Chutes** first. If you instead run [vLLM](https://github.com/vllm-project/vllm) locally, set **`OPENAI_BASE_URL=http://127.0.0.1:8000/v1`** (or `host.docker.internal` from Docker) and **`OPENAI_MODEL`** to whatever id your server loads—then realign **`uv run lemma meta`** with your operators.

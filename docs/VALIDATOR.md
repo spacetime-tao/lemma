@@ -1,5 +1,7 @@
 # Validator operations
 
+First-time install (clone, **`uv sync`**, **`btcli`** wallets, **`.env`**): [GETTING_STARTED.md](GETTING_STARTED.md).
+
 ## Prerequisites
 
 1. **Wallet**: cold + hot registered on the target subnet (`btcli` — see [Bittensor docs](https://docs.learnbittensor.org/)).

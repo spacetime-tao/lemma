@@ -12,7 +12,7 @@
 
 ## Governance
 
-Catalog bumps, judge/rubric versions, and env parity across validators are described in [GOVERNANCE.md](GOVERNANCE.md). Operators should align on `lemma meta` (rubric SHA-256) and pinned `JUDGE_*` settings.
+Catalog bumps, judge/rubric versions, and env parity across validators are described in [GOVERNANCE.md](GOVERNANCE.md). Operators should align on **`uv run lemma meta`** fingerprints (rubric SHA-256) and pinned **`JUDGE_*`** settings.
 
 ## Trust model (v1)
 
