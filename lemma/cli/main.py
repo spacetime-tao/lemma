@@ -14,6 +14,7 @@ from pathlib import Path
 import click
 
 from lemma import __version__
+from lemma.cli.style import stylize
 from lemma.common.config import LemmaSettings
 from lemma.common.logging import setup_logging
 from lemma.problems.factory import get_problem_source, resolve_problem
@@ -104,8 +105,6 @@ def _doctor_api_lines(s: LemmaSettings) -> tuple[list[str], bool]:
 @main.command("doctor")
 def doctor_cmd() -> None:
     """Quick checks: venv, config load, optional chain RPC."""
-    from lemma.cli.style import stylize
-
     ok = True
     keys_ok = True
     root = Path.cwd()
@@ -187,11 +186,16 @@ def docs_cmd(open_desktop: bool) -> None:
         "docs/TESTING.md",
     )
     paths: list[Path] = []
-    click.echo("Docs (repo-relative paths; open in your editor or use --open):")
+    click.echo(
+        stylize("Docs", fg="cyan", bold=True)
+        + stylize(" (repo paths; use --open to launch the first file on your OS)\n", dim=True),
+        nl=False,
+    )
     for rel in rels:
         path = repo / rel
         paths.append(path)
-        click.echo(f"  {path}" if path.is_file() else f"  {rel} (not found)")
+        line = f"  {path}" if path.is_file() else f"  {rel} (not found)"
+        click.echo(stylize(line, fg="green") if path.is_file() else stylize(line, fg="yellow"))
     if open_desktop:
         from lemma.cli.open_help import open_paths_in_os
 
@@ -212,6 +216,8 @@ def meta_cmd() -> None:
     from lemma.problems.generated import generated_registry_canonical_dict, generated_registry_sha256
 
     s = LemmaSettings()
+    click.echo(stylize("Subnet fingerprints (`lemma meta`)", fg="cyan", bold=True))
+    click.echo(stylize("(publish these so every validator matches judge + templates)\n", dim=True), nl=False)
     click.echo(f"lemma_version={__version__}")
     click.echo(f"problem_source={s.problem_source}")
     click.echo(f"generated_registry_sha256={generated_registry_sha256()}")
@@ -235,7 +241,7 @@ def meta_cmd() -> None:
     help="Pretend chain head is this block when resolving the problem seed.",
 )
 def try_prover_cmd(do_verify: bool, block: int | None) -> None:
-    """Run the prover once on the theorem validators would sample now (prints reasoning + proof)."""
+    """Run the prover once on the current theorem. Uses your prover API (paid / quota)."""
     from lemma.cli.try_prover import run_try_prover
 
     settings = LemmaSettings()
@@ -272,6 +278,8 @@ def status_cmd() -> None:
         subtensor=subtensor,
     )
     p = src.sample(seed=problem_seed)
+    click.echo(stylize("Validator sampling preview", fg="cyan", bold=True))
+    click.echo(stylize("(same seed logic as `run_epoch`)\n", dim=True), nl=False)
     click.echo(f"problem_source={settings.problem_source}")
     click.echo(f"LEMMA_PROBLEM_SEED_MODE={settings.problem_seed_mode}")
     click.echo(f"LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS={settings.problem_seed_quantize_blocks}")
@@ -285,14 +293,14 @@ def status_cmd() -> None:
     if isinstance(extra, dict) and extra.get("template_fn"):
         click.echo(f"template_fn={extra.get('template_fn')}")
     click.echo("")
-    click.echo("Print Challenge.lean:")
+    click.echo(stylize("Print Challenge.lean:", fg="cyan"))
     click.echo("  lemma problems show --current")
     click.echo("")
-    click.echo("Run prover once on this theorem (LLM cost):")
+    click.echo(stylize("Try prover (bills API like a forward):", fg="yellow"))
     click.echo("  lemma try-prover")
-    click.echo("  lemma try-prover --verify   # also lake-build Submission.lean")
+    click.echo("  lemma try-prover --verify")
     click.echo("")
-    click.echo("Subnet fingerprints (align validators):")
+    click.echo(stylize("Fingerprints:", dim=True))
     click.echo("  lemma meta")
 
 
@@ -338,6 +346,15 @@ def miner_cmd(dry_run: bool, max_forwards_per_day: int | None) -> None:
             )
         return
     MinerService(settings).run()
+
+
+@main.command("miner-dry", help="Same as `lemma miner --dry-run` (print axon settings, no server).")
+@click.pass_context
+def miner_dry_cmd(ctx: click.Context) -> None:
+    cmd = main.get_command(ctx, "miner")
+    if cmd is None:
+        raise click.ClickException("miner command missing")
+    ctx.invoke(cmd, dry_run=True, max_forwards_per_day=None)
 
 
 @main.command("setup")
@@ -472,6 +489,34 @@ def validator_cmd(dry_run: bool | None) -> None:
     settings = LemmaSettings()
     dr = dry_run if dry_run is not None else os.environ.get("LEMMA_DRY_RUN") == "1"
     ValidatorService(settings, dry_run=dr).run_blocking()
+
+
+@main.command(
+    "validator-dry",
+    help="Print validator env summary and exit. "
+    "(For repeated rounds without set_weights, use `lemma validator --dry-run`.)",
+)
+def validator_dry_cmd() -> None:
+    """One-shot preview — unlike `lemma validator --dry-run`, does not run the metronome loop."""
+    settings = LemmaSettings()
+    setup_logging(settings.log_level)
+    click.echo(stylize("Validator — config preview (no rounds started)", fg="cyan", bold=True))
+    click.echo(f"netuid={settings.netuid}")
+    click.echo(f"problem_source={settings.problem_source}")
+    click.echo(f"LEAN_SANDBOX_IMAGE={settings.lean_sandbox_image}")
+    click.echo(f"LEAN_VERIFY_TIMEOUT_S={settings.lean_verify_timeout_s}")
+    click.echo(f"DENDRITE_TIMEOUT_S={settings.dendrite_timeout_s}")
+    click.echo(f"LEMMA_VALIDATOR_ROUND_INTERVAL_S={settings.validator_round_interval_s}")
+    click.echo(f"LEMMA_VALIDATOR_ALIGN_ROUNDS_TO_EPOCH={int(settings.validator_align_rounds_to_epoch)}")
+    click.echo(f"JUDGE_PROVIDER={settings.judge_provider}")
+    click.echo(f"OPENAI_BASE_URL={settings.openai_base_url}")
+    click.echo(f"OPENAI_MODEL={settings.openai_model}")
+    click.echo(
+        stylize(
+            "\nRun rounds (Ctrl+C to stop): `lemma validator` — dry-run epochs: `lemma validator --dry-run`",
+            dim=True,
+        ),
+    )
 
 
 @main.command("verify")

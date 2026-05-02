@@ -60,6 +60,13 @@ def run_try_prover(settings: LemmaSettings, *, verify: bool, block: int | None) 
 
     click.echo(stylize(f"lemma {__version__} — try-prover", fg="cyan", bold=True))
     click.echo(
+        stylize(
+            "This bills your prover API (Chutes, Anthropic, …) — same as handling one validator forward.",
+            fg="yellow",
+            bold=True,
+        ),
+    )
+    click.echo(
         stylize(f"chain_head_block={head} problem_seed={problem_seed} ({seed_tag})", dim=True),
     )
     click.echo(stylize(f"theorem_id={problem.id}  {problem.theorem_name}", fg="green"))

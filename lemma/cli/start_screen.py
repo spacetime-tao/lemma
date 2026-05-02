@@ -16,10 +16,13 @@ _MENU: tuple[tuple[str, str], ...] = (
     ("status", "Chain head + problem seed + theorem (same rule as validators)"),
     (
         "try-prover",
-        "Run prover on current theorem: print LLM reasoning + Submission.lean (uses API)",
+        "Run prover on current theorem (bills your LLM API — same as receiving a forward)",
     ),
-    ("miner-dry", "Show miner axon settings only (no server, no API)"),
-    ("validator-dry", "Show validator settings only (no rounds, no Docker loop)"),
+    ("miner-dry", "Same as shell: lemma miner-dry or lemma miner --dry-run"),
+    (
+        "validator-dry",
+        "Print validator env only (for repeating rounds without weights use validator --dry-run)",
+    ),
     (
         "miner",
         "Run miner axon for real (listens for validators; Ctrl+C to stop)",
@@ -45,7 +48,9 @@ class _NextStepParam(click.ParamType):
         self._keys = [k for k, _ in _MENU]
 
     def convert(self, value: object, param: click.Parameter | None, ctx: click.Context | None) -> str:
-        raw = str(value).strip().lower()
+        raw = " ".join(str(value).strip().lower().split())
+        if raw.startswith("lemma "):
+            raw = raw[6:].strip()
         if raw in ("q", "quit", "exit"):
             return "quit"
         if raw.isdigit():
@@ -81,7 +86,20 @@ def show_start_here(ctx: click.Context | None = None, *, group: click.Group | No
         + stylize(".\n", dim=True),
         nl=False,
     )
-    click.echo(stylize("Then pick a step — number or command:\n", dim=True))
+    click.echo(
+        stylize(
+            "Shell tip: type ",
+            dim=True,
+        )
+        + stylize("lemma", fg="green")
+        + stylize(" before each command (e.g. ", dim=True)
+        + stylize("lemma doctor", fg="yellow")
+        + stylize(", not ", dim=True)
+        + stylize("doctor", fg="yellow")
+        + stylize(" alone).\n", dim=True),
+        nl=False,
+    )
+    click.echo(stylize("Then pick a step — number or one keyword (not `lemma doctor`):\n", dim=True))
     for i, (key, blurb) in enumerate(_MENU, start=1):
         num = stylize(f"{i}", fg="yellow")
         name = stylize(key, fg="green")
@@ -113,8 +131,8 @@ def show_start_here(ctx: click.Context | None = None, *, group: click.Group | No
         "docs": ("docs", {}),
         "status": ("status", {}),
         "try-prover": ("try-prover", {}),
-        "miner-dry": ("miner", {"dry_run": True}),
-        "validator-dry": ("validator", {"dry_run": True}),
+        "miner-dry": ("miner-dry", {}),
+        "validator-dry": ("validator-dry", {}),
         "miner": ("miner", {"dry_run": False}),
         "validator": ("validator", {}),
         "meta": ("meta", {}),
