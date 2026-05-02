@@ -6,74 +6,78 @@ import sys
 
 import click
 
+from lemma.cli.style import stylize
+
+# (command_key, one-line description) — order fixed for numeric shortcuts.
+_MENU: tuple[tuple[str, str], ...] = (
+    ("setup", "Write .env interactively (NETUID, chain, wallets, API keys, …)"),
+    ("doctor", "Sanity check: .venv, config load, optional chain RPC"),
+    ("docs", "Print paths to markdown docs under this repo"),
+    ("status", "Chain head + problem seed + theorem id (validator sampling)"),
+    ("miner-dry", "Print miner axon settings only (no listener)"),
+    ("validator-dry", "Print validator settings only (no round loop)"),
+    ("meta", "Judge + generated-registry hashes (subnet parity)"),
+    ("quit", "Exit this menu"),
+)
+
+
+class _NextStepParam(click.ParamType):
+    """Accept 1–N, command name, or quit aliases."""
+
+    name = "step"
+
+    def __init__(self) -> None:
+        self._keys = [k for k, _ in _MENU]
+
+    def convert(self, value: object, param: click.Parameter | None, ctx: click.Context | None) -> str:
+        raw = str(value).strip().lower()
+        if raw in ("q", "quit", "exit"):
+            return "quit"
+        if raw.isdigit():
+            n = int(raw)
+            if 1 <= n <= len(self._keys):
+                return self._keys[n - 1]
+        for k in self._keys:
+            if raw == k.lower():
+                return k
+        raise click.BadParameter(
+            f"expected 1–{len(self._keys)} or one of: {', '.join(self._keys)}",
+        )
+
 
 def show_start_here(ctx: click.Context | None = None, *, group: click.Group | None = None) -> None:
     """Print the onboarding roadmap and optionally branch into another command."""
+    click.echo(stylize("\nLemma — START HERE\n", fg="cyan", bold=True), nl=False)
     click.echo(
-        """
- ======================================================================
-   Lemma — START HERE
- ======================================================================
-
-   New install (from repo root):
-
-     uv sync --extra dev
-     lemma
-
-   Or: activate .venv, run `lemma setup` when prompted.
-
- ----------------------------------------------------------------------
-   Reference: docs/GETTING_STARTED.md
- ----------------------------------------------------------------------
-   uv sync --extra dev
-   lemma setup              (prompts → .env)
-   btcli                    coldkey / hotkey, then subnet register
-   lemma miner | lemma validator
-
-   Same sampling as validators:  lemma status
-                                   lemma problems show --current
-
-   lemma doctor | lemma docs
-
- ----------------------------------------------------------------------
-   Defaults
- ----------------------------------------------------------------------
-   Time limits: subnet operator publishes DENDRITE_TIMEOUT_S / LEAN_VERIFY_TIMEOUT_S (defaults
-   often 300 s each). Everyone runs the same policy (see docs/FAQ.md, GOVERNANCE.md).
-
-   Theorem seed: LEMMA_PROBLEM_SEED_MODE=subnet_epoch (default) or quantize.
-
-   Rounds: LEMMA_VALIDATOR_ROUND_INTERVAL_S (timer), unless
-   LEMMA_VALIDATOR_ALIGN_ROUNDS_TO_EPOCH=1.
-
- ======================================================================
-"""
+        stylize("Install Python deps in your normal terminal first: ", dim=True)
+        + stylize("uv sync --extra dev", fg="yellow")
+        + stylize("  (this prompt is not a shell)\n", dim=True),
+        nl=False,
+    )
+    click.echo(stylize("Then pick a step — number or command:\n", dim=True))
+    for i, (key, blurb) in enumerate(_MENU, start=1):
+        num = stylize(f"{i}", fg="yellow")
+        name = stylize(key, fg="green")
+        click.echo(f"  {num}  {name}  {blurb}")
+    click.echo(
+        stylize("\nDefaults: see docs/FAQ.md (timeouts, seeds). ", dim=True)
+        + stylize("docs/GETTING_STARTED.md", fg="cyan")
+        + stylize(" for the full path.\n", dim=True),
+        nl=False,
     )
 
     if ctx is None or group is None or not sys.stdin.isatty():
-        click.echo("Tip: run `lemma start` for this menu. Next: `lemma setup`")
+        click.echo(stylize("Tip: run `lemma start` for this menu.", dim=True))
         return
 
-    choice = click.prompt(
-        "Next step",
-        type=click.Choice(
-            [
-                "setup",
-                "doctor",
-                "docs",
-                "status",
-                "miner-dry",
-                "validator-dry",
-                "meta",
-                "quit",
-            ],
-            case_sensitive=False,
-        ),
-        default="setup",
+    key = click.prompt(
+        stylize("Next step", fg="cyan", bold=True),
+        type=_NextStepParam(),
+        default="1",
         show_default=True,
     )
-    key = choice.lower()
     if key == "quit":
+        click.echo(stylize("Bye.", dim=True))
         return
 
     spec: dict[str, tuple[str, dict[str, object]]] = {

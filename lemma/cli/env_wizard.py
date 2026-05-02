@@ -7,12 +7,17 @@ from pathlib import Path
 
 import click
 
+from lemma.cli.style import stylize
 from lemma.common.env_file import merge_dotenv
 
 # Subnet default stack (see .env.example and MODELS.md)
 CHUTES_OPENAI_BASE_URL = "https://llm.chutes.ai/v1"
 CHUTES_DEFAULT_MODEL = "Qwen/Qwen3-32B-TEE"
-DEFAULT_SUBTENSOR_CHAIN_ENDPOINT = "wss://entrypoint-finney.opentensor.ai:443"
+
+# Official entrypoints (Bittensor docs — mainnet vs testnet).
+CHAIN_ENDPOINT_FINNEY = "wss://entrypoint-finney.opentensor.ai:443"
+CHAIN_ENDPOINT_TEST = "wss://test.finney.opentensor.ai:443"
+DEFAULT_SUBTENSOR_CHAIN_ENDPOINT = CHAIN_ENDPOINT_FINNEY
 
 
 def _require_secret(prompt: str) -> str:
@@ -23,16 +28,56 @@ def _require_secret(prompt: str) -> str:
 
 
 def collect_chain_updates() -> dict[str, str]:
-    click.echo("Chain + wallet names (must match coldkeys/hotkeys you created with btcli).")
-    netuid = click.prompt("NETUID", type=int)
-    network = click.prompt("SUBTENSOR_NETWORK", default="finney", show_default=True)
-    endpoint = click.prompt(
-        "SUBTENSOR_CHAIN_ENDPOINT",
-        default=DEFAULT_SUBTENSOR_CHAIN_ENDPOINT,
+    click.echo(
+        stylize("Chain", fg="cyan", bold=True)
+        + stylize(" — wallet names must match ", dim=True)
+        + stylize("btcli", fg="yellow")
+        + stylize(" coldkeys / hotkeys.\n", dim=True),
+        nl=False,
+    )
+    netuid = click.prompt(stylize("NETUID", fg="green"), type=int)
+
+    preset = click.prompt(
+        stylize("Network", fg="green"),
+        type=click.Choice(["finney", "test", "custom"], case_sensitive=False),
+        default="finney",
+    )
+    preset_l = preset.strip().lower()
+    if preset_l == "finney":
+        network, endpoint = "finney", CHAIN_ENDPOINT_FINNEY
+    elif preset_l == "test":
+        network, endpoint = "test", CHAIN_ENDPOINT_TEST
+    else:
+        click.echo(stylize("Custom RPC — paste values from your operator.\n", dim=True))
+        network = click.prompt(
+            stylize("SUBTENSOR_NETWORK", fg="green"),
+            default="finney",
+            show_default=True,
+        ).strip()
+        endpoint = click.prompt(
+            stylize("SUBTENSOR_CHAIN_ENDPOINT", fg="green"),
+            default=DEFAULT_SUBTENSOR_CHAIN_ENDPOINT,
+            show_default=True,
+        ).strip()
+
+    click.echo(
+        stylize(f"→ {network}", fg="cyan")
+        + stylize("  ", dim=True)
+        + stylize(endpoint, dim=True)
+        + "\n",
+        nl=False,
+    )
+
+    cold = click.prompt(
+        stylize("Cold wallet name", fg="green") + stylize(" (BT_WALLET_COLD)", dim=True),
+        default="default",
         show_default=True,
     ).strip()
-    cold = click.prompt("BT_WALLET_COLD (cold wallet name)", default="default", show_default=True).strip()
-    hot = click.prompt("BT_WALLET_HOT (hotkey name)", default="default", show_default=True).strip()
+    hot = click.prompt(
+        stylize("Hotkey name", fg="green") + stylize(" (BT_WALLET_HOT)", dim=True),
+        default="default",
+        show_default=True,
+    ).strip()
     return {
         "NETUID": str(netuid),
         "SUBTENSOR_NETWORK": network,
@@ -142,12 +187,17 @@ def collect_prover_updates() -> dict[str, str]:
 
 
 def merge_prompted(path: Path, label: str, collect: Callable[[], dict[str, str]]) -> None:
-    click.echo(f"--- {label} ---")
+    click.echo(stylize(f"— {label} —", fg="cyan", bold=True))
     merge_dotenv(path, collect())
 
 
 def run_setup(env_path: Path, role: str) -> None:
-    click.echo(f"Lemma writes configuration to {env_path} (no manual file editing).")
+    click.echo(
+        stylize("Writing ", dim=True)
+        + stylize(str(env_path), fg="yellow")
+        + stylize(" (merged prompts; no hand-editing required).\n", dim=True),
+        nl=False,
+    )
     merge_prompted(env_path, "Chain + wallets", collect_chain_updates)
     if role == "miner":
         merge_prompted(env_path, "Miner — prover LLM", collect_prover_updates)
@@ -162,5 +212,10 @@ def run_setup(env_path: Path, role: str) -> None:
         merge_prompted(env_path, "Validator — Lean image", collect_lean_image_updates)
 
     click.echo("")
-    click.echo("Done. Remaining manual steps: on-chain registration / funding (btcli).")
-    click.echo("Validators: run `bash scripts/prebuild_lean_image.sh` before first run if the image is not built yet.")
+    click.echo(
+        stylize("Done.", fg="green")
+        + stylize(" Register / fund with ", dim=True)
+        + stylize("btcli", fg="yellow")
+        + stylize(". Validators: build Lean image first → ", dim=True)
+        + stylize("bash scripts/prebuild_lean_image.sh", fg="yellow"),
+    )
