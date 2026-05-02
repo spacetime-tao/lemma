@@ -69,6 +69,18 @@ def show_start_here(ctx: click.Context | None = None, *, group: click.Group | No
         + stylize("  (this prompt is not a shell)\n", dim=True),
         nl=False,
     )
+    click.echo(
+        stylize("Then either ", dim=True)
+        + stylize("source .venv/bin/activate", fg="yellow")
+        + stylize(" and run ", dim=True)
+        + stylize("lemma …", fg="green")
+        + stylize(", or ", dim=True)
+        + stylize("uv run lemma …", fg="yellow")
+        + stylize(", or ", dim=True)
+        + stylize("./scripts/lemma-run lemma …", fg="yellow")
+        + stylize(".\n", dim=True),
+        nl=False,
+    )
     click.echo(stylize("Then pick a step — number or command:\n", dim=True))
     for i, (key, blurb) in enumerate(_MENU, start=1):
         num = stylize(f"{i}", fg="yellow")

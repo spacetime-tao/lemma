@@ -42,10 +42,72 @@ def start_cmd(ctx: click.Context) -> None:
     show_start_here(ctx, group=main)
 
 
+def _doctor_api_lines(s: LemmaSettings) -> tuple[list[str], bool]:
+    """Lines about inference keys (never print secrets). Returns (lines, all_required_ok)."""
+    lines: list[str] = []
+    ok_all = True
+
+    def _present(val: str | None) -> bool:
+        return bool(val and str(val).strip())
+
+    jp = (s.judge_provider or "openai").lower()
+    pp = (s.prover_provider or "anthropic").lower()
+
+    tasks: list[tuple[str, str]] = []
+    if jp == "openai":
+        tasks.append(("Judge", "openai"))
+    elif jp == "anthropic":
+        tasks.append(("Judge", "anthropic"))
+    else:
+        lines.append(f"INFO judge: JUDGE_PROVIDER={jp!r}")
+
+    if pp == "openai":
+        tasks.append(("Prover", "openai"))
+    elif pp == "anthropic":
+        tasks.append(("Prover", "anthropic"))
+    else:
+        lines.append(f"INFO prover: PROVER_PROVIDER={pp!r}")
+
+    if tasks == [("Judge", "openai"), ("Prover", "openai")]:
+        ok = _present(s.openai_api_key)
+        ok_all = ok
+        tag = "OK" if ok else "WARN"
+        lines.append(
+            f"{tag} Judge + prover (OpenAI-compatible): "
+            + ("OPENAI_API_KEY present (hidden)" if ok else "OPENAI_API_KEY missing"),
+        )
+        return lines, ok_all
+
+    for role, kind in tasks:
+        if kind == "openai":
+            ok = _present(s.openai_api_key)
+            if not ok:
+                ok_all = False
+            tag = "OK" if ok else "WARN"
+            lines.append(
+                f"{tag} {role} (OpenAI-compatible): "
+                + ("OPENAI_API_KEY present (hidden)" if ok else "OPENAI_API_KEY missing"),
+            )
+        else:
+            ok = _present(s.anthropic_api_key)
+            if not ok:
+                ok_all = False
+            tag = "OK" if ok else "WARN"
+            lines.append(
+                f"{tag} {role} (Anthropic): "
+                + ("ANTHROPIC_API_KEY present (hidden)" if ok else "ANTHROPIC_API_KEY missing"),
+            )
+
+    return lines, ok_all
+
+
 @main.command("doctor")
 def doctor_cmd() -> None:
     """Quick checks: venv, config load, optional chain RPC."""
+    from lemma.cli.style import stylize
+
     ok = True
+    keys_ok = True
     root = Path.cwd()
     if (root / ".venv").is_dir():
         click.echo("OK .venv present (uv sync --extra dev)")
@@ -55,6 +117,29 @@ def doctor_cmd() -> None:
     try:
         s = LemmaSettings()
         click.echo(f"OK config NETUID={s.netuid} problem_source={s.problem_source}")
+        key_lines, keys_ok = _doctor_api_lines(s)
+        for ln in key_lines:
+            click.echo(ln)
+        jp2 = (s.judge_provider or "openai").lower()
+        pp2 = (s.prover_provider or "anthropic").lower()
+        if jp2 == "openai":
+            click.echo(
+                stylize(
+                    f"Judge: OPENAI_MODEL={s.openai_model!r} @ {s.openai_base_url!r} "
+                    f"(Chutes Qwen default if you used setup).",
+                    dim=True,
+                ),
+            )
+        elif jp2 == "anthropic":
+            click.echo(stylize(f"Judge: ANTHROPIC_MODEL={s.anthropic_model!r}", dim=True))
+        if pp2 == "openai":
+            pm = s.prover_model or s.openai_model
+            click.echo(
+                stylize(
+                    f"Prover: model={pm!r} @ {s.openai_base_url!r}",
+                    dim=True,
+                ),
+            )
     except Exception as e:  # noqa: BLE001
         click.echo(f"CONFIG ERROR: {e}", err=True)
         raise SystemExit(1) from e
@@ -66,10 +151,21 @@ def doctor_cmd() -> None:
     except Exception as e:  # noqa: BLE001
         click.echo(f"SKIP chain RPC (offline OK): {e}")
     click.echo("")
+    click.echo(
+        stylize(
+            "`lemma meta` prints hashes — subnet operators publish these so every validator "
+            "uses the same judge stack + generated templates (fair scores).",
+            dim=True,
+        ),
+    )
+    click.echo("")
     click.echo("START HERE: `lemma` or `lemma start`  ·  Doc paths: `lemma docs`")
     if not ok:
         raise SystemExit(1)
-    click.echo("doctor: OK")
+    if not keys_ok:
+        click.echo("doctor: WARN (inference keys — see above; validators need judge, miners need prover)", err=True)
+    else:
+        click.echo("doctor: OK")
 
 
 @main.command("docs")

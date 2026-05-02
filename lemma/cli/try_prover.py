@@ -63,6 +63,12 @@ def run_try_prover(settings: LemmaSettings, *, verify: bool, block: int | None) 
         stylize(f"chain_head_block={head} problem_seed={problem_seed} ({seed_tag})", dim=True),
     )
     click.echo(stylize(f"theorem_id={problem.id}  {problem.theorem_name}", fg="green"))
+    click.echo(
+        stylize(
+            "Calling your prover LLM (no axon / no other miners). This can take minutes.",
+            dim=True,
+        ),
+    )
     click.echo("")
 
     prover = LLMProver(settings)
