@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Run any command with the repo virtualenv activated (no need for `uv run` each time).
+# Usage from repo root:
+#   ./scripts/lemma-run lemma miner --dry-run
+# Optional: add an alias in ~/.zshrc or ~/.bashrc (replace path once):
+#   alias lemma-run='/ABS/PATH/TO/lemma/scripts/lemma-run'
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+if [[ ! -d .venv ]]; then
+  echo "lemma-run: .venv not found. Run: cd '$ROOT' && uv sync --extra dev" >&2
+  exit 1
+fi
+# shellcheck source=/dev/null
+source "$ROOT/.venv/bin/activate"
+exec "$@"

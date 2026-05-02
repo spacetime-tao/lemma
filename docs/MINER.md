@@ -1,74 +1,29 @@
 # Miner
 
-End-to-end flow: install → **`.env`** → wallets → axon reachable → run.
+Full walkthrough (uv, **`btcli`**, **`lemma setup`**, **`lemma-run`**): [GETTING_STARTED.md](GETTING_STARTED.md).
+
+That guide avoids hand-editing **`.env`**: use **`lemma setup`** (role **miner** or **both**) or **`lemma configure chain`** + **`lemma configure prover`** + **`lemma configure axon`**.
+
+**Recommended LLM backend:** Chutes (OpenAI-compatible) when prompted — others are optional.
 
 ---
 
-## 1. Install and shell
+## Run
+
+From repo root (with **`lemma-run`** or an activated **`.venv`**):
 
 ```bash
-git clone <repository-url>
-cd lemma
-uv sync --extra dev
-source .venv/bin/activate
+./scripts/lemma-run lemma miner --dry-run
+./scripts/lemma-run lemma miner
 ```
 
-(Windows: **`.venv\Scripts\activate`**.)
-
----
-
-## 2. Base `.env`
-
-```bash
-cp .env.example .env
-```
-
-Set at least **`NETUID`**, **`SUBTENSOR_*`**, **`BT_WALLET_COLD`**, **`BT_WALLET_HOT`**, **`AXON_PORT`**.
-
----
-
-## 3. Prover API keys (interactive)
-
-```bash
-cd lemma
-source .venv/bin/activate
-lemma configure prover
-```
-
-Choose **openai** or **anthropic**, paste the key when prompted. This merges **`PROVER_PROVIDER`** and **`OPENAI_*`** or **`ANTHROPIC_*`** into **`.env`**.
-
-To set **`PROVER_MODEL`**, **`OPENAI_BASE_URL`**, or caps by hand, edit **`.env`** after (see [`.env.example`](../.env.example)).
-
----
-
-## 4. Axon reachability (automatic + checks)
-
-**Default behavior:** if **`AXON_EXTERNAL_IP`** is empty and **`AXON_DISCOVER_EXTERNAL_IP=true`**, the miner discovers your public IPv4 at startup (same logic as production).
-
-**See resolved settings without starting the axon:**
-
-```bash
-lemma miner --dry-run
-```
-
-You should see **`axon_external_ip=...`** (from env, or a probe of what auto-discovery would use). If discovery fails, set **`AXON_EXTERNAL_IP`** to your public IPv4 and ensure **`AXON_PORT`** is open to validators.
-
----
-
-## 5. Run
-
-```bash
-lemma miner --dry-run
-lemma miner
-```
-
-Daily forward cap: **`MINER_MAX_FORWARDS_PER_DAY`** or **`lemma miner --max-forwards-per-day`** → HTTP **429** after limit; state under **`~/.lemma/miner_daily_forwards.json`**.
+Daily forward cap: **`MINER_MAX_FORWARDS_PER_DAY`** or **`lemma miner --max-forwards-per-day`**.
 
 ---
 
 ## Generated mode
 
-Templates span easy/medium/hard; answer deadline on validators is **`DENDRITE_TIMEOUT_S`** ([GENERATED_PROBLEMS.md](GENERATED_PROBLEMS.md)).
+Templates span easy/medium/hard; validator answer deadline is **`DENDRITE_TIMEOUT_S`** ([GENERATED_PROBLEMS.md](GENERATED_PROBLEMS.md)).
 
 ---
 
@@ -82,10 +37,10 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml up miner
 
 ## Output contract
 
-**`proof_script`** must be complete **`Submission.lean`** for the challenge theorem name. Without API keys the stub only proves the bundled demo.
+**`proof_script`** must be complete **`Submission.lean`** for the challenge theorem name.
 
 ---
 
 ## Models
 
-Chutes and other OpenAI-compatible endpoints: [MODELS.md](MODELS.md).
+Chutes (primary), self-hosted vLLM, Anthropic: [MODELS.md](MODELS.md).

@@ -21,7 +21,7 @@ btcli --help
 
 Equivalent: `python -m venv .venv && pip install -e ".[dev]"`. Optional extras: `catalog`, `wandb` (`uv sync --all-extras` if all are required).
 
-Wallets, chain endpoints, and API keys: [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md).
+**Smooth setup:** run **`chmod +x scripts/lemma-run`** then **`./scripts/lemma-run lemma setup`** — prompts fill **`.env`** (no manual editing). **`scripts/lemma-run`** activates **`.venv`** so you do not need **`uv run`** each time. Create cold/hot keys with **`btcli`** first; **[Getting started](docs/GETTING_STARTED.md)** lists copy-paste **`btcli`** commands and recommends **Chutes** for LLM keys.
 
 ## Documentation
 

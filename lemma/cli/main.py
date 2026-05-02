@@ -15,9 +15,7 @@ import click
 
 from lemma import __version__
 from lemma.common.config import LemmaSettings
-from lemma.common.env_file import merge_dotenv
 from lemma.common.logging import setup_logging
-from lemma.common.subtensor import get_subtensor
 from lemma.problems.factory import get_problem_source, resolve_problem
 
 
@@ -90,9 +88,89 @@ def miner_cmd(dry_run: bool, max_forwards_per_day: int | None) -> None:
     MinerService(settings).run()
 
 
+@main.command("setup")
+@click.option(
+    "--role",
+    type=click.Choice(["miner", "validator", "both"]),
+    default=None,
+    help="If omitted, you will be prompted.",
+)
+@click.option(
+    "--env-file",
+    "env_path",
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=None,
+    help="Default: ./.env",
+)
+def setup_cmd(role: str | None, env_path: Path | None) -> None:
+    """Interactive first-time configuration (chain, keys, axon / judge / Lean image). No manual .env editing."""
+    from lemma.cli.env_wizard import run_setup
+
+    path = env_path or Path.cwd() / ".env"
+    chosen = role or click.prompt(
+        "Role",
+        type=click.Choice(["miner", "validator", "both"]),
+    )
+    run_setup(path, chosen)
+
+
 @main.group("configure")
 def configure_grp() -> None:
-    """Interactive prompts to merge secrets into a `.env` file (run from repo root)."""
+    """Interactive prompts merged into `.env` (run from repo root)."""
+
+
+@configure_grp.command("chain")
+@click.option(
+    "--env-file",
+    "env_path",
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=None,
+    help="Default: ./.env",
+)
+def configure_chain(env_path: Path | None) -> None:
+    """Set NETUID, subtensor endpoint, and wallet names."""
+    from lemma.cli.env_wizard import collect_chain_updates
+    from lemma.common.env_file import merge_dotenv
+
+    path = env_path or Path.cwd() / ".env"
+    click.echo(f"Merging into {path}")
+    merge_dotenv(path, collect_chain_updates())
+
+
+@configure_grp.command("axon")
+@click.option(
+    "--env-file",
+    "env_path",
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=None,
+    help="Default: ./.env",
+)
+def configure_axon(env_path: Path | None) -> None:
+    """Set AXON_PORT for miners."""
+    from lemma.cli.env_wizard import collect_axon_updates
+    from lemma.common.env_file import merge_dotenv
+
+    path = env_path or Path.cwd() / ".env"
+    click.echo(f"Merging into {path}")
+    merge_dotenv(path, collect_axon_updates())
+
+
+@configure_grp.command("lean-image")
+@click.option(
+    "--env-file",
+    "env_path",
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=None,
+    help="Default: ./.env",
+)
+def configure_lean_image(env_path: Path | None) -> None:
+    """Set LEAN_SANDBOX_IMAGE for validators."""
+    from lemma.cli.env_wizard import collect_lean_image_updates
+    from lemma.common.env_file import merge_dotenv
+
+    path = env_path or Path.cwd() / ".env"
+    click.echo(f"Merging into {path}")
+    merge_dotenv(path, collect_lean_image_updates())
 
 
 @configure_grp.command("judge")
@@ -104,33 +182,14 @@ def configure_grp() -> None:
     help="Default: ./.env",
 )
 def configure_judge(env_path: Path | None) -> None:
-    """Set validator judge provider and API key (writes OPENAI_* or ANTHROPIC_* plus JUDGE_PROVIDER)."""
+    """Set validator judge (Chutes recommended, or Anthropic / custom OpenAI-compatible)."""
+    from lemma.cli.env_wizard import collect_judge_updates
+    from lemma.common.env_file import merge_dotenv
+
     path = env_path or Path.cwd() / ".env"
     click.echo(f"Merging into {path}")
-    provider = click.prompt(
-        "Judge provider",
-        type=click.Choice(["openai", "anthropic"], case_sensitive=False),
-    )
-    updates: dict[str, str] = {"JUDGE_PROVIDER": provider}
-    if provider == "openai":
-        key = click.prompt("OpenAI-compatible API key", hide_input=True).strip()
-        if not key:
-            raise click.UsageError("API key is required.")
-        updates["OPENAI_API_KEY"] = key
-        url = click.prompt(
-            "OPENAI_BASE_URL (optional; Enter for default Chutes/vLLM later in .env)",
-            default="",
-            show_default=False,
-        ).strip()
-        if url:
-            updates["OPENAI_BASE_URL"] = url
-    else:
-        key = click.prompt("Anthropic API key", hide_input=True).strip()
-        if not key:
-            raise click.UsageError("API key is required.")
-        updates["ANTHROPIC_API_KEY"] = key
-    merge_dotenv(path, updates)
-    click.echo("Done. Run `lemma meta` after edits that affect judge routing.")
+    merge_dotenv(path, collect_judge_updates())
+    click.echo("Done. Run `lemma meta` after changing models or URLs.")
 
 
 @configure_grp.command("prover")
@@ -142,34 +201,14 @@ def configure_judge(env_path: Path | None) -> None:
     help="Default: ./.env",
 )
 def configure_prover(env_path: Path | None) -> None:
-    """Set miner prover provider and API key (PROVER_PROVIDER + OPENAI_* or ANTHROPIC_*)."""
+    """Set miner prover LLM (Chutes recommended, or Anthropic / custom OpenAI-compatible)."""
+    from lemma.cli.env_wizard import collect_prover_updates
+    from lemma.common.env_file import merge_dotenv
+
     path = env_path or Path.cwd() / ".env"
     click.echo(f"Merging into {path}")
-    provider = click.prompt(
-        "Prover provider",
-        type=click.Choice(["openai", "anthropic"], case_sensitive=False),
-    )
-    pl = provider.lower()
-    updates: dict[str, str] = {"PROVER_PROVIDER": pl}
-    if pl == "openai":
-        key = click.prompt("OPENAI_API_KEY", hide_input=True).strip()
-        if not key:
-            raise click.UsageError("API key is required.")
-        updates["OPENAI_API_KEY"] = key
-        url = click.prompt(
-            "OPENAI_BASE_URL (optional)",
-            default="",
-            show_default=False,
-        ).strip()
-        if url:
-            updates["OPENAI_BASE_URL"] = url
-    else:
-        key = click.prompt("ANTHROPIC_API_KEY", hide_input=True).strip()
-        if not key:
-            raise click.UsageError("API key is required.")
-        updates["ANTHROPIC_API_KEY"] = key
-    merge_dotenv(path, updates)
-    click.echo("Done. Use `lemma miner --dry-run` to confirm axon settings.")
+    merge_dotenv(path, collect_prover_updates())
+    click.echo("Done. Run `lemma miner --dry-run` to confirm axon settings.")
 
 
 @main.command("validator")
@@ -302,6 +341,8 @@ def problems_show(problem_id: str | None, current: bool, block: int | None) -> N
         raise click.UsageError("Specify exactly one of: PROBLEM_ID, --current (-c), or --block N.")
 
     if current:
+        from lemma.common.subtensor import get_subtensor
+
         seed = int(get_subtensor(settings).get_current_block())
         p = src.sample(seed=seed)
         click.echo(f"# block={seed} theorem_id={p.id}\n")
