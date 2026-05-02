@@ -31,12 +31,19 @@ jobs:
           version: "latest"
       - name: Sync (pytest)
         run: uv sync --extra dev
+      # Buildx does not load into the local daemon unless load=true; otherwise
+      # pytest/docker-py tries to pull lemma-lean-sandbox:ci from a registry (404).
       - name: Build Lean sandbox image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: compose/lean.Dockerfile
           push: false
+          load: true
+          # Single platform so `load` works; matches ubuntu-latest (amd64). Provenance
+          # off avoids occasional BuildKit+daemon issues when loading into the local store.
+          platforms: linux/amd64
+          provenance: false
           tags: lemma-lean-sandbox:ci
       - name: Docker golden Lean verify
         run: LEAN_SANDBOX_IMAGE=lemma-lean-sandbox:ci RUN_DOCKER_LEAN=1 uv run pytest tests/test_docker_golden.py -v --tb=short
