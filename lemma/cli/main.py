@@ -73,20 +73,37 @@ def doctor_cmd() -> None:
 
 
 @main.command("docs")
-def docs_cmd() -> None:
+@click.option(
+    "--open",
+    "open_desktop",
+    is_flag=True,
+    help="Open the first available doc in your default app (macOS open / Linux xdg-open).",
+)
+def docs_cmd(open_desktop: bool) -> None:
     """Print paths to main documentation files in this repository."""
     repo = Path(__file__).resolve().parents[2]
-    click.echo("Open or preview these files:")
-    for rel in (
+    rels = (
         "docs/GETTING_STARTED.md",
         "docs/FAQ.md",
         "docs/MINER.md",
         "docs/VALIDATOR.md",
         "docs/MODELS.md",
         "docs/TESTING.md",
-    ):
+    )
+    paths: list[Path] = []
+    click.echo("Docs (repo-relative paths; open in your editor or use --open):")
+    for rel in rels:
         path = repo / rel
+        paths.append(path)
         click.echo(f"  {path}" if path.is_file() else f"  {rel} (not found)")
+    if open_desktop:
+        from lemma.cli.open_help import open_paths_in_os
+
+        opened = open_paths_in_os([p for p in paths if p.is_file()])
+        if opened:
+            click.echo(f"Opened: {opened}")
+        else:
+            click.echo("No files found to open.", err=True)
 
 
 @main.command("meta")
@@ -106,6 +123,27 @@ def meta_cmd() -> None:
     click.echo(f"judge_rubric_sha256={rubric_sha256()}")
     click.echo(f"judge_profile_sha256={judge_profile_sha256(s)}")
     click.echo("judge_profile_json=" + json.dumps(judge_profile_dict(s), sort_keys=True))
+
+
+@main.command("try-prover")
+@click.option(
+    "--verify/--no-verify",
+    "do_verify",
+    default=False,
+    help="After the LLM returns, run Lean sandbox verification (Docker/host like validators).",
+)
+@click.option(
+    "--block",
+    type=int,
+    default=None,
+    help="Pretend chain head is this block when resolving the problem seed.",
+)
+def try_prover_cmd(do_verify: bool, block: int | None) -> None:
+    """Run the prover once on the theorem validators would sample now (prints reasoning + proof)."""
+    from lemma.cli.try_prover import run_try_prover
+
+    settings = LemmaSettings()
+    run_try_prover(settings, verify=do_verify, block=block)
 
 
 @main.command("status")
@@ -153,6 +191,10 @@ def status_cmd() -> None:
     click.echo("")
     click.echo("Print Challenge.lean:")
     click.echo("  lemma problems show --current")
+    click.echo("")
+    click.echo("Run prover once on this theorem (LLM cost):")
+    click.echo("  lemma try-prover")
+    click.echo("  lemma try-prover --verify   # also lake-build Submission.lean")
     click.echo("")
     click.echo("Subnet fingerprints (align validators):")
     click.echo("  lemma meta")

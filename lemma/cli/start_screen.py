@@ -12,11 +12,26 @@ from lemma.cli.style import stylize
 _MENU: tuple[tuple[str, str], ...] = (
     ("setup", "Write .env interactively (NETUID, chain, wallets, API keys, …)"),
     ("doctor", "Sanity check: .venv, config load, optional chain RPC"),
-    ("docs", "Print paths to markdown docs under this repo"),
-    ("status", "Chain head + problem seed + theorem id (validator sampling)"),
-    ("miner-dry", "Print miner axon settings only (no listener)"),
-    ("validator-dry", "Print validator settings only (no round loop)"),
-    ("meta", "Judge + generated-registry hashes (subnet parity)"),
+    ("docs", "Print doc file paths (add --open on CLI to open in a desktop app)"),
+    ("status", "Chain head + problem seed + theorem (same rule as validators)"),
+    (
+        "try-prover",
+        "Run prover on current theorem: print LLM reasoning + Submission.lean (uses API)",
+    ),
+    ("miner-dry", "Show miner axon settings only (no server, no API)"),
+    ("validator-dry", "Show validator settings only (no rounds, no Docker loop)"),
+    (
+        "miner",
+        "Run miner axon for real (listens for validators; Ctrl+C to stop)",
+    ),
+    (
+        "validator",
+        "Run validator rounds for real (Lean + judge; Ctrl+C to stop)",
+    ),
+    (
+        "meta",
+        "Fingerprints: judge stack + template registry (must match other validators)",
+    ),
     ("quit", "Exit this menu"),
 )
 
@@ -85,8 +100,11 @@ def show_start_here(ctx: click.Context | None = None, *, group: click.Group | No
         "doctor": ("doctor", {}),
         "docs": ("docs", {}),
         "status": ("status", {}),
+        "try-prover": ("try-prover", {}),
         "miner-dry": ("miner", {"dry_run": True}),
         "validator-dry": ("validator", {"dry_run": True}),
+        "miner": ("miner", {"dry_run": False}),
+        "validator": ("validator", {}),
         "meta": ("meta", {}),
     }
     if key not in spec:

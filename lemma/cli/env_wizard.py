@@ -88,7 +88,18 @@ def collect_chain_updates() -> dict[str, str]:
 
 
 def collect_axon_updates() -> dict[str, str]:
-    port = click.prompt("AXON_PORT (miners: validators connect here)", default=8091, type=int)
+    click.echo(
+        stylize("Validators reach your miner at ", dim=True)
+        + stylize("public_ip:AXON_PORT", fg="yellow")
+        + stylize(". Press Enter to keep the default port.\n", dim=True),
+        nl=False,
+    )
+    port = click.prompt(
+        stylize("AXON_PORT", fg="green") + stylize("  [Enter = 8091]", dim=True),
+        default=8091,
+        type=int,
+        show_default=True,
+    )
     return {"AXON_PORT": str(port)}
 
 

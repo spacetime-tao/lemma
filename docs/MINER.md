@@ -17,6 +17,8 @@ Daily forward cap: `MINER_MAX_FORWARDS_PER_DAY` or `lemma miner --max-forwards-p
 
 Validators decide whether your proof typechecks; the miner process does not receive scores back on the axon path.
 
+- `lemma try-prover` runs the **prover once** on whatever theorem `lemma status` would sample right now, then prints informal reasoning and `proof_script` (uses your prover API). Add `--verify` to run Lean sandbox locally after (Docker).
+
 - Set `LEMMA_MINER_LOG_FORWARDS=1` to log each forward: reasoning excerpt and `proof_script` excerpt at INFO; raw model output is logged at DEBUG (enable e.g. `LOG_LEVEL=DEBUG` to see it).
 - Set `LEMMA_MINER_LOCAL_VERIFY=1` to run the same sandbox `lake build` as validators after the prover returns (requires Docker and `LEAN_SANDBOX_IMAGE` / timeouts aligned with your subnet). Logs `miner local verify OK` or `FAIL` with reason.
 
