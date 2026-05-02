@@ -1,25 +1,16 @@
-# Comparator hook (experimental)
+# Comparator (optional)
 
-After Lean **`lake build`** and axiom checks succeed, you can run an **optional** shell command inside the same temporary workspace (host or Docker-side equivalent paths).
+After successful **`lake build`** and axiom checks, an optional shell command may run in the same workspace (host or container paths).
 
-This is a **placeholder** for integrating tools such as [leanprover/comparator](https://github.com/leanprover/comparator) or custom scripts that compare statements/proofs. Nothing runs unless explicitly enabled.
+Enables integration of [leanprover/comparator](https://github.com/leanprover/comparator) or custom checks. Disabled unless configured.
 
-## Should we use it?
+- **Default:** off — kernel + axiom policy cover v1 security.
+- **If enabled on a subnet:** all validators must use the same **`LEMMA_COMPARATOR_CMD`** (or disable everywhere) to keep scores comparable.
 
-- **Default recommendation: no.** Kernel checking and axiom rules already decide whether a proof is acceptable for Lemma’s main security story. The comparator adds **ops burden** and another moving part.
-- **Use it when** your subnet explicitly wants **stronger statement equivalence** or **extra tooling** beyond `lake build` (policy decision—document it in subnet governance).
-- **If any validator enables it, every validator on that subnet should use the same** `LEMMA_COMPARATOR_ENABLED` / `LEMMA_COMPARATOR_CMD`. Mixed deployments ⇒ incomparable scores (same reasoning as pinning one judge stack).
-
-## Environment
-
-| Variable | Meaning |
+| Variable | Purpose |
 | -------- | ------- |
-| `LEMMA_COMPARATOR_ENABLED` | Set to `1` / `true` / `yes` to enable |
-| `LEMMA_COMPARATOR_CMD` | Shell tokenization via `shlex` (e.g. `/usr/local/bin/my-check --workspace .`) |
-| `LEMMA_COMPARATOR_TIMEOUT_S` | Optional cap (default `120`) |
+| `LEMMA_COMPARATOR_ENABLED` | `1` / `true` / `yes` |
+| `LEMMA_COMPARATOR_CMD` | Shell command (e.g. `shlex` list) |
+| `LEMMA_COMPARATOR_TIMEOUT_S` | Optional (default 120) |
 
-If the command exits non-zero, verification fails with reason **`comparator_rejected`** (see [`VerifyResult`](../lemma/lean/sandbox.py)).
-
-## Production note
-
-Full **landrun** / isolation parity with [lean-eval](https://github.com/leanprover/lean-eval) is **not** bundled here; wire your binary and security model according to subnet policy.
+Non-zero exit → **`comparator_rejected`** ([`VerifyResult`](../lemma/lean/sandbox.py)). Full [lean-eval](https://github.com/leanprover/lean-eval) isolation is not shipped here.

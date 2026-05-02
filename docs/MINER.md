@@ -1,52 +1,41 @@
-# Miner operations
+# Miner
 
-First-time install (clone, **`uv sync`**, **`btcli`** wallets, **`.env`**): [GETTING_STARTED.md](GETTING_STARTED.md).
+Setup: [GETTING_STARTED.md](GETTING_STARTED.md).
 
-## Prerequisites
+## Requirements
 
-- Registered hotkey on the subnet.
-- **Prover API**: `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` (see `PROVER_PROVIDER` in `.env`).
-- **Reachable axon:** Lemma **guesses your public IP** when **`AXON_EXTERNAL_IP`** is blank (`AXON_DISCOVER_EXTERNAL_IP=false` to turn that off). You must still **expose port `AXON_PORT`** (router forward or cloud firewall)—software can’t punch the hole for you.
+- Registered hotkey on `NETUID`.
+- Prover credentials (`PROVER_PROVIDER`, `ANTHROPIC_*` / `OPENAI_*` per `.env`).
+- **`AXON_PORT`** reachable from validators; **`AXON_EXTERNAL_IP`** if public IP is not auto-detected (`AXON_DISCOVER_EXTERNAL_IP=false` to disable discovery).
 
-## Problem difficulty (generated mode)
+## Generated mode
 
-Default challenges come from **deterministic templates** (not the giant frozen bank). Roughly **one third** are “easy,” **half** “medium,” **one fifth** “hard” per draw; the **answer deadline** is **`DENDRITE_TIMEOUT_S`** on validators (shipped default **60 minutes**), not baked into the theorem text—see [GENERATED_PROBLEMS.md](GENERATED_PROBLEMS.md) for the split and success-rate implications.
+Templates span easy/medium/hard buckets; answer deadline is **`DENDRITE_TIMEOUT_S`** on validators ([GENERATED_PROBLEMS.md](GENERATED_PROBLEMS.md)).
 
 ## Configuration
 
-See [.env.example](../.env.example):
+See [`.env.example`](../.env.example): `NETUID`, `AXON_*`, `PROVER_*`, optional `MINER_*` gates and **`SYNAPSE_MAX_*`**.
 
-- `NETUID`, `AXON_PORT`, optional `AXON_EXTERNAL_IP` / `AXON_DISCOVER_EXTERNAL_IP`
-- `PROVER_PROVIDER`, `PROVER_MODEL` (optional override)
-- Optional prod gates: `MINER_MIN_VALIDATOR_STAKE`, `MINER_PRIORITY_BY_STAKE`, `MINER_MAX_CONCURRENT_FORWARDS`, synapse size caps (`SYNAPSE_MAX_*`)
-
-## Run
+## Commands
 
 ```bash
 uv sync --extra dev
+uv run lemma miner --dry-run
 uv run lemma miner
 ```
 
-**Budget / spend control:** set **`MINER_MAX_FORWARDS_PER_DAY`** (or **`lemma miner --max-forwards-per-day N`**) to stop invoking the prover after **N** forwards each **UTC** day (persists in `~/.lemma/miner_daily_forwards.json`). Later validator queries get HTTP **429** until the next UTC day — you earn less but burn fewer tokens.
+Daily forward cap: **`MINER_MAX_FORWARDS_PER_DAY`** or **`lemma miner --max-forwards-per-day`** → HTTP **429** after limit (`~/.lemma/miner_daily_forwards.json`).
 
-Config smoke test:
-
-```bash
-uv run lemma miner --dry-run
-```
-
-## Docker
+## Compose
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.local.yml up miner
 ```
 
-## Output format
+## Output
 
-The miner must return **complete** `Submission.lean` source in `proof_script`, matching the theorem name in the challenge. Without API keys, the built-in stub only proves the bundled `two_plus_two` demo.
+**`proof_script`** must be complete **`Submission.lean`** matching the challenge theorem name. Without API keys the stub proves only the bundled demo.
 
-## Model ideas
+## Models
 
-- **[Chutes](https://chutes.ai/)** (recommended for cost and uniformity): set `PROVER_PROVIDER=openai`, `OPENAI_BASE_URL=https://llm.chutes.ai/v1`, pick an `OPENAI_MODEL` id from `GET https://llm.chutes.ai/v1/models`. Tradeoffs: [MODELS.md](MODELS.md).
-- Other hosted APIs (Claude, OpenAI).
-- Open weights such as [DeepSeek-Prover-V2](https://github.com/deepseek-ai/DeepSeek-Prover-V2) behind a local server (custom `Prover` adapter).
+Chutes and other OpenAI-compatible endpoints: [MODELS.md](MODELS.md).
