@@ -16,6 +16,7 @@ import click
 from lemma import __version__
 from lemma.common.config import LemmaSettings
 from lemma.common.logging import setup_logging
+from lemma.common.subtensor import get_subtensor
 from lemma.problems.factory import get_problem_source, resolve_problem
 
 
@@ -163,11 +164,54 @@ def problems_list() -> None:
         click.echo(f"{p.id}\t{p.split}\t{p.theorem_name}")
 
 
-@problems_grp.command("show")
-@click.argument("problem_id")
-def problems_show(problem_id: str) -> None:
+@problems_grp.command(
+    "show",
+    context_settings={"max_content_width": 100},
+)
+@click.argument("problem_id", required=False)
+@click.option(
+    "--current",
+    "-c",
+    is_flag=True,
+    help="Use the current chain head block as seed (same selection as validators: sample(block)).",
+)
+@click.option(
+    "--block",
+    type=int,
+    default=None,
+    help="Use this block height as seed (same selection validators use at that height).",
+)
+def problems_show(problem_id: str | None, current: bool, block: int | None) -> None:
+    """Print Challenge.lean source for one problem.
+
+    Validators pick problems with ``problem_source.sample(seed=current_block)``. For
+    ``LEMMA_PROBLEM_SOURCE=generated``, that matches id ``gen/<block>``. For ``frozen``,
+    the seed chooses a deterministic row from the catalog (not necessarily id ``gen/...``).
+
+    Provide exactly one of: PROBLEM_ID, --current, or --block N.
+    """
     settings = LemmaSettings()
-    p = resolve_problem(settings, problem_id)
+    src = get_problem_source(settings)
+
+    n_sel = sum([bool(problem_id and problem_id.strip()), current, block is not None])
+    if n_sel != 1:
+        raise click.UsageError("Specify exactly one of: PROBLEM_ID, --current (-c), or --block N.")
+
+    if current:
+        seed = int(get_subtensor(settings).get_current_block())
+        p = src.sample(seed=seed)
+        click.echo(f"# block={seed} theorem_id={p.id}\n")
+        click.echo(p.challenge_source())
+        return
+
+    if block is not None:
+        p = src.sample(seed=block)
+        click.echo(f"# block={block} theorem_id={p.id}\n")
+        click.echo(p.challenge_source())
+        return
+
+    assert problem_id is not None  # guaranteed by n_sel with current/block exhausted
+    p = resolve_problem(settings, problem_id.strip())
     click.echo(p.challenge_source())
 
 
