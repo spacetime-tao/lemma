@@ -2,67 +2,291 @@
 
 from __future__ import annotations
 
+import json
+import os
+import shlex
 import sys
+from typing import NamedTuple
 
 import click
 
 from lemma.cli.style import stylize
 
-# (command_key, one-line description) — order fixed for numeric shortcuts.
-_MENU: tuple[tuple[str, str], ...] = (
-    ("setup", "Write .env interactively (NETUID, chain, wallets, API keys, …)"),
-    ("doctor", "Sanity check: .venv, config load, optional chain RPC"),
-    ("docs", "Print doc file paths (add --open on CLI to open in a desktop app)"),
-    ("status", "Chain head + problem seed + theorem (same rule as validators)"),
-    (
+
+class _MenuItem(NamedTuple):
+    key: str
+    desc: str
+    billing: str | None = None  # Shown in cyan when set (paid API / cost warning).
+
+
+# Order fixed for numeric shortcuts.
+_MENU: tuple[_MenuItem, ...] = (
+    _MenuItem(
+        "setup",
+        "Guided questions — fill `.env` with network, wallets, and miner or validator settings (or both)",
+    ),
+    _MenuItem(
+        "doctor",
+        "Quick health check: Python env, config, API keys, timeouts, and (if online) current chain block",
+    ),
+    _MenuItem(
+        "docs",
+        "List guide files; open one (e.g. getting started, FAQ) with flags shown in the tip below",
+    ),
+    _MenuItem("glossary", "Short explanations of terms you will see in logs and docs"),
+    _MenuItem("status", "What block and theorem the subnet is using right now (same problem as validators)"),
+    _MenuItem("problems", "Print the live challenge (the file with `sorry` you are meant to prove)"),
+    _MenuItem(
         "try-prover",
-        "Run prover on current theorem (bills your LLM API — same as receiving a forward)",
+        "Ask your prover to solve the current challenge on your machine",
+        "Bills your LLM API",
     ),
-    ("miner-dry", "Same as shell: lemma miner-dry or lemma miner --dry-run"),
-    (
-        "validator-dry",
-        "Print validator env only (for repeating rounds without weights use validator --dry-run)",
+    _MenuItem("miner-dry", "See how your miner would look to the network — no server, no traffic"),
+    _MenuItem(
+        "validator-check",
+        "Before you run a validator: are chain, wallet, and Lean image in order? (READY or NOT READY)",
     ),
-    (
-        "miner",
-        "Run miner axon for real (listens for validators; Ctrl+C to stop)",
-    ),
-    (
-        "validator",
-        "Run validator rounds for real (Lean + judge; Ctrl+C to stop)",
-    ),
-    (
-        "meta",
-        "Fingerprints: judge stack + template registry (must match other validators)",
-    ),
-    ("quit", "Exit this menu"),
+    _MenuItem("validator-dry", "Show validator settings only — no scoring, no on-chain weights"),
+    _MenuItem("miner", "Start your miner so validators can send you challenges"),
+    _MenuItem("validator", "Run the full validator: check proofs, judge, and update weights on chain"),
+    _MenuItem("meta", "Show fingerprints of your judge and problem code (should match the rest of the subnet)"),
+    _MenuItem("leaderboard", "On-chain stake and rewards — not a scoreboard for math proofs"),
+    _MenuItem("configure", "Update one slice of `.env` (e.g. chain, API, port, Lean) without hand-editing"),
+    _MenuItem("quit", "Exit"),
 )
 
 
-class _NextStepParam(click.ParamType):
-    """Accept 1–N, command name, or quit aliases."""
+def _menu_keys() -> list[str]:
+    return [item.key for item in _MENU]
 
-    name = "step"
 
-    def __init__(self) -> None:
-        self._keys = [k for k, _ in _MENU]
+def _resolve_menu_selector(token: str) -> str:
+    """Map first token to menu key (1–N, command name, quit aliases)."""
+    raw = token.strip().lower()
+    if raw.startswith("lemma "):
+        raw = raw[6:].strip()
+    if not raw:
+        raise click.BadParameter("empty step")
+    if raw in ("q", "quit", "exit"):
+        return "quit"
+    keys = _menu_keys()
+    if raw.isdigit():
+        n = int(raw)
+        if 1 <= n <= len(keys):
+            return keys[n - 1]
+        raise click.BadParameter(f"expected a number from 1 to {len(keys)}")
+    for k in keys:
+        if raw == k.lower():
+            return k
+    raise click.BadParameter(
+        f"expected 1–{len(keys)} or one of: {', '.join(keys)}",
+    )
 
-    def convert(self, value: object, param: click.Parameter | None, ctx: click.Context | None) -> str:
-        raw = " ".join(str(value).strip().lower().split())
-        if raw.startswith("lemma "):
-            raw = raw[6:].strip()
-        if raw in ("q", "quit", "exit"):
-            return "quit"
-        if raw.isdigit():
-            n = int(raw)
-            if 1 <= n <= len(self._keys):
-                return self._keys[n - 1]
-        for k in self._keys:
-            if raw == k.lower():
-                return k
-        raise click.BadParameter(
-            f"expected 1–{len(self._keys)} or one of: {', '.join(self._keys)}",
+
+def _parse_docs_menu_extras(extra: list[str]) -> dict[str, object]:
+    """Parse argv fragments after the menu step for `lemma docs`."""
+    if not extra:
+        return {}
+    if extra == ["--pick"]:
+        return {"pick": True, "open_slug": None}
+    if extra[0] == "--open":
+        if len(extra) < 2:
+            raise click.UsageError(
+                "`--open` needs a doc slug (e.g. faq). Example from menu: 3 --open faq",
+            )
+        return {"pick": False, "open_slug": extra[1]}
+    raise click.UsageError(
+        "After docs, use `--pick` or `--open SLUG` (see `lemma docs --help`). "
+        f"Got: {' '.join(extra)}",
+    )
+
+
+def _parse_try_prover_menu_extras(extra: list[str], *, menu_assume_yes: bool) -> dict[str, object]:
+    """Parse argv fragments after the menu step for `lemma try-prover`."""
+    kwargs: dict[str, object] = {
+        "assume_yes": menu_assume_yes,
+        "do_verify": False,
+        "block": None,
+        "retry_attempts": None,
+    }
+    i = 0
+    while i < len(extra):
+        t = extra[i]
+        if t == "--verify":
+            kwargs["do_verify"] = True
+            i += 1
+        elif t == "--no-verify":
+            kwargs["do_verify"] = False
+            i += 1
+        elif t in ("--yes", "-y"):
+            kwargs["assume_yes"] = True
+            i += 1
+        elif t == "--block" and i + 1 < len(extra):
+            kwargs["block"] = int(extra[i + 1])
+            i += 2
+        elif t == "--retry-attempts" and i + 1 < len(extra):
+            ra = int(extra[i + 1])
+            if not 1 <= ra <= 32:
+                raise click.UsageError(f"--retry-attempts must be 1–32, got {ra}")
+            kwargs["retry_attempts"] = ra
+            i += 2
+        else:
+            raise click.UsageError(
+                "After try-prover, optional flags: `--verify`, `--block N`, `--retry-attempts N`, `-y`. "
+                f"See `lemma try-prover --help`. Got: {' '.join(extra)}",
+            )
+    return kwargs
+
+
+_STEPS_ALLOWING_EXTRAS = frozenset({"docs", "try-prover"})
+
+
+def dispatch_menu_command(
+    ctx: click.Context,
+    group: click.Group,
+    key: str,
+    extra: list[str],
+    *,
+    menu_assume_yes_for_try_prover: bool,
+) -> None:
+    """Run one menu item (shared by interactive prompt and ``lemma <n>`` shorthand)."""
+    if extra and key not in _STEPS_ALLOWING_EXTRAS:
+        click.echo(
+            stylize(
+                f"Ignoring extra arguments ({' '.join(extra)}). "
+                "Only steps 3 (docs) and 7 (try-prover) accept flags here; "
+                f"otherwise run e.g. `lemma {key}` with flags in your shell.",
+                fg="yellow",
+            ),
+            err=True,
         )
+
+    if key == "quit":
+        click.echo(stylize("Bye.", dim=True))
+        return
+
+    if key == "configure":
+        click.echo(
+            stylize("\nlemma configure", fg="cyan", bold=True)
+            + stylize(" — merge prompts into `.env` (run from repo root)\n", dim=True),
+            nl=False,
+        )
+        subs = (
+            ("chain", "NETUID, subtensor endpoint, wallet names"),
+            ("axon", "AXON_PORT (miners)"),
+            ("lean-image", "Write fixed LEAN_SANDBOX_IMAGE; build with scripts/prebuild_lean_image.sh first"),
+            ("judge", "Validator judge LLM (Chutes / Anthropic / custom)"),
+            ("prover", "Miner prover LLM (full wizard)"),
+            ("prover-model", "PROVER_MODEL only (miner model id)"),
+            (
+                "prover-system-append",
+                "Extra prover instructions after built-in JSON rules ($EDITOR / --file / --clear)",
+            ),
+            ("prover-retries", "LEMMA_PROVER_LLM_RETRY_ATTEMPTS (gateway retries per forward)"),
+            ("subnet-pins", "Write meta hash pins into `.env` (after env matches subnet policy)"),
+        )
+        cmd_w = max(len(f"lemma configure {n}") for n, _ in subs)
+        for name, hint in subs:
+            cmd = f"lemma configure {name}"
+            gap = max(2, cmd_w - len(cmd) + 2)
+            click.echo(f"  {stylize(cmd, fg='green')}{' ' * gap}{stylize(hint, dim=True)}")
+        click.echo(
+            stylize("\nSame commands: ", dim=True)
+            + stylize("lemma configure --help", fg="green")
+            + stylize("\n", dim=True),
+            nl=False,
+        )
+        return
+
+    if key == "problems":
+        pg = group.get_command(ctx, "problems")
+        if isinstance(pg, click.Group):
+            show_cmd = pg.get_command(ctx, "show")
+            if show_cmd is not None:
+                ctx.invoke(show_cmd, problem_id=None, current=True, block=None)
+        return
+
+    if key == "miner":
+        mg = group.get_command(ctx, "miner")
+        if isinstance(mg, click.Group):
+            st = mg.get_command(ctx, "start")
+            if st is not None:
+                ctx.invoke(st, max_forwards_per_day=None)
+        return
+
+    if key == "validator":
+        vg = group.get_command(ctx, "validator")
+        if isinstance(vg, click.Group):
+            st = vg.get_command(ctx, "start")
+            if st is not None:
+                ctx.invoke(st, dry_run=False)
+        return
+
+    spec: dict[str, tuple[str, dict[str, object]]] = {
+        "setup": ("setup", {}),
+        "doctor": ("doctor", {}),
+        "docs": ("docs", {}),
+        "glossary": ("glossary", {}),
+        "status": ("status", {}),
+        "try-prover": ("try-prover", {"assume_yes": menu_assume_yes_for_try_prover}),
+        "miner-dry": ("miner-dry", {}),
+        "validator-check": ("validator-check", {}),
+        "validator-dry": ("validator-dry", {}),
+        "meta": ("meta", {}),
+        "leaderboard": ("leaderboard", {}),
+    }
+    if key not in spec:
+        return
+    name, base_kwargs = spec[key]
+    cmd = group.get_command(ctx, name)
+    if cmd is None:
+        click.echo(f"Command {name!r} not found.", err=True)
+        return
+    merged: dict[str, object] = dict(base_kwargs)
+    if key == "docs":
+        try:
+            merged.update(_parse_docs_menu_extras(extra))
+        except click.UsageError as e:
+            click.echo(stylize(str(e), fg="red"), err=True)
+            return
+    elif key == "try-prover":
+        try:
+            merged.update(
+                _parse_try_prover_menu_extras(
+                    extra,
+                    menu_assume_yes=bool(base_kwargs.get("assume_yes")),
+                ),
+            )
+        except click.UsageError as e:
+            click.echo(stylize(str(e), fg="red"), err=True)
+            return
+    ctx.invoke(cmd, **merged)
+
+
+def run_quick_menu_step(ctx: click.Context, *, group: click.Group, step: int) -> None:
+    """Non-interactive menu dispatch for ``lemma N`` (1-based index)."""
+    keys = _menu_keys()
+    if not (1 <= step <= len(keys)):
+        raise click.ClickException(f"Menu step must be from 1 to {len(keys)} (got {step}).")
+    key = keys[step - 1]
+    raw = os.environ.pop("_LEMMA_QUICK_MENU_EXTRAS_JSON", None)
+    extra: list[str] = []
+    if raw:
+        try:
+            extra = json.loads(raw)
+        except json.JSONDecodeError:
+            extra = []
+    if not isinstance(extra, list):
+        extra = []
+    extra = [str(x) for x in extra]
+    click.echo(stylize(f"Menu step {step} → lemma {key}" + (f" {' '.join(extra)}" if extra else ""), dim=True))
+    dispatch_menu_command(
+        ctx,
+        group,
+        key,
+        extra,
+        menu_assume_yes_for_try_prover=True,
+    )
 
 
 def show_start_here(ctx: click.Context | None = None, *, group: click.Group | None = None) -> None:
@@ -99,11 +323,29 @@ def show_start_here(ctx: click.Context | None = None, *, group: click.Group | No
         + stylize(" alone).\n", dim=True),
         nl=False,
     )
-    click.echo(stylize("Then pick a step — number or one keyword (not `lemma doctor`):\n", dim=True))
-    for i, (key, blurb) in enumerate(_MENU, start=1):
-        num = stylize(f"{i}", fg="yellow")
-        name = stylize(key, fg="green")
-        click.echo(f"  {num}  {name}  {blurb}")
+    click.echo(
+        stylize(
+            "Then pick a step — number or command name (not `lemma doctor`). "
+            "From your shell you can also run ",
+            dim=True,
+        )
+        + stylize("lemma 7", fg="yellow")
+        + stylize(" (same as choosing try-prover); optional flags only for docs / try-prover, e.g. ", dim=True)
+        + stylize("3 --open faq", fg="yellow")
+        + stylize(" or ", dim=True)
+        + stylize("lemma 7 --verify", fg="yellow")
+        + stylize(":\n", dim=True),
+        nl=False,
+    )
+    max_key = max(len(item.key) for item in _MENU)
+    num_width = len(str(len(_MENU)))
+    for i, item in enumerate(_MENU, start=1):
+        num = stylize(f"{i:>{num_width}}", fg="yellow")
+        name = stylize(item.key.ljust(max_key), fg="green")
+        rest = item.desc
+        if item.billing:
+            rest = rest + "  " + stylize(item.billing, fg="blue", bold=True)
+        click.echo(f"  {num}  {name}  {rest}")
     click.echo(
         stylize("\nDefaults: see docs/FAQ.md (timeouts, seeds). ", dim=True)
         + stylize("docs/GETTING_STARTED.md", fg="cyan")
@@ -115,33 +357,39 @@ def show_start_here(ctx: click.Context | None = None, *, group: click.Group | No
         click.echo(stylize("Tip: run `lemma start` for this menu.", dim=True))
         return
 
-    key = click.prompt(
+    default_step = "1"
+    raw_line = click.prompt(
         stylize("Next step", fg="cyan", bold=True),
-        type=_NextStepParam(),
-        default="1",
+        default=default_step,
         show_default=True,
     )
-    if key == "quit":
-        click.echo(stylize("Bye.", dim=True))
+    line_stripped = (raw_line or default_step).strip() or default_step
+    try:
+        parts = shlex.split(line_stripped)
+    except ValueError:
+        parts = line_stripped.split()
+    if not parts:
+        parts = [default_step]
+
+    try:
+        key = _resolve_menu_selector(parts[0])
+    except click.BadParameter as e:
+        click.echo(
+            stylize(
+                f"{e} "
+                f"Use a number 1–{len(_MENU)} or a command name; optional flags only after docs / try-prover "
+                "(e.g. `3 --open faq`). For anything else run `lemma <command>` in your shell.",
+                fg="red",
+            ),
+            err=True,
+        )
         return
 
-    spec: dict[str, tuple[str, dict[str, object]]] = {
-        "setup": ("setup", {}),
-        "doctor": ("doctor", {}),
-        "docs": ("docs", {}),
-        "status": ("status", {}),
-        "try-prover": ("try-prover", {}),
-        "miner-dry": ("miner-dry", {}),
-        "validator-dry": ("validator-dry", {}),
-        "miner": ("miner", {"dry_run": False}),
-        "validator": ("validator", {}),
-        "meta": ("meta", {}),
-    }
-    if key not in spec:
-        return
-    name, kwargs = spec[key]
-    cmd = group.get_command(ctx, name)
-    if cmd is None:
-        click.echo(f"Command {name!r} not found.", err=True)
-        return
-    ctx.invoke(cmd, **kwargs)
+    extra = parts[1:]
+    dispatch_menu_command(
+        ctx,
+        group,
+        key,
+        extra,
+        menu_assume_yes_for_try_prover=True,
+    )

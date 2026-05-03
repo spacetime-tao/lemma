@@ -83,7 +83,7 @@ def _materialize_multiplex(dest: Path, problems: list[Problem]) -> None:
     (dest / "Submission.lean").write_text(submission, encoding="utf-8")
     (dest / "lean-toolchain").write_text(p0.lean_toolchain.strip() + "\n", encoding="utf-8")
 
-    lake = f'''name = "lemma_round"
+    lake = f'''name = "lemma_stub"
 version = "0.1.0"
 defaultTargets = ["Challenge", "Solution", "Submission"]
 

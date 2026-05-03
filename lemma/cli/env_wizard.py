@@ -8,11 +8,14 @@ from pathlib import Path
 import click
 
 from lemma.cli.style import stylize
+from lemma.common.config import CANONICAL_JUDGE_OPENAI_MODEL, LemmaSettings
 from lemma.common.env_file import merge_dotenv
 
 # Subnet default stack (see .env.example and MODELS.md)
 CHUTES_OPENAI_BASE_URL = "https://llm.chutes.ai/v1"
-CHUTES_DEFAULT_MODEL = "Qwen/Qwen3-32B-TEE"
+CHUTES_DEFAULT_MODEL = CANONICAL_JUDGE_OPENAI_MODEL
+# Matches LemmaSettings.anthropic_model default (prover falls back if PROVER_MODEL unset).
+DEFAULT_ANTHROPIC_MODEL = "claude-3-5-sonnet-20241022"
 
 # Official entrypoints (Bittensor docs — mainnet vs testnet).
 CHAIN_ENDPOINT_FINNEY = "wss://entrypoint-finney.opentensor.ai:443"
@@ -89,9 +92,12 @@ def collect_chain_updates() -> dict[str, str]:
 
 def collect_axon_updates() -> dict[str, str]:
     click.echo(
-        stylize("Validators reach your miner at ", dim=True)
-        + stylize("public_ip:AXON_PORT", fg="yellow")
-        + stylize(". Press Enter to keep the default port.\n", dim=True),
+        stylize(
+            "TCP port for the miner axon. Validators connect to ",
+            dim=True,
+        )
+        + stylize("your_public_ip:AXON_PORT", fg="yellow")
+        + stylize(". Default 8091 is fine unless that port is taken.\n", dim=True),
         nl=False,
     )
     port = click.prompt(
@@ -100,36 +106,58 @@ def collect_axon_updates() -> dict[str, str]:
         type=int,
         show_default=True,
     )
+    click.echo(
+        stylize("→ will write ", dim=True)
+        + stylize(f"AXON_PORT={port}\n", fg="green"),
+        nl=False,
+    )
     return {"AXON_PORT": str(port)}
 
 
 def collect_lean_image_updates() -> dict[str, str]:
+    """Subnet Lean sandbox tag — fixed; build locally with ``scripts/prebuild_lean_image.sh``."""
+    img = "lemma/lean-sandbox:latest"
     click.echo(
-        "Lean sandbox Docker image (run `bash scripts/prebuild_lean_image.sh` first; "
-        "it tags `lemma/lean-sandbox:latest`)."
+        stylize(
+            "Validators check miners’ proofs inside this Docker image (everyone uses the same tag).\n",
+            dim=True,
+        ),
+        nl=False,
     )
-    img = click.prompt(
-        "LEAN_SANDBOX_IMAGE",
-        default="lemma/lean-sandbox:latest",
-        show_default=True,
-    ).strip()
+    click.echo(
+        stylize("Build it once from the repo root: ", dim=True)
+        + stylize("bash scripts/prebuild_lean_image.sh", fg="yellow")
+        + stylize("  →  writes ", dim=True)
+        + stylize(img, fg="green")
+        + stylize(" locally.\n", dim=True),
+        nl=False,
+    )
+    click.echo(
+        stylize(f"→ writing LEAN_SANDBOX_IMAGE={img} to `.env`\n", dim=True),
+        nl=False,
+    )
     return {"LEAN_SANDBOX_IMAGE": img}
 
 
-def _backend_choice() -> str:
+def _backend_choice(role_label: str) -> str:
     click.echo(
-        "Inference backend — Chutes (https://llm.chutes.ai/v1) is recommended for this subnet; "
-        "others work as secondary options."
+        stylize(
+            f"{role_label} — pick an API. ",
+            dim=True,
+        )
+        + stylize("chutes", fg="yellow")
+        + stylize(" matches the subnet’s recommended stack (https://llm.chutes.ai/v1).\n", dim=True),
+        nl=False,
     )
     return click.prompt(
-        "Backend",
+        stylize("Backend", fg="green"),
         type=click.Choice(["chutes", "anthropic", "custom_openai"], case_sensitive=False),
         default="chutes",
     )
 
 
 def collect_judge_updates() -> dict[str, str]:
-    backend = _backend_choice().lower()
+    backend = _backend_choice("Judge (scores miner proofs + traces)").lower()
     updates: dict[str, str]
     if backend == "chutes":
         key = _require_secret("Chutes API key (OpenAI-compatible)")
@@ -139,6 +167,14 @@ def collect_judge_updates() -> dict[str, str]:
             "OPENAI_BASE_URL": CHUTES_OPENAI_BASE_URL,
             "OPENAI_MODEL": CHUTES_DEFAULT_MODEL,
         }
+        click.echo(
+            stylize(
+                "→ will write judge settings + API key to .env (key not printed). "
+                f"Model  {CHUTES_DEFAULT_MODEL}  (change later: `lemma configure judge`)\n",
+                dim=True,
+            ),
+            nl=False,
+        )
     elif backend == "anthropic":
         key = _require_secret("Anthropic API key")
         updates = {
@@ -147,6 +183,20 @@ def collect_judge_updates() -> dict[str, str]:
         }
     else:
         key = _require_secret("OpenAI-compatible API key")
+        click.echo(
+            stylize(
+                "Gemini (Google AI Studio): OPENAI_BASE_URL\n  ",
+                dim=True,
+            )
+            + stylize("https://generativelanguage.googleapis.com/v1beta/openai/", fg="yellow")
+            + stylize(
+                "  OPENAI_MODEL = Gemini id (e.g. ",
+                dim=True,
+            )
+            + stylize("gemini-2.0-flash", fg="green")
+            + stylize(").\n", dim=True),
+            nl=False,
+        )
         url = click.prompt(
             "OPENAI_BASE_URL (e.g. https://api.openai.com/v1 or http://127.0.0.1:8000/v1)",
             default="",
@@ -165,48 +215,237 @@ def collect_judge_updates() -> dict[str, str]:
 
 
 def collect_prover_updates() -> dict[str, str]:
-    backend = _backend_choice().lower()
+    backend = _backend_choice("Prover (writes Submission.lean when you mine)").lower()
     updates: dict[str, str]
     if backend == "chutes":
         key = _require_secret("Chutes API key (prover)")
+        click.echo(
+            stylize(
+                "PROVER_MODEL is only for the miner; validators use OPENAI_MODEL for the judge "
+                "(set separately via `lemma configure judge`).",
+                dim=True,
+            )
+        )
+        model = click.prompt(
+            stylize("PROVER_MODEL", fg="green") + stylize(f"  [Enter = {CHUTES_DEFAULT_MODEL}]", dim=True),
+            default=CHUTES_DEFAULT_MODEL,
+            show_default=True,
+        ).strip()
+        use_model = model or CHUTES_DEFAULT_MODEL
         updates = {
             "PROVER_PROVIDER": "openai",
             "OPENAI_API_KEY": key,
             "OPENAI_BASE_URL": CHUTES_OPENAI_BASE_URL,
-            "OPENAI_MODEL": CHUTES_DEFAULT_MODEL,
+            "PROVER_MODEL": use_model,
         }
+        click.echo(
+            stylize("→ will write prover + key to .env; prover model ", dim=True)
+            + stylize(use_model, fg="green")
+            + stylize("\n", dim=True),
+            nl=False,
+        )
     elif backend == "anthropic":
         key = _require_secret("Anthropic API key (prover)")
-        updates = {"PROVER_PROVIDER": "anthropic", "ANTHROPIC_API_KEY": key}
+        model = click.prompt(
+            stylize("PROVER_MODEL", fg="green")
+            + stylize(f"  [Enter = {DEFAULT_ANTHROPIC_MODEL}]", dim=True),
+            default=DEFAULT_ANTHROPIC_MODEL,
+            show_default=True,
+        ).strip()
+        use_model = model or DEFAULT_ANTHROPIC_MODEL
+        updates = {
+            "PROVER_PROVIDER": "anthropic",
+            "ANTHROPIC_API_KEY": key,
+            "PROVER_MODEL": use_model,
+        }
+        click.echo(
+            stylize("→ will write prover + key to .env; prover model ", dim=True)
+            + stylize(use_model, fg="green")
+            + stylize("\n", dim=True),
+            nl=False,
+        )
     else:
         key = _require_secret("OpenAI-compatible API key (prover)")
+        click.echo(
+            stylize(
+                "Gemini (Google AI Studio key): set OPENAI_BASE_URL to\n  ",
+                dim=True,
+            )
+            + stylize("https://generativelanguage.googleapis.com/v1beta/openai/", fg="yellow")
+            + stylize(
+                "\n  and PROVER_MODEL to a Gemini id (e.g. ",
+                dim=True,
+            )
+            + stylize("gemini-2.0-flash", fg="green")
+            + stylize(
+                ", or the exact id from AI Studio). See https://ai.google.dev/gemini-api/docs/openai\n",
+                dim=True,
+            ),
+            nl=False,
+        )
         url = click.prompt(
             "OPENAI_BASE_URL",
             default="",
             show_default=False,
         ).strip()
-        model = click.prompt("OPENAI_MODEL", default="", show_default=False).strip()
+        model = click.prompt("PROVER_MODEL", default="", show_default=False).strip()
         if not url or not model:
-            raise click.UsageError("OPENAI_BASE_URL and OPENAI_MODEL are required for custom OpenAI-compatible.")
+            raise click.UsageError("OPENAI_BASE_URL and PROVER_MODEL are required for custom OpenAI-compatible.")
         updates = {
             "PROVER_PROVIDER": "openai",
             "OPENAI_API_KEY": key,
             "OPENAI_BASE_URL": url,
-            "OPENAI_MODEL": model,
+            "PROVER_MODEL": model,
         }
     return updates
 
 
+def collect_prover_retries_updates() -> dict[str, str]:
+    """LEMMA_PROVER_LLM_RETRY_ATTEMPTS — transient LLM errors per forward / try-prover."""
+    s = LemmaSettings()
+    default_n = int(s.prover_llm_retry_attempts)
+    click.echo(
+        stylize(
+            "429 / timeouts / 5xx: exponential backoff between tries. Higher = more patience; "
+            "each forward uses more wall-clock (watch validator forward wait).\n",
+            dim=True,
+        ),
+        nl=False,
+    )
+    n = click.prompt(
+        stylize("LEMMA_PROVER_LLM_RETRY_ATTEMPTS", fg="green"),
+        default=default_n,
+        type=click.IntRange(1, 32),
+        show_default=True,
+    )
+    click.echo(
+        stylize(f"→ will write LEMMA_PROVER_LLM_RETRY_ATTEMPTS={n}\n", dim=True),
+        nl=False,
+    )
+    return {"LEMMA_PROVER_LLM_RETRY_ATTEMPTS": str(n)}
+
+
+def collect_prover_system_append_updates() -> dict[str, str]:
+    """LEMMA_PROVER_SYSTEM_APPEND — optional text after built-in PROVER_SYSTEM on every prover call."""
+    click.echo(stylize("\nProver system append", fg="cyan", bold=True), nl=False)
+    click.echo(
+        stylize(
+            "\nLemma always sends a fixed system prompt so replies stay in the JSON shape the subnet expects. "
+            "This setting adds your instructions after that built-in text on each prover API call.\n",
+            dim=True,
+        ),
+        nl=False,
+    )
+    click.echo(
+        stylize(
+            "• Use it for tone, audience, or house style — not for replacing JSON rules "
+            "(those stay in-repo).\n"
+            "• One completion fills both informal reasoning_steps and proof_script; "
+            "Lean is still checked by the kernel.\n"
+            "• Gemini / ChatGPT UI system fields are not used unless you paste equivalent text here.\n",
+            dim=True,
+        )
+    )
+    s = LemmaSettings()
+    current = s.prover_system_append or ""
+    if current:
+        preview = current if len(current) <= 520 else current[:520] + "…"
+        click.echo(stylize(f"\nCurrent ({len(current)} characters):\n", dim=True), nl=False)
+        click.echo(stylize(preview, fg="yellow"))
+
+    use_editor = click.confirm(
+        stylize("Open $EDITOR to set or edit this text?", fg="green"),
+        default=True,
+    )
+    if use_editor:
+        new = click.edit(current, require_save=False, extension=".txt")
+        if new is None:
+            click.echo(stylize("Cancelled — .env not modified.", fg="yellow"))
+            raise click.Abort()
+        stripped = new.strip()
+        return {"LEMMA_PROVER_SYSTEM_APPEND": stripped}
+
+    one = click.prompt(
+        stylize(
+            "Append text (single line). For paragraphs use an editor above, or "
+            "`lemma configure prover-system-append --file policy.txt`.",
+            fg="green",
+        ),
+        default=current,
+        show_default=bool(current),
+    )
+    return {"LEMMA_PROVER_SYSTEM_APPEND": one.strip()}
+
+
+def collect_prover_model_updates() -> dict[str, str]:
+    """Set only PROVER_MODEL (miner); judges keep OPENAI_MODEL / ANTHROPIC_MODEL."""
+    click.echo(
+        stylize(
+            "This name is sent to your prover API as the model id (miner only). Judges use "
+            "OPENAI_MODEL / ANTHROPIC_MODEL instead.",
+            dim=True,
+        )
+    )
+    click.echo(
+        stylize(
+            "How to find an id: on Chutes list models — ",
+            dim=True,
+        )
+        + stylize("curl -sS https://llm.chutes.ai/v1/models | jq '.data[].id'", fg="yellow")
+        + stylize(
+            " — use the exact ",
+            dim=True,
+        )
+        + stylize("id", fg="green")
+        + stylize(" string (same form as OPENAI_MODEL).\n", dim=True),
+        nl=False,
+    )
+    click.echo(
+        stylize(
+            "Type it at the prompt without quotes (quotes are only needed inside shell scripts; "
+            "this wizard writes them into .env for you). Example: ",
+            dim=True,
+        )
+        + stylize(CANONICAL_JUDGE_OPENAI_MODEL, fg="green")
+        + stylize(" (subnet judge) or any strong ", dim=True)
+        + stylize("reasoning", fg="green")
+        + stylize(" model on Chutes.\n", dim=True)
+        + stylize(".\n", dim=True),
+        nl=False,
+    )
+    m = click.prompt(
+        stylize("PROVER_MODEL", fg="green"),
+        default="",
+        show_default=False,
+    ).strip()
+    if not m:
+        raise click.UsageError("PROVER_MODEL cannot be empty.")
+    return {"PROVER_MODEL": m}
+
+
+def collect_subnet_pin_updates(settings: LemmaSettings) -> dict[str, str]:
+    """Expected-hash pins matching **current** `lemma meta` (same judge env + same generated registry code)."""
+    from lemma.judge.profile import judge_profile_sha256
+    from lemma.problems.generated import generated_registry_sha256
+
+    out: dict[str, str] = {"JUDGE_PROFILE_SHA256_EXPECTED": judge_profile_sha256(settings).strip().lower()}
+    if (settings.problem_source or "").strip().lower() == "generated":
+        out["LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED"] = generated_registry_sha256().strip().lower()
+    return out
+
+
 def merge_prompted(path: Path, label: str, collect: Callable[[], dict[str, str]]) -> None:
-    click.echo(stylize(f"— {label} —", fg="cyan", bold=True))
+    click.echo("")
+    click.echo(stylize(f"── {label} ──", fg="cyan", bold=True))
     merge_dotenv(path, collect())
 
 
 def run_setup(env_path: Path, role: str) -> None:
+    click.echo(stylize("\nLemma setup\n", fg="cyan", bold=True), nl=False)
     click.echo(
-        stylize("Writing ", dim=True)
+        stylize("Writes answers into ", dim=True)
         + stylize(str(env_path), fg="yellow")
-        + stylize(" (merged prompts; no hand-editing required).\n", dim=True),
+        + stylize(" as each answer is merged — safe to re-run if you mistype.\n", dim=True),
         nl=False,
     )
     merge_prompted(env_path, "Chain + wallets", collect_chain_updates)
@@ -215,18 +454,38 @@ def run_setup(env_path: Path, role: str) -> None:
         merge_prompted(env_path, "Miner — axon", collect_axon_updates)
     elif role == "validator":
         merge_prompted(env_path, "Validator — judge", collect_judge_updates)
-        merge_prompted(env_path, "Validator — Lean image", collect_lean_image_updates)
+        merge_prompted(env_path, "Validator — Lean Docker image", collect_lean_image_updates)
     else:
         merge_prompted(env_path, "Miner — prover LLM", collect_prover_updates)
         merge_prompted(env_path, "Miner — axon", collect_axon_updates)
         merge_prompted(env_path, "Validator — judge", collect_judge_updates)
-        merge_prompted(env_path, "Validator — Lean image", collect_lean_image_updates)
+        merge_prompted(env_path, "Validator — Lean Docker image", collect_lean_image_updates)
 
     click.echo("")
+    click.echo(stylize("── Done ──", fg="green", bold=True))
     click.echo(
-        stylize("Done.", fg="green")
-        + stylize(" Register / fund with ", dim=True)
+        stylize("  • Register / fund hotkeys with ", dim=True)
         + stylize("btcli", fg="yellow")
-        + stylize(". Validators: build Lean image first → ", dim=True)
-        + stylize("bash scripts/prebuild_lean_image.sh", fg="yellow"),
+        + stylize(" as needed.\n", dim=True),
+        nl=False,
     )
+    if role in ("validator", "both"):
+        click.echo(
+            stylize("  • Validator: build image → ", dim=True)
+            + stylize("bash scripts/prebuild_lean_image.sh", fg="yellow")
+            + stylize("  then  ", dim=True)
+            + stylize("lemma validator-check", fg="green")
+            + stylize("  before  ", dim=True)
+            + stylize("lemma validator", fg="green")
+            + stylize(".\n", dim=True),
+            nl=False,
+        )
+    if role in ("miner", "both"):
+        click.echo(
+            stylize("  • Miner: open ", dim=True)
+            + stylize("AXON_PORT", fg="yellow")
+            + stylize(" to the internet; check with ", dim=True)
+            + stylize("lemma miner-dry", fg="green")
+            + stylize(".\n", dim=True),
+            nl=False,
+        )

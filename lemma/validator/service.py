@@ -9,7 +9,7 @@ import time
 import bittensor as bt
 from loguru import logger
 
-from lemma.common.config import LemmaSettings
+from lemma.common.config import LemmaSettings, assert_canonical_openai_judge_model
 from lemma.common.logging import setup_logging
 from lemma.common.subtensor import get_subtensor
 from lemma.judge.profile import judge_profile_sha256
@@ -25,7 +25,38 @@ class ValidatorService:
 
     async def run_forever(self) -> None:
         setup_logging(self.settings.log_level)
+        logger.info(
+            "Validator running — press Ctrl+C to stop and return to your shell.",
+        )
         s = self.settings
+        assert_canonical_openai_judge_model(s)
+        if s.validator_enforce_published_meta:
+            jp = (s.judge_profile_expected_sha256 or "").strip()
+            if not jp:
+                raise SystemExit(
+                    "LEMMA_VALIDATOR_ENFORCE_PUBLISHED_META=1 requires JUDGE_PROFILE_SHA256_EXPECTED "
+                    "from `lemma meta --raw` (subnet operator publishes this hash)."
+                )
+            if (s.problem_source or "").strip().lower() == "generated":
+                gr = (s.generated_registry_expected_sha256 or "").strip()
+                if not gr:
+                    raise SystemExit(
+                        "LEMMA_VALIDATOR_ENFORCE_PUBLISHED_META=1 with generated problems requires "
+                        "LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED from `lemma meta --raw`."
+                    )
+        elif not (s.judge_profile_expected_sha256 or "").strip():
+            logger.warning(
+                "JUDGE_PROFILE_SHA256_EXPECTED not set — validator may drift from subnet policy. "
+                "Run `lemma meta`, copy hashes into .env, or set LEMMA_VALIDATOR_ENFORCE_PUBLISHED_META=1 "
+                "to hard-fail when pins are missing."
+            )
+        elif (s.problem_source or "").strip().lower() == "generated" and not (
+            s.generated_registry_expected_sha256 or ""
+        ).strip():
+            logger.warning(
+                "LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED not set — generated template registry is unpinned."
+            )
+
         expected = s.judge_profile_expected_sha256
         if expected:
             actual = judge_profile_sha256(s)
@@ -77,7 +108,28 @@ class ValidatorService:
                 await asyncio.sleep(interval)
 
     def run_blocking(self) -> None:
-        asyncio.run(self.run_forever())
+        import click
+
+        from lemma.cli.style import finish_cli_output, stylize
+
+        click.echo(
+            stylize(
+                "Validator running — press Ctrl+C to stop and return to your shell.",
+                fg="cyan",
+                bold=True,
+            ),
+            err=True,
+        )
+        try:
+            asyncio.run(self.run_forever())
+        except KeyboardInterrupt:
+            click.echo("")
+            click.echo(
+                stylize("Validator stopped (Ctrl+C).", fg="yellow", bold=True),
+                err=True,
+            )
+        finally:
+            finish_cli_output()
 
 
 def wait_until_epoch(subtensor: bt.Subtensor, netuid: int, max_sleep: float = 7200.0) -> None:

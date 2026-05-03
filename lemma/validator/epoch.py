@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 import bittensor as bt
 from loguru import logger
 
+from lemma.common.block_deadline import compute_forward_deadline_and_wait
 from lemma.common.problem_seed import resolve_problem_seed
 from lemma.common.split_timeout import split_timeout_multiplier
 from lemma.common.subtensor import get_subtensor
@@ -36,6 +37,7 @@ if TYPE_CHECKING:
 def _build_judge(settings: LemmaSettings, dry_run: bool) -> Judge:
     if dry_run or os.environ.get("LEMMA_FAKE_JUDGE") == "1":
         return FakeJudge()
+    to = float(settings.llm_http_timeout_s)
     prov = (settings.judge_provider or "openai").lower()
     if prov == "openai":
         key = settings.openai_api_key
@@ -48,6 +50,7 @@ def _build_judge(settings: LemmaSettings, dry_run: bool) -> Judge:
             base_url=settings.openai_base_url,
             temperature=settings.judge_temperature,
             max_tokens=settings.judge_max_tokens,
+            timeout=to,
         )
     key = settings.anthropic_api_key
     if not key:
@@ -58,6 +61,7 @@ def _build_judge(settings: LemmaSettings, dry_run: bool) -> Judge:
         settings.anthropic_model,
         temperature=settings.judge_temperature,
         max_tokens=settings.judge_max_tokens,
+        timeout=to,
     )
 
 
@@ -65,10 +69,10 @@ async def run_epoch(
     settings: LemmaSettings,
     problem_source: ProblemSource,
     dry_run: bool = False,
-    dendrite_timeout: float | None = None,
 ) -> dict[int, float]:
     t_epoch = time.perf_counter()
-    wallet = bt.Wallet(name=settings.wallet_cold, hotkey=settings.wallet_hot)
+    vc, vh = settings.validator_wallet_names()
+    wallet = bt.Wallet(name=vc, hotkey=vh)
     subtensor = get_subtensor(settings)
     netuid = settings.netuid
     cur_block = subtensor.get_current_block()
@@ -80,10 +84,6 @@ async def run_epoch(
     if settings.validator_abort_if_not_registered and my_uid is None:
         logger.warning("Validator wallet has no UID on subnet {}; skipping epoch", netuid)
         return {}
-
-    base_dendrite_timeout = float(
-        dendrite_timeout if dendrite_timeout is not None else settings.dendrite_timeout_s
-    )
 
     uids = [u for u in range(n) if my_uid is None or u != my_uid]
     if not uids:
@@ -100,18 +100,24 @@ async def run_epoch(
         subtensor=subtensor,
     )
     problem = problem_source.sample(seed=problem_seed)
+    verify_timeout_s = settings.lean_verify_timeout_s
+    wait_scale = 1.0
     if settings.timeout_scale_by_split:
-        sm = split_timeout_multiplier(
+        wait_scale = split_timeout_multiplier(
             problem.split,
             settings.timeout_split_easy_mult,
             settings.timeout_split_medium_mult,
             settings.timeout_split_hard_mult,
         )
-        timeout = base_dendrite_timeout * sm
-        verify_timeout_s = max(1, int(round(float(settings.lean_verify_timeout_s) * sm)))
-    else:
-        timeout = base_dendrite_timeout
-        verify_timeout_s = settings.lean_verify_timeout_s
+        verify_timeout_s = max(1, int(round(float(settings.lean_verify_timeout_s) * wait_scale)))
+
+    deadline_block, forward_wait_s = compute_forward_deadline_and_wait(
+        settings=settings,
+        subtensor=subtensor,
+        cur_block=int(cur_block),
+        seed_tag=problem_seed_tag,
+        wait_scale=wait_scale,
+    )
 
     synapse = LemmaChallenge(
         theorem_id=problem.id,
@@ -119,14 +125,16 @@ async def run_epoch(
         imports=list(problem.imports),
         lean_toolchain=problem.lean_toolchain,
         mathlib_rev=problem.mathlib_rev,
-        deadline_unix=int(time.time()) + int(timeout),
+        deadline_unix=int(time.time()) + int(forward_wait_s),
+        deadline_block=deadline_block,
         metronome_id=str(problem_seed),
-        timeout=timeout,
+        timeout=forward_wait_s,
     )
 
-    dendrite = bt.Dendrite(wallet=wallet)
     axons = axon_list_for_uids(metagraph, uids)
-    responses = await q.query_miners(dendrite, axons, synapse, timeout=timeout)
+    # Use async context manager so aiohttp ClientSession closes cleanly (avoids bittensor __del__ warnings).
+    async with bt.Dendrite(wallet=wallet) as dendrite:
+        responses = await q.query_miners(dendrite, axons, synapse, timeout=forward_wait_s)
 
     sandbox = LeanSandbox(
         image=settings.lean_sandbox_image,
@@ -202,7 +210,8 @@ async def run_epoch(
     logger.info(
         "lemma_epoch_summary chain_head_block={} problem_seed={} problem_seed_tag={} split={} "
         "theorem_id={} verified={} scored={} pareto_entries={} judge_errors={} skip_set_weights={} "
-        "seconds={:.2f}",
+        "seconds={:.2f}  "
+        "[verified=Lean proof OK; scored=judge rubric applied; pareto_entries=weight rows]",
         cur_block,
         problem_seed,
         problem_seed_tag,

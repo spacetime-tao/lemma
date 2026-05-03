@@ -51,13 +51,30 @@ def parse_axioms_from_lean_output(text: str) -> set[str] | None:
 
 
 def lean_driver_failed(lean_output: str) -> bool:
-    """True if Lean printed errors before a usable ``#print axioms`` line."""
+    """True if Lean/lake failed before a usable ``#print axioms`` line."""
     t = lean_output.lower()
     return (
         "error (" in t
         or "unknown identifier" in t
         or "unknown constant" in t
         or "invalid field" in t
+        or "error:" in t
+        or "build failed" in t
+        or "failed to build" in t
+    )
+
+
+def lake_build_environment_failed(lean_output: str) -> bool:
+    """True when lake/git failed for network or tooling — not a rejected proof or axiom issue."""
+    t = lean_output.lower()
+    return (
+        "could not resolve host" in t
+        or "couldn't resolve host" in t
+        or ("git" in t and "exit code 128" in t)
+        or "network is unreachable" in t
+        or "failed to download" in t
+        or "tls handshake" in t
+        or "connection refused" in t
     )
 
 

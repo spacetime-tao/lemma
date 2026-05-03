@@ -1,6 +1,6 @@
 # Generated problems (default)
 
-When `LEMMA_PROBLEM_SOURCE=generated`, each round maps `chain_head → problem_seed` via `LEMMA_PROBLEM_SEED_MODE`: default `subnet_epoch` uses subnet Tempo; `quantize` uses `LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`. The seed picks one theorem from [`generated.py`](../lemma/problems/generated.py). Same code + seed ⇒ same `Problem`.
+When `LEMMA_PROBLEM_SOURCE=generated`, each round maps `chain_head → problem_seed` via `LEMMA_PROBLEM_SEED_MODE`: default **`quantize`** holds one theorem for each `LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS` window (default **100** blocks). **`subnet_epoch`** uses subnet Tempo from chain RPC instead. The seed picks one theorem from [`generated.py`](../lemma/problems/generated.py). Same code + seed ⇒ same `Problem`.
 
 ## Template mix
 
@@ -12,7 +12,7 @@ Easy templates suit quick tactics; medium resemble typical Mathlib exercises; ha
 
 ## Timeouts
 
-The generator does not embed limits. **Subnet policy** sets `DENDRITE_TIMEOUT_S` (miner answer) and `LEAN_VERIFY_TIMEOUT_S` (sandbox `lake build`) — one published template for all validators ([GOVERNANCE.md](GOVERNANCE.md)). Hard templates stress **prover time** first; Lean checking is usually fast for a clean script unless elaboration or cold caches blow up ([FAQ.md](FAQ.md)).
+The generator does not embed limits. **Subnet policy** sets block-time / forward-wait clamps for miner answers and `LEAN_VERIFY_TIMEOUT_S` for sandbox `lake build` — one published template for all validators ([GOVERNANCE.md](GOVERNANCE.md)). Hard templates stress **prover time** first; Lean checking is usually fast for a clean script unless elaboration or cold caches blow up ([FAQ.md](FAQ.md)).
 
 ## Scoring round
 

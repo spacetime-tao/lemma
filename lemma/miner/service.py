@@ -72,9 +72,19 @@ class MinerService:
             s.axon_port,
             wallet.hotkey.ss58_address,
         )
+        logger.info(
+            "Miner running — press Ctrl+C to stop and return to your shell.",
+        )
         try:
             while True:
                 time.sleep(60)
         except KeyboardInterrupt:
             logger.info("Miner shutting down")
             axon.stop()
+            import click
+
+            from lemma.cli.style import finish_cli_output, stylize
+
+            click.echo("")
+            click.echo(stylize("Miner stopped (Ctrl+C).", fg="yellow", bold=True), err=True)
+            finish_cli_output()

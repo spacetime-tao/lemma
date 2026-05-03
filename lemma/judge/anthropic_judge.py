@@ -17,8 +17,12 @@ class AnthropicJudge:
         *,
         temperature: float = 0.2,
         max_tokens: int = 256,
+        timeout: float | None = None,
     ) -> None:
-        self._client = AsyncAnthropic(api_key=api_key)
+        kw: dict[str, object] = {"api_key": api_key}
+        if timeout is not None:
+            kw["timeout"] = timeout
+        self._client = AsyncAnthropic(**kw)
         self._model = model
         self._temperature = temperature
         self._max_tokens = max_tokens

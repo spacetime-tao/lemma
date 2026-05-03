@@ -12,24 +12,24 @@ Use `id` as `OPENAI_MODEL`.
 
 ## Validators (judge)
 
+**Required** on the default OpenAI-compatible path: `OPENAI_MODEL=deepseek-ai/DeepSeek-V3.2-TEE` at `https://llm.chutes.ai/v1` (or the same HF-style id on your self-hosted vLLM). `lemma validator` refuses other ids unless `LEMMA_ALLOW_NONCANONICAL_JUDGE_MODEL=1` (experiments only).
+
 One pinned stack per subnet: `uv run lemma meta` → `judge_profile_sha256` → optional `JUDGE_PROFILE_SHA256_EXPECTED`.
 
-Default starting point: `Qwen/Qwen3-32B-TEE` at `https://llm.chutes.ai/v1`. Judge emits short JSON.
-
-After changing endpoints or models, rerun `uv run lemma meta` and redistribute hashes.
+Judge emits short JSON. After changing endpoints or models, rerun `uv run lemma meta` and redistribute hashes.
 
 ## Miners (prover)
 
-Any model that yields valid `Submission.lean`. Example goals on Chutes (verify pricing live):
+Use a **reasoning-capable** model that writes valid `Submission.lean`. Recommended baseline on Chutes: the same family as the subnet judge (`deepseek-ai/DeepSeek-V3.2-TEE`) or another strong reasoning model you operate reliably.
 
 | Goal | Examples |
 | ---- | -------- |
-| Low cost | Small instruct models |
-| Code-oriented | `Qwen/Qwen2.5-Coder-32B-Instruct` |
-| Stronger reasoning | Qwen3 Next / DeepSeek variants |
-| Maximum capability | Frontier-tier listings |
+| Align with subnet judge tier | `deepseek-ai/DeepSeek-V3.2-TEE` |
+| Other reasoning options | Other DeepSeek / Qwen / frontier reasoning listings on Chutes |
 
-Set `PROVER_PROVIDER=openai`, `OPENAI_BASE_URL`, `OPENAI_MODEL`, `OPENAI_API_KEY`. Set `model_card` accurately for training exports.
+Set `PROVER_PROVIDER=openai`, `OPENAI_BASE_URL`, `OPENAI_API_KEY`, and `PROVER_MODEL` (miner-only id; falls back to `OPENAI_MODEL` if unset). Optional `model_card` for training exports.
+
+The live miner (`lemma miner`) starts solving **as soon as** a validator forwards a challenge — no deliberate wait for block ticks. `lemma try-prover` is separate (manual smoke test).
 
 ## vLLM
 

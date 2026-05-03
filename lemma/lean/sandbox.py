@@ -12,10 +12,29 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from lemma.lean.cheats import axiom_scan_ok, lean_driver_failed, scan_submission_for_cheats
+from lemma.lean.cheats import (
+    axiom_scan_ok,
+    lake_build_environment_failed,
+    lean_driver_failed,
+    scan_submission_for_cheats,
+)
 from lemma.lean.comparator_hook import hook_failure_reason, run_comparator_hook
 from lemma.lean.workspace import materialize_workspace
 from lemma.problems.base import Problem
+
+
+def _docker_container_logs_text(container: object) -> str:
+    """Merge stdout+stderr from ``container.logs()`` (Lake often prints failures to stdout)."""
+    raw = container.logs(stdout=True, stderr=True, timestamps=False)
+    if isinstance(raw, tuple):
+        out_b, err_b = raw
+        return (
+            (out_b or b"").decode("utf-8", errors="replace")
+            + "\n"
+            + (err_b or b"").decode("utf-8", errors="replace")
+        )
+    return raw.decode("utf-8", errors="replace")
+
 
 VerifyReason = Literal[
     "ok",
@@ -107,6 +126,14 @@ class LeanSandbox:
         elapsed = time.monotonic() - t0
         tail = (r.stderr or "")[-4000:]
         if r.returncode != 0:
+            combined = ((r.stderr or "") + "\n" + (r.stdout or ""))[-8000:]
+            if lake_build_environment_failed(combined):
+                return VerifyResult(
+                    passed=False,
+                    reason="compile_error",
+                    stderr_tail=combined[-4000:],
+                    build_seconds=elapsed,
+                )
             return VerifyResult(
                 passed=False,
                 reason="compile_error",
@@ -126,10 +153,19 @@ class LeanSandbox:
         except subprocess.TimeoutExpired:
             return VerifyResult(passed=False, reason="timeout", stderr_tail="axiom check timeout")
         out = (r2.stdout or "") + "\n" + (r2.stderr or "")
+        if lake_build_environment_failed(out):
+            return VerifyResult(
+                passed=False,
+                reason="compile_error",
+                stderr_tail=out[-4000:],
+                stdout_tail=out[-4000:],
+                build_seconds=elapsed,
+            )
         ok, found = axiom_scan_ok(out)
         if not ok:
             extra = f" axioms={found}" if found else ""
-            if lean_driver_failed(out):
+            # Parse failure (found is None) means no usable #print axioms line — usually lake/Lean failed.
+            if found is None or lean_driver_failed(out):
                 return VerifyResult(
                     passed=False,
                     reason="compile_error",
@@ -156,10 +192,12 @@ class LeanSandbox:
 
     def _verify_docker(self, work: Path) -> VerifyResult:
         try:
-            import docker
             import docker.errors
+            from requests.exceptions import ReadTimeout
         except ImportError:
             return VerifyResult(passed=False, reason="docker_error", stderr_tail="docker SDK missing")
+
+        import docker
 
         client = docker.from_env()
         inner = (
@@ -170,55 +208,117 @@ class LeanSandbox:
         nano_cpus = int(self.cpu * 1e9)
         mem = self.mem_mb * 1024 * 1024
         t0 = time.monotonic()
-        # docker-py's ``containers.run`` forwards kwargs to ``create()``; ``demux``
-        # and ``timeout`` are not valid there (docker-py >= 7), so omit them.
+        log_tail = 16_000
+        container = None
         try:
-            out = client.containers.run(
-                self.image,
+            container = client.containers.create(
+                image=self.image,
                 command=["bash", "-lc", inner],
                 volumes={str(work.resolve()): {"bind": "/work", "mode": "rw"}},
                 working_dir="/work",
                 network_mode=self.network_mode,
                 nano_cpus=nano_cpus,
                 mem_limit=mem,
-                remove=True,
-                stdout=True,
-                stderr=True,
                 user="0:0",
             )
-        except docker.errors.ContainerError as e:
+            container.start()
+            try:
+                wait_result = container.wait(timeout=float(self.timeout_s))
+            except ReadTimeout:
+                elapsed = time.monotonic() - t0
+                try:
+                    container.kill()
+                except Exception:
+                    pass
+                text = _docker_container_logs_text(container)
+                return VerifyResult(
+                    passed=False,
+                    reason="timeout",
+                    stderr_tail=text[-log_tail:],
+                    build_seconds=elapsed,
+                )
             elapsed = time.monotonic() - t0
-            # docker-py's ContainerError carries ``stderr`` only (no ``stdout``).
-            err_raw = getattr(e, "stderr", None)
-            if isinstance(err_raw, bytes):
-                err_b = err_raw
-            elif isinstance(err_raw, str):
-                err_b = err_raw.encode("utf-8", errors="replace")
-            else:
-                err_b = str(e).encode("utf-8", errors="replace")
-            text = err_b.decode("utf-8", errors="replace")
-            if e.exit_status == 137:
-                return VerifyResult(passed=False, reason="oom", stderr_tail=text[-8000:], build_seconds=elapsed)
-            ok_ax, found_ax = axiom_scan_ok(text)
-            if not ok_ax:
-                if lean_driver_failed(text):
+            text = _docker_container_logs_text(container)
+            exit_status = (
+                int(wait_result["StatusCode"]) if isinstance(wait_result, dict) else int(wait_result)
+            )
+
+            if exit_status != 0:
+                if exit_status == 137:
+                    return VerifyResult(
+                        passed=False,
+                        reason="oom",
+                        stderr_tail=text[-log_tail:],
+                        build_seconds=elapsed,
+                    )
+                if lake_build_environment_failed(text):
                     return VerifyResult(
                         passed=False,
                         reason="compile_error",
-                        stderr_tail=text[-8000:],
+                        stderr_tail=text[-log_tail:],
                         build_seconds=elapsed,
                     )
-                extra_ax = f" axioms={found_ax}" if found_ax else ""
+                ok_ax, found_ax = axiom_scan_ok(text)
+                if not ok_ax:
+                    if found_ax is None or lean_driver_failed(text):
+                        return VerifyResult(
+                            passed=False,
+                            reason="compile_error",
+                            stderr_tail=text[-log_tail:],
+                            build_seconds=elapsed,
+                        )
+                    extra_ax = f" axioms={found_ax}"
+                    return VerifyResult(
+                        passed=False,
+                        reason="axiom_violation",
+                        stderr_tail=text[-log_tail:] + extra_ax,
+                        build_seconds=elapsed,
+                    )
+                return VerifyResult(
+                    passed=False,
+                    reason="compile_error",
+                    stderr_tail=text[-log_tail:],
+                    build_seconds=elapsed,
+                )
+
+            if lake_build_environment_failed(text):
+                return VerifyResult(
+                    passed=False,
+                    reason="compile_error",
+                    stderr_tail=text[-log_tail:],
+                    build_seconds=elapsed,
+                )
+            ok, found = axiom_scan_ok(text)
+            if not ok:
+                extra = f" axioms={found}" if found else ""
+                if found is None or lean_driver_failed(text):
+                    return VerifyResult(
+                        passed=False,
+                        reason="compile_error",
+                        stderr_tail=text[-log_tail:] + extra,
+                        build_seconds=elapsed,
+                    )
                 return VerifyResult(
                     passed=False,
                     reason="axiom_violation",
-                    stderr_tail=text[-8000:] + extra_ax,
+                    stdout_tail=text[-4000:] + extra,
                     build_seconds=elapsed,
                 )
+            hook = run_comparator_hook(work, timeout_s=float(self.timeout_s))
+            if hook is not None and hook_failure_reason(hook):
+                return VerifyResult(
+                    passed=False,
+                    reason="comparator_rejected",
+                    stderr_tail=hook.stderr_tail[-8000:],
+                    build_seconds=elapsed,
+                )
+            return VerifyResult(passed=True, reason="ok", stdout_tail=text[-2000:], build_seconds=elapsed)
+        except docker.errors.APIError as e:
+            elapsed = time.monotonic() - t0
             return VerifyResult(
                 passed=False,
-                reason="compile_error",
-                stderr_tail=text[-8000:],
+                reason="docker_error",
+                stderr_tail=str(e)[-8000:],
                 build_seconds=elapsed,
             )
         except Exception as e:  # noqa: BLE001 — surface docker failures
@@ -229,34 +329,9 @@ class LeanSandbox:
             if "137" in err or "OOM" in err or "non-zero exit: 137" in err:
                 return VerifyResult(passed=False, reason="oom", stderr_tail=err, build_seconds=elapsed)
             return VerifyResult(passed=False, reason="docker_error", stderr_tail=err[-8000:], build_seconds=elapsed)
-
-        elapsed = time.monotonic() - t0
-        stdout_b, stderr_b = out if isinstance(out, tuple) else (out, b"")
-        text = (stdout_b or b"").decode("utf-8", errors="replace") + (
-            stderr_b or b""
-        ).decode("utf-8", errors="replace")
-        ok, found = axiom_scan_ok(text)
-        if not ok:
-            extra = f" axioms={found}" if found else ""
-            if lean_driver_failed(text):
-                return VerifyResult(
-                    passed=False,
-                    reason="compile_error",
-                    stderr_tail=text[-8000:],
-                    build_seconds=elapsed,
-                )
-            return VerifyResult(
-                passed=False,
-                reason="axiom_violation",
-                stdout_tail=text[-4000:] + extra,
-                build_seconds=elapsed,
-            )
-        hook = run_comparator_hook(work, timeout_s=float(self.timeout_s))
-        if hook is not None and hook_failure_reason(hook):
-            return VerifyResult(
-                passed=False,
-                reason="comparator_rejected",
-                stderr_tail=hook.stderr_tail[-8000:],
-                build_seconds=elapsed,
-            )
-        return VerifyResult(passed=True, reason="ok", stdout_tail=text[-2000:], build_seconds=elapsed)
+        finally:
+            if container is not None:
+                try:
+                    container.remove(force=True)
+                except Exception:
+                    pass

@@ -6,7 +6,7 @@
 
 Inference for miners/validators: [Chutes](https://chutes.ai) OpenAI-compatible API at `https://llm.chutes.ai/v1` (default model in `.env.example`). Other OpenAI-compatible stacks work via the same env vars.
 
-See what validators would sample: `lemma status`, then `lemma problems show --current`. More: [FAQ.md](FAQ.md).
+See what validators would sample: `lemma status`, then `lemma problems` (or `lemma problems show --current`). More: [FAQ.md](FAQ.md).
 
 ## Install uv
 
@@ -104,7 +104,7 @@ More tuning: `.env.example` and `lemma configure` where possible.
 | Keys | `btcli` coldkey + hotkey |
 | Env | `lemma setup` |
 | Chain | Fund + `btcli subnet register` |
-| Miner | `lemma miner` |
-| Validator | `prebuild_lean_image.sh`, `lemma validator` |
+| Miner | `lemma miner` (menu) or `lemma miner start` |
+| Validator | `prebuild_lean_image.sh`, `lemma validator` / `lemma validator start` |
 
 [MINER.md](MINER.md), [VALIDATOR.md](VALIDATOR.md), [MODELS.md](MODELS.md), [TESTING.md](TESTING.md).

@@ -18,10 +18,13 @@ class OpenAIJudge:
         base_url: str | None = None,
         temperature: float = 0.2,
         max_tokens: int = 256,
+        timeout: float | None = None,
     ) -> None:
         kwargs: dict[str, object] = {"api_key": api_key}
         if base_url:
             kwargs["base_url"] = base_url
+        if timeout is not None:
+            kwargs["timeout"] = timeout
         self._client = AsyncOpenAI(**kwargs)
         self._model = model
         self._temperature = temperature

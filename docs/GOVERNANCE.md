@@ -38,7 +38,7 @@ Optional hook ([COMPARATOR.md](COMPARATOR.md)). If any validator enables it, all
 
 ## Shared validator settings
 
-The **subnet operator** publishes one configuration for the subnet: timeouts, seeds, judge, sandbox image, comparator flags. Validators are expected to deploy **that** template so scores stay comparable. Document and distribute: `DENDRITE_TIMEOUT_S`, `LEAN_VERIFY_TIMEOUT_S`, `LEMMA_TIMEOUT_SCALE_BY_SPLIT` / `LEMMA_TIMEOUT_SPLIT_*_MULT` (only if the operator’s policy includes them), `LEMMA_PROBLEM_SEED_MODE`, `LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`, `EMPTY_EPOCH_WEIGHTS_POLICY`, `LEAN_SANDBOX_*`, `JUDGE_*`, `OPENAI_*`, `LEMMA_COMPARATOR_*`. Nothing here is “per-validator preference”; mismatch is misconfiguration. On-chain code does not enforce equality — parity relies on the published policy ([FAQ.md](FAQ.md)).
+The **subnet operator** publishes one configuration for the subnet: timeouts, seeds, judge, sandbox image, comparator flags. Validators are expected to deploy **that** template so scores stay comparable. Document and distribute: `LEMMA_BLOCK_TIME_SEC_ESTIMATE`, `LEMMA_FORWARD_WAIT_MIN_S`, `LEMMA_FORWARD_WAIT_MAX_S`, `LEAN_VERIFY_TIMEOUT_S`, `LEMMA_TIMEOUT_SCALE_BY_SPLIT` / `LEMMA_TIMEOUT_SPLIT_*_MULT` (only if the operator’s policy includes them), `LEMMA_PROBLEM_SEED_MODE`, `LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`, `EMPTY_EPOCH_WEIGHTS_POLICY`, `LEAN_SANDBOX_*`, `JUDGE_*`, `OPENAI_MODEL` (subnet canonical judge id on Chutes), `OPENAI_BASE_URL`, `LEMMA_COMPARATOR_*`. Nothing here is “per-validator preference”; mismatch is misconfiguration. On-chain code does not enforce equality — parity relies on the published policy ([FAQ.md](FAQ.md)).
 
 ### Parity checklist
 
@@ -47,7 +47,7 @@ The **subnet operator** publishes one configuration for the subnet: timeouts, se
 3. Pin `uv run lemma meta`: `JUDGE_PROFILE_SHA256_EXPECTED`, optional `LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED` (generated mode).
 4. Announce upgrades with changelog and cutover.
 
-Hashes reduce drift; they do not prove honest validators. Epoch tempo comes from Bittensor; `DENDRITE_TIMEOUT_S` only bounds each HTTP response.
+Hashes reduce drift; they do not prove honest validators. Epoch tempo comes from Bittensor; forward HTTP wait per query is derived from block height and shared clamps — not a per-node dial.
 
 ## Miner axon policy
 

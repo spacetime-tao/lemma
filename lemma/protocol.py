@@ -34,6 +34,7 @@ class LemmaChallenge(bt.Synapse):
         "theorem_statement",
         "lean_toolchain",
         "mathlib_rev",
+        "deadline_block",
     )
 
     # --- Validator-filled (challenge) ---
@@ -61,6 +62,13 @@ class LemmaChallenge(bt.Synapse):
         ...,
         description="Unix time after which validators may ignore late responses.",
     )
+    deadline_block: int | None = Field(
+        default=None,
+        description=(
+            "First chain height where this challenge is treated as late — same cadence as the next problem-seed "
+            "edge (Tempo epoch or quantize boundary)."
+        ),
+    )
     metronome_id: str = Field(
         ...,
         description="Unique id for this broadcast round (e.g. block hash snippet).",
@@ -69,11 +77,14 @@ class LemmaChallenge(bt.Synapse):
     # --- Miner-filled (response) ---
     reasoning_trace: str | None = Field(
         default=None,
-        description="Flat step-by-step reasoning (legacy); prefer reasoning_steps when possible.",
+        description=(
+            "Flattened informal narrative — populated when routing structured steps to text for hashing/size; "
+            "miners must supply reasoning_steps from the prover JSON (legacy reasoning_trace-only payloads fail)."
+        ),
     )
     reasoning_steps: list[ReasoningStep] | None = Field(
         default=None,
-        description="Structured PRM-style steps; judge prefers this over reasoning_trace when set.",
+        description="Structured informal reasoning (required from miner JSON); judge scores primarily from here.",
     )
     proof_script: str | None = Field(
         default=None,

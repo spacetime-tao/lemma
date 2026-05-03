@@ -1,6 +1,10 @@
 """Cheat scanner."""
 
-from lemma.lean.cheats import axiom_scan_ok, scan_submission_for_cheats
+from lemma.lean.cheats import (
+    axiom_scan_ok,
+    lake_build_environment_failed,
+    scan_submission_for_cheats,
+)
 
 
 def test_scan_sorry() -> None:
@@ -11,6 +15,11 @@ def test_scan_sorry() -> None:
 def test_scan_axiom_decl() -> None:
     r = scan_submission_for_cheats("axiom bad : False\ntheorem t : True := trivial")
     assert not r.ok
+
+
+def test_lake_build_environment_failed_detects_git_dns() -> None:
+    text = "fatal: unable to access 'https://github.com/': Could not resolve host: github.com"
+    assert lake_build_environment_failed(text)
 
 
 def test_axiom_parse_ok() -> None:

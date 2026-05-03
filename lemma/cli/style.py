@@ -17,3 +17,23 @@ def stylize(text: str, **kwargs: object) -> str:
     if not colors_enabled():
         return text
     return click.style(text, **kwargs)
+
+
+def flush_stdio() -> None:
+    """Flush streams only (safe mid-command)."""
+    try:
+        sys.stdout.flush()
+        sys.stderr.flush()
+    except (BrokenPipeError, OSError):
+        pass
+
+
+def finish_cli_output() -> None:
+    """End-of-command: newline(s) + flush so the shell prompt never sticks to the last stderr line."""
+    click.echo("")
+    try:
+        sys.stderr.write("\n")
+        sys.stderr.flush()
+    except OSError:
+        pass
+    flush_stdio()

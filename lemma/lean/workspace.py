@@ -24,7 +24,9 @@ def materialize_workspace(dest: Path, problem: Problem, submission_lean: str) ->
 
     (dest / "lean-toolchain").write_text(problem.lean_toolchain.strip() + "\n", encoding="utf-8")
 
-    lake = f'''name = "lemma_round"
+    # Must match `name` in `lemma/lean/template/lakefile.toml` (Lean sandbox image bakes `/opt/lemma-stub/.lake`
+    # under that project name so `cp` in the container can warm this workspace).
+    lake = f'''name = "lemma_stub"
 version = "0.1.0"
 defaultTargets = ["Challenge", "Solution", "Submission"]
 

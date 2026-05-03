@@ -11,7 +11,9 @@ Inference: Chutes when prompted works for most setups.
 ./scripts/lemma-run lemma miner
 ```
 
-Daily forward cap: `MINER_MAX_FORWARDS_PER_DAY` or `lemma miner --max-forwards-per-day`.
+While the axon is up, each validator forward **starts the prover immediately** — there is no intentional delay for “new theorem” windows; you compete as soon as traffic hits your axon. By contrast, `lemma try-prover` is a manual one-off (same API billing pattern, but you pressed Enter).
+
+Daily forward cap: `MINER_MAX_FORWARDS_PER_DAY` or `lemma miner start --max-forwards-per-day N`.
 
 ## Seeing replies, correctness, and Lean status
 
@@ -26,7 +28,7 @@ For frozen catalog problems, `LEMMA_MINER_LOCAL_VERIFY` needs the same `LEMMA_MI
 
 ## Generated mode
 
-Templates span easy/medium/hard; answer deadline is `DENDRITE_TIMEOUT_S` ([GENERATED_PROBLEMS.md](GENERATED_PROBLEMS.md)).
+Templates span easy/medium/hard; how long validators wait on the wire follows **block height** (blocks to the next seed edge × `LEMMA_BLOCK_TIME_SEC_ESTIMATE`, clamped) — see [GENERATED_PROBLEMS.md](GENERATED_PROBLEMS.md).
 
 ## Compose
 
@@ -40,4 +42,4 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml up miner
 
 ## Models
 
-[MODELS.md](MODELS.md).
+Subnet validators score with a fixed judge model; miners should use a **reasoning**-oriented prover (documented in [MODELS.md](MODELS.md) — e.g. `deepseek-ai/DeepSeek-V3.2-TEE` on Chutes or another strong reasoning model you run well).
