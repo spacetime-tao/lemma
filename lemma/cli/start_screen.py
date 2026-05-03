@@ -536,11 +536,22 @@ def show_start_here(ctx: click.Context | None = None, *, group: click.Group | No
         return
 
     default_step = "1"
-    raw_line = click.prompt(
-        stylize("Next step", fg="cyan", bold=True),
-        default=default_step,
-        show_default=True,
-    )
+    try:
+        raw_line = click.prompt(
+            stylize("Next step", fg="cyan", bold=True),
+            default=default_step,
+            show_default=True,
+        )
+    except (click.Abort, EOFError):
+        # Ctrl+C / Ctrl+D at the prompt — still hand off to a `.venv` subshell when enabled (same as after a step).
+        finish_cli_output()
+        from lemma.cli.interactive_venv_shell import (
+            maybe_exec_venv_shell_after_interactive_menu,
+        )
+
+        maybe_exec_venv_shell_after_interactive_menu()
+        return
+
     line_stripped = (raw_line or default_step).strip() or default_step
     try:
         parts = shlex.split(line_stripped)

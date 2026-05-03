@@ -41,6 +41,22 @@ def _reattach_stdio_to_controlling_tty() -> bool:
     return True
 
 
+def _sync_controlling_tty_after_pty() -> None:
+    """New line + SGR reset on the real tty after ``pty.spawn`` returns.
+
+    Nested PTYs (IDE / Terminal.app + our handoff) often leave the cursor mid-line, so the next
+    prompt draws on top of pasted text until the user runs ``reset`` or starts a new line.
+    """
+    if os.name != "posix":
+        return
+    try:
+        with open("/dev/tty", "w", encoding="utf-8", errors="replace") as tty:
+            tty.write("\r\033[0m\033[39m\033[49m\n")
+            tty.flush()
+    except OSError:
+        pass
+
+
 def _exec_invocation(shell_bin: str) -> str:
     """Shell argv tail after ``exec`` so login shells stay interactive (stdin must be a real TTY)."""
     q = shlex.quote(shell_bin)
@@ -53,8 +69,12 @@ def _exec_invocation(shell_bin: str) -> str:
 def maybe_exec_venv_shell_after_interactive_menu() -> None:
     """After ``finish_cli_output``, hand off to an interactive shell with ``.venv`` sourced.
 
-    ``uv run`` / some terminals attach stdin as a pipe; a plain ``exec $SHELL`` then exits on EOF.
-    We prefer :func:`pty.spawn` so the child gets a real pseudo-terminal. Disable with
+    We attach stdio to ``/dev/tty`` (``uv run`` / IDE wrappers often leave fd 0 as a pipe) and
+    ``exec`` a login shell — **no** Python-side :func:`pty.spawn` relay, so Cursor/VS Code
+    terminals do not get a nested PTY (that breaks paste, wrapping, and the prompt).
+
+    Fallback: if ``exec`` fails, use ``pty.spawn``. Force the PTY path with
+    ``LEMMA_INTERACTIVE_VENV_USE_PTY=1``. Disable the whole handoff with
     ``LEMMA_NO_INTERACTIVE_VENV_SHELL=1``.
     """
     if os.name == "nt":
@@ -101,30 +121,56 @@ def maybe_exec_venv_shell_after_interactive_menu() -> None:
     sys.stderr.flush()
 
     argv = ["/bin/sh", "-c", inner]
+    force_pty = os.environ.get("LEMMA_INTERACTIVE_VENV_USE_PTY", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
 
-    # Prefer PTY: interactive shells need a TTY; uv/IDE often wire stdin as a pipe.
-    try:
-        import pty
-
+    def _run_pty_fallback() -> None:
+        try:
+            import pty
+        except ImportError:
+            return
         try:
             status = pty.spawn(argv)
         except OSError:
-            status = None
-        if status is not None:
-            try:
-                code = os.waitstatus_to_exitstatus(status)
-            except ValueError:
-                code = 1
-            raise SystemExit(code)
-    except ImportError:
-        pass
+            return
+        try:
+            code = os.waitstatus_to_exitstatus(status)
+        except ValueError:
+            code = 1
+        _sync_controlling_tty_after_pty()
+        raise SystemExit(code)
+
+    if force_pty:
+        try:
+            _run_pty_fallback()
+        except SystemExit:
+            raise
+        click.echo(
+            stylize(
+                "PTY handoff unavailable (import or spawn failed). Run `lemma env` for `source …/activate`.\n",
+                fg="red",
+            ),
+            err=True,
+        )
+        return
 
     _reattach_stdio_to_controlling_tty()
 
     try:
         os.execv("/bin/sh", ["/bin/sh", "-c", inner])
-    except OSError as e:
+    except OSError as exec_err:
+        try:
+            _run_pty_fallback()
+        except SystemExit:
+            raise
         click.echo(
-            stylize(f"Could not start shell with `.venv` ({e}). Run `lemma env` for `source …/activate`.\n", fg="red"),
+            stylize(
+                f"Could not start shell with `.venv` ({exec_err}). Run `lemma env` for `source …/activate`.\n",
+                fg="red",
+            ),
             err=True,
         )
