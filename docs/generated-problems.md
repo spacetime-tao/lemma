@@ -12,6 +12,14 @@ There is **no single fixed “number of theorems in the world”** here. What ex
 
 So: **finite template repertoire, infinite instance stream** as the chain advances. If you need a **closed catalog** (countable, frozen list), use `LEMMA_PROBLEM_SOURCE=frozen` and see [catalog-sources.md](catalog-sources.md).
 
+### Plain English
+
+What **22 builders** means is **not** “there are only 22 problems total.” It means **22 recipes**. Each recipe says how to cook one *kind* of challenge—e.g. ask for a proof about two random natural numbers, or about a certain logical shape. Every time the subnet advances and hands out a **new seed**, the code runs the RNG again: it may pick **another recipe**, or the **same recipe with new random constants**. So **one family** can produce **endlessly many slightly different statements**: same pattern, different numbers or details.
+
+You should **not** picture a short list to memorize. You picture **many instances** flowing from **a small cookbook**. The **topic** labels (algebra, analysis, …) are mainly for logging—they are not separate rule sets in Lean.
+
+**Honest limit:** these are **variations inside fixed templates**, not “every possible theorem in mathematics.” Over time, miners may still recognize **which shapes repeat**—that is normal. **More diversity** comes from adding builders, frozen/catalog problems, or separate bounty lanes—whatever governance turns on.
+
 **Future directions** (not all implemented): more builders or splits; imports from formalized contest corpora (e.g. miniF2F-style); harder multi-lemma templates; curated `sorry` bounties alongside generated traffic—governance decides what is live.
 
 ## Template mix
