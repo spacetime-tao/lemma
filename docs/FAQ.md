@@ -10,21 +10,23 @@
 
 Each forward is its own response. **Rewards are not a lifetime XP total.** They come from how you **rank in validator rounds where your answer is actually scored** and validators run **`set_weights`**. Doing well in **several** scored rounds can matter across **those** rounds; repeating the same success **offline** does not by itself stack on-chain.
 
-## `LEMMA_PROVER_SYSTEM_APPEND` — what, where, why
+## Prover system prompt (miners)
 
-**What:** Extra **natural-language instructions** you choose (audience, style, language, emphasis). Lemma **appends** them after the fixed in-repo `PROVER_SYSTEM` that defines the JSON contract (`reasoning_steps`, `proof_script`, no `sorry`, etc.). You are **not** replacing that contract — only adding operator policy on top.
+The miner’s LLM uses the **fixed in-repo** `PROVER_SYSTEM` in [`lemma/miner/prover.py`](../lemma/miner/prover.py) for every prover call (JSON shape, reasoning rules, Lean contract). There is **no** env-based append — subnet answers are defined by that prompt plus the challenge text you receive from the protocol.
 
-**Where:** `LEMMA_PROVER_SYSTEM_APPEND` in `.env`. Prefer **`lemma configure prover-system-append`** (opens an editor or accepts `--file` / `--clear`) so you do not have to hand-edit multiline text.
+**Informal vs Lean:** One completion fills both **`reasoning_steps`** and **`proof_script`**. **Detailed formal proofs:** The built-in prompt asks for expanded `by` blocks where appropriate. Operators can optionally set **`LEMMA_PROVER_MIN_PROOF_SCRIPT_CHARS`** (full `Submission.lean` length; default **off**) to reject overly short scripts — tune so trivial `rfl` goals still pass when unset or low.
 
-**Why:** Steers how the model writes **without** forking the repo prompt. Saved **Gemini / ChatGPT “system instructions” in the browser UI are not sent** to Lemma’s HTTP calls unless you put equivalent text here (or maintain your own fork of `PROVER_SYSTEM`).
+## `lemma try-prover --verify` vs real validator scoring
 
-**Informal vs Lean:** The miner prover makes **one** LLM completion per challenge. The **system** message (built-in + append) influences **both** informal **`reasoning_steps`** **and** the **`proof_script`** string (the Lean file contents). There is no separate env var for “informal only.” **Correctness** of the Lean proof is still enforced by the **kernel** in the validator sandbox; append cannot disable that. Tweaking append **can** improve judged exposition and sometimes helps the model produce valid proofs, but it is not a substitute for model choice, temperature, timeouts, or Mathlib skill.
+**`lemma try-prover`** is a **local** dry run: it calls **your** prover API and prints output. It does **not** talk to validators or write scores on-chain.
 
-**Detailed formal proofs:** The built-in `PROVER_SYSTEM` instructs the model to write **expanded** `by` blocks (`calc`, induction branches, `--` comments), not one-line opaque tactics when the math naturally has multiple steps. Operators can optionally set **`LEMMA_PROVER_MIN_PROOF_SCRIPT_CHARS`** (full `Submission.lean` character count; default **off**) to reject overly short scripts and force retries toward longer proofs — tune carefully so trivial `rfl`-only goals still pass when the minimum is unset or low.
+**`--verify`** (after the LLM returns) runs **`lake build`** **on your machine** to check that `Submission.lean` compiles — the same *kind* of kernel check validators use, but **only locally**:
 
-## Can tweaking the prover system append improve scores?
+- **`lemma validator`:** **`lemma validator` refuses to start** if **`LEMMA_USE_DOCKER=false`** — validators must use Docker. **`lemma verify`** / miners may still use **`LEMMA_USE_DOCKER=false`** where policy allows (local tooling only).
+- **`try-prover --verify`:** Defaults to the **same Docker sandbox** as validators when **`LEMMA_USE_DOCKER=true`**. Host `lake` is opt-in: **`--host-lean`** or **`LEMMA_TRY_PROVER_HOST_VERIFY=1`**, and only if **`LEMMA_ALLOW_HOST_LEAN=1`** in **`.env`**.
+- **`lemma verify --host-lean`:** Host `lake` only with **`LEMMA_ALLOW_HOST_LEAN=1`**. Otherwise use Docker (default). Still **local**, not on-chain scoring.
 
-Sometimes. Clearer, rubric-aligned reasoning often scores better with the judge; a more disciplined prompt can also reduce malformed JSON or weak proofs — but outcomes still depend on the **model**, **temperature**, **timeouts**, and the **theorem**. Use **`lemma configure prover-system-append`** for a visible, CLI-first path; compare with `lemma try-prover` before relying on it under validator forward wait.
+To see what validators would sample, use **`lemma status`** / **`lemma problems`**; actual rewards come only when a validator **forwards** to your axon and runs the full round (Lean + judge), not from `try-prover`.
 
 ## Validator pipeline (each round)
 
@@ -82,11 +84,23 @@ Template or catalog changes need coordinated upgrades ([GOVERNANCE.md](GOVERNANC
 | `LEMMA_BLOCK_TIME_SEC_ESTIMATE` | Rough seconds per chain block; validators derive **forward HTTP wait** = blocks until the next problem-seed edge × this value (then clamped). |
 | `LEMMA_FORWARD_WAIT_MIN_S` / `LEMMA_FORWARD_WAIT_MAX_S` | Floor and ceiling for that derived forward HTTP wait (validator client timeout per miner query). |
 | `LEMMA_LLM_HTTP_TIMEOUT_S` | HTTP read timeout for one prover or judge completion — must fit within a round’s forward wait at typical chain heads. |
-| `LEAN_VERIFY_TIMEOUT_S` | Sandbox `lake build` budget (default 300 s). |
-| `LEMMA_VALIDATOR_ROUND_INTERVAL_S` | Seconds between rounds when not epoch-aligned (default 300). |
-| `LEMMA_VALIDATOR_ALIGN_ROUNDS_TO_EPOCH` | `1` = wait for chain epoch each round; default `0` (timer). |
+| `LEAN_VERIFY_TIMEOUT_S` | Sandbox `lake build` budget **per miner proof** (default 300 s). |
+
+Validator **round cadence** is not configurable in Lemma: each validator waits for **subnet epoch boundaries** before running `run_epoch` — no wall-clock interval mode.
 
 Timeout values are subnet policy: the operator publishes a single canonical `.env` (or equivalent) and every validator is expected to run that same configuration. Individual validators do not choose different budgets; drift breaks fairness and comparability ([GOVERNANCE.md](GOVERNANCE.md)). Forward HTTP wait follows **block height** (same edge as the next seed rotation), not a single operator-chosen wall-clock cap. If the operator’s published policy includes per-split multipliers (`LEMMA_TIMEOUT_SCALE_BY_SPLIT`, `LEMMA_TIMEOUT_SPLIT_*_MULT`), that is still one policy for the whole subnet, not a per-node setting.
+
+## Miner deadlines vs validator processing (plain English)
+
+**Miners** have an explicit **response** deadline: the synapse **`timeout`** / forward HTTP wait (derived from blocks until the next seed edge × `LEMMA_BLOCK_TIME_SEC_ESTIMATE`, then clamped). If your axon does not complete the HTTP response in time, that round does not count as a successful candidate answer from you.
+
+**Validators** do **not** get a matching global rule like “finish verifying and judging **every** successful miner before block *N* or before the next theorem.” Lemma picks **one** theorem when `run_epoch` **starts** and runs forward → verify → judge for that round; advancing blocks do **not** swap the theorem mid-batch or void in-flight grading. There is **no** separate “validator batch clock” in addition to the per-proof limits below. You still want fast hardware and tuning so each epoch completes in reasonable wall-clock time and stays competitive with other validators.
+
+**What happens if one proof hits `LEAN_VERIFY_TIMEOUT_S`?** That miner’s Lean step **fails** (verify reason `timeout`). They are **not** verified for the round, so they get **no** judge score and **no** Pareto weight from that proof. Other miners in the same round are unaffected.
+
+**What happens if the judge times out or errors?** That UID is **skipped** for scoring for the round (failure is logged; `judge_errors` in the epoch summary). Other judged miners are still scored.
+
+Concurrency caps (`LEMMA_LEAN_VERIFY_MAX_CONCURRENT`, `LEMMA_JUDGE_MAX_CONCURRENT`) limit how many proofs are processed at once; extra work **queues**, it is not dropped because the chain moved.
 
 ## What can exceed the defaults?
 
@@ -124,7 +138,7 @@ One validator, one round: every queried miner gets the same synapse.
 
 Across validators: default `LEMMA_PROBLEM_SEED_MODE=quantize` rotates the shared theorem every `LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS` (default **100** blocks; at ~12 s/block that is about **20 minutes** per theorem). Subnet operators may switch to `subnet_epoch` to follow on-chain Tempo instead. Same code, problem source, registry hashes, and consistent RPC matter.
 
-Within one validator, a round finishes before the next sleep (`LEMMA_VALIDATOR_ROUND_INTERVAL_S`).
+Within one validator, a round finishes before the code waits for the **next subnet epoch boundary**.
 
 ## CLI: current theorem and fingerprints
 
@@ -195,7 +209,7 @@ So repeated “failures” while you believe the proof is right are usually **en
 ## Judge protocol
 
 - Prompts: [`prompts.py`](../lemma/judge/prompts.py); parsing [`json_util.py`](../lemma/judge/json_util.py).
-- `JUDGE_PROVIDER=openai` means OpenAI-compatible HTTP. **Validators** must use `OPENAI_MODEL=deepseek-ai/DeepSeek-V3.2-TEE` (Chutes id) unless `LEMMA_ALLOW_NONCANONICAL_JUDGE_MODEL=1` for experiments.
+- `JUDGE_PROVIDER=chutes` means the subnet judge on Chutes (OpenAI-compatible HTTP to `https://llm.chutes.ai/v1`; legacy `JUDGE_PROVIDER=openai` still works for the same client). **Validators** must use `OPENAI_MODEL=deepseek-ai/DeepSeek-V3.2-TEE` and that base URL (enforced at startup). **Miners** may use any prover model via `PROVER_*` / `PROVER_MODEL`.
 - Align with `uv run lemma meta` and optional `JUDGE_PROFILE_SHA256_EXPECTED`.
 
 ## Miner provenance
@@ -224,7 +238,7 @@ Logs: `lemma_epoch_summary`; optional JSONL. No built-in dashboard ([PRODUCTION.
 
 ## Throughput
 
-One sampled problem per validator round. The forward HTTP wait (block-derived) bounds one miner response; spacing is `LEMMA_VALIDATOR_ROUND_INTERVAL_S` or epoch alignment.
+One sampled problem per validator round. The forward HTTP wait (block-derived) bounds one miner response; the next round starts after the **next subnet epoch boundary**.
 
 ## `lemma --help` and Bittensor
 

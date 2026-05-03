@@ -6,6 +6,11 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any
 
+# Solution.lean bridges Challenge ↔ Submission with `exact Submission.<theorem_name>`.
+# The bridge theorem must use a name **different** from `theorem_name`, otherwise after
+# `import Submission` Lean reports "`theorem_name` has already been declared".
+SOLUTION_BRIDGE_THEOREM = "LemmaSubmissionBridge"
+
 
 @dataclass(frozen=True)
 class Problem:
@@ -47,7 +52,7 @@ theorem {self.theorem_name} : {self.type_expr} := by
         return f"""{imps}
 import Submission
 
-theorem {self.theorem_name} : {self.type_expr} := by
+theorem {SOLUTION_BRIDGE_THEOREM} : {self.type_expr} := by
   exact Submission.{self.theorem_name}
 """
 

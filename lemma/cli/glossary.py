@@ -46,8 +46,9 @@ def print_glossary() -> None:
             "Running `lemma try-prover` in a terminal prompts once before billing your API (`--yes` skips it; "
             "the numbered START HERE menu skips it because you already picked the step).\n"
             "That output is **not** the same as Lean successfully **building** that file (imports, Mathlib, proofs).\n"
-            "`--verify` runs a local Lean build (Docker/host) to see if that script actually compiles — "
-            "similar *idea* to the validator’s Lean step, but only on your machine.\n"
+            "`--verify` runs a local Lean build (default: Docker when LEMMA_USE_DOCKER=1, like validators; host `lake` "
+            "only with LEMMA_ALLOW_HOST_LEAN=1 and --host-lean) — similar *idea* to the validator’s Lean step, "
+            "but only on your machine.\n"
             "It does **not** run the LLM **judge** (scores). Validators still run Lean + judge themselves.",
         ),
         (
@@ -56,14 +57,16 @@ def print_glossary() -> None:
             "miner starts the real axon so validators can forward challenges (prover bills when answering).",
         ),
         (
-            "validator-dry vs validator",
-            "validator-dry prints a one-shot summary of validator-related env (wallet, timeouts, …).\n"
-            "validator runs the full scoring loop; use validator --dry-run for repeated rounds without set_weights.",
+            "validator-dry vs validator dry-run vs validator",
+            "`lemma validator-dry` — print env only, no scoring.\n"
+            "`lemma validator dry-run` — full scoring rounds without set_weights.\n"
+            "`lemma validator start` — full rounds including set_weights.\n"
+            "`lemma validator-check` — pre-flight READY / NOT READY before any of the above.",
         ),
         (
             "validator-check",
             "Run **before** `lemma validator`: chain RPC, UID for **validator** wallet on NETUID (see "
-            "BT_VALIDATOR_WALLET_* vs BT_WALLET_*), optional pin drift vs `lemma meta`, Lean image. "
+            "BT_VALIDATOR_WALLET_* vs BT_WALLET_*), subnet hash pins vs `lemma meta`, Lean image. "
             "READY or NOT READY — unlike validator-dry, which only prints env.",
         ),
         (
@@ -86,16 +89,16 @@ def print_glossary() -> None:
         ),
         (
             "Subnet hash pins (`lemma configure subnet-pins`)",
-            "Writes expected-hash lines into `.env` copied from `lemma meta`. Optional safety only — "
-            "does not block running a validator unless you turn on LEMMA_VALIDATOR_ENFORCE_PUBLISHED_META=1.",
+            "Writes expected-hash lines into `.env` copied from `lemma meta`. Validators must have these pins "
+            "set and matching live `lemma meta` (judge profile always; generated-registry hash when using "
+            "generated problems).",
         ),
         (
             "Can I run a validator?",
             "Use `lemma validator-check` for a clear pre-flight (READY / NOT READY). Usually you’re fine if: "
-            "RPC works, hotkey has a UID on NETUID, judge API keys set, Lean image present, timeouts OK "
-            "(`lemma doctor` for key/env sanity). Pins in `.env` are optional; without ENFORCE they don’t stop "
-            "startup. If something “doesn’t match,” compare **live** `lemma meta` to your pinned expected lines "
-            "— or remove pins until you understand them.",
+            "RPC works, hotkey has a UID on NETUID, judge API keys set, subnet pins and Lean image present, "
+            "timeouts OK (`lemma doctor` for key/env sanity). If something “doesn’t match,” compare **live** "
+            "`lemma meta` to your pinned expected lines and refresh `lemma configure subnet-pins`.",
         ),
     )
     for title, body in sections:

@@ -1,6 +1,10 @@
 """Judge profile hashing for subnet parity."""
 
-from lemma.common.config import LemmaSettings
+from lemma.common.config import (
+    CANONICAL_JUDGE_OPENAI_BASE_URL,
+    CANONICAL_JUDGE_OPENAI_MODEL,
+    LemmaSettings,
+)
 from lemma.judge.profile import judge_profile_dict, judge_profile_sha256
 
 
@@ -45,3 +49,20 @@ def test_judge_profile_base_url_trailing_slash_normalized() -> None:
         judge_max_tokens=256,
     )
     assert judge_profile_sha256(a) == judge_profile_sha256(b)
+
+
+def test_chutes_and_legacy_openai_chutes_stack_share_fingerprint() -> None:
+    """``JUDGE_PROVIDER=chutes`` matches legacy ``openai`` when the stack is the official Chutes judge."""
+    legacy = LemmaSettings(
+        judge_provider="openai",
+        openai_model=CANONICAL_JUDGE_OPENAI_MODEL,
+        openai_base_url=CANONICAL_JUDGE_OPENAI_BASE_URL,
+    )
+    modern = LemmaSettings(
+        judge_provider="chutes",
+        openai_model=CANONICAL_JUDGE_OPENAI_MODEL,
+        openai_base_url=CANONICAL_JUDGE_OPENAI_BASE_URL,
+    )
+    assert judge_profile_sha256(legacy) == judge_profile_sha256(modern)
+    assert judge_profile_dict(legacy)["judge_provider"] == "chutes"
+    assert judge_profile_dict(modern)["judge_provider"] == "chutes"

@@ -12,14 +12,14 @@ Prerequisites: [GETTING_STARTED.md](GETTING_STARTED.md).
 
 - `uv run lemma meta`; distribute `judge_rubric_sha256` and `judge_profile_sha256`.
 - `JUDGE_PROFILE_SHA256_EXPECTED` to fail on misconfiguration.
-- Default in `.env.example`: Chutes + `deepseek-ai/DeepSeek-V3.2-TEE` (required `OPENAI_MODEL` for validators unless `LEMMA_ALLOW_NONCANONICAL_JUDGE_MODEL=1`). Self-hosted: `OPENAI_BASE_URL` to vLLM; from containers use a host-reachable URL (`host.docker.internal` on macOS/Windows, bridge gateway on Linux).
+- Validators: Chutes `OPENAI_BASE_URL` + `OPENAI_MODEL=deepseek-ai/DeepSeek-V3.2-TEE` (enforced; no vLLM for the judge). Miners: prover can use a different host via `PROVER_OPENAI_BASE_URL` / `PROVER_MODEL` as needed; from containers use a host-reachable URL (`host.docker.internal` on macOS/Windows, bridge gateway on Linux).
 
 ## Miner payloads
 
 - Prefer `reasoning_steps` + `proof_script`; legacy `reasoning_trace` supported.
 - Cap size with `SYNAPSE_MAX_TRACE_CHARS`.
 - Align `LEMMA_BLOCK_TIME_SEC_ESTIMATE`, forward-wait clamps, `LEMMA_LLM_HTTP_TIMEOUT_S`, and `LEAN_VERIFY_TIMEOUT_S` across validators (see `.env.example`).
-- Choose `LEMMA_VALIDATOR_ROUND_INTERVAL_S` vs `LEMMA_VALIDATOR_ALIGN_ROUNDS_TO_EPOCH` for cadence.
+- Validator cadence is subnet epoch boundaries only (mandatory).
 
 ## Catalogs
 

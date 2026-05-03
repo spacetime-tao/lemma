@@ -29,6 +29,21 @@ def scan_submission_for_cheats(source: str) -> CheatScan:
     return CheatScan(True, None)
 
 
+def cheat_scan_stderr_tail(scan: CheatScan, *, max_len: int = 8000) -> str:
+    """Human-readable tail for ``VerifyResult`` when ``scan.ok`` is false."""
+    if scan.ok:
+        return ""
+    tail = scan.reason or ""
+    if tail == "forbidden_token":
+        tail += (
+            " — remove `sorry`, `admit`, `unsafe`, … from Submission.lean (completed proof only). "
+            "`lemma/lean/template/Submission.lean` is a stub and will always fail this check."
+        )
+    elif tail == "user_axiom":
+        tail += " — do not declare new `axiom`s in Submission.lean."
+    return tail[:max_len]
+
+
 ALLOWED_AXIOMS = frozenset({"propext", "Quot.sound", "Classical.choice"})
 
 

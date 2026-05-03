@@ -10,7 +10,8 @@ from typing import NamedTuple
 
 import click
 
-from lemma.cli.style import stylize
+from lemma.cli.env_paths import venv_activate_script
+from lemma.cli.style import finish_cli_output, stylize
 
 
 class _MenuItem(NamedTuple):
@@ -46,7 +47,11 @@ _MENU: tuple[_MenuItem, ...] = (
         "validator-check",
         "Before you run a validator: are chain, wallet, and Lean image in order? (READY or NOT READY)",
     ),
-    _MenuItem("validator-dry", "Show validator settings only — no scoring, no on-chain weights"),
+    _MenuItem(
+        "validator-dry",
+        "Print validator env from `.env` — no scoring rounds (for live rounds without weights use "
+        "`lemma validator dry-run`)",
+    ),
     _MenuItem("miner", "Start your miner so validators can send you challenges"),
     _MenuItem("validator", "Run the full validator: check proofs, judge, and update weights on chain"),
     _MenuItem("meta", "Show fingerprints of your judge and problem code (should match the rest of the subnet)"),
@@ -60,6 +65,53 @@ def _menu_keys() -> list[str]:
     return [item.key for item in _MENU]
 
 
+def _looks_like_shell_step(token: str) -> bool:
+    """True if the user pasted a shell command into the menu prompt by mistake."""
+    raw = token.strip().lower()
+    if not raw:
+        return False
+    shell_verbs = frozenset(
+        {
+            "source",
+            "cd",
+            "export",
+            "uv",
+            "sudo",
+            "pip",
+            "pip3",
+            "python",
+            "python3",
+            "conda",
+            "npx",
+            "npm",
+            "pnpm",
+            "yarn",
+            "git",
+            "curl",
+            "wget",
+            "cat",
+            "ls",
+            "echo",
+            "which",
+            "open",
+            "kill",
+            "mkdir",
+            "rm",
+            "mv",
+            "cp",
+            "chmod",
+            "activate",
+        },
+    )
+    if raw in shell_verbs:
+        return True
+    if raw.startswith(("./", "../", "/", "~")):
+        return True
+    if raw.endswith((".sh", ".zsh", ".bash")) and "/" in raw:
+        return True
+    return False
+
+
 def _resolve_menu_selector(token: str) -> str:
     """Map first token to menu key (1–N, command name, quit aliases)."""
     raw = token.strip().lower()
@@ -67,9 +119,15 @@ def _resolve_menu_selector(token: str) -> str:
         raw = raw[6:].strip()
     if not raw:
         raise click.BadParameter("empty step")
+    keys = _menu_keys()
+    if _looks_like_shell_step(raw):
+        raise click.BadParameter(
+            "this prompt is not a shell — type a step number "
+            f"(1–{len(keys)}) or a command name (e.g. doctor, status). "
+            "Run `source .venv/bin/activate` or `uv run lemma …` in your normal terminal.",
+        )
     if raw in ("q", "quit", "exit"):
         return "quit"
-    keys = _menu_keys()
     if raw.isdigit():
         n = int(raw)
         if 1 <= n <= len(keys):
@@ -108,6 +166,8 @@ def _parse_try_prover_menu_extras(extra: list[str], *, menu_assume_yes: bool) ->
         "do_verify": False,
         "block": None,
         "retry_attempts": None,
+        "host_lean": False,
+        "docker_verify": False,
     }
     i = 0
     while i < len(extra):
@@ -130,11 +190,20 @@ def _parse_try_prover_menu_extras(extra: list[str], *, menu_assume_yes: bool) ->
                 raise click.UsageError(f"--retry-attempts must be 1–32, got {ra}")
             kwargs["retry_attempts"] = ra
             i += 2
+        elif t == "--host-lean":
+            kwargs["host_lean"] = True
+            i += 1
+        elif t == "--docker-verify":
+            kwargs["docker_verify"] = True
+            i += 1
         else:
             raise click.UsageError(
-                "After try-prover, optional flags: `--verify`, `--block N`, `--retry-attempts N`, `-y`. "
+                "After try-prover, optional flags: `--verify`, `--host-lean`, `--docker-verify`, `--block N`, "
+                "`--retry-attempts N`, `-y`. "
                 f"See `lemma try-prover --help`. Got: {' '.join(extra)}",
             )
+    if kwargs["host_lean"] and kwargs["docker_verify"]:
+        raise click.UsageError("Use only one of --host-lean and --docker-verify.")
     return kwargs
 
 
@@ -178,10 +247,6 @@ def dispatch_menu_command(
             ("judge", "Validator judge LLM (Chutes / Anthropic / custom)"),
             ("prover", "Miner prover LLM (full wizard)"),
             ("prover-model", "PROVER_MODEL only (miner model id)"),
-            (
-                "prover-system-append",
-                "Extra prover instructions after built-in JSON rules ($EDITOR / --file / --clear)",
-            ),
             ("prover-retries", "LEMMA_PROVER_LLM_RETRY_ATTEMPTS (gateway retries per forward)"),
             ("subnet-pins", "Write meta hash pins into `.env` (after env matches subnet policy)"),
         )
@@ -280,61 +345,174 @@ def run_quick_menu_step(ctx: click.Context, *, group: click.Group, step: int) ->
         extra = []
     extra = [str(x) for x in extra]
     click.echo(stylize(f"Menu step {step} → lemma {key}" + (f" {' '.join(extra)}" if extra else ""), dim=True))
-    dispatch_menu_command(
-        ctx,
-        group,
-        key,
-        extra,
-        menu_assume_yes_for_try_prover=True,
-    )
+    try:
+        dispatch_menu_command(
+            ctx,
+            group,
+            key,
+            extra,
+            menu_assume_yes_for_try_prover=True,
+        )
+    finally:
+        finish_cli_output()
 
 
 def show_start_here(ctx: click.Context | None = None, *, group: click.Group | None = None) -> None:
     """Print the onboarding roadmap and optionally branch into another command."""
+    n_menu = len(_MENU)
+    ve = (os.environ.get("VIRTUAL_ENV") or "").strip()
+
     click.echo(stylize("\nLemma — START HERE\n", fg="cyan", bold=True), nl=False)
-    click.echo(
-        stylize("Install Python deps in your normal terminal first: ", dim=True)
-        + stylize("uv sync --extra dev", fg="yellow")
-        + stylize("  (this prompt is not a shell)\n", dim=True),
-        nl=False,
-    )
-    click.echo(
-        stylize("Then either ", dim=True)
-        + stylize("source .venv/bin/activate", fg="yellow")
-        + stylize(" and run ", dim=True)
-        + stylize("lemma …", fg="green")
-        + stylize(", or ", dim=True)
-        + stylize("uv run lemma …", fg="yellow")
-        + stylize(", or ", dim=True)
-        + stylize("./scripts/lemma-run lemma …", fg="yellow")
-        + stylize(".\n", dim=True),
-        nl=False,
-    )
+
+    act = venv_activate_script()
+    courtesy_path = ve or (str(act) if act else "")
+    if courtesy_path:
+        click.echo(
+            stylize(
+                "Courtesy — this `lemma` process is already using a virtualenv:\n  ",
+                fg="green",
+                dim=True,
+            )
+            + stylize(courtesy_path, fg="green")
+            + stylize(
+                "\n  `uv run lemma …` loads `.venv` for **this** command (same packages as "
+                "`source .venv/bin/activate`). Your outer shell prompt does not change until you activate "
+                "manually — run ",
+                dim=True,
+            )
+            + stylize("lemma env", fg="cyan")
+            + stylize(" for the exact `source …` line. Optional: ", dim=True)
+            + stylize(".envrc.example", fg="cyan")
+            + stylize(" + direnv auto-activate when you `cd` here.\n", dim=True),
+            nl=False,
+        )
+    else:
+        click.echo(
+            stylize(
+                "Tip: from the repo root run `uv sync --extra dev`, then `uv run lemma`.\n",
+                fg="yellow",
+                dim=True,
+            ),
+            err=True,
+        )
+
+    if ve:
+        click.echo(
+            stylize(
+                "Interactive menu — not a shell:\n"
+                f"  • At Next step, type only a number 1–{n_menu} or a name (e.g. ",
+                dim=True,
+            )
+            + stylize("doctor", fg="green")
+            + stylize(", ", dim=True)
+            + stylize("7", fg="green")
+            + stylize(" for try-prover). ", dim=True)
+            + stylize("No", fg="red")
+            + stylize(" ", dim=True)
+            + stylize("source", fg="yellow")
+            + stylize(", ", dim=True)
+            + stylize("cd", fg="yellow")
+            + stylize(", ", dim=True)
+            + stylize("uv", fg="yellow")
+            + stylize(", and no word ", dim=True)
+            + stylize("lemma", fg="yellow")
+            + stylize(" on that line.\n", dim=True)
+            + stylize(
+                "  • From a real shell (outside this prompt): ",
+                dim=True,
+            )
+            + stylize("lemma 7", fg="green")
+            + stylize(" = try-prover; ", dim=True)
+            + stylize("lemma 7 --verify", fg="green")
+            + stylize("; menu step ", dim=True)
+            + stylize("3 --open faq", fg="green")
+            + stylize(".\n", dim=True),
+            nl=False,
+        )
+    else:
+        click.echo(
+            stylize("Two different places:\n", dim=True)
+            + stylize("  • Your ", dim=True)
+            + stylize("macOS / terminal", fg="yellow")
+            + stylize(" — run shell commands: ", dim=True)
+            + stylize("uv sync --extra dev", fg="green")
+            + stylize(", then ", dim=True)
+            + stylize("source .venv/bin/activate", fg="green")
+            + stylize(" and ", dim=True)
+            + stylize("lemma doctor", fg="green")
+            + stylize(", or use ", dim=True)
+            + stylize("uv run lemma doctor", fg="green")
+            + stylize(" without activating the venv.\n", dim=True)
+            + stylize("  • The ", dim=True)
+            + stylize("Next step", fg="cyan")
+            + stylize(" line below (interactive only) — type ", dim=True)
+            + stylize("only", fg="yellow")
+            + stylize(" a number 1–", dim=True)
+            + stylize(str(n_menu), fg="yellow")
+            + stylize(" or a short name (e.g. ", dim=True)
+            + stylize("doctor", fg="green")
+            + stylize(", ", dim=True)
+            + stylize("7", fg="green")
+            + stylize(" for try-prover). ", dim=True)
+            + stylize("No", fg="red")
+            + stylize(" ", dim=True)
+            + stylize("source", fg="yellow")
+            + stylize(", ", dim=True)
+            + stylize("cd", fg="yellow")
+            + stylize(", ", dim=True)
+            + stylize("uv", fg="yellow")
+            + stylize(", and no word ", dim=True)
+            + stylize("lemma", fg="yellow")
+            + stylize(" on that line.\n", dim=True),
+            nl=False,
+        )
+        click.echo(
+            stylize("From your real shell, optional shortcuts: ", dim=True)
+            + stylize("lemma 7", fg="green")
+            + stylize(" = try-prover, ", dim=True)
+            + stylize("lemma 7 --verify", fg="green")
+            + stylize(" with verify; in the menu, step ", dim=True)
+            + stylize("3", fg="yellow")
+            + stylize(" accepts ", dim=True)
+            + stylize("3 --open faq", fg="green")
+            + stylize(".\n", dim=True),
+            nl=False,
+        )
+
     click.echo(
         stylize(
-            "Shell tip: type ",
+            "\nWhat you can do next:\n"
+            "  • Continue here — at ",
             dim=True,
         )
-        + stylize("lemma", fg="green")
-        + stylize(" before each command (e.g. ", dim=True)
-        + stylize("lemma doctor", fg="yellow")
-        + stylize(", not ", dim=True)
-        + stylize("doctor", fg="yellow")
-        + stylize(" alone).\n", dim=True),
-        nl=False,
-    )
-    click.echo(
-        stylize(
-            "Then pick a step — number or command name (not `lemma doctor`). "
-            "From your shell you can also run ",
+        + stylize("Next step", fg="cyan")
+        + stylize(
+            ", press Enter for default (1 = setup) or type a number 1–"
+            f"{n_menu} / a command name to run that item.\n"
+            "  • Or leave first — press Ctrl+C",
             dim=True,
         )
-        + stylize("lemma 7", fg="yellow")
-        + stylize(" (same as choosing try-prover); optional flags only for docs / try-prover, e.g. ", dim=True)
-        + stylize("3 --open faq", fg="yellow")
-        + stylize(" or ", dim=True)
-        + stylize("lemma 7 --verify", fg="yellow")
-        + stylize(":\n", dim=True),
+        + (
+            stylize(
+                " (then install/fix env with `uv sync --extra dev` or `source .venv/bin/activate` if needed).\n",
+                dim=True,
+            )
+            if ve
+            else (
+                stylize(
+                    ", run ",
+                    dim=True,
+                )
+                + stylize("uv sync --extra dev", fg="yellow")
+                + stylize(" / ", dim=True)
+                + stylize("source .venv/bin/activate", fg="yellow")
+                + stylize(" in your terminal, then run ", dim=True)
+                + stylize("lemma", fg="green")
+                + stylize(" or ", dim=True)
+                + stylize("lemma start", fg="green")
+                + stylize(" again.\n", dim=True)
+            )
+        ),
         nl=False,
     )
     max_key = max(len(item.key) for item in _MENU)
@@ -386,10 +564,20 @@ def show_start_here(ctx: click.Context | None = None, *, group: click.Group | No
         return
 
     extra = parts[1:]
-    dispatch_menu_command(
-        ctx,
-        group,
-        key,
-        extra,
-        menu_assume_yes_for_try_prover=True,
-    )
+    try:
+        dispatch_menu_command(
+            ctx,
+            group,
+            key,
+            extra,
+            menu_assume_yes_for_try_prover=True,
+        )
+    finally:
+        finish_cli_output()
+
+    if key != "quit":
+        from lemma.cli.interactive_venv_shell import (
+            maybe_exec_venv_shell_after_interactive_menu,
+        )
+
+        maybe_exec_venv_shell_after_interactive_menu()

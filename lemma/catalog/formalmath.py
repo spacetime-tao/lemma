@@ -5,6 +5,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from lemma.problems.base import SOLUTION_BRIDGE_THEOREM
+
 
 def _insert_import_submission(code: str, theorem_name: str) -> str:
     lines = code.splitlines()
@@ -62,6 +64,12 @@ def row_from_hf_record(rec: dict[str, Any], idx: int, *, split_tag: str = "forma
     name = m.group(1)
 
     solution_full = _insert_import_submission(code, name)
+    solution_full = re.sub(
+        rf"\btheorem\s+{re.escape(name)}\b",
+        f"theorem {SOLUTION_BRIDGE_THEOREM}",
+        solution_full,
+        count=1,
+    )
     submission_stub = _submission_stub(code, name)
 
     domain = str(rec.get("domain") or "")[:300]

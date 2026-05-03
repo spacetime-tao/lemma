@@ -2,18 +2,57 @@
 
 from __future__ import annotations
 
+import hashlib
 import shutil
 from pathlib import Path
 
 from lemma.problems.base import Problem
 
 
-def materialize_workspace(dest: Path, problem: Problem, submission_lean: str) -> None:
+def workspace_template_cache_key(problem: Problem) -> str:
+    """Stable id for Challenge/Solution/lakefile template (same epoch ⇒ same key)."""
+    h = hashlib.sha256()
+    for part in (
+        problem.id,
+        problem.mathlib_rev,
+        problem.lean_toolchain,
+        problem.challenge_source(),
+        problem.solution_source(),
+    ):
+        h.update(part.encode("utf-8"))
+        h.update(b"\x1e")
+    return h.hexdigest()[:48]
+
+
+def materialize_workspace(
+    dest: Path,
+    problem: Problem,
+    submission_lean: str,
+    *,
+    preserve_lake: bool = False,
+) -> None:
     """
     Write Challenge, Solution, Submission, lakefile, toolchain, and axiom check driver.
 
     ``dest`` must be empty or will be created; caller typically uses a temp directory.
+    If ``preserve_lake`` is True and ``dest/.lake`` already exists, source files are
+    overwritten in place so Lake can incrementally rebuild ``Submission`` only.
     """
+    if preserve_lake and dest.exists() and (dest / ".lake").is_dir():
+        (dest / "Challenge.lean").write_text(problem.challenge_source(), encoding="utf-8")
+        (dest / "Solution.lean").write_text(problem.solution_source(), encoding="utf-8")
+        (dest / "Submission.lean").write_text(submission_lean, encoding="utf-8")
+        (dest / "lean-toolchain").write_text(problem.lean_toolchain.strip() + "\n", encoding="utf-8")
+        lake = _lakefile_toml(problem)
+        (dest / "lakefile.toml").write_text(lake, encoding="utf-8")
+        thm = problem.theorem_name
+        axiom_check = f"""import Submission
+
+#print axioms Submission.{thm}
+"""
+        (dest / "AxiomCheck.lean").write_text(axiom_check, encoding="utf-8")
+        return
+
     if dest.exists():
         shutil.rmtree(dest)
     dest.mkdir(parents=True)
@@ -24,9 +63,23 @@ def materialize_workspace(dest: Path, problem: Problem, submission_lean: str) ->
 
     (dest / "lean-toolchain").write_text(problem.lean_toolchain.strip() + "\n", encoding="utf-8")
 
+    (dest / "lakefile.toml").write_text(_lakefile_toml(problem), encoding="utf-8")
+
+    thm = problem.theorem_name
+    # Check axioms on the miner's theorem in ``Submission`` (not ``Solution``): the
+    # Solution module only bridges Challenge ↔ Submission and may not expose names
+    # the way ``lake env lean`` expects for every workspace layout.
+    axiom_check = f"""import Submission
+
+#print axioms Submission.{thm}
+"""
+    (dest / "AxiomCheck.lean").write_text(axiom_check, encoding="utf-8")
+
+
+def _lakefile_toml(problem: Problem) -> str:
     # Must match `name` in `lemma/lean/template/lakefile.toml` (Lean sandbox image bakes `/opt/lemma-stub/.lake`
     # under that project name so `cp` in the container can warm this workspace).
-    lake = f'''name = "lemma_stub"
+    return f'''name = "lemma_stub"
 version = "0.1.0"
 defaultTargets = ["Challenge", "Solution", "Submission"]
 
@@ -47,14 +100,3 @@ name = "Solution"
 [[lean_lib]]
 name = "Submission"
 '''
-    (dest / "lakefile.toml").write_text(lake, encoding="utf-8")
-
-    thm = problem.theorem_name
-    # Check axioms on the miner's theorem in ``Submission`` (not ``Solution``): the
-    # Solution module only bridges Challenge ↔ Submission and may not expose names
-    # the way ``lake env lean`` expects for every workspace layout.
-    axiom_check = f"""import Submission
-
-#print axioms Submission.{thm}
-"""
-    (dest / "AxiomCheck.lean").write_text(axiom_check, encoding="utf-8")

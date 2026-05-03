@@ -10,8 +10,9 @@ from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic_settings.sources import PydanticBaseSettingsSource
 
-# Subnet policy: OpenAI-compatible judge model id (Chutes HF-style). Validators must match unless opted out.
+# Subnet judge (validators only): DeepSeek on Chutes — see ``validator_judge_stack_strict_issue``.
 CANONICAL_JUDGE_OPENAI_MODEL = "deepseek-ai/DeepSeek-V3.2-TEE"
+CANONICAL_JUDGE_OPENAI_BASE_URL = "https://llm.chutes.ai/v1"
 
 
 class LemmaSettings(BaseSettings):
@@ -96,7 +97,10 @@ class LemmaSettings(BaseSettings):
             "LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED",
             "generated_registry_expected_sha256",
         ),
-        description="If set, validator exits in generated mode unless registry matches.",
+        description=(
+            "Validators with LEMMA_PROBLEM_SOURCE=generated must set this; startup fails unless it matches "
+            "the live generated-registry hash (`lemma meta`)."
+        ),
     )
     subtensor_network: str = Field(
         default="finney",
@@ -171,13 +175,30 @@ class LemmaSettings(BaseSettings):
         default="none",
         validation_alias=AliasChoices("LEAN_SANDBOX_NETWORK", "lean_sandbox_network"),
     )
+    lean_use_docker: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("LEMMA_USE_DOCKER", "lean_use_docker"),
+        description=(
+            "When true (default), validators/miners/`lemma verify` use Docker for LeanSandbox — subnet parity. "
+            "Set false only for host `lake` when toolchain matches `LEAN_SANDBOX_IMAGE` and policy allows."
+        ),
+    )
+    allow_host_lean: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("LEMMA_ALLOW_HOST_LEAN", "allow_host_lean"),
+        description=(
+            "If true, allow `lemma verify --host-lean`, `lemma try-prover --host-lean`, and "
+            "`LEMMA_TRY_PROVER_HOST_VERIFY` for local debugging. Production validators should leave this false."
+        ),
+    )
 
     judge_provider: str = Field(
-        default="openai",
+        default="chutes",
         validation_alias=AliasChoices("JUDGE_PROVIDER", "judge_provider"),
         description=(
-            "Subnet default: OpenAI-compatible API on Chutes. Validators must use OPENAI_MODEL="
-            f"{CANONICAL_JUDGE_OPENAI_MODEL!r} unless LEMMA_ALLOW_NONCANONICAL_JUDGE_MODEL=1."
+            "``chutes`` = subnet judge via OpenAI-compatible HTTP to Chutes (same stack as ``lemma configure judge`` "
+            f"→ Chutes). Legacy alias: ``openai``. Anthropic: ``anthropic``. Validators must use ``chutes`` with "
+            f"OPENAI_MODEL={CANONICAL_JUDGE_OPENAI_MODEL!r} and OPENAI_BASE_URL={CANONICAL_JUDGE_OPENAI_BASE_URL!r}."
         ),
     )
     anthropic_api_key: str | None = Field(
@@ -196,14 +217,17 @@ class LemmaSettings(BaseSettings):
         default=CANONICAL_JUDGE_OPENAI_MODEL,
         validation_alias=AliasChoices("OPENAI_MODEL", "openai_model"),
         description=(
-            f"Judge model id when JUDGE_PROVIDER=openai (default {CANONICAL_JUDGE_OPENAI_MODEL!r} on Chutes). "
-            "Self-hosted vLLM: use the same HF-style id as loaded weights."
+            f"Judge model when JUDGE_PROVIDER is chutes or openai. Validators must use "
+            f"{CANONICAL_JUDGE_OPENAI_MODEL!r} (miners: use PROVER_MODEL for a different prover id)."
         ),
     )
     openai_base_url: str = Field(
         default="https://llm.chutes.ai/v1",
         validation_alias=AliasChoices("OPENAI_BASE_URL", "openai_base_url"),
-        description="OpenAI-compatible API base (Chutes llm endpoint by default; use localhost for vLLM).",
+        description=(
+            f"Judge API base. Validators must use {CANONICAL_JUDGE_OPENAI_BASE_URL!r}; miners may point "
+            "`PROVER_OPENAI_BASE_URL` elsewhere."
+        ),
     )
     judge_temperature: float = Field(
         default=0.2,
@@ -219,13 +243,38 @@ class LemmaSettings(BaseSettings):
         validation_alias=AliasChoices("JUDGE_MAX_TOKENS", "judge_max_tokens"),
         description="Max completion tokens for judge responses (short JSON rubric).",
     )
+    judge_llm_retry_attempts: int = Field(
+        default=4,
+        ge=1,
+        le=32,
+        validation_alias=AliasChoices(
+            "LEMMA_JUDGE_LLM_RETRY_ATTEMPTS",
+            "judge_llm_retry_attempts",
+        ),
+        description="Judge-only retries on 429 / timeouts / 5xx for each score() call.",
+    )
+    judge_llm_http_timeout_s: float | None = Field(
+        default=None,
+        gt=0.0,
+        validation_alias=AliasChoices(
+            "LEMMA_JUDGE_HTTP_TIMEOUT_S",
+            "judge_llm_http_timeout_s",
+        ),
+        description=(
+            "If set, overrides LEMMA_LLM_HTTP_TIMEOUT_S for judge HTTP reads only "
+            "(small JSON output; use a tighter cap to fail fast on stalls)."
+        ),
+    )
     judge_profile_expected_sha256: str | None = Field(
         default=None,
         validation_alias=AliasChoices(
             "JUDGE_PROFILE_SHA256_EXPECTED",
             "judge_profile_expected_sha256",
         ),
-        description="If set, validator refuses to run unless judge_profile_sha256 matches.",
+        description=(
+            "Validators must set this; startup fails unless it matches live judge_profile_sha256 "
+            "(`lemma meta`)."
+        ),
     )
     allow_noncanonical_judge_model: bool = Field(
         default=False,
@@ -234,8 +283,8 @@ class LemmaSettings(BaseSettings):
             "allow_noncanonical_judge_model",
         ),
         description=(
-            "If false (default), validators with JUDGE_PROVIDER=openai must set OPENAI_MODEL to "
-            f"{CANONICAL_JUDGE_OPENAI_MODEL!r}. Set true only for local experiments."
+            "Ignored by ``lemma validator`` (validators always use the Chutes DeepSeek judge). "
+            "Reserved for future non-validator tooling."
         ),
     )
 
@@ -287,17 +336,6 @@ class LemmaSettings(BaseSettings):
         ),
         description="Sampling temperature for prover completions (OpenAI-compatible and Anthropic prover paths).",
     )
-    prover_system_append: str = Field(
-        default="",
-        validation_alias=AliasChoices(
-            "LEMMA_PROVER_SYSTEM_APPEND",
-            "prover_system_append",
-        ),
-        description=(
-            "Appended to the built-in prover system prompt on every LLM call (after PROVER_SYSTEM). "
-            "Use for operator tone/style (e.g. lay audience). Does not replace JSON/proof rules."
-        ),
-    )
     prover_min_reasoning_steps: int = Field(
         default=0,
         ge=0,
@@ -334,6 +372,22 @@ class LemmaSettings(BaseSettings):
         description=(
             "If > 0, reject JSON unless proof_script (full Submission.lean string) has at least this many "
             "characters after strip. 0 = off (default). Use to force longer formal proofs on your miner."
+        ),
+    )
+    prover_openai_base_url: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("PROVER_OPENAI_BASE_URL", "prover_openai_base_url"),
+        description=(
+            "Miner-only: OpenAI-compatible API base for PROVER_PROVIDER=openai. "
+            "If unset, prover uses OPENAI_BASE_URL (validator judge is unchanged)."
+        ),
+    )
+    prover_openai_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("PROVER_OPENAI_API_KEY", "prover_openai_api_key"),
+        description=(
+            "Miner-only: API key for the prover’s OpenAI-compatible endpoint. "
+            "If unset, prover falls back to OPENAI_API_KEY."
         ),
     )
 
@@ -376,18 +430,6 @@ class LemmaSettings(BaseSettings):
         ),
         description="If true, refuse axon work when chain head >= synapse.deadline_block (when set).",
     )
-    validator_enforce_published_meta: bool = Field(
-        default=False,
-        validation_alias=AliasChoices(
-            "LEMMA_VALIDATOR_ENFORCE_PUBLISHED_META",
-            "validator_enforce_published_meta",
-        ),
-        description=(
-            "If true, refuse to start validator unless JUDGE_PROFILE_SHA256_EXPECTED is set and "
-            "(for generated problems) LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED is set — "
-            "subnet policy pins from `lemma meta --raw`."
-        ),
-    )
     timeout_scale_by_split: bool = Field(
         default=False,
         validation_alias=AliasChoices(
@@ -425,28 +467,85 @@ class LemmaSettings(BaseSettings):
             "timeout_split_hard_mult",
         ),
     )
-    validator_round_interval_s: float = Field(
-        default=300.0,
-        gt=0,
+    lemma_lean_verify_max_concurrent: int = Field(
+        default=4,
+        ge=1,
+        le=128,
         validation_alias=AliasChoices(
-            "LEMMA_VALIDATOR_ROUND_INTERVAL_S",
-            "validator_round_interval_s",
+            "LEMMA_LEAN_VERIFY_MAX_CONCURRENT",
+            "lemma_lean_verify_max_concurrent",
         ),
         description=(
-            "Seconds between validator rounds when not aligning to chain epochs. "
-            "Default 300 (5m)."
+            "Max concurrent Lean sandbox.verify jobs per epoch (each may spawn Docker). "
+            "Raise on large validators when many miners return proofs; lower if CPU/RAM or Docker struggles."
         ),
     )
-    validator_align_rounds_to_epoch: bool = Field(
-        default=False,
+    lemma_judge_max_concurrent: int = Field(
+        default=8,
+        ge=1,
+        le=256,
         validation_alias=AliasChoices(
-            "LEMMA_VALIDATOR_ALIGN_ROUNDS_TO_EPOCH",
-            "validator_align_rounds_to_epoch",
+            "LEMMA_JUDGE_MAX_CONCURRENT",
+            "lemma_judge_max_concurrent",
         ),
         description=(
-            "If true, wait for subnet epoch boundaries before each round (legacy). "
-            "If false (default), sleep validator_round_interval_s between rounds."
+            "Max concurrent judge LLM HTTP calls per epoch (after Lean passes). "
+            "Caps bursts against Chutes/Anthropic to reduce 429 rate limits when many miners verify."
         ),
+    )
+    lean_verify_workspace_cache_dir: Path | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR",
+            "lean_verify_workspace_cache_dir",
+        ),
+        description=(
+            "Optional directory on fast local disk to reuse a warm `.lake` per theorem template. "
+            "After the first passing verify for a template, later verifies only rebuild ``Submission`` "
+            "(same subnet epoch = same template for all miners). Creates subdirs; prune manually if huge."
+        ),
+    )
+    lemma_lean_docker_worker: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "LEMMA_LEAN_DOCKER_WORKER",
+            "lemma_lean_docker_worker",
+        ),
+        description=(
+            "Name of a **running** sandbox container: Lemma uses `docker exec` instead of `docker run` per "
+            "verify (much lower latency). Must bind-mount `LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR` — see "
+            "docs/VALIDATOR.md and scripts/start_lean_docker_worker.sh."
+        ),
+    )
+    lean_verify_remote_url: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "LEMMA_LEAN_VERIFY_REMOTE_URL",
+            "lean_verify_remote_url",
+        ),
+        description=(
+            "Optional base URL (http/https) of a dedicated Lean verify worker process "
+            "(POST `/verify` JSON — see `lemma lean-worker`). When unset, verification runs in-process "
+            "via `LeanSandbox` on this machine."
+        ),
+    )
+    lean_verify_remote_bearer: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "LEMMA_LEAN_VERIFY_REMOTE_BEARER",
+            "lean_verify_remote_bearer",
+        ),
+        description="Optional shared secret; sent as ``Authorization: Bearer`` when calling ``LEMMA_LEAN_VERIFY_REMOTE_URL``.",
+    )
+    lean_verify_remote_timeout_margin_s: float = Field(
+        default=30.0,
+        ge=0.0,
+        le=600.0,
+        validation_alias=AliasChoices(
+            "LEMMA_LEAN_VERIFY_REMOTE_TIMEOUT_MARGIN_S",
+            "lean_verify_remote_timeout_margin_s",
+        ),
+        description="Added to ``LEAN_VERIFY_TIMEOUT_S`` (per-request split scaling included) for HTTP client read timeout.",
     )
     set_weights_max_retries: int = Field(
         default=3,
@@ -545,6 +644,18 @@ class LemmaSettings(BaseSettings):
         validation_alias=AliasChoices("SYNAPSE_MAX_TRACE_CHARS", "synapse_max_trace_chars"),
     )
 
+    def prover_openai_base_url_resolved(self) -> str:
+        """OpenAI-compatible base URL for the miner prover; defaults to judge ``OPENAI_BASE_URL``."""
+        p = (self.prover_openai_base_url or "").strip()
+        return p if p else (self.openai_base_url or "").strip()
+
+    def prover_openai_api_key_resolved(self) -> str | None:
+        """API key for prover when ``PROVER_PROVIDER=openai``; defaults to ``OPENAI_API_KEY``."""
+        pk = self.prover_openai_api_key
+        if pk is not None and str(pk).strip():
+            return pk
+        return self.openai_api_key
+
     def validator_wallet_names(self) -> tuple[str, str]:
         """Cold/hot key names for signing and metagraph (validator). Falls back to BT_WALLET_*."""
         c = (self.validator_wallet_cold or "").strip()
@@ -552,25 +663,46 @@ class LemmaSettings(BaseSettings):
         return (c or self.wallet_cold, h or self.wallet_hot)
 
 
-def canonical_openai_judge_model_issue(settings: LemmaSettings) -> str | None:
-    """Return a human-readable problem description, or None if OpenAI judge model policy is satisfied."""
-    if os.environ.get("LEMMA_FAKE_JUDGE") == "1":
-        return None
-    if (settings.judge_provider or "").lower() != "openai":
-        return None
-    if settings.allow_noncanonical_judge_model:
-        return None
-    got = (settings.openai_model or "").strip()
-    if got != CANONICAL_JUDGE_OPENAI_MODEL:
+def normalized_judge_openai_base_url(settings: LemmaSettings) -> str:
+    """Same normalization as ``judge_profile_dict`` for ``openai_base_url``."""
+    return (settings.openai_base_url or "").strip().rstrip("/")
+
+
+def validator_judge_stack_strict_issue(settings: LemmaSettings) -> str | None:
+    """Hard subnet policy for ``lemma validator``: DeepSeek V3.2 TEE on Chutes only.
+
+    Miners are unaffected (prover uses ``PROVER_*``); this gates scoring only.
+    """
+    if os.environ.get("LEMMA_FAKE_JUDGE", "").strip().lower() in ("1", "true", "yes"):
         return (
-            f"OPENAI_MODEL must be {CANONICAL_JUDGE_OPENAI_MODEL!r} for subnet validators "
-            f"(got {got!r}). Set LEMMA_ALLOW_NONCANONICAL_JUDGE_MODEL=1 only for experiments."
+            "lemma validator requires the live Chutes judge — unset LEMMA_FAKE_JUDGE "
+            "(FakeJudge cannot score miners)."
+        )
+    prov = (settings.judge_provider or "chutes").lower()
+    if prov not in ("chutes", "openai"):
+        return (
+            "lemma validator requires JUDGE_PROVIDER=chutes (Chutes judge via OpenAI-compatible HTTP) with "
+            f"OPENAI_MODEL={CANONICAL_JUDGE_OPENAI_MODEL!r} at {CANONICAL_JUDGE_OPENAI_BASE_URL!r} "
+            f"(legacy alias openai allowed; got judge_provider={prov!r})."
+        )
+    got_model = (settings.openai_model or "").strip()
+    if got_model != CANONICAL_JUDGE_OPENAI_MODEL:
+        return (
+            f"lemma validator requires OPENAI_MODEL={CANONICAL_JUDGE_OPENAI_MODEL!r} on Chutes "
+            f"(got {got_model!r})."
+        )
+    got_base = normalized_judge_openai_base_url(settings)
+    canon = CANONICAL_JUDGE_OPENAI_BASE_URL.strip().rstrip("/").lower()
+    if got_base.lower() != canon:
+        return (
+            f"lemma validator requires OPENAI_BASE_URL={CANONICAL_JUDGE_OPENAI_BASE_URL!r} "
+            f"(got {got_base!r})."
         )
     return None
 
 
-def assert_canonical_openai_judge_model(settings: LemmaSettings) -> None:
-    """Raise ``SystemExit`` if validator judge stack violates subnet OpenAI model policy."""
-    msg = canonical_openai_judge_model_issue(settings)
+def assert_validator_judge_stack_strict(settings: LemmaSettings) -> None:
+    """Raise ``SystemExit`` if validator judge env is not the subnet Chutes DeepSeek stack."""
+    msg = validator_judge_stack_strict_issue(settings)
     if msg:
         raise SystemExit(msg)

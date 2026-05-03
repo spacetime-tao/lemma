@@ -10,7 +10,7 @@ def prover_model_card_text(settings: LemmaSettings) -> str:
     prov = (settings.prover_provider or "anthropic").lower()
     if prov == "openai":
         m = settings.prover_model or settings.openai_model
-        base = (settings.openai_base_url or "").strip().rstrip("/")
+        base = (settings.prover_openai_base_url_resolved() or "").strip().rstrip("/")
         if base:
             return f"prover=openai model={m} base_url={base}"[:500]
         return f"prover=openai model={m}"[:500]

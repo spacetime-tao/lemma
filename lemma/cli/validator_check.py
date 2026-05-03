@@ -12,7 +12,7 @@ import bittensor as bt
 import click
 
 from lemma.cli.style import finish_cli_output, flush_stdio, stylize
-from lemma.common.config import LemmaSettings, canonical_openai_judge_model_issue
+from lemma.common.config import LemmaSettings, validator_judge_stack_strict_issue
 from lemma.common.subtensor import get_subtensor
 from lemma.judge.profile import judge_profile_sha256
 from lemma.problems.generated import generated_registry_sha256
@@ -59,7 +59,14 @@ def _maybe_prompt_validator_start(settings: LemmaSettings, *, had_warnings: bool
             default=False,
         )
     if not ok:
-        flush_stdio()
+        click.echo(
+            stylize(
+                "Skipping validator start. Your shell prompt should appear below — "
+                "if not, press Enter once.",
+                dim=True,
+            ),
+        )
+        finish_cli_output()
         return
     from lemma.validator.service import ValidatorService
 
@@ -91,25 +98,26 @@ def run_validator_check(settings: LemmaSettings) -> int:
     click.echo(stylize("Validator pre-flight", fg="cyan", bold=True))
     click.echo(stylize("(run before `lemma validator` — not the same as `lemma validator-dry`)\n", dim=True), nl=False)
 
-    # --- Enforce-pins policy (same gates as ValidatorService) ---
-    if settings.validator_enforce_published_meta:
-        if not (settings.judge_profile_expected_sha256 or "").strip():
+    # --- Subnet pin requirements (same gates as ValidatorService) ---
+    if not (settings.judge_profile_expected_sha256 or "").strip():
+        fatal.append(
+            "lemma validator requires JUDGE_PROFILE_SHA256_EXPECTED in `.env` "
+            "(run `lemma configure subnet-pins` or copy from `lemma meta --raw`).",
+        )
+    if (settings.problem_source or "").strip().lower() == "generated":
+        if not (settings.generated_registry_expected_sha256 or "").strip():
             fatal.append(
-                "LEMMA_VALIDATOR_ENFORCE_PUBLISHED_META=1 but JUDGE_PROFILE_SHA256_EXPECTED is empty "
-                "(run `lemma configure subnet-pins` after aligning judge env).",
-            )
-        elif (
-            (settings.problem_source or "").strip().lower() == "generated"
-            and not (settings.generated_registry_expected_sha256 or "").strip()
-        ):
-            fatal.append(
-                "LEMMA_VALIDATOR_ENFORCE_PUBLISHED_META=1 + generated source but "
-                "LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED is empty.",
+                "lemma validator requires LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED when "
+                "LEMMA_PROBLEM_SOURCE=generated (run `lemma configure subnet-pins`).",
             )
 
+    judge_policy = validator_judge_stack_strict_issue(settings)
+    if judge_policy:
+        fatal.append(judge_policy)
+
     # --- Judge keys ---
-    jp = (settings.judge_provider or "openai").lower()
-    if jp == "openai":
+    jp = (settings.judge_provider or "chutes").lower()
+    if jp in ("openai", "chutes"):
         if not (settings.openai_api_key or "").strip():
             warn.append(
                 "OPENAI_API_KEY missing — validator will use FakeJudge (not for production scoring).",
@@ -119,10 +127,6 @@ def run_validator_check(settings: LemmaSettings) -> int:
             warn.append(
                 "ANTHROPIC_API_KEY missing — validator will use FakeJudge (not for production scoring).",
             )
-
-    canon_issue = canonical_openai_judge_model_issue(settings)
-    if canon_issue:
-        fatal.append(canon_issue)
 
     # --- Chain + wallet / UID ---
     subtensor: bt.Subtensor | None = None
@@ -173,7 +177,14 @@ def run_validator_check(settings: LemmaSettings) -> int:
         else:
             click.echo(stylize("OK judge pin   matches live judge_profile_sha256", fg="green"))
     else:
-        click.echo(stylize("INFO judge pin  JUDGE_PROFILE_SHA256_EXPECTED unset (optional)", dim=True))
+        click.echo(
+            stylize(
+                "FAIL judge pin  JUDGE_PROFILE_SHA256_EXPECTED required for validators",
+                fg="red",
+                bold=True,
+            ),
+            err=True,
+        )
 
     if (settings.problem_source or "").strip().lower() == "generated":
         exp_g = (settings.generated_registry_expected_sha256 or "").strip().lower()
@@ -187,12 +198,30 @@ def run_validator_check(settings: LemmaSettings) -> int:
             else:
                 click.echo(stylize("OK registry pin matches generated_registry_sha256", fg="green"))
         else:
-            click.echo(stylize("INFO registry pin LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED unset (optional)", dim=True))
+            click.echo(
+                stylize(
+                    "FAIL registry pin  LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED required when "
+                    "LEMMA_PROBLEM_SOURCE=generated",
+                    fg="red",
+                    bold=True,
+                ),
+                err=True,
+            )
 
-    # --- Lean image ---
+    # --- Lean image / verify path ---
     img = (settings.lean_sandbox_image or "").strip()
-    use_docker = os.environ.get("LEMMA_USE_DOCKER", "1") != "0"
-    if use_docker:
+    use_docker = settings.lean_use_docker
+    remote_u = (settings.lean_verify_remote_url or "").strip()
+
+    if remote_u:
+        click.echo(
+            stylize(
+                f"OK Lean remote  verify delegated to worker ({remote_u!r}) — run `lemma lean-worker` there "
+                "with matching `.env` (Docker/cache on worker host)",
+                fg="green",
+            ),
+        )
+    elif use_docker:
         if _docker_image_available(img):
             click.echo(stylize(f"OK Docker image `{img}` present locally", fg="green"))
         else:
@@ -208,7 +237,47 @@ def run_validator_check(settings: LemmaSettings) -> int:
                 err=True,
             )
     else:
-        click.echo(stylize("INFO Lean       LEMMA_USE_DOCKER=0 — host/path verify only", dim=True))
+        click.echo(
+            stylize(
+                "FAIL Lean      LEMMA_USE_DOCKER=false — `lemma validator` cannot start "
+                "(validators must use Docker). Set LEMMA_USE_DOCKER=true.",
+                fg="red",
+                bold=True,
+            ),
+            err=True,
+        )
+        fatal.append("LEMMA_USE_DOCKER=false — lemma validator requires Docker (LEMMA_USE_DOCKER=true).")
+
+    if use_docker and not remote_u:
+        cache_dir = settings.lean_verify_workspace_cache_dir
+        worker = (settings.lemma_lean_docker_worker or "").strip()
+        if cache_dir is not None:
+            click.echo(
+                stylize(f"INFO Lean cache workspace dir set ({cache_dir}) — warm `.lake` per template", dim=True),
+            )
+        else:
+            click.echo(
+                stylize(
+                    "INFO Lean speed  set LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR + optional "
+                    "LEMMA_LEAN_DOCKER_WORKER for exec-based verify (see docs/VALIDATOR.md)",
+                    dim=True,
+                ),
+            )
+        if worker:
+            click.echo(
+                stylize(
+                    f"OK Lean worker  LEMMA_LEAN_DOCKER_WORKER={worker!r} — verify uses `docker exec`",
+                    fg="green",
+                ),
+            )
+        else:
+            click.echo(
+                stylize(
+                    "INFO Lean speed  LEMMA_LEAN_DOCKER_WORKER unset — each verify starts a new container "
+                    "(`scripts/start_lean_docker_worker.sh` + add LEMMA_LEAN_DOCKER_WORKER to `.env`)",
+                    dim=True,
+                ),
+            )
 
     # --- Timeout sanity (validator queries miners) ---
     # Compare only to LEMMA_FORWARD_WAIT_MAX_S (clamp ceiling). Per-head forward wait is shorter near rotations

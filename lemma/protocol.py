@@ -25,7 +25,10 @@ class LemmaChallenge(bt.Synapse):
     """
     Validator broadcasts a formal theorem; miner returns a reasoning trace and Lean proof.
 
-    ``required_hash_fields`` binds the body hash to the specific challenge instance.
+    ``required_hash_fields`` drive :func:`bittensor.core.synapse.Synapse.body_hash`. That hash becomes
+    ``computed_body_hash`` in HTTP headers on both the validator→miner request and the miner→validator response.
+    Including miner-filled fields binds the **proof and reasoning** to the hash so a middle party cannot silently
+    swap bytes after the miner signs (coordinated miner + validator release required when this list changes).
     """
 
     required_hash_fields: ClassVar[tuple[str, ...]] = (
@@ -35,6 +38,9 @@ class LemmaChallenge(bt.Synapse):
         "lean_toolchain",
         "mathlib_rev",
         "deadline_block",
+        "reasoning_trace",
+        "reasoning_steps",
+        "proof_script",
     )
 
     # --- Validator-filled (challenge) ---
@@ -98,3 +104,16 @@ class LemmaChallenge(bt.Synapse):
     def deserialize(self) -> LemmaChallenge:
         """No-op: strings are already JSON-safe."""
         return self
+
+
+def synapse_miner_response_integrity_ok(s: LemmaChallenge) -> bool:
+    """Return True if recomputed :meth:`~bittensor.core.synapse.Synapse.body_hash` matches axon ``computed_body_hash``.
+
+    When ``computed_body_hash`` is missing (older stacks / headers not merged), returns True so epochs keep working;
+    when it is present and differs, the synapse body was altered after the miner built the response or the client is
+    out of sync — drop the response.
+    """
+    expected = (s.computed_body_hash or "").strip()
+    if not expected:
+        return True
+    return s.body_hash == expected

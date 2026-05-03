@@ -12,7 +12,7 @@ Use `id` as `OPENAI_MODEL`.
 
 ## Validators (judge)
 
-**Required** on the default OpenAI-compatible path: `OPENAI_MODEL=deepseek-ai/DeepSeek-V3.2-TEE` at `https://llm.chutes.ai/v1` (or the same HF-style id on your self-hosted vLLM). `lemma validator` refuses other ids unless `LEMMA_ALLOW_NONCANONICAL_JUDGE_MODEL=1` (experiments only).
+**Required** for `lemma validator`: `JUDGE_PROVIDER=chutes`, `OPENAI_MODEL=deepseek-ai/DeepSeek-V3.2-TEE`, and `OPENAI_BASE_URL=https://llm.chutes.ai/v1` — no self-hosted or alternate judge stack for scoring (`openai` remains a legacy alias for the same HTTP client path). Miners use `PROVER_*` and may call any prover model the operator runs.
 
 One pinned stack per subnet: `uv run lemma meta` → `judge_profile_sha256` → optional `JUDGE_PROFILE_SHA256_EXPECTED`.
 

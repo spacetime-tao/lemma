@@ -19,7 +19,10 @@ Daily forward cap: `MINER_MAX_FORWARDS_PER_DAY` or `lemma miner start --max-forw
 
 Validators decide whether your proof typechecks; the miner process does not receive scores back on the axon path.
 
-- `lemma try-prover` runs the **prover once** on whatever theorem `lemma status` would sample right now, then prints informal reasoning and `proof_script` (uses your prover API). Add `--verify` to run Lean sandbox locally after (Docker).
+- `lemma try-prover` runs the **prover once** on whatever theorem `lemma status` would sample right now, then prints informal reasoning and `proof_script` (uses your prover API). Add `--verify` to run the Lean check after (default: Docker, same as validators).
+
+- When a validator forward starts, logs include **`my_uid`** and **`my_incentive`** from the **chain metagraph** (same column family as `lemma leaderboard`) — a snapshot of subnet incentive for your hotkey, not a grade on this theorem.
+- At **INFO** you get **`miner answered`** when the reply is ready; **`local_lean=`** is `PASS` / `FAIL` / … only if **`LEMMA_MINER_LOCAL_VERIFY=1`**. That flag is **optional**: validators always run Lean on your submission — enable local verify only if you want early PASS/FAIL on your machine (costs Docker CPU per forward while debugging). **`miner_forward_summary`** (default on) adds session rollups.
 
 - Set `LEMMA_MINER_LOG_FORWARDS=1` to log each forward: reasoning excerpt and `proof_script` excerpt at INFO; raw model output is logged at DEBUG (enable e.g. `LOG_LEVEL=DEBUG` to see it).
 - Set `LEMMA_MINER_LOCAL_VERIFY=1` to run the same sandbox `lake build` as validators after the prover returns (requires Docker and `LEAN_SANDBOX_IMAGE` / timeouts aligned with your subnet). Logs `miner local verify OK` or `FAIL` with reason.

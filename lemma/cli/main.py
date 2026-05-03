@@ -6,6 +6,10 @@ Top-level imports stay light: the console script is named ``lemma``, and importi
 
 from __future__ import annotations
 
+from lemma.cli.uv_bootstrap import maybe_reexec_under_uv
+
+maybe_reexec_under_uv()
+
 import asyncio
 import json
 import os
@@ -56,6 +60,41 @@ def start_cmd(ctx: click.Context, quick_select: int | None) -> None:
     show_start_here(ctx, group=main)
 
 
+@main.command("env")
+@click.option(
+    "--fish",
+    is_flag=True,
+    help="Print activation for fish shell (if activate.fish exists).",
+)
+def env_cmd(fish: bool) -> None:
+    """Print how to activate `.venv` so `lemma` and `btcli` work without prefixing `uv run`."""
+    from lemma.cli.env_paths import venv_activate_script
+    from lemma.cli.style import stylize
+
+    act = venv_activate_script()
+    if act is None:
+        click.echo(
+            stylize(
+                "Could not find `.venv/bin/activate`. From the Lemma repo root run `uv sync --extra dev`.",
+                fg="red",
+            ),
+            err=True,
+        )
+        raise SystemExit(1)
+    if fish:
+        fish_act = act.parent / "activate.fish"
+        click.echo(f"source {fish_act if fish_act.is_file() else act}")
+    else:
+        click.echo(f"source {act}")
+    click.echo(
+        stylize(
+            "Paste once per terminal tab. After that, `lemma` / `btcli` use this repo's `.venv`. "
+            "`uv run …` does not replace this — it only wraps a single command.",
+            dim=True,
+        )
+    )
+
+
 def _rewrite_lemma_argv_numeric_menu() -> None:
     """Turn ``lemma 7`` / ``lemma 7 --verify`` into ``lemma start --quick-select 7`` (+ extras in env)."""
     av = sys.argv
@@ -75,11 +114,11 @@ def _doctor_api_lines(s: LemmaSettings) -> tuple[list[str], bool]:
     def _present(val: str | None) -> bool:
         return bool(val and str(val).strip())
 
-    jp = (s.judge_provider or "openai").lower()
+    jp = (s.judge_provider or "chutes").lower()
     pp = (s.prover_provider or "anthropic").lower()
 
     tasks: list[tuple[str, str]] = []
-    if jp == "openai":
+    if jp in ("openai", "chutes"):
         tasks.append(("Judge", "openai"))
     elif jp == "anthropic":
         tasks.append(("Judge", "anthropic"))
@@ -93,25 +132,24 @@ def _doctor_api_lines(s: LemmaSettings) -> tuple[list[str], bool]:
     else:
         lines.append(f"INFO prover: PROVER_PROVIDER={pp!r}")
 
-    if tasks == [("Judge", "openai"), ("Prover", "openai")]:
-        ok = _present(s.openai_api_key)
-        ok_all = ok
-        tag = "OK" if ok else "WARN"
-        lines.append(
-            f"{tag} Judge + prover (OpenAI-compatible): "
-            + ("OPENAI_API_KEY present (hidden)" if ok else "OPENAI_API_KEY missing"),
-        )
-        return lines, ok_all
-
     for role, kind in tasks:
         if kind == "openai":
-            ok = _present(s.openai_api_key)
+            if role == "Judge":
+                ok = _present(s.openai_api_key)
+                key_hint = "OPENAI_API_KEY"
+            else:
+                ok = _present(s.prover_openai_api_key_resolved())
+                key_hint = (
+                    "PROVER_OPENAI_API_KEY"
+                    if s.prover_openai_api_key and str(s.prover_openai_api_key).strip()
+                    else "OPENAI_API_KEY (fallback)"
+                )
             if not ok:
                 ok_all = False
             tag = "OK" if ok else "WARN"
             lines.append(
                 f"{tag} {role} (OpenAI-compatible): "
-                + ("OPENAI_API_KEY present (hidden)" if ok else "OPENAI_API_KEY missing"),
+                + (f"{key_hint} present (hidden)" if ok else f"{key_hint} missing"),
             )
         else:
             ok = _present(s.anthropic_api_key)
@@ -151,12 +189,12 @@ def doctor_cmd() -> None:
                 dim=True,
             ),
         )
-        jp2 = (s.judge_provider or "openai").lower()
+        jp2 = (s.judge_provider or "chutes").lower()
         pp2 = (s.prover_provider or "anthropic").lower()
-        if jp2 == "openai":
+        if jp2 in ("openai", "chutes"):
             click.echo(
                 stylize(
-                    f"  Judge   OPENAI_MODEL={s.openai_model!r} @ {s.openai_base_url!r}",
+                    f"  Judge   JUDGE_PROVIDER={jp2}  OPENAI_MODEL={s.openai_model!r} @ {s.openai_base_url!r}",
                     dim=True,
                 ),
             )
@@ -164,10 +202,11 @@ def doctor_cmd() -> None:
             click.echo(stylize(f"  Judge   ANTHROPIC_MODEL={s.anthropic_model!r}", dim=True))
         if pp2 == "openai":
             pm = s.prover_model or s.openai_model
+            purl = s.prover_openai_base_url_resolved()
             click.echo(
                 stylize(
-                    f"  Prover  model={pm!r} @ {s.openai_base_url!r}  "
-                    f"(miner prover — PROVER_MODEL is not used when scoring as a validator)",
+                    f"  Prover  model={pm!r} @ {purl!r}  "
+                    f"(miner — set PROVER_OPENAI_BASE_URL / PROVER_OPENAI_API_KEY to differ from judge)",
                     dim=True,
                 ),
             )
@@ -247,8 +286,8 @@ def doctor_cmd() -> None:
         if not (s.judge_profile_expected_sha256 or "").strip():
             click.echo(
                 stylize(
-                    "  Tip   optional pin: JUDGE_PROFILE_SHA256_EXPECTED from `lemma meta --raw` "
-                    "(enforce with LEMMA_VALIDATOR_ENFORCE_PUBLISHED_META=1)",
+                    "  Tip   validators need JUDGE_PROFILE_SHA256_EXPECTED — run `lemma configure subnet-pins` "
+                    "after aligning judge env (copy from `lemma meta --raw`).",
                     dim=True,
                 ),
             )
@@ -267,6 +306,7 @@ def doctor_cmd() -> None:
         stylize(
             "\n"
             "  Next:\n"
+            "    • `lemma env` — print `source …/.venv/bin/activate` for bare `lemma` / `btcli`\n"
             "    • `lemma meta` — judge + template hashes (subnet alignment)\n"
             "    • `lemma validator-check` — before `lemma validator` (READY / NOT READY)\n"
             "    • `lemma start` · `lemma configure --help` · `lemma docs --pick`\n",
@@ -382,7 +422,15 @@ def meta_cmd(raw: bool) -> None:
 
     if raw:
         click.echo(stylize("Subnet fingerprints (`lemma meta --raw`)", fg="cyan", bold=True))
-        click.echo(stylize("(publish hashes so every validator matches judge + templates)\n", dim=True), nl=False)
+        click.echo(
+            stylize(
+                "Does not edit `.env`. To merge pins: ",
+                dim=True,
+            )
+            + stylize("lemma configure subnet-pins\n", fg="green", bold=True)
+            + stylize("(publish hashes so every validator matches judge + templates)\n", dim=True),
+            nl=False,
+        )
         click.echo(f"lemma_version={__version__}")
         click.echo(f"problem_source={s.problem_source}")
         click.echo(f"generated_registry_sha256={reg_sha}")
@@ -390,6 +438,9 @@ def meta_cmd(raw: bool) -> None:
         click.echo(f"judge_rubric_sha256={rub_sha}")
         click.echo(f"judge_profile_sha256={prof_sha}")
         click.echo("judge_profile_json=" + json.dumps(prof, sort_keys=True))
+        rub_embed = str(prof.get("rubric_sha256", "")).strip().lower()
+        rub_ok = rub_embed == rub_sha.strip().lower()
+        click.echo(f"judge_profile_embedded_rubric_matches_code={'1' if rub_ok else '0'}")
         return
 
     click.echo(stylize("Subnet fingerprints", fg="cyan", bold=True))
@@ -400,6 +451,26 @@ def meta_cmd(raw: bool) -> None:
             "Subnet operators publish these hashes so everyone runs the same stack.\n",
             dim=True,
         ),
+        nl=False,
+    )
+    click.echo(stylize("Update `.env` from this screen (validators)\n", fg="cyan"))
+    click.echo(
+        stylize("  This command only ", dim=True)
+        + stylize("prints", fg="yellow")
+        + stylize(" hashes. It does not edit files. To ", dim=True)
+        + stylize("merge", fg="green")
+        + stylize(" the current `judge_profile_sha256` and (if needed) generated-registry pin into ", dim=True)
+        + stylize("`.env`", fg="yellow")
+        + stylize(", run:\n", dim=True)
+        + stylize("  lemma configure subnet-pins\n", fg="green", bold=True)
+        + stylize(
+            "\n  That snapshots **today’s** `lemma meta` for your active env (match OPENAI_MODEL, Chutes URL, "
+            "JUDGE_PROVIDER, etc. to the subnet first — then re-run if you change them).\n"
+            "  Manual option: copy from ",
+            dim=True,
+        )
+        + stylize("lemma meta --raw", fg="green")
+        + stylize(" into `JUDGE_PROFILE_SHA256_EXPECTED` / `LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED`.\n", dim=True),
         nl=False,
     )
     click.echo(stylize("What you’re looking at\n", fg="cyan"))
@@ -469,30 +540,34 @@ def meta_cmd(raw: bool) -> None:
     click.echo(
         stylize(
             "  1. Use the same lemma release (git tag / commit) the subnet operator publishes.\n"
-            "  2. Run ",
+            "  2. Align judge env with the operator (OPENAI_MODEL, OPENAI_BASE_URL, JUDGE_PROVIDER, temps, …).\n"
+            "  3. Run ",
             dim=True,
         )
-        + stylize("lemma meta --raw", fg="green")
+        + stylize("lemma configure subnet-pins", fg="green", bold=True)
         + stylize(
-            " and copy into `.env`: ",
+            " to write ",
             dim=True,
         )
         + stylize("JUDGE_PROFILE_SHA256_EXPECTED", fg="yellow")
-        + stylize(" = the printed ", dim=True)
-        + stylize("judge_profile_sha256", fg="yellow")
-        + stylize(
-            " line; for generated templates also ",
-            dim=True,
-        )
+        + stylize(" (and for generated problems ", dim=True)
         + stylize("LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED", fg="yellow")
-        + stylize(".\n", dim=True),
+        + stylize(") into `.env` from **this** checkout + env.\n", dim=True),
         nl=False,
     )
     click.echo(
         stylize(
-            "  3. Match judge env to that hash: same OPENAI_MODEL, OPENAI_BASE_URL text (after trimming), "
-            "JUDGE_TEMPERATURE, JUDGE_MAX_TOKENS, JUDGE_PROVIDER (see judge_profile JSON below).\n"
-            "  4. Optional: set LEMMA_VALIDATOR_ENFORCE_PUBLISHED_META=1 so the process exits unless pins are set.\n",
+            "     Or copy manually from ",
+            dim=True,
+        )
+        + stylize("lemma meta --raw", fg="green")
+        + stylize(" if you prefer editing `.env` by hand.\n", dim=True),
+        nl=False,
+    )
+    click.echo(
+        stylize(
+            "  4. Validators refuse to start until pins match live `lemma meta` "
+            "(expected lines must equal the SHA256 blocks below).\n",
             dim=True,
         ),
         nl=False,
@@ -515,6 +590,17 @@ def meta_cmd(raw: bool) -> None:
     click.echo(stylize(f"  SHA256  {prof_sha}", dim=False))
     click.echo(
         stylize(
+            "  → write this value into `.env`: ",
+            dim=True,
+        )
+        + stylize("lemma configure subnet-pins", fg="green")
+        + stylize("   (or paste into ", dim=True)
+        + stylize("JUDGE_PROFILE_SHA256_EXPECTED", fg="yellow")
+        + stylize(" yourself)\n", dim=True),
+        nl=False,
+    )
+    click.echo(
+        stylize(
             "  (compare this JSON to another validator — identical ⇒ same judge_profile_sha256.)\n",
             dim=True,
         ),
@@ -523,10 +609,46 @@ def meta_cmd(raw: bool) -> None:
     for line in json.dumps(prof, indent=2, sort_keys=True).splitlines():
         click.echo(stylize(line, dim=True))
 
+    rub_embed = str(prof.get("rubric_sha256", "")).strip().lower()
+    rub_ok = rub_embed == rub_sha.strip().lower()
+    click.echo(stylize("\nRubric alignment (easy check)\n", fg="cyan"))
+    if rub_ok:
+        click.echo(
+            stylize("  ", dim=True)
+            + stylize("OK", fg="green", bold=True)
+            + stylize(
+                "  The `rubric_sha256` field inside the judge profile JSON matches the "
+                "“Judge rubric (code fingerprint)” "
+                f"line ({rub_sha[:12]}…).\n",
+                dim=True,
+            ),
+            nl=False,
+        )
+        click.echo(
+            stylize(
+                "  You do not need the two top-level hashes (rubric-only vs full profile) to be equal — "
+                "the profile hash includes rubric + model + URL + sampling params.\n",
+                dim=True,
+            ),
+            nl=False,
+        )
+    else:
+        click.echo(
+            stylize(
+                "  MISMATCH — embedded rubric in profile JSON differs from `lemma.judge.fingerprint` "
+                "(report this; it should not happen on a clean install).\n",
+                fg="red",
+                bold=True,
+            ),
+            err=True,
+        )
+
     click.echo(
         stylize("\nTip: ", dim=True)
+        + stylize("lemma configure subnet-pins", fg="green", bold=True)
+        + stylize(" merges pins into `.env`; ", dim=True)
         + stylize("lemma meta --raw", fg="green")
-        + stylize(" repeats the old compact `key=value` + one-line JSON.\n", dim=True),
+        + stylize(" is compact copy/paste + one-line JSON.\n", dim=True),
         nl=False,
     )
 
@@ -537,8 +659,10 @@ def meta_cmd(raw: bool) -> None:
     "do_verify",
     default=False,
     help=(
-        "After the LLM answers, run Lean verify (Docker/host). Without --verify you only see model output, "
-        "not whether Submission.lean builds (slower when enabled)."
+        "After the LLM answers, run `lake build` (checks Submission.lean). "
+        "Uses the same Docker sandbox as validators when `LEMMA_USE_DOCKER` is true (default); "
+        "use `--host-lean` for host `lake`, or set `LEMMA_TRY_PROVER_HOST_VERIFY=1`. "
+        "Does not send answers to validators. Without --verify you only see model output."
     ),
 )
 @click.option(
@@ -562,14 +686,36 @@ def meta_cmd(raw: bool) -> None:
     default=None,
     help="Override LEMMA_PROVER_LLM_RETRY_ATTEMPTS for this run only (default: from .env).",
 )
+@click.option(
+    "--host-lean",
+    "host_lean",
+    is_flag=True,
+    default=False,
+    help=(
+        "Only with --verify: force host `lake` instead of the Docker sandbox (faster on a warm Mathlib checkout). "
+        "Mutually exclusive with --docker-verify."
+    ),
+)
+@click.option(
+    "--docker-verify",
+    "docker_verify",
+    is_flag=True,
+    default=False,
+    help=(
+        "Only with --verify: force the Docker Lean sandbox (default when `LEMMA_USE_DOCKER` is true). "
+        "Mutually exclusive with --host-lean."
+    ),
+)
 def try_prover_cmd(
     do_verify: bool,
     block: int | None,
     assume_yes: bool,
     retry_attempts: int | None,
+    host_lean: bool,
+    docker_verify: bool,
 ) -> None:
     """Manual one-shot prover run (like a dry exercise); the live axon miner solves each forward immediately."""
-    from lemma.cli.try_prover import run_try_prover
+    from lemma.cli.try_prover import assert_try_prover_host_lean_allowed, run_try_prover
 
     if not assume_yes:
         if not sys.stdin.isatty():
@@ -587,12 +733,23 @@ def try_prover_cmd(
         if not click.confirm("Continue?", default=False):
             raise click.Abort()
 
+    if host_lean and docker_verify:
+        raise click.ClickException("Use only one of --host-lean and --docker-verify.")
     settings = LemmaSettings()
+    assert_try_prover_host_lean_allowed(settings, verify=do_verify, host_lean=host_lean)
+    lean_use_docker: bool | None
+    if host_lean:
+        lean_use_docker = False
+    elif docker_verify:
+        lean_use_docker = True
+    else:
+        lean_use_docker = None
     run_try_prover(
         settings,
         verify=do_verify,
         block=block,
         prover_llm_retry_attempts=retry_attempts,
+        lean_use_docker=lean_use_docker,
     )
 
 
@@ -701,7 +858,10 @@ def status_cmd() -> None:
     )
     click.echo(
         f"  {stylize('lemma try-prover --verify', fg='green')}  "
-        + stylize("+ compile Submission.lean locally (Lean build)", dim=True),
+        + stylize(
+            "+ local Lean compile only (not validator scoring); add --host-lean to use host lake vs Docker",
+            dim=True,
+        ),
     )
     click.echo(f"  {stylize('lemma meta', fg='green')}  " + stylize("judge + template hashes", dim=True))
 
@@ -777,9 +937,111 @@ def _miner_emit_dry_run_summary() -> None:
         )
         + stylize("lemma miner start", fg="green")
         + stylize(" — bind port and wait for validators · ", dim=True)
+        + stylize("lemma miner observability", fg="green")
+        + stylize(" — what you can see in this terminal · ", dim=True)
         + stylize("lemma miner", fg="green")
         + stylize(" — interactive menu.\n", dim=True),
         nl=False,
+    )
+
+
+def _miner_emit_observability_panel() -> None:
+    """Operator-facing: logs vs judge scores (synapse has no return grade)."""
+    s = LemmaSettings()
+    setup_logging(s.log_level)
+    click.echo(stylize("\nMiner — observability (CLI)\n", fg="cyan", bold=True), nl=False)
+    click.echo(
+        stylize(
+            "Validators score your response after the HTTP reply — the axon does not receive a judge grade "
+            "back on the wire. You can still see your own outputs in logs and aggregate incentives on-chain.\n",
+            dim=True,
+        ),
+    )
+    click.echo(stylize("On this machine (stdout / logs)\n", fg="cyan", bold=True), nl=False)
+    click.echo(
+        "  "
+        + stylize("LEMMA_MINER_LOG_FORWARDS=1", fg="yellow")
+        + stylize(
+            " — log INFO excerpts of reasoning + proof_script each forward (set in `.env` before ",
+            dim=True,
+        )
+        + stylize("lemma miner start", fg="green")
+        + stylize(").\n", dim=True),
+        nl=False,
+    )
+    click.echo(
+        "  "
+        + stylize("LEMMA_MINER_FORWARD_SUMMARY=1", fg="yellow")
+        + stylize(
+            " — one line per forward (default on unless you disable it).\n",
+            dim=True,
+        ),
+        nl=False,
+    )
+    click.echo(
+        "  "
+        + stylize("LEMMA_MINER_LOCAL_VERIFY=1", fg="yellow")
+        + stylize(
+            " — run Lean verify locally after each forward "
+            "(same idea as validators’ kernel check; not the LLM judge).\n",
+            dim=True,
+        ),
+        nl=False,
+    )
+    click.echo(
+        "  "
+        + stylize("LEMMA_LOG_LEVEL=DEBUG", fg="yellow")
+        + stylize(" — more verbose prover logging when debugging.\n", dim=True),
+        nl=False,
+    )
+    click.echo(stylize("On-chain (aggregate, not one theorem’s judge score)\n", fg="cyan", bold=True), nl=False)
+    click.echo(
+        "  "
+        + stylize("lemma leaderboard", fg="green")
+        + stylize(
+            " — incentive / stake / trust from the metagraph (updates as validators set weights).\n",
+            dim=True,
+        ),
+        nl=False,
+    )
+    click.echo(
+        stylize(
+            "If you thought you saw a “judge score” in docs or logs: that is usually the validator pipeline "
+            "(Lean → judge rubric → weights), described in docs/FAQ.md — "
+            "not a score returned to the miner over HTTP.\n",
+            dim=True,
+        ),
+    )
+    click.echo(stylize("On the validator machine (not your miner)\n", fg="cyan", bold=True), nl=False)
+    click.echo(
+        stylize(
+            "  INFO lines like ",
+            dim=True,
+        )
+        + stylize("lemma_epoch_summary … scored=N …", fg="yellow")
+        + stylize(
+            " count how many miners got a judge rubric that round. ",
+            dim=True,
+        )
+        + stylize("lemma validator", fg="green")
+        + stylize(
+            " dry-runs may print weight snippets. With ",
+            dim=True,
+        )
+        + stylize("LEMMA_TRAINING_EXPORT_JSONL", fg="yellow")
+        + stylize(
+            ", validators can append per-UID rubric rows to a JSONL file.\n",
+            dim=True,
+        ),
+        nl=False,
+    )
+    click.echo(stylize("Subnet round timing\n", fg="cyan", bold=True), nl=False)
+    click.echo(
+        stylize(
+            "Validators always wait for subnet epoch boundaries before each scoring round — same cadence for "
+            "every operator; there is no timer-only mode in Lemma.\n",
+            dim=True,
+        ),
     )
 
 
@@ -849,6 +1111,14 @@ def miner_start_cmd(max_forwards_per_day: int | None) -> None:
 @miner_group.command("dry-run", help="Print axon / env summary only — does not bind the port.")
 def miner_group_dry_run_cmd() -> None:
     _miner_emit_dry_run_summary()
+
+
+@miner_group.command(
+    "observability",
+    help="Explain how to see forwards in logs vs on-chain incentives (judge scores are not returned to the axon).",
+)
+def miner_observability_cmd() -> None:
+    _miner_emit_observability_panel()
 
 
 @main.command("miner-dry", help="Same as `lemma miner dry-run` (print axon settings, no server).")
@@ -1017,59 +1287,6 @@ def configure_prover_retries(env_path: Path | None) -> None:
     click.echo("Done. Miner and `lemma try-prover` pick this up on next run.")
 
 
-@configure_grp.command("prover-system-append")
-@click.option(
-    "--env-file",
-    "env_path",
-    type=click.Path(dir_okay=False, path_type=Path),
-    default=None,
-    help="Default: ./.env",
-)
-@click.option(
-    "--clear",
-    is_flag=True,
-    default=False,
-    help="Remove append text (set LEMMA_PROVER_SYSTEM_APPEND empty).",
-)
-@click.option(
-    "--file",
-    "text_file",
-    type=click.File(encoding="utf-8"),
-    default=None,
-    help="Read append text from a UTF-8 file (multiline policies).",
-)
-def configure_prover_system_append(
-    env_path: Path | None,
-    clear: bool,
-    text_file: object | None,
-) -> None:
-    """Optional text appended after built-in PROVER_SYSTEM on every miner prover call (tone, audience, style).
-
-    Does not replace JSON/proof rules in-repo. Use --file for long text; interactive mode offers $EDITOR.
-    """
-    from lemma.cli.env_wizard import collect_prover_system_append_updates
-    from lemma.common.env_file import merge_dotenv
-
-    path = env_path or Path.cwd() / ".env"
-    click.echo(f"Merging into {path}")
-    if clear and text_file is not None:
-        raise click.UsageError("Use either --clear or --file, not both.")
-    if clear:
-        merge_dotenv(path, {"LEMMA_PROVER_SYSTEM_APPEND": ""})
-        click.echo(stylize("Cleared LEMMA_PROVER_SYSTEM_APPEND.", fg="green"))
-        click.echo("Done. Restart the miner / retry `lemma try-prover` to pick up.")
-        return
-    if text_file is not None:
-        content = text_file.read()
-        merge_dotenv(path, {"LEMMA_PROVER_SYSTEM_APPEND": content})
-        click.echo(stylize(f"Wrote LEMMA_PROVER_SYSTEM_APPEND ({len(content)} characters).", fg="green"))
-        click.echo("Done. Restart the miner / retry `lemma try-prover` to pick up.")
-        return
-    merge_dotenv(path, collect_prover_system_append_updates())
-    click.echo(stylize("Wrote LEMMA_PROVER_SYSTEM_APPEND.", fg="green"))
-    click.echo("Done. Restart the miner / retry `lemma try-prover` to pick up.")
-
-
 @configure_grp.command("subnet-pins")
 @click.option(
     "--env-file",
@@ -1088,7 +1305,7 @@ def configure_subnet_pins(env_path: Path | None, yes: bool) -> None:
     """Write JUDGE_PROFILE_SHA256_EXPECTED (+ registry pin if generated) from **current** `lemma meta`.
 
     Align OPENAI_MODEL, OPENAI_BASE_URL, temps, etc. to subnet policy first — then this snapshots pins so
-    validators can enforce match (with LEMMA_VALIDATOR_ENFORCE_PUBLISHED_META=1).
+    `lemma validator` / `lemma validator-check` can confirm you match published subnet meta.
     """
     from lemma.cli.env_wizard import collect_subnet_pin_updates
     from lemma.common.env_file import merge_dotenv
@@ -1134,9 +1351,8 @@ def configure_subnet_pins(env_path: Path | None, yes: bool) -> None:
     click.echo(
         stylize(
             "• These values are snapshots only — they do not change how models are called.\n"
-            "• If you set LEMMA_VALIDATOR_ENFORCE_PUBLISHED_META=1, the validator exits when "
-            "`lemma meta` drifts (e.g. you change OPENAI_MODEL or pull a release without "
-            "running this command again).\n"
+            "• The validator exits when `lemma meta` drifts from these pins (e.g. you change OPENAI_MODEL "
+            "or pull a release without running this command again).\n"
             "• `judge_rubric_sha256` and `judge_profile_sha256` are different hashes on purpose.\n",
             dim=True,
         )
@@ -1239,7 +1455,7 @@ def validator_dry_cmd() -> None:
     settings = LemmaSettings()
     setup_logging(settings.log_level)
     click.echo("")
-    click.echo(stylize("Validator — dry-run (preview only)", fg="cyan", bold=True))
+    click.echo(stylize("Validator — config summary (not `lemma validator dry-run`)", fg="cyan", bold=True))
     click.echo("")
     click.echo(stylize("What this is", fg="cyan", bold=True))
     click.echo("")
@@ -1270,11 +1486,57 @@ def validator_dry_cmd() -> None:
         f"LEMMA_FORWARD_WAIT_MIN_S={settings.forward_wait_min_s}  "
         f"LEMMA_FORWARD_WAIT_MAX_S={settings.forward_wait_max_s}",
     )
-    click.echo(f"  LEMMA_VALIDATOR_ROUND_INTERVAL_S={settings.validator_round_interval_s}")
-    click.echo(f"  LEMMA_VALIDATOR_ALIGN_ROUNDS_TO_EPOCH={int(settings.validator_align_rounds_to_epoch)}")
+    click.echo(
+        stylize(
+            "  Validator cadence: subnet epoch boundaries only (no env toggle — mandatory for all operators).",
+            dim=True,
+        ),
+    )
     click.echo(f"  JUDGE_PROVIDER={settings.judge_provider}")
     click.echo(f"  OPENAI_BASE_URL={settings.openai_base_url}")
     click.echo(f"  OPENAI_MODEL={settings.openai_model}")
+    prov_base = (settings.prover_openai_base_url or "").strip()
+    if prov_base:
+        click.echo(f"  PROVER_OPENAI_BASE_URL={settings.prover_openai_base_url_resolved()}")
+    else:
+        click.echo(
+            stylize(
+                "  PROVER_OPENAI_BASE_URL=(unset — miner prover uses OPENAI_BASE_URL above)",
+                dim=True,
+            ),
+        )
+    if settings.prover_openai_api_key and str(settings.prover_openai_api_key).strip():
+        click.echo(
+            stylize(
+                "  PROVER_OPENAI_API_KEY=(set — miner prover uses this instead of OPENAI_API_KEY)",
+                dim=True,
+            ),
+        )
+    click.echo(
+        stylize(
+            "  Subnet judge default on Chutes: OPENAI_BASE_URL=https://llm.chutes.ai/v1",
+            dim=True,
+        ),
+    )
+    click.echo(
+        f"  LEMMA_LEAN_VERIFY_MAX_CONCURRENT={settings.lemma_lean_verify_max_concurrent}  "
+        f"LEMMA_JUDGE_MAX_CONCURRENT={settings.lemma_judge_max_concurrent}  "
+        "(cap parallel Lean + judge calls per epoch)",
+    )
+    if settings.lean_verify_workspace_cache_dir is not None:
+        click.echo(f"  LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR={settings.lean_verify_workspace_cache_dir}")
+    else:
+        click.echo(
+            stylize(
+                "  LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR=(unset — no cross-verify .lake reuse on disk)",
+                dim=True,
+            ),
+        )
+    jto = settings.judge_llm_http_timeout_s
+    click.echo(
+        f"  LEMMA_JUDGE_LLM_RETRY_ATTEMPTS={settings.judge_llm_retry_attempts}  "
+        f"LEMMA_JUDGE_HTTP_TIMEOUT_S={jto if jto is not None else '(unset — uses LEMMA_LLM_HTTP_TIMEOUT_S)'}",
+    )
     click.echo("")
     click.echo(stylize("Next steps", fg="cyan", bold=True))
     click.echo("")
@@ -1316,24 +1578,54 @@ def validator_check_cmd() -> None:
 
 @main.command("verify")
 @click.option("--problem", "problem_id", required=True)
-@click.option("--submission", "submission_path", type=click.Path(exists=True), required=True)
-def verify_cmd(problem_id: str, submission_path: str) -> None:
+@click.option(
+    "--submission",
+    "submission_path",
+    type=click.Path(exists=True, dir_okay=False, file_okay=True, path_type=Path),
+    required=True,
+    help="Path to a Submission.lean file (not a directory). Example: ./my_proof.lean",
+)
+@click.option(
+    "--host-lean",
+    "host_lean",
+    is_flag=True,
+    default=False,
+    help=(
+        "Run lake on host (not Docker). Requires LEMMA_ALLOW_HOST_LEAN=1. "
+        "Default is Docker (same as validators)."
+    ),
+)
+def verify_cmd(problem_id: str, submission_path: Path, host_lean: bool) -> None:
     """Verify a Submission.lean file against a catalog problem."""
-    from lemma.lean.sandbox import LeanSandbox
+    from lemma.cli.try_prover import assert_host_lean_cli_allowed
+    from lemma.lean.verify_runner import run_lean_verify
 
     settings = LemmaSettings()
-    src = Path(submission_path).read_text(encoding="utf-8")
+    assert_host_lean_cli_allowed(settings, host_lean)
+    src = submission_path.read_text(encoding="utf-8")
     p = resolve_problem(settings, problem_id)
-    sb = LeanSandbox(
-        image=settings.lean_sandbox_image,
-        cpu=settings.lean_sandbox_cpu,
-        mem_mb=settings.lean_sandbox_mem_mb,
-        timeout_s=settings.lean_verify_timeout_s,
-        network_mode=settings.lean_sandbox_network,
+    use_docker = not host_lean and settings.lean_use_docker
+    eff = settings.model_copy(update={"lean_use_docker": use_docker})
+    vr = run_lean_verify(
+        eff,
+        verify_timeout_s=settings.lean_verify_timeout_s,
+        problem=p,
+        proof_script=src,
     )
-    vr = sb.verify(p, src)
     click.echo(vr.model_dump_json(indent=2))
     sys.exit(0 if vr.passed else 1)
+
+
+@main.command("lean-worker")
+@click.option("--host", default="127.0.0.1", show_default=True)
+@click.option("--port", default=8787, type=int, show_default=True)
+def lean_worker_cmd(host: str, port: int) -> None:
+    """Run HTTP Lean verify worker (POST ``/verify``); pair with ``LEMMA_LEAN_VERIFY_REMOTE_URL`` on validators."""
+    from lemma.common.logging import setup_logging
+    from lemma.lean.worker_http import serve_forever
+
+    setup_logging(LemmaSettings().log_level)
+    serve_forever(host, port)
 
 
 @main.command("judge")
@@ -1356,20 +1648,26 @@ def judge_cmd(theorem: str | None, trace: str, proof: str | None) -> None:
     async def _run() -> None:
         if os.environ.get("LEMMA_FAKE_JUDGE") == "1":
             j: Judge = FakeJudge()
-        elif (settings.judge_provider or "").lower() == "openai" and settings.openai_api_key:
+        elif (settings.judge_provider or "").lower() in ("openai", "chutes") and settings.openai_api_key:
+            jto = float(settings.judge_llm_http_timeout_s or settings.llm_http_timeout_s)
             j = OpenAIJudge(
                 settings.openai_api_key,
                 settings.openai_model,
                 base_url=settings.openai_base_url,
                 temperature=settings.judge_temperature,
                 max_tokens=settings.judge_max_tokens,
+                timeout=jto,
+                retry_attempts=settings.judge_llm_retry_attempts,
             )
         elif settings.anthropic_api_key:
+            jto = float(settings.judge_llm_http_timeout_s or settings.llm_http_timeout_s)
             j = AnthropicJudge(
                 settings.anthropic_api_key,
                 settings.anthropic_model,
                 temperature=settings.judge_temperature,
                 max_tokens=settings.judge_max_tokens,
+                timeout=jto,
+                retry_attempts=settings.judge_llm_retry_attempts,
             )
         else:
             j = FakeJudge()
@@ -1557,8 +1855,9 @@ def local_loop_cmd() -> None:
     setup_logging(settings.log_level)
     src = get_problem_source(settings)
     os.environ["LEMMA_FAKE_JUDGE"] = "1"
-    os.environ["LEMMA_USE_DOCKER"] = "0"
-    weights = asyncio.run(ep.run_epoch(settings, src, dry_run=True))
+    weights = asyncio.run(
+        ep.run_epoch(settings.model_copy(update={"lean_use_docker": False}), src, dry_run=True),
+    )
     click.echo(weights)
 
 

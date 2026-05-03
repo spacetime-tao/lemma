@@ -12,8 +12,7 @@ from lemma.validator import epoch as ep
 
 async def main() -> None:
     os.environ.setdefault("LEMMA_FAKE_JUDGE", "1")
-    os.environ.setdefault("LEMMA_USE_DOCKER", "0")
-    settings = LemmaSettings()
+    settings = LemmaSettings().model_copy(update={"lean_use_docker": False})
     source = MiniF2FSource()
     weights = await ep.run_epoch(settings, source, dry_run=True)
     print(weights)

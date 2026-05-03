@@ -1,0 +1,10 @@
+# Auto-activate `.venv` when you `cd` into this repo (optional).
+#
+#   brew install direnv   # or see https://direnv.net
+#   hook direnv into your shell (see direnv docs)
+#   cp .envrc.example .envrc && direnv allow
+#
+# Then your prompt can show the venv name and bare `lemma` / `btcli` work like a “locked-in” session.
+if [[ -f .venv/bin/activate ]]; then
+  source .venv/bin/activate
+fi

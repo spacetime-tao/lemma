@@ -51,7 +51,9 @@ def test_problem_challenge_full_roundtrip(tmp_path: Path) -> None:
         "mathlib_rev": "5450b53e5ddc",
         "imports": [],
         "challenge_full": "theorem foo : True := by\n  sorry",
-        "solution_full": "import Submission\n\ntheorem foo : True := by\n  exact Submission.foo",
+        "solution_full": (
+            "import Submission\n\ntheorem LemmaSubmissionBridge : True := by\n  exact Submission.foo"
+        ),
         "submission_stub": (
             "import Mathlib\n\nnamespace Submission\n\ntheorem foo : True := by\n  sorry\n\nend Submission\n"
         ),

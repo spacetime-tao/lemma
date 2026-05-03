@@ -20,9 +20,10 @@ from lemma.judge.base import Judge
 from lemma.judge.fake import FakeJudge
 from lemma.judge.fingerprint import rubric_sha256
 from lemma.judge.openai_judge import OpenAIJudge
-from lemma.lean.sandbox import LeanSandbox, VerifyResult
+from lemma.lean.sandbox import VerifyResult
+from lemma.lean.verify_runner import run_lean_verify
 from lemma.problems.base import ProblemSource
-from lemma.protocol import LemmaChallenge
+from lemma.protocol import LemmaChallenge, synapse_miner_response_integrity_ok
 from lemma.reasoning.format import effective_reasoning_text
 from lemma.scoring.pareto import ScoredEntry, pareto_weights
 from lemma.scoring.rewards import entry_from_scores
@@ -37,9 +38,10 @@ if TYPE_CHECKING:
 def _build_judge(settings: LemmaSettings, dry_run: bool) -> Judge:
     if dry_run or os.environ.get("LEMMA_FAKE_JUDGE") == "1":
         return FakeJudge()
-    to = float(settings.llm_http_timeout_s)
-    prov = (settings.judge_provider or "openai").lower()
-    if prov == "openai":
+    to = float(settings.judge_llm_http_timeout_s or settings.llm_http_timeout_s)
+    ra = max(1, int(settings.judge_llm_retry_attempts))
+    prov = (settings.judge_provider or "chutes").lower()
+    if prov in ("openai", "chutes"):
         key = settings.openai_api_key
         if not key:
             logger.warning("OPENAI_API_KEY missing; using FakeJudge")
@@ -51,6 +53,7 @@ def _build_judge(settings: LemmaSettings, dry_run: bool) -> Judge:
             temperature=settings.judge_temperature,
             max_tokens=settings.judge_max_tokens,
             timeout=to,
+            retry_attempts=ra,
         )
     key = settings.anthropic_api_key
     if not key:
@@ -62,6 +65,7 @@ def _build_judge(settings: LemmaSettings, dry_run: bool) -> Judge:
         temperature=settings.judge_temperature,
         max_tokens=settings.judge_max_tokens,
         timeout=to,
+        retry_attempts=ra,
     )
 
 
@@ -136,43 +140,60 @@ async def run_epoch(
     async with bt.Dendrite(wallet=wallet) as dendrite:
         responses = await q.query_miners(dendrite, axons, synapse, timeout=forward_wait_s)
 
-    sandbox = LeanSandbox(
-        image=settings.lean_sandbox_image,
-        cpu=settings.lean_sandbox_cpu,
-        mem_mb=settings.lean_sandbox_mem_mb,
-        timeout_s=verify_timeout_s,
-        network_mode=settings.lean_sandbox_network,
-        use_docker=os.environ.get("LEMMA_USE_DOCKER", "1") != "0",
-    )
     judge = _build_judge(settings, dry_run)
 
-    verified: list[tuple[int, LemmaChallenge, VerifyResult]] = []
-    judge_errors = 0
-    export_path = settings.training_export_jsonl
-    training_rows: list[dict[str, Any]] = []
+    candidates: list[tuple[int, LemmaChallenge]] = []
     for uid, resp in zip(uids, responses, strict=True):
         if not isinstance(resp, LemmaChallenge):
             continue
         if not resp.is_success:
             continue
+        if not synapse_miner_response_integrity_ok(resp):
+            logger.warning(
+                "uid={} dropping response: synapse body_hash does not match computed_body_hash "
+                "(tampered payload or miner/validator version skew)",
+                uid,
+            )
+            continue
         if not resp.proof_script:
             continue
-        vr = sandbox.verify(problem, resp.proof_script)
-        if vr.passed:
-            verified.append((uid, resp, vr))
-        else:
+        candidates.append((uid, resp))
+
+    verify_sem = asyncio.Semaphore(max(1, settings.lemma_lean_verify_max_concurrent))
+
+    async def _verify_one(uid: int, resp: LemmaChallenge) -> tuple[int, LemmaChallenge, VerifyResult] | None:
+        async with verify_sem:
+            vr = await asyncio.to_thread(
+                run_lean_verify,
+                settings,
+                verify_timeout_s=verify_timeout_s,
+                problem=problem,
+                proof_script=resp.proof_script,
+            )
+        if not vr.passed:
             logger.debug("uid={} verify failed: {}", uid, vr.reason)
+            return None
+        return (uid, resp, vr)
+
+    verified_results = await asyncio.gather(*[_verify_one(u, r) for u, r in candidates])
+    verified = [x for x in verified_results if x is not None]
+
+    judge_errors = 0
+    export_path = settings.training_export_jsonl
+    training_rows: list[dict[str, Any]] = []
+    judge_sem = asyncio.Semaphore(max(1, settings.lemma_judge_max_concurrent))
 
     async def _score_one(item: tuple[int, LemmaChallenge, VerifyResult]) -> ScoredEntry | None:
         nonlocal judge_errors
         uid, resp, _vr = item
         trace_text = effective_reasoning_text(resp)
         try:
-            rubric = await judge.score(
-                resp.theorem_statement,
-                trace_text,
-                resp.proof_script or "",
-            )
+            async with judge_sem:
+                rubric = await judge.score(
+                    resp.theorem_statement,
+                    trace_text,
+                    resp.proof_script or "",
+                )
         except Exception as e:  # noqa: BLE001
             judge_errors += 1
             logger.warning("judge failed uid={} err={}", uid, e)
@@ -191,6 +212,15 @@ async def run_epoch(
 
     scored = [x for x in await asyncio.gather(*[_score_one(v) for v in verified]) if x is not None]
     weights_by_uid = pareto_weights(scored)
+
+    logger.debug(
+        "epoch concurrency caps used: LEMMA_LEAN_VERIFY_MAX_CONCURRENT={} LEMMA_JUDGE_MAX_CONCURRENT={} "
+        "candidates={} verified={}",
+        settings.lemma_lean_verify_max_concurrent,
+        settings.lemma_judge_max_concurrent,
+        len(candidates),
+        len(verified),
+    )
 
     if export_path and training_rows:
         append_epoch_jsonl(export_path, training_rows, weights_by_uid)

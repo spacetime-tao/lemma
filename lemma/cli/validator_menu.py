@@ -19,7 +19,7 @@ def show_validator_menu(ctx: click.Context) -> None:
     click.echo(stylize("\nLemma — validator\n", fg="cyan", bold=True), nl=False)
     click.echo(
         stylize(
-            "Runs scoring rounds: query miners, Lean sandbox, LLM judge, optional set_weights.\n",
+            "1–2 run the real scoring loop (miners, Lean, judge). 3–4 do not run scoring — they only print.\n",
             dim=True,
         ),
         nl=False,
@@ -29,22 +29,22 @@ def show_validator_menu(ctx: click.Context) -> None:
         + stylize("1", fg="yellow")
         + "  "
         + stylize("start", fg="green")
-        + "          Live rounds (set_weights on chain unless you pass --dry-run below)\n"
+        + "          Live loop until Ctrl+C — includes set_weights on chain\n"
         "  "
         + stylize("2", fg="yellow")
         + "  "
         + stylize("dry-run", fg="green")
-        + "      Rounds with LEMMA-style dry-run (no on-chain weights)\n"
+        + "      Same live loop as 1, but never set_weights (still queries miners / Lean / judge)\n"
         "  "
         + stylize("3", fg="yellow")
         + "  "
-        + stylize("preview", fg="green")
-        + "      One-shot env summary — same as `lemma validator-dry`\n"
+        + stylize("config", fg="green")
+        + "        Read `.env` and print a summary — no rounds, no miners (`lemma validator-dry`)\n"
         "  "
         + stylize("4", fg="yellow")
         + "  "
         + stylize("check", fg="green")
-        + "        Pre-flight READY / NOT READY (`lemma validator-check`)\n"
+        + "        Pre-flight checklist — RPC, wallet UID, subnet pins, Docker → READY or NOT READY\n"
         "  "
         + stylize("5", fg="yellow")
         + "  "
@@ -61,7 +61,9 @@ def show_validator_menu(ctx: click.Context) -> None:
         + stylize("  ·  ", dim=True)
         + stylize("lemma validator dry-run", fg="yellow")
         + stylize("  ·  ", dim=True)
-        + stylize("lemma validator start --dry-run", fg="yellow")
+        + stylize("lemma validator-dry", fg="yellow")
+        + stylize("  ·  ", dim=True)
+        + stylize("lemma validator-check", fg="yellow")
         + stylize("\n", dim=True),
         nl=False,
     )
@@ -69,7 +71,8 @@ def show_validator_menu(ctx: click.Context) -> None:
     if not sys.stdin.isatty():
         click.echo(
             stylize(
-                "Non-interactive: use `lemma validator start`, `lemma validator dry-run`, or `lemma validator-check`.",
+                "Non-interactive: use `lemma validator start`, `lemma validator dry-run`, `lemma validator-dry`, "
+            "or `lemma validator-check`.",
                 dim=True,
             ),
         )

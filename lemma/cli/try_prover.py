@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import os
 import time
+from pathlib import Path
 
 import click
 from openai import APIConnectionError, APITimeoutError
@@ -25,11 +26,77 @@ from lemma.common.problem_seed import (
 )
 from lemma.common.subtensor import get_subtensor
 from lemma.lean.cheats import lake_build_environment_failed
-from lemma.lean.sandbox import LeanSandbox
+from lemma.lean.verify_runner import run_lean_verify
 from lemma.miner.prover import LLMProver
 from lemma.problems.factory import get_problem_source
 from lemma.protocol import LemmaChallenge
 from lemma.reasoning.format import format_reasoning_steps
+
+
+def _env_truthy(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in ("1", "true", "yes")
+
+
+def resolve_try_prover_use_docker(
+    *,
+    verify: bool,
+    explicit_use_docker: bool | None,
+    base_use_docker: bool = True,
+    allow_host_lean: bool = False,
+) -> bool:
+    """How ``try-prover`` runs Lean when ``--verify`` is set.
+
+    **Defaults match validators:** use Docker when ``LEMMA_USE_DOCKER`` is true (the usual subnet setup).
+    Host ``lake`` is opt-in (``--host-lean`` or ``LEMMA_TRY_PROVER_HOST_VERIFY=1``) for a faster dev path.
+
+    ``base_use_docker`` is ``LemmaSettings.lean_use_docker`` from ``.env``.
+
+    Validators/miners are unchanged — this only applies to ``lemma try-prover``.
+    """
+    if explicit_use_docker is not None:
+        return explicit_use_docker
+    if not verify:
+        return base_use_docker
+    if _env_truthy("LEMMA_TRY_PROVER_DOCKER_VERIFY"):
+        return True
+    if _env_truthy("LEMMA_TRY_PROVER_HOST_VERIFY") and allow_host_lean:
+        return False
+    return base_use_docker
+
+
+def assert_host_lean_cli_allowed(settings: LemmaSettings, host_lean: bool) -> None:
+    """``lemma verify --host-lean`` — same policy as try-prover (opt-in)."""
+    if host_lean and not settings.allow_host_lean:
+        raise click.ClickException(
+            "Host Lean is disabled. Use Docker (default) to match validators. "
+            "Set LEMMA_ALLOW_HOST_LEAN=1 in `.env` for local debugging, then use --host-lean."
+        )
+
+
+def assert_try_prover_host_lean_allowed(settings: LemmaSettings, *, verify: bool, host_lean: bool) -> None:
+    """Raise ClickException if CLI/env requests host Lean without ``LEMMA_ALLOW_HOST_LEAN``."""
+    if not verify:
+        return
+    if host_lean and not settings.allow_host_lean:
+        raise click.ClickException(
+            "Host Lean is disabled (subnet default is Docker). "
+            "Set LEMMA_ALLOW_HOST_LEAN=1 in `.env` for local debugging only, then retry `--host-lean`."
+        )
+    if _env_truthy("LEMMA_TRY_PROVER_HOST_VERIFY") and not settings.allow_host_lean:
+        raise click.ClickException(
+            "LEMMA_TRY_PROVER_HOST_VERIFY is set but host Lean is not enabled. "
+            "Set LEMMA_ALLOW_HOST_LEAN=1 in `.env`, or unset LEMMA_TRY_PROVER_HOST_VERIFY to use Docker."
+        )
+
+
+def resolve_try_prover_workspace_cache(settings: LemmaSettings) -> Path | None:
+    """Warm-cache directory for ``try-prover --verify``: env wins; else ``~/.cache/lemma-lean-workspace``."""
+    if settings.lean_verify_workspace_cache_dir is not None:
+        return Path(settings.lean_verify_workspace_cache_dir)
+    if _env_truthy("LEMMA_TRY_PROVER_NO_WORKSPACE_CACHE"):
+        return None
+    base = os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache"))
+    return Path(base) / "lemma-lean-workspace"
 
 
 def _echo_prover_api_error_hints(exc: BaseException) -> None:
@@ -53,8 +120,15 @@ def _run_try_prover_session(
     *,
     verify: bool,
     block: int | None,
+    lean_use_docker: bool | None = None,
 ) -> int:
     """Run chain setup, LLM, optional Lean verify; return process exit code."""
+    use_docker = resolve_try_prover_use_docker(
+        verify=verify,
+        explicit_use_docker=lean_use_docker,
+        base_use_docker=settings.lean_use_docker,
+        allow_host_lean=settings.allow_host_lean,
+    )
     setup_logging(settings.log_level)
     from lemma import __version__
 
@@ -101,9 +175,17 @@ def _run_try_prover_session(
     click.echo(stylize(f"lemma {__version__} — try-prover", fg="cyan", bold=True))
     click.echo(
         stylize(
-            "Stop anytime: press Ctrl+C once — exits try-prover and returns you to the shell (exit 130).",
+            "Stop anytime: Ctrl+C once → exits try-prover and returns you to the shell (exit 130).",
             fg="green",
             bold=True,
+        ),
+        err=True,
+    )
+    click.echo(
+        stylize(
+            "When this command ends (success or failure): you should get your normal shell prompt back. "
+            "If the terminal looks stuck with no prompt, press Enter once.",
+            fg="green",
         ),
         err=True,
     )
@@ -170,7 +252,6 @@ def _run_try_prover_session(
         synapse_timeout_s=timeout_s,
         show_timeout_help=True,
     )
-    use_docker = os.environ.get("LEMMA_USE_DOCKER", "1") != "0"
     if verify and use_docker:
         nm = (settings.lean_sandbox_network or "none").strip().lower()
         if nm in ("none", ""):
@@ -262,23 +343,79 @@ def _run_try_prover_session(
 
         lean_ok: bool | None = None
         if verify and (proof or "").strip():
-            sandbox = LeanSandbox(
-                image=settings.lean_sandbox_image,
-                cpu=settings.lean_sandbox_cpu,
-                mem_mb=settings.lean_sandbox_mem_mb,
-                timeout_s=settings.lean_verify_timeout_s,
-                network_mode=settings.lean_sandbox_network,
-                use_docker=os.environ.get("LEMMA_USE_DOCKER", "1") != "0",
+            ws_cache = resolve_try_prover_workspace_cache(settings)
+            eff_settings = settings.model_copy(
+                update={
+                    "lean_use_docker": use_docker,
+                    "lean_verify_workspace_cache_dir": ws_cache,
+                },
             )
             click.echo("")
+            if ws_cache is not None:
+                click.echo(
+                    stylize(
+                        f"Lean workspace cache: {ws_cache}  "
+                        f"(override LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR; disable default: "
+                        f"LEMMA_TRY_PROVER_NO_WORKSPACE_CACHE=1)",
+                        dim=True,
+                    ),
+                )
+            remote_u = (settings.lean_verify_remote_url or "").strip()
+            if remote_u:
+                click.echo(
+                    stylize(
+                        f"Lean verify — remote worker `{remote_u}` (POST /verify). "
+                        "Unset LEMMA_LEAN_VERIFY_REMOTE_URL to verify locally.",
+                        fg="cyan",
+                    ),
+                )
+            elif not use_docker:
+                click.echo(
+                    stylize(
+                        "Lean verify — host `lake` (opt‑in; warm Mathlib can be fast). "
+                        "Default path is Docker — same as validators when LEMMA_USE_DOCKER=1.",
+                        fg="cyan",
+                    ),
+                )
+            else:
+                _dw = (settings.lemma_lean_docker_worker or "").strip()
+                if _dw:
+                    click.echo(
+                        stylize(
+                            f"Lean Docker — `docker exec` into `{_dw}` (set in `.env` as LEMMA_LEAN_DOCKER_WORKER).",
+                            fg="cyan",
+                        ),
+                    )
+                else:
+                    click.echo(
+                        stylize(
+                            "Lean Docker — new container per verify (slower). For exec-based verify set "
+                            "LEMMA_LEAN_DOCKER_WORKER in `.env` and run `scripts/start_lean_docker_worker.sh`.",
+                            dim=True,
+                        ),
+                    )
             click.echo(
                 stylize(
                     "Lean verify may take many minutes on a cold Mathlib build — Ctrl+C aborts and exits.",
                     dim=True,
                 ),
             )
-            click.echo(stylize("— Local Lean verify —", fg="cyan", bold=True))
-            vr = await asyncio.to_thread(sandbox.verify, problem, proof)
+            click.echo(
+                stylize(
+                    "— Lean verify (same kernel check as validators; "
+                    + ("remote POST /verify when LEMMA_LEAN_VERIFY_REMOTE_URL is set; " if remote_u else "")
+                    + "not on-chain scoring) —",
+                    fg="cyan",
+                    bold=True,
+                ),
+            )
+            vr = await asyncio.to_thread(
+                run_lean_verify,
+                eff_settings,
+                verify_timeout_s=settings.lean_verify_timeout_s,
+                problem=problem,
+                proof_script=proof,
+            )
             lean_ok = bool(vr.passed)
             if vr.passed:
                 click.echo(stylize("PASS", fg="green") + f"  ({vr.build_seconds:.2f}s)")
@@ -318,7 +455,13 @@ def _run_try_prover_session(
                     )
         elif verify:
             click.echo("")
-            click.echo(stylize("— Local Lean verify — skipped (empty proof_script)", fg="yellow"), err=True)
+            click.echo(
+                stylize(
+                    "— Lean verify (local) — skipped (empty proof_script)",
+                    fg="yellow",
+                ),
+                err=True,
+            )
 
         click.echo("")
         if lean_ok is True:
@@ -327,7 +470,9 @@ def _run_try_prover_session(
         if lean_ok is False:
             click.echo(
                 stylize(
-                    "try-prover: finished — Lean verify FAIL (exit 1). Fix the proof or check Docker/Mathlib setup.",
+                    "try-prover: finished — Lean verify FAIL (exit 1). "
+                    "Fix the proof or Mathlib setup; ensure Docker can run the sandbox image "
+                    "or use --host-lean for host lake.",
                     fg="red",
                     bold=True,
                 ),
@@ -355,13 +500,19 @@ def run_try_prover(
     verify: bool,
     block: int | None,
     prover_llm_retry_attempts: int | None = None,
+    lean_use_docker: bool | None = None,
 ) -> None:
     """Load current (or --block) seed, call LLM prover, print trace + proof; optional Lean verify."""
     if prover_llm_retry_attempts is not None:
         settings = settings.model_copy(update={"prover_llm_retry_attempts": prover_llm_retry_attempts})
     exit_code = 1
     try:
-        exit_code = _run_try_prover_session(settings, verify=verify, block=block)
+        exit_code = _run_try_prover_session(
+            settings,
+            verify=verify,
+            block=block,
+            lean_use_docker=lean_use_docker,
+        )
     except KeyboardInterrupt:
         click.echo("")
         click.echo(
@@ -374,9 +525,12 @@ def run_try_prover(
             err=True,
         )
         exit_code = 130
-    finally:
-        finish_cli_output()
-    if exit_code == 0:
-        click.echo(stylize("Done — shell prompt below.", dim=True))
+
+    # Exit 0: the green "try-prover: finished …" line above is enough; avoid extra ANSI here.
+    # Non-zero: plain stderr line (no stylize) so we do not add SGR after error output.
+    if exit_code != 130 and exit_code != 0:
+        click.echo("try-prover: done (non-zero exit). See messages above.", err=True)
+    # Reset streams + /dev/tty (see finish_cli_output) — IDE terminals often need the latter for the prompt.
+    finish_cli_output()
     if exit_code != 0:
         raise SystemExit(exit_code)

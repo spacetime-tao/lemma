@@ -5,6 +5,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from lemma.problems.base import SOLUTION_BRIDGE_THEOREM
+
 
 def parse_putnam_file(path: Path) -> dict | None:
     """
@@ -39,7 +41,14 @@ def parse_putnam_file(path: Path) -> dict | None:
     preamble = "\n".join(opens)
     challenge_full = f"{preamble}\n\n{body}".strip() if preamble else body
 
-    sol_body = re.sub(r":=\s*\n\s*sorry\s*$", f":= Submission.{name}", body.strip())
+    body_for_sol = re.sub(
+        rf"^theorem\s+{re.escape(name)}\b",
+        f"theorem {SOLUTION_BRIDGE_THEOREM}",
+        body.strip(),
+        count=1,
+        flags=re.MULTILINE,
+    )
+    sol_body = re.sub(r":=\s*\n\s*sorry\s*$", f":= by\n  exact Submission.{name}", body_for_sol)
     solution_parts = ["import Submission"]
     if preamble:
         solution_parts.append(preamble)

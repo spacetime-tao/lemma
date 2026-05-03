@@ -17,7 +17,7 @@ from dataclasses import replace
 from typing import Any
 
 from lemma.catalog.constants import DEFAULT_LEAN_TOOLCHAIN, DEFAULT_MATHLIB_REV
-from lemma.problems.base import Problem, ProblemSource
+from lemma.problems.base import SOLUTION_BRIDGE_THEOREM, Problem, ProblemSource
 
 # Taxonomy for logging / exports (not used by Lean itself).
 TOPICS: tuple[str, ...] = (
@@ -77,7 +77,7 @@ def _mk_problem(
     sf = f"""import Mathlib
 import Submission
 
-theorem {theorem_name} : {type_expr} := by
+theorem {SOLUTION_BRIDGE_THEOREM} : {type_expr} := by
   exact Submission.{theorem_name}
 """
     extra: dict[str, Any] = {

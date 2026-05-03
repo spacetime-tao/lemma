@@ -162,7 +162,7 @@ def collect_judge_updates() -> dict[str, str]:
     if backend == "chutes":
         key = _require_secret("Chutes API key (OpenAI-compatible)")
         updates = {
-            "JUDGE_PROVIDER": "openai",
+            "JUDGE_PROVIDER": "chutes",
             "OPENAI_API_KEY": key,
             "OPENAI_BASE_URL": CHUTES_OPENAI_BASE_URL,
             "OPENAI_MODEL": CHUTES_DEFAULT_MODEL,
@@ -221,8 +221,8 @@ def collect_prover_updates() -> dict[str, str]:
         key = _require_secret("Chutes API key (prover)")
         click.echo(
             stylize(
-                "PROVER_MODEL is only for the miner; validators use OPENAI_MODEL for the judge "
-                "(set separately via `lemma configure judge`).",
+                "PROVER_MODEL / PROVER_OPENAI_BASE_URL are miner-only; the judge uses OPENAI_MODEL / OPENAI_BASE_URL "
+                "(set via `lemma configure judge`).",
                 dim=True,
             )
         )
@@ -235,7 +235,7 @@ def collect_prover_updates() -> dict[str, str]:
         updates = {
             "PROVER_PROVIDER": "openai",
             "OPENAI_API_KEY": key,
-            "OPENAI_BASE_URL": CHUTES_OPENAI_BASE_URL,
+            "PROVER_OPENAI_BASE_URL": CHUTES_OPENAI_BASE_URL,
             "PROVER_MODEL": use_model,
         }
         click.echo(
@@ -268,7 +268,7 @@ def collect_prover_updates() -> dict[str, str]:
         key = _require_secret("OpenAI-compatible API key (prover)")
         click.echo(
             stylize(
-                "Gemini (Google AI Studio key): set OPENAI_BASE_URL to\n  ",
+                "Gemini (Google AI Studio key): set PROVER_OPENAI_BASE_URL to\n  ",
                 dim=True,
             )
             + stylize("https://generativelanguage.googleapis.com/v1beta/openai/", fg="yellow")
@@ -284,17 +284,19 @@ def collect_prover_updates() -> dict[str, str]:
             nl=False,
         )
         url = click.prompt(
-            "OPENAI_BASE_URL",
+            "PROVER_OPENAI_BASE_URL",
             default="",
             show_default=False,
         ).strip()
         model = click.prompt("PROVER_MODEL", default="", show_default=False).strip()
         if not url or not model:
-            raise click.UsageError("OPENAI_BASE_URL and PROVER_MODEL are required for custom OpenAI-compatible.")
+            raise click.UsageError(
+                "PROVER_OPENAI_BASE_URL and PROVER_MODEL are required for custom OpenAI-compatible prover.",
+            )
         updates = {
             "PROVER_PROVIDER": "openai",
             "OPENAI_API_KEY": key,
-            "OPENAI_BASE_URL": url,
+            "PROVER_OPENAI_BASE_URL": url,
             "PROVER_MODEL": model,
         }
     return updates
@@ -323,58 +325,6 @@ def collect_prover_retries_updates() -> dict[str, str]:
         nl=False,
     )
     return {"LEMMA_PROVER_LLM_RETRY_ATTEMPTS": str(n)}
-
-
-def collect_prover_system_append_updates() -> dict[str, str]:
-    """LEMMA_PROVER_SYSTEM_APPEND — optional text after built-in PROVER_SYSTEM on every prover call."""
-    click.echo(stylize("\nProver system append", fg="cyan", bold=True), nl=False)
-    click.echo(
-        stylize(
-            "\nLemma always sends a fixed system prompt so replies stay in the JSON shape the subnet expects. "
-            "This setting adds your instructions after that built-in text on each prover API call.\n",
-            dim=True,
-        ),
-        nl=False,
-    )
-    click.echo(
-        stylize(
-            "• Use it for tone, audience, or house style — not for replacing JSON rules "
-            "(those stay in-repo).\n"
-            "• One completion fills both informal reasoning_steps and proof_script; "
-            "Lean is still checked by the kernel.\n"
-            "• Gemini / ChatGPT UI system fields are not used unless you paste equivalent text here.\n",
-            dim=True,
-        )
-    )
-    s = LemmaSettings()
-    current = s.prover_system_append or ""
-    if current:
-        preview = current if len(current) <= 520 else current[:520] + "…"
-        click.echo(stylize(f"\nCurrent ({len(current)} characters):\n", dim=True), nl=False)
-        click.echo(stylize(preview, fg="yellow"))
-
-    use_editor = click.confirm(
-        stylize("Open $EDITOR to set or edit this text?", fg="green"),
-        default=True,
-    )
-    if use_editor:
-        new = click.edit(current, require_save=False, extension=".txt")
-        if new is None:
-            click.echo(stylize("Cancelled — .env not modified.", fg="yellow"))
-            raise click.Abort()
-        stripped = new.strip()
-        return {"LEMMA_PROVER_SYSTEM_APPEND": stripped}
-
-    one = click.prompt(
-        stylize(
-            "Append text (single line). For paragraphs use an editor above, or "
-            "`lemma configure prover-system-append --file policy.txt`.",
-            fg="green",
-        ),
-        default=current,
-        show_default=bool(current),
-    )
-    return {"LEMMA_PROVER_SYSTEM_APPEND": one.strip()}
 
 
 def collect_prover_model_updates() -> dict[str, str]:

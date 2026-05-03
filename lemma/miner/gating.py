@@ -35,6 +35,25 @@ class MetagraphCache:
         return self._mg
 
 
+def metagraph_incentive_for_hotkey(
+    cache: MetagraphCache,
+    hotkey_ss58: str,
+) -> tuple[int | None, float | None]:
+    """Your subnet UID and incentive column from the cached metagraph (same basis as ``lemma leaderboard``)."""
+    mg = cache.get()
+    uid = _uid_for_hotkey(mg, hotkey_ss58)
+    if uid is None:
+        return None, None
+    if not hasattr(mg, "I"):
+        return uid, None
+    raw = mg.I[uid]
+    try:
+        inc = float(raw.item())  # type: ignore[union-attr]
+    except Exception:
+        inc = float(raw)
+    return uid, inc
+
+
 def _uid_for_hotkey(metagraph: bt.Metagraph, hotkey: str) -> int | None:
     for uid, hk in enumerate(metagraph.hotkeys):
         if hk == hotkey:

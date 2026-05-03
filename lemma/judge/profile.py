@@ -10,20 +10,52 @@ from __future__ import annotations
 import hashlib
 import json
 
-from lemma.common.config import LemmaSettings
+from lemma.common.config import (
+    CANONICAL_JUDGE_OPENAI_BASE_URL,
+    CANONICAL_JUDGE_OPENAI_MODEL,
+    LemmaSettings,
+    normalized_judge_openai_base_url,
+)
 from lemma.judge.fingerprint import rubric_sha256
+
+
+def judge_uses_openai_compatible_http(settings: LemmaSettings) -> bool:
+    """Chutes and ``openai`` both use the OpenAI-compatible HTTP client to the configured base URL."""
+    p = (settings.judge_provider or "chutes").lower()
+    return p in ("openai", "chutes")
+
+
+def judge_provider_for_profile_hash(settings: LemmaSettings) -> str:
+    """Canonical ``judge_provider`` value stored in ``lemma meta`` / pin JSON.
+
+    Legacy ``JUDGE_PROVIDER=openai`` with the official Chutes + DeepSeek stack is normalized to
+    ``chutes`` so the fingerprint matches ``JUDGE_PROVIDER=chutes``.
+    """
+    p = (settings.judge_provider or "chutes").lower()
+    if p == "openai":
+        model_ok = (settings.openai_model or "").strip() == CANONICAL_JUDGE_OPENAI_MODEL
+        base_ok = (
+            normalized_judge_openai_base_url(settings).lower()
+            == CANONICAL_JUDGE_OPENAI_BASE_URL.strip().rstrip("/").lower()
+        )
+        if model_ok and base_ok:
+            return "chutes"
+        return "openai"
+    if p == "chutes":
+        return "chutes"
+    return p
 
 
 def judge_profile_dict(settings: LemmaSettings) -> dict[str, object]:
     """Stable dict for hashing (no API keys). Active provider only for model fields."""
-    prov = (settings.judge_provider or "openai").lower()
+    stored = judge_provider_for_profile_hash(settings)
     out: dict[str, object] = {
         "rubric_sha256": rubric_sha256(),
-        "judge_provider": prov,
+        "judge_provider": stored,
         "judge_temperature": float(settings.judge_temperature),
         "judge_max_tokens": int(settings.judge_max_tokens),
     }
-    if prov == "openai":
+    if stored in ("openai", "chutes"):
         base = (settings.openai_base_url or "").strip().rstrip("/")
         out["openai_model"] = settings.openai_model
         out["openai_base_url"] = base

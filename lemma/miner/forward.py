@@ -5,15 +5,15 @@ waiting for block/time windows (manual ``lemma try-prover`` is separate and oper
 """
 
 import asyncio
-import os
 import threading
 import time
 
 from loguru import logger
 
 from lemma.common.config import LemmaSettings
-from lemma.lean.sandbox import LeanSandbox
+from lemma.lean.verify_runner import run_lean_verify
 from lemma.miner.daily_budget import allow_daily_forward
+from lemma.miner.gating import MetagraphCache, metagraph_incentive_for_hotkey
 from lemma.miner.limits import reject_synopsis, synapse_payload_error
 from lemma.miner.model_card import prover_model_card_text
 from lemma.miner.prover import Prover
@@ -31,7 +31,13 @@ def _excerpt(text: str, max_chars: int = 12_000) -> str:
     return text[:half] + "\n... [truncated] ...\n" + text[-half:]
 
 
-def make_forward(settings: LemmaSettings, prover: Prover):
+def make_forward(
+    settings: LemmaSettings,
+    prover: Prover,
+    *,
+    metagraph_cache: MetagraphCache | None = None,
+    miner_hotkey_ss58: str | None = None,
+):
     sem = asyncio.Semaphore(max(1, settings.miner_max_concurrent_forwards))
 
     async def forward(synapse: LemmaChallenge) -> LemmaChallenge:
@@ -65,10 +71,24 @@ def make_forward(settings: LemmaSettings, prover: Prover):
                 f"daily forward limit reached ({settings.miner_max_forwards_per_day}/UTC day)",
             )
 
+        my_uid_s = "?"
+        my_inc_s = "?"
+        if metagraph_cache is not None and miner_hotkey_ss58:
+            try:
+                uid_i, inc_f = metagraph_incentive_for_hotkey(metagraph_cache, miner_hotkey_ss58)
+                if uid_i is not None:
+                    my_uid_s = str(uid_i)
+                if inc_f is not None:
+                    my_inc_s = f"{inc_f:.4f}"
+            except Exception as e:  # noqa: BLE001
+                logger.debug("miner forward incentive snapshot skipped: {}", e)
+
         logger.info(
-            "miner forward: solving immediately theorem_id={} metronome_id={}",
+            "miner forward: solving theorem_id={} metronome_id={} my_uid={} my_incentive={}",
             synapse.theorem_id,
             synapse.metronome_id,
+            my_uid_s,
+            my_inc_s,
         )
         t0 = time.perf_counter()
         async with sem:
@@ -98,39 +118,46 @@ def make_forward(settings: LemmaSettings, prover: Prover):
             logger.info("proof_script (excerpt):\n{}", _excerpt(proof or ""))
 
         local_tag = ""
-        if settings.miner_local_verify and prob_meta is not None and (proof or "").strip():
-            try:
-                sandbox = LeanSandbox(
-                    image=settings.lean_sandbox_image,
-                    cpu=settings.lean_sandbox_cpu,
-                    mem_mb=settings.lean_sandbox_mem_mb,
-                    timeout_s=settings.lean_verify_timeout_s,
-                    network_mode=settings.lean_sandbox_network,
-                    use_docker=os.environ.get("LEMMA_USE_DOCKER", "1") != "0",
-                )
-                vr = await asyncio.to_thread(sandbox.verify, prob_meta, proof)
-                if vr.passed:
-                    local_tag = "local_lean=PASS"
-                    with _stats_lock:
-                        _stats["local_ok"] = int(_stats["local_ok"]) + 1
-                    logger.info(
-                        "miner local verify OK theorem_id={} build_s={:.2f}",
-                        synapse.theorem_id,
-                        vr.build_seconds,
+        local_lean_status = "off"
+        if settings.miner_local_verify:
+            if not (proof or "").strip():
+                local_lean_status = "skipped_empty_proof"
+            elif prob_meta is None:
+                local_lean_status = "skipped_no_problem"
+            else:
+                try:
+                    vr = await asyncio.to_thread(
+                        run_lean_verify,
+                        settings,
+                        verify_timeout_s=settings.lean_verify_timeout_s,
+                        problem=prob_meta,
+                        proof_script=proof,
                     )
-                else:
-                    local_tag = "local_lean=FAIL"
-                    with _stats_lock:
-                        _stats["local_fail"] = int(_stats["local_fail"]) + 1
-                    logger.warning(
-                        "miner local verify FAIL theorem_id={} reason={} build_s={:.2f}",
-                        synapse.theorem_id,
-                        vr.reason,
-                        vr.build_seconds,
-                    )
-                    logger.warning("stderr_tail:\n{}", _excerpt(vr.stderr_tail or "", 8000))
-            except Exception as e:  # noqa: BLE001
-                logger.warning("miner local verify error theorem_id={}: {}", synapse.theorem_id, e)
+                    if vr.passed:
+                        local_tag = "local_lean=PASS"
+                        local_lean_status = "PASS"
+                        with _stats_lock:
+                            _stats["local_ok"] = int(_stats["local_ok"]) + 1
+                        logger.info(
+                            "miner local verify OK theorem_id={} build_s={:.2f}",
+                            synapse.theorem_id,
+                            vr.build_seconds,
+                        )
+                    else:
+                        local_tag = "local_lean=FAIL"
+                        local_lean_status = "FAIL"
+                        with _stats_lock:
+                            _stats["local_fail"] = int(_stats["local_fail"]) + 1
+                        logger.warning(
+                            "miner local verify FAIL theorem_id={} reason={} build_s={:.2f}",
+                            synapse.theorem_id,
+                            vr.reason,
+                            vr.build_seconds,
+                        )
+                        logger.warning("stderr_tail:\n{}", _excerpt(vr.stderr_tail or "", 8000))
+                except Exception as e:  # noqa: BLE001
+                    local_lean_status = "ERROR"
+                    logger.warning("miner local verify error theorem_id={}: {}", synapse.theorem_id, e)
 
         if settings.miner_forward_summary:
             with _stats_lock:
@@ -167,6 +194,16 @@ def make_forward(settings: LemmaSettings, prover: Prover):
         err = synapse_payload_error(synapse, settings)
         if err:
             return reject_synopsis(synapse, 413, err)
+        logger.info(
+            "miner answered theorem_id={} metronome_id={} prover_s={:.2f}s proof_chars={} trace_chars={} "
+            "local_lean={}",
+            synapse.theorem_id,
+            synapse.metronome_id,
+            solve_s,
+            len(proof or ""),
+            len(trace or ""),
+            local_lean_status,
+        )
         return synapse
 
     return forward

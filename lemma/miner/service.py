@@ -35,7 +35,12 @@ class MinerService:
         priority_fn = make_miner_priority(cache) if use_stake_priority else priority_stub
 
         prover = LLMProver(s)
-        forward = make_forward(s, prover)
+        forward = make_forward(
+            s,
+            prover,
+            metagraph_cache=cache,
+            miner_hotkey_ss58=wallet.hotkey.ss58_address,
+        )
 
         external_ip = (s.axon_external_ip or "").strip() or None
         if external_ip is None and s.axon_discover_external_ip:
@@ -72,6 +77,16 @@ class MinerService:
             s.axon_port,
             wallet.hotkey.ss58_address,
         )
+        logger.info(
+            "Each forward: log starts with my_uid / my_incentive (chain metagraph, like `lemma leaderboard`); "
+            "ends with miner answered + local_lean=…",
+        )
+        if not s.miner_log_forwards:
+            logger.info(
+                "LEMMA_MINER_LOCAL_VERIFY: optional. Validators run Lean on your reply anyway — enable locally "
+                "only if you want PASS/FAIL in logs before send (extra Docker per forward). "
+                "LEMMA_MINER_LOG_FORWARDS=1 for excerpts — or `lemma miner observability`.",
+            )
         logger.info(
             "Miner running — press Ctrl+C to stop and return to your shell.",
         )
