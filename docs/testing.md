@@ -1,6 +1,6 @@
 # Testing
 
-Clone repo and `uv sync --extra dev` ([GETTING_STARTED.md](GETTING_STARTED.md)).
+Clone repo and `uv sync --extra dev` ([getting-started.md](getting-started.md)).
 
 ## Default suite
 

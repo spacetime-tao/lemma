@@ -1,12 +1,10 @@
 # Getting started
 
-1. Install [uv](https://docs.astral.sh/uv/getting-started/installation/), clone this repo, run `uv sync --extra dev`.
-2. Run `lemma` or `lemma start` — interactive menu (`lemma setup`, `lemma doctor`, `lemma docs`, `lemma status`, dry-runs, `lemma meta`).
-3. Create cold/hot keys with `btcli`, then `lemma setup` to merge settings into `.env` (no hand-editing required).
+End-to-end: **uv** + repo → **keys** → **`lemma setup`** → **miner or validator**. Sections below are copy-paste commands (swap `<repository-url>`, wallet names, and paths).
 
-Inference for miners/validators: [Chutes](https://chutes.ai) OpenAI-compatible API at `https://llm.chutes.ai/v1` (default model in `.env.example`). Other OpenAI-compatible stacks work via the same env vars.
-
-See what validators would sample: `lemma status`, then `lemma problems` (or `lemma problems show --current`). More: [FAQ.md](FAQ.md).
+- Run `lemma` or `lemma start` for the interactive menu (`setup`, `doctor`, `docs`, `status`, dry-runs, `meta`).
+- Inference defaults: [Chutes](https://chutes.ai) OpenAI-compatible `https://llm.chutes.ai/v1` (see `.env.example`). Other OpenAI-compatible stacks use the same env vars.
+- After setup: `lemma status`, then `lemma problems` (or `lemma problems show --current`). Deep reference: [faq](faq.md).
 
 ## Install uv
 
@@ -87,12 +85,12 @@ bash scripts/prebuild_lean_image.sh
 ./scripts/lemma-run lemma validator
 ```
 
-Parity: `./scripts/lemma-run lemma meta` — [GOVERNANCE.md](GOVERNANCE.md).
+Parity: `./scripts/lemma-run lemma meta` — [governance.md](governance.md).
 
 ## Problem source
 
 - `LEMMA_PROBLEM_SOURCE=generated` (default): block height seeds templates.
-- `frozen`: catalog JSON — [CATALOG_SOURCES.md](CATALOG_SOURCES.md).
+- `frozen`: catalog JSON — [catalog-sources.md](catalog-sources.md).
 
 More tuning: `.env.example` and `lemma configure` where possible.
 
@@ -107,4 +105,4 @@ More tuning: `.env.example` and `lemma configure` where possible.
 | Miner | `lemma miner` (menu) or `lemma miner start` |
 | Validator | `prebuild_lean_image.sh`, `lemma validator` / `lemma validator start` |
 
-[MINER.md](MINER.md), [VALIDATOR.md](VALIDATOR.md), [MODELS.md](MODELS.md), [TESTING.md](TESTING.md).
+[miner.md](miner.md), [validator.md](validator.md), [models.md](models.md), [testing.md](testing.md).

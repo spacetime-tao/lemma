@@ -1,12 +1,12 @@
 # Production checklist
 
-Prerequisites: [GETTING_STARTED.md](GETTING_STARTED.md).
+Prerequisites: [getting-started.md](getting-started.md).
 
 ## Lean
 
 - Build and pin sandbox image ([`compose/lean.Dockerfile`](../compose/lean.Dockerfile)) to match catalog `lean_toolchain` / `mathlib_rev`.
 - Set `LEAN_VERIFY_TIMEOUT_S`, CPU/memory, `LEAN_SANDBOX_NETWORK` for untrusted code.
-- Regenerate `minif2f_frozen.json` and `catalog_manifest.json` when catalog sources change ([GOVERNANCE.md](GOVERNANCE.md)).
+- Regenerate `minif2f_frozen.json` and `catalog_manifest.json` when catalog sources change ([governance.md](governance.md)).
 
 ## Judge
 
@@ -23,7 +23,7 @@ Prerequisites: [GETTING_STARTED.md](GETTING_STARTED.md).
 
 ## Catalogs
 
-- Broader sets: [`scripts/build_lemma_catalog.py`](../scripts/build_lemma_catalog.py) ([CATALOG_SOURCES.md](CATALOG_SOURCES.md)).
+- Broader sets: [`scripts/build_lemma_catalog.py`](../scripts/build_lemma_catalog.py) ([catalog-sources.md](catalog-sources.md)).
 - Mathlib overview: [topic map](https://leanprover-community.github.io/mathlib-overview.html).
 
 ## Training export
@@ -32,7 +32,7 @@ Prerequisites: [GETTING_STARTED.md](GETTING_STARTED.md).
 
 ## Observability
 
-No bundled dashboard. Typical: logs or JSONL to storage + BI ([FAQ.md](FAQ.md)).
+No bundled dashboard. Typical: logs or JSONL to storage + BI ([faq.md](faq.md)).
 
 ## Ops
 
@@ -40,4 +40,4 @@ Document `EMPTY_EPOCH_WEIGHTS_POLICY`, `SET_WEIGHTS_*`, block-derived forward wa
 
 ## Comparator
 
-Optional post-verify hook ([COMPARATOR.md](COMPARATOR.md)).
+Optional post-verify hook ([comparator.md](comparator.md)).

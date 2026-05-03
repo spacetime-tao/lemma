@@ -11,7 +11,7 @@ from lemma.cli.style import stylize
 from lemma.common.config import CANONICAL_JUDGE_OPENAI_MODEL, LemmaSettings
 from lemma.common.env_file import merge_dotenv
 
-# Subnet default stack (see .env.example and MODELS.md)
+# Subnet default stack (see .env.example and docs/models.md)
 CHUTES_OPENAI_BASE_URL = "https://llm.chutes.ai/v1"
 CHUTES_DEFAULT_MODEL = CANONICAL_JUDGE_OPENAI_MODEL
 # Matches LemmaSettings.anthropic_model default (prover falls back if PROVER_MODEL unset).

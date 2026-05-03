@@ -10,11 +10,11 @@ Validators map block seed → theorem via [`generated.py`](../lemma/problems/gen
 uv run lemma meta
 ```
 
-Publish `generated_registry_sha256`; validators may set `LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED`. Difficulty mix: [GENERATED_PROBLEMS.md](GENERATED_PROBLEMS.md).
+Publish `generated_registry_sha256`; validators may set `LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED`. Difficulty mix: [generated-problems.md](generated-problems.md).
 
 ## Frozen catalog (`LEMMA_PROBLEM_SOURCE=frozen`)
 
-1. Build JSON ([CATALOG_SOURCES.md](CATALOG_SOURCES.md)).
+1. Build JSON ([catalog-sources.md](catalog-sources.md)).
 2. Update `catalog_manifest.json`.
 3. Rebuild sandbox image if toolchain pins change.
 4. Tag releases and announce cutover blocks.
@@ -34,11 +34,11 @@ Production: one pinned stack; `JUDGE_PROFILE_SHA256_EXPECTED`. Dev may use multi
 
 ## Comparator
 
-Optional hook ([COMPARATOR.md](COMPARATOR.md)). If any validator enables it, all must share `LEMMA_COMPARATOR_CMD` or scores diverge.
+Optional hook ([comparator.md](comparator.md)). If any validator enables it, all must share `LEMMA_COMPARATOR_CMD` or scores diverge.
 
 ## Shared validator settings
 
-The **subnet operator** publishes one configuration for the subnet: timeouts, seeds, judge, sandbox image, comparator flags. Validators are expected to deploy **that** template so scores stay comparable. Document and distribute: `LEMMA_BLOCK_TIME_SEC_ESTIMATE`, `LEMMA_FORWARD_WAIT_MIN_S`, `LEMMA_FORWARD_WAIT_MAX_S`, `LEAN_VERIFY_TIMEOUT_S`, `LEMMA_TIMEOUT_SCALE_BY_SPLIT` / `LEMMA_TIMEOUT_SPLIT_*_MULT` (only if the operator’s policy includes them), `LEMMA_PROBLEM_SEED_MODE`, `LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`, `EMPTY_EPOCH_WEIGHTS_POLICY`, `LEAN_SANDBOX_*`, `JUDGE_*`, `OPENAI_MODEL` (subnet canonical judge id on Chutes), `OPENAI_BASE_URL`, `LEMMA_COMPARATOR_*`. Nothing here is “per-validator preference”; mismatch is misconfiguration. On-chain code does not enforce equality — parity relies on the published policy ([FAQ.md](FAQ.md)).
+The **subnet operator** publishes one configuration for the subnet: timeouts, seeds, judge, sandbox image, comparator flags. Validators are expected to deploy **that** template so scores stay comparable. Document and distribute: `LEMMA_BLOCK_TIME_SEC_ESTIMATE`, `LEMMA_FORWARD_WAIT_MIN_S`, `LEMMA_FORWARD_WAIT_MAX_S`, `LEAN_VERIFY_TIMEOUT_S`, `LEMMA_TIMEOUT_SCALE_BY_SPLIT` / `LEMMA_TIMEOUT_SPLIT_*_MULT` (only if the operator’s policy includes them), `LEMMA_PROBLEM_SEED_MODE`, `LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`, `EMPTY_EPOCH_WEIGHTS_POLICY`, `LEAN_SANDBOX_*`, `JUDGE_*`, `OPENAI_MODEL` (subnet canonical judge id on Chutes), `OPENAI_BASE_URL`, `LEMMA_COMPARATOR_*`. Nothing here is “per-validator preference”; mismatch is misconfiguration. On-chain code does not enforce equality — parity relies on the published policy ([faq.md](faq.md)).
 
 ### Parity checklist
 

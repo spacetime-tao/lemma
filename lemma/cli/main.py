@@ -331,12 +331,12 @@ def doctor_cmd() -> None:
 
 
 _DOCS_BY_SLUG: tuple[tuple[str, str], ...] = (
-    ("getting-started", "docs/GETTING_STARTED.md"),
-    ("faq", "docs/FAQ.md"),
-    ("miner", "docs/MINER.md"),
-    ("validator", "docs/VALIDATOR.md"),
-    ("models", "docs/MODELS.md"),
-    ("testing", "docs/TESTING.md"),
+    ("getting-started", "docs/getting-started.md"),
+    ("faq", "docs/faq.md"),
+    ("miner", "docs/miner.md"),
+    ("validator", "docs/validator.md"),
+    ("models", "docs/models.md"),
+    ("testing", "docs/testing.md"),
 )
 _DOC_REL_BY_SLUG: dict[str, str] = dict(_DOCS_BY_SLUG)
 
@@ -774,7 +774,7 @@ def status_cmd() -> None:
             err=True,
         )
         click.echo(
-            "Problem seeds follow LEMMA_PROBLEM_SEED_MODE (see docs/FAQ.md).",
+            "Problem seeds follow LEMMA_PROBLEM_SEED_MODE (see docs/faq.md).",
             err=True,
         )
         raise SystemExit(2) from e
@@ -1007,7 +1007,7 @@ def _miner_emit_observability_panel() -> None:
     click.echo(
         stylize(
             "If you thought you saw a “judge score” in docs or logs: that is usually the validator pipeline "
-            "(Lean → judge rubric → weights), described in docs/FAQ.md — "
+            "(Lean → judge rubric → weights), described in docs/faq.md — "
             "not a score returned to the miner over HTTP.\n",
             dim=True,
         ),

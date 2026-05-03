@@ -1,6 +1,6 @@
 # Validator
 
-Walkthrough: [GETTING_STARTED.md](GETTING_STARTED.md) — `lemma setup` (validator or both) sets judge and `LEAN_SANDBOX_IMAGE` via prompts.
+Walkthrough: [getting-started.md](getting-started.md) — `lemma setup` (validator or both) sets judge and `LEAN_SANDBOX_IMAGE` via prompts.
 
 Validators **always** wait for subnet epoch boundaries before each round — no timer-only mode; every operator shares the same on-chain cadence.
 
@@ -79,7 +79,7 @@ Local smoke without LLM cost: `export LEMMA_FAKE_JUDGE=1`.
 ./scripts/lemma-run lemma meta
 ```
 
-[GOVERNANCE.md](GOVERNANCE.md).
+[governance.md](governance.md).
 
 ## Compose
 
@@ -89,4 +89,4 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml up validator
 
 ## Ops
 
-[PRODUCTION.md](PRODUCTION.md).
+[production.md](production.md).

@@ -295,7 +295,7 @@ class LemmaSettings(BaseSettings):
     prover_model: str | None = Field(
         default=None,
         validation_alias=AliasChoices("PROVER_MODEL", "prover_model"),
-        description="Miner-only model id. Use a capable reasoning model; see docs/MODELS.md.",
+        description="Miner-only model id. Use a capable reasoning model; see docs/models.md.",
     )
     prover_max_tokens: int = Field(
         default=32_768,
@@ -514,7 +514,7 @@ class LemmaSettings(BaseSettings):
         description=(
             "Name of a **running** sandbox container: Lemma uses `docker exec` instead of `docker run` per "
             "verify (much lower latency). Must bind-mount `LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR` — see "
-            "docs/VALIDATOR.md and scripts/start_lean_docker_worker.sh."
+            "docs/validator.md and scripts/start_lean_docker_worker.sh."
         ),
     )
     lean_verify_remote_url: str | None = Field(

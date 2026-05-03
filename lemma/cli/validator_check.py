@@ -259,7 +259,7 @@ def run_validator_check(settings: LemmaSettings) -> int:
             click.echo(
                 stylize(
                     "INFO Lean speed  set LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR + optional "
-                    "LEMMA_LEAN_DOCKER_WORKER for exec-based verify (see docs/VALIDATOR.md)",
+                    "LEMMA_LEAN_DOCKER_WORKER for exec-based verify (see docs/validator.md)",
                     dim=True,
                 ),
             )

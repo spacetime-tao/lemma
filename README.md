@@ -1,13 +1,10 @@
 # Lemma
 
-Bittensor subnet: miners submit Lean 4 proofs and reasoning traces; validators verify in Docker and score traces with an LLM judge.
+Bittensor subnet: miners submit **Lean 4** proofs and reasoning traces; validators verify in Docker and score traces with an LLM judge.
 
-## Install
+**First-time path:** open [docs/getting-started.md](docs/getting-started.md) — install, keys, `lemma setup`, miner, validator (all copy-paste blocks). **Direction:** [docs/vision.md](docs/vision.md).
 
-| What | You get |
-| ---- | ------- |
-| `git clone` | Source only. |
-| `uv sync` from repo root | `.venv`, editable `lemma` package (CLI `lemma`), `bittensor`, `btcli`. Add `--extra dev` for tests/linters. |
+## Quick start
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -15,33 +12,29 @@ git clone <repository-url>
 cd lemma
 uv sync --extra dev
 source .venv/bin/activate
-lemma --help
+lemma
 ```
 
-Equivalent: `python -m venv .venv && pip install -e ".[dev]"`. Extras: `catalog`, `wandb` (`uv sync --all-extras` if you need everything).
+`lemma` with no args opens the interactive menu (`setup`, `doctor`, `docs`, …). Create wallets with `btcli` before registering; exact commands are in **getting-started**.
 
-## New here
+## Docs (lowercase filenames)
 
-After `uv sync --extra dev`, run `lemma` (no args) or `lemma start`. The CLI walks setup: env via `lemma setup`, health via `lemma doctor`, doc paths via `lemma docs`. Optional: `chmod +x scripts/lemma-run` and `./scripts/lemma-run lemma setup` so the wrapper activates `.venv` for you.
-
-Wallet keys: create with `btcli` first. Details: [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md).
-
-## Documentation
-
-- [Vision & roadmap](docs/VISION.md)
-- [Getting started](docs/GETTING_STARTED.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Production](docs/PRODUCTION.md)
-- [Governance](docs/GOVERNANCE.md)
-- [Comparator](docs/COMPARATOR.md)
-- [Validator](docs/VALIDATOR.md)
-- [Miner](docs/MINER.md)
-- [FAQ](docs/FAQ.md)
-- [Testing](docs/TESTING.md)
-- [System requirements](docs/SYSTEM_REQUIREMENTS.md)
-- [Models](docs/MODELS.md)
-- [Generated problems](docs/GENERATED_PROBLEMS.md)
-- [Catalog sources](docs/CATALOG_SOURCES.md)
+| Topic | File |
+| ----- | ---- |
+| Install & operator checklist | [getting-started.md](docs/getting-started.md) |
+| Vision & roadmap | [vision.md](docs/vision.md) |
+| Components | [architecture.md](docs/architecture.md) |
+| FAQ (timeouts, seeds, scoring) | [faq.md](docs/faq.md) |
+| Miner | [miner.md](docs/miner.md) |
+| Validator | [validator.md](docs/validator.md) |
+| Models / APIs | [models.md](docs/models.md) |
+| Production / ops | [production.md](docs/production.md) |
+| Governance / pins | [governance.md](docs/governance.md) |
+| Tests | [testing.md](docs/testing.md) |
+| Comparator hook | [comparator.md](docs/comparator.md) |
+| Generated problems | [generated-problems.md](docs/generated-problems.md) |
+| Catalog sources | [catalog-sources.md](docs/catalog-sources.md) |
+| System requirements | [system-requirements.md](docs/system-requirements.md) |
 
 ## References
 

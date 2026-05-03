@@ -525,8 +525,8 @@ def show_start_here(ctx: click.Context | None = None, *, group: click.Group | No
             rest = rest + "  " + stylize(item.billing, fg="blue", bold=True)
         click.echo(f"  {num}  {name}  {rest}")
     click.echo(
-        stylize("\nDefaults: see docs/FAQ.md (timeouts, seeds). ", dim=True)
-        + stylize("docs/GETTING_STARTED.md", fg="cyan")
+        stylize("\nDefaults: see docs/faq.md (timeouts, seeds). ", dim=True)
+        + stylize("docs/getting-started.md", fg="cyan")
         + stylize(" for the full path.\n", dim=True),
         nl=False,
     )

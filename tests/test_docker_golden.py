@@ -30,7 +30,7 @@ theorem two_plus_two_eq_four : (2 : Nat) + 2 = 4 := by rfl
 end Submission
 """
     # Fresh workspaces often run ``lake`` against Mathlib over HTTPS; ``network_mode=none``
-    # blocks DNS (see VALIDATOR.md — bridge only when bootstrap needs the network).
+    # blocks DNS (see docs/validator.md — bridge only when bootstrap needs the network).
     sb = LeanSandbox(
         image=os.environ.get("LEAN_SANDBOX_IMAGE", "lemma/lean-sandbox:latest"),
         use_docker=True,

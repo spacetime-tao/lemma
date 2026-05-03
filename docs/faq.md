@@ -1,5 +1,7 @@
 # FAQ
 
+> **New here:** follow [getting-started](getting-started.md) first (install, keys, miner, validator). This file is long-form reference: scoring, timeouts, seeds, policy.
+
 ## Scoring
 
 1. Lean must typecheck (kernel gate).
@@ -75,7 +77,7 @@ Think of **informal reasoning** as “explain your math before the Lean file.”
 | `LEMMA_PROBLEM_SOURCE=generated` | Block seed → templates ([`generated.py`](../lemma/problems/generated.py)). |
 | `frozen` | Rows from `minif2f_frozen.json`. |
 
-Template or catalog changes need coordinated upgrades ([GOVERNANCE.md](GOVERNANCE.md)).
+Template or catalog changes need coordinated upgrades ([governance.md](governance.md)).
 
 ## Timeouts
 
@@ -88,7 +90,7 @@ Template or catalog changes need coordinated upgrades ([GOVERNANCE.md](GOVERNANC
 
 Validator **round cadence** is not configurable in Lemma: each validator waits for **subnet epoch boundaries** before running `run_epoch` — no wall-clock interval mode.
 
-Timeout values are subnet policy: the operator publishes a single canonical `.env` (or equivalent) and every validator is expected to run that same configuration. Individual validators do not choose different budgets; drift breaks fairness and comparability ([GOVERNANCE.md](GOVERNANCE.md)). Forward HTTP wait follows **block height** (same edge as the next seed rotation), not a single operator-chosen wall-clock cap. If the operator’s published policy includes per-split multipliers (`LEMMA_TIMEOUT_SCALE_BY_SPLIT`, `LEMMA_TIMEOUT_SPLIT_*_MULT`), that is still one policy for the whole subnet, not a per-node setting.
+Timeout values are subnet policy: the operator publishes a single canonical `.env` (or equivalent) and every validator is expected to run that same configuration. Individual validators do not choose different budgets; drift breaks fairness and comparability ([governance.md](governance.md)). Forward HTTP wait follows **block height** (same edge as the next seed rotation), not a single operator-chosen wall-clock cap. If the operator’s published policy includes per-split multipliers (`LEMMA_TIMEOUT_SCALE_BY_SPLIT`, `LEMMA_TIMEOUT_SPLIT_*_MULT`), that is still one policy for the whole subnet, not a per-node setting.
 
 ## Miner deadlines vs validator processing (plain English)
 
@@ -222,7 +224,7 @@ Each validator queries miners independently; proofs are not merged across miners
 
 ## Observability
 
-Logs: `lemma_epoch_summary`; optional JSONL. No built-in dashboard ([PRODUCTION.md](PRODUCTION.md)).
+Logs: `lemma_epoch_summary`; optional JSONL. No built-in dashboard ([production.md](production.md)).
 
 ## CI templates
 
@@ -246,7 +248,7 @@ One sampled problem per validator round. The forward HTTP wait (block-derived) b
 
 ## Comparator / lean-eval
 
-Core: `lake build` + axiom allowlist + cheat scan. Optional: [COMPARATOR.md](COMPARATOR.md); stricter isolation may follow [lean-eval](https://github.com/leanprover/lean-eval).
+Core: `lake build` + axiom allowlist + cheat scan. Optional: [comparator.md](comparator.md); stricter isolation may follow [lean-eval](https://github.com/leanprover/lean-eval).
 
 ## Affine comparison
 

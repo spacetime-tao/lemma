@@ -583,7 +583,7 @@ class LeanSandbox:
 
         # Optional: long-lived worker + `docker exec` — avoids container create/start/remove overhead
         # (often hundreds of ms per verify on Linux, >1s on Docker Desktop). Requires the host root of the
-        # workspace cache to match the worker bind-mount (see docs/VALIDATOR.md).
+        # workspace cache to match the worker bind-mount (see docs/validator.md).
         worker = self.docker_worker
         if worker and shutil.which("docker"):
             root = self._docker_worker_host_root()

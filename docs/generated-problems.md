@@ -12,11 +12,11 @@ Easy templates suit quick tactics; medium resemble typical Mathlib exercises; ha
 
 ## Timeouts
 
-The generator does not embed limits. **Subnet policy** sets block-time / forward-wait clamps for miner answers and `LEAN_VERIFY_TIMEOUT_S` for sandbox `lake build` — one published template for all validators ([GOVERNANCE.md](GOVERNANCE.md)). Hard templates stress **prover time** first; Lean checking is usually fast for a clean script unless elaboration or cold caches blow up ([FAQ.md](FAQ.md)).
+The generator does not embed limits. **Subnet policy** sets block-time / forward-wait clamps for miner answers and `LEAN_VERIFY_TIMEOUT_S` for sandbox `lake build` — one published template for all validators ([governance.md](governance.md)). Hard templates stress **prover time** first; Lean checking is usually fast for a clean script unless elaboration or cold caches blow up ([faq.md](faq.md)).
 
 ## Scoring round
 
-Each epoch is independent: pass Lean → judge → Pareto weights for that round. Emissions follow Bittensor rules. Details: [FAQ.md](FAQ.md).
+Each epoch is independent: pass Lean → judge → Pareto weights for that round. Emissions follow Bittensor rules. Details: [faq.md](faq.md).
 
 ### Example
 
@@ -26,4 +26,4 @@ Each epoch is independent: pass Lean → judge → Pareto weights for that round
 | Lean fails | No weight |
 | Lean OK + judged | Enters Pareto pool |
 
-Registry changes: [GOVERNANCE.md](GOVERNANCE.md). Frozen mode: [CATALOG_SOURCES.md](CATALOG_SOURCES.md).
+Registry changes: [governance.md](governance.md). Frozen mode: [catalog-sources.md](catalog-sources.md).

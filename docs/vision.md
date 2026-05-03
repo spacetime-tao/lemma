@@ -96,7 +96,7 @@ After real traffic: consider **partial-progress** or **lemma-submission** tracks
 
 | Doc | Use |
 | --- | --- |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Components and data flow today. |
-| [GOVERNANCE.md](GOVERNANCE.md) | Pins, meta, policy. |
-| [GETTING_STARTED.md](GETTING_STARTED.md) | Install and first commands. |
-| [MINER.md](MINER.md) / [VALIDATOR.md](VALIDATOR.md) | Operator detail. |
+| [Architecture](architecture.md) | Components and data flow today. |
+| [Governance](governance.md) | Pins, meta, policy. |
+| [Getting started](getting-started.md) | Install and first commands. |
+| [Miner](miner.md) / [Validator](validator.md) | Operator detail. |

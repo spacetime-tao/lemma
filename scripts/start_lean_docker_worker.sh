@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Long-lived Lean sandbox container for fast `docker exec` verify (see docs/VALIDATOR.md).
+# Long-lived Lean sandbox container for fast `docker exec` verify (see docs/validator.md).
 # Reads LEAN_SANDBOX_IMAGE, LEMMA_LEAN_DOCKER_WORKER, LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR from env / .env.
 #
 # Usage:

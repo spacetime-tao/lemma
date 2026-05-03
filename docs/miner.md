@@ -1,6 +1,6 @@
 # Miner
 
-Walkthrough: [GETTING_STARTED.md](GETTING_STARTED.md) — `btcli`, `lemma setup`, `lemma-run`. Prefer prompts over hand-editing `.env` (`lemma configure chain`, `configure prover`, `configure axon`).
+Walkthrough: [getting-started.md](getting-started.md) — `btcli`, `lemma setup`, `lemma-run`. Prefer prompts over hand-editing `.env` (`lemma configure chain`, `configure prover`, `configure axon`).
 
 Inference: Chutes when prompted works for most setups.
 
@@ -31,7 +31,7 @@ For frozen catalog problems, `LEMMA_MINER_LOCAL_VERIFY` needs the same `LEMMA_MI
 
 ## Generated mode
 
-Templates span easy/medium/hard; how long validators wait on the wire follows **block height** (blocks to the next seed edge × `LEMMA_BLOCK_TIME_SEC_ESTIMATE`, clamped) — see [GENERATED_PROBLEMS.md](GENERATED_PROBLEMS.md).
+Templates span easy/medium/hard; how long validators wait on the wire follows **block height** (blocks to the next seed edge × `LEMMA_BLOCK_TIME_SEC_ESTIMATE`, clamped) — see [generated-problems.md](generated-problems.md).
 
 ## Compose
 
@@ -45,4 +45,4 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml up miner
 
 ## Models
 
-Subnet validators score with a fixed judge model; miners should use a **reasoning**-oriented prover (documented in [MODELS.md](MODELS.md) — e.g. `deepseek-ai/DeepSeek-V3.2-TEE` on Chutes or another strong reasoning model you run well).
+Subnet validators score with a fixed judge model; miners should use a **reasoning**-oriented prover (documented in [models.md](models.md) — e.g. `deepseek-ai/DeepSeek-V3.2-TEE` on Chutes or another strong reasoning model you run well).

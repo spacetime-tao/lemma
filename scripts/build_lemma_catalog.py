@@ -2,7 +2,7 @@
 """
 Build a merged ``minif2f_frozen.json`` from multiple upstream Lean 4 sources.
 
-Sources (see ``docs/CATALOG_SOURCES.md``):
+Sources (see ``docs/catalog-sources.md``):
   yangky          — yangky11/miniF2F-lean4 (competition-style)
   dm              — google-deepmind/miniF2F (Lean 4 fork)
   putnam          — trishullab/PutnamBench ``lean4/src``
@@ -266,7 +266,7 @@ def main() -> int:
         "generated_at": datetime.now(UTC).isoformat(),
         "lean_toolchain_default": args.toolchain,
         "mathlib_rev_default": args.mathlib_rev,
-        "notes": "See docs/CATALOG_SOURCES.md. Align compose/lean.Dockerfile with toolchain pins.",
+        "notes": "See docs/catalog-sources.md. Align compose/lean.Dockerfile with toolchain pins.",
     }
     man_path = args.out.parent / "catalog_manifest.json"
     man_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")

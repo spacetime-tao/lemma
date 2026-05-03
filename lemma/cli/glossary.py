@@ -10,7 +10,7 @@ from lemma.cli.style import stylize
 def print_glossary() -> None:
     """Echo glossary to stdout."""
     click.echo(stylize("Lemma glossary", fg="cyan", bold=True))
-    click.echo(stylize("(quick definitions — see docs/FAQ.md for detail)\n", dim=True), nl=False)
+    click.echo(stylize("(quick definitions — see docs/faq.md for detail)\n", dim=True), nl=False)
 
     sections: tuple[tuple[str, str], ...] = (
         (
