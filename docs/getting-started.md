@@ -21,7 +21,7 @@ cd lemma
 uv sync --extra dev
 ```
 
-Creates `.venv/` and installs `lemma`, `bittensor`, `btcli`.
+`uv sync` installs from **PyPI**: this repo depends on **`bittensor`** (SDK) and on **`bittensor[cli]`**, which pulls in the official **[bittensor-cli](https://pypi.org/project/bittensor-cli/)** package. **`btcli`** is only the **command name** those packages put on your `PATH`—there is no legitimate PyPI package you should install called `btcli`; typosquat packages have existed, so always use **`bittensor`**, **`bittensor-cli`**, or **`bittensor[cli]`** from PyPI.
 
 ## Optional: `lemma-run` wrapper
 
@@ -36,9 +36,9 @@ From anywhere (replace path):
 echo 'alias lemma-run='"'"'/ABS/PATH/TO/lemma/scripts/lemma-run'"'"'' >> ~/.zshrc
 ```
 
-## Keys (`btcli`)
+## Keys (Bittensor CLI: `btcli`)
 
-Names you will enter in `lemma setup`. Keys live under `~/.bittensor/wallets/`.
+Names you will enter in `lemma setup`. Keys live under `~/.bittensor/wallets/`. Commands below use the **`btcli`** executable from **`bittensor-cli`** (see above).
 
 ```bash
 ./scripts/lemma-run btcli wallet new_coldkey --wallet.name my_wallet --n_words 12

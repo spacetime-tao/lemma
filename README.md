@@ -19,7 +19,7 @@ source .venv/bin/activate
 lemma
 ```
 
-`lemma` with no args opens the interactive menu (`setup`, `doctor`, `docs`, …). Create wallets with `btcli` before registering; exact commands are in **getting-started**.
+`lemma` with no args opens the interactive menu (`setup`, `doctor`, `docs`, …). Create wallets with the **`btcli`** command from official **[bittensor-cli](https://pypi.org/project/bittensor-cli/)** (installed via **`bittensor[cli]`** when you `uv sync`—see **getting-started** for PyPI package names vs the `btcli` executable).
 
 ## Docs
 
