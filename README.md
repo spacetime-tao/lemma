@@ -1,6 +1,8 @@
 # Lemma
 
-> **Lemma** — verified reasoning for mathematics on [Bittensor](https://docs.learnbittensor.org/). Miners—often with help from **LLMs** (language models that draft code and prose)—**work on theorems** stated in **Lean**: precise logical claims. They return a **proof** (Lean code the kernel checks) and a **step-by-step informal** write-up of how they got there. **Validators** check the proof first: it **passes** if it type-checks against the fixed statement, otherwise it **fails**. When it passes, a pinned **LLM judge** scores how clear and faithful the informal part is, so rewards can compare miners fairly.
+> **Lemma** — verified reasoning for mathematics on [Bittensor](https://docs.learnbittensor.org/).
+>
+> Miners use **LLMs** (language models) to work on **theorems** written in **Lean**: exact logical statements. They send a **proof** Lean can check, plus a short **informal** explanation of how they got there. **Validators** look at the proof first: it **passes** if Lean accepts it for that statement, or **fails**. If it passes, a **pinned LLM judge** grades how clear and faithful the informal part is, so miner rewards stay comparable.
 
 Validators verify proofs in **Docker** (lean-sandbox image).
 
