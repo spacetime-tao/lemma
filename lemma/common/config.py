@@ -535,7 +535,10 @@ class LemmaSettings(BaseSettings):
             "LEMMA_LEAN_VERIFY_REMOTE_BEARER",
             "lean_verify_remote_bearer",
         ),
-        description="Optional shared secret; sent as ``Authorization: Bearer`` when calling ``LEMMA_LEAN_VERIFY_REMOTE_URL``.",
+        description=(
+            "Optional shared secret; sent as ``Authorization: Bearer`` when calling "
+            "``LEMMA_LEAN_VERIFY_REMOTE_URL``."
+        ),
     )
     lean_verify_remote_timeout_margin_s: float = Field(
         default=30.0,
@@ -545,7 +548,10 @@ class LemmaSettings(BaseSettings):
             "LEMMA_LEAN_VERIFY_REMOTE_TIMEOUT_MARGIN_S",
             "lean_verify_remote_timeout_margin_s",
         ),
-        description="Added to ``LEAN_VERIFY_TIMEOUT_S`` (per-request split scaling included) for HTTP client read timeout.",
+        description=(
+            "Added to ``LEAN_VERIFY_TIMEOUT_S`` (per-request split scaling included) "
+            "for HTTP client read timeout."
+        ),
     )
     set_weights_max_retries: int = Field(
         default=3,

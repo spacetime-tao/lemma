@@ -6,7 +6,6 @@ import json
 
 import httpx
 import pytest
-
 from lemma.common.config import LemmaSettings
 from lemma.lean.verify_runner import run_lean_verify
 from lemma.problems.base import Problem

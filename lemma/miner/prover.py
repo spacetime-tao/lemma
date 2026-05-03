@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Awaitable, Callable
 from typing import Protocol, TypeVar
 
 import httpx

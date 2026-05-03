@@ -1,7 +1,6 @@
 """LEAN_NUM_THREADS wiring for Lean sandbox."""
 
 import pytest
-
 from lemma.lean.sandbox import _lean_num_threads_value, _merge_lean_process_env
 
 

@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import pytest
-
 from lemma.lean.sandbox import lake_exe_cache_get_needed
 
 

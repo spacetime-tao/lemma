@@ -2,14 +2,15 @@
 Simplest possible Bittensor subnet validator. Simply burns everything to UID 0.
 """
 
-import os
-import time
-import click
 import logging
-import bittensor as bt
-from bittensor_wallet import Wallet
-import threading
+import os
 import sys
+import threading
+import time
+
+import bittensor as bt
+import click
+from bittensor_wallet import Wallet
 
 logging.basicConfig(
     level=logging.INFO,
@@ -25,7 +26,8 @@ def heartbeat_monitor(last_heartbeat, stop_event):
         time.sleep(5)
         if time.time() - last_heartbeat[0] > HEARTBEAT_TIMEOUT:
             logger.error("No heartbeat detected in the last 600 seconds. Restarting process.")
-            logging.shutdown(); os.execv(sys.executable, [sys.executable] + sys.argv)
+            logging.shutdown()
+            os.execv(sys.executable, [sys.executable] + sys.argv)
 
 @click.command()
 @click.option(

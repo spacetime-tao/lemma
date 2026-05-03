@@ -10,7 +10,6 @@ from loguru import logger
 
 from lemma.common.config import LemmaSettings
 from lemma.lean.problem_codec import problem_from_payload
-from lemma.lean.sandbox import VerifyResult
 from lemma.lean.verify_runner import lean_sandbox_from_settings
 
 

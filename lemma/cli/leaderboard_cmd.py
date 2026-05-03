@@ -53,7 +53,7 @@ def run_leaderboard(settings: LemmaSettings, *, top: int, sort: str) -> None:
     rows.sort(key=lambda r: -r[key])
 
     click.echo(
-        stylize(f"Leaderboard  ", fg="cyan", bold=True)
+        stylize("Leaderboard  ", fg="cyan", bold=True)
         + stylize(f"netuid={netuid}  n={n}  sort={sort}  (metagraph snapshot)\n", dim=True),
         nl=False,
     )
