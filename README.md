@@ -1,10 +1,8 @@
 # Lemma
 
-> **Lemma** — verified reasoning for mathematics on [Bittensor](https://docs.learnbittensor.org/).
->
-> Miners use **LLMs** (language models) to work on **theorems** written in **Lean**: exact logical statements. They send a **proof** Lean can check, plus a short **informal** explanation of how they got there. **Validators** look at the proof first: it **passes** if Lean accepts it for that statement, or **fails**. If it passes, a **pinned LLM judge** grades how clear and faithful the informal part is, so miner rewards stay comparable.
+> **Lemma: Verified reasoning for mathematics on [Bittensor](https://docs.learnbittensor.org/).** Miners use LLMs to solve theorems by writing proofs, and offering an informal, step-by-step explanation. Validators grade the proof (it either passes or it fails) and they grade the quality of the informal reasoning response.
 
-Validators verify proofs in **Docker** (lean-sandbox image).
+A **theorem** is the precise claim to establish; a **proof** is the formal, machine-checkable argument that shows it. **Lean** is a proof assistant (and language): it checks those proofs mechanically, line by line. Validators run that check in **Docker** (lean-sandbox image).
 
 **Status:** The codebase is still largely **proof-of-concept**, but you can **register and run on** **Subnet 467 — Lemma** on **Bittensor testnet** (`--network test`, `NETUID=467` after `lemma configure chain`). **Finney** is Bittensor **mainnet** (a different network). Full copy-paste flow: [getting-started](docs/getting-started.md). Economics, security, and long-term direction: [vision](docs/vision.md).
 
