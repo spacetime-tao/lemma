@@ -2,7 +2,7 @@
 
 Lemma is a **Bittensor subnet** where participants answer formal math challenges in **Lean 4**: they submit a **proof script** (and, on the default path, a **reasoning trace**). Validators **verify proofs** in **Docker** (lean-sandbox image). An **LLM judge** scores how well the trace explains the work when a trace is part of the submission. **Weights on chain** follow from that pipeline.
 
-**Important distinction:** what the subnet *must* check mechanically is the **proof script against the locked `theorem`**. *How* that script was produced—autonomous model, human mathematician, or a mixed team—is largely **out of band** for Lean. Today’s reference miner is LLM-driven; the **bounty / long-horizon lane** is explicitly compatible with **offline work** and **human-led** formalization, as long as the final submission passes verification.
+**Important distinction:** what the subnet *must* check mechanically is the **proof script against the locked `theorem`**. *How* that script was produced—autonomous model, human mathematician, or a mixed team—is largely **out of band** for Lean. Today’s reference miner is LLM-driven. A planned **bounty / long-horizon lane** (opt-in, higher stakes, offline-friendly) is **not** required at launch—it fits **after** the base economy is healthy (see **Economics v0 → v1** below).
 
 This document is for **contributors and partners** who want the long-term direction—not only the current implementation. Today’s code is still largely **proof-of-concept**; you can nevertheless **run on** **Subnet 467 (Lemma)** on **Bittensor testnet** while that matures. **Finney** is mainnet—a separate network.
 
@@ -24,9 +24,9 @@ The codebase already demonstrates an **end-to-end loop**: sample or generate a `
 
 ---
 
-## Bounty lane: offline work, any prover, submit when ready
+## Bounty lane (v1-phase): offline work, any prover, submit when ready
 
-For **hard or “unsolved” style** items (curated `sorry`, formalized Olympiad-tier statements, rare frontier prompts), the economically meaningful work often happens **off the subnet clock**:
+This lane is the **optional second track** described under **Economics v1**—rolled out once the steady lane has matured. For **hard or “unsolved” style** items (curated `sorry`, formalized Olympiad-tier statements, rare frontier prompts), the economically meaningful work often happens **off the subnet clock**:
 
 - A person or team develops a proof using **their own editors, libraries, and CI**—the same way Mathlib contributors work today.
 - They **run Lean locally** (or in their own infra) until `lake build` succeeds and they are confident the proof matches the **published statement hash** they will be judged against.
@@ -34,7 +34,7 @@ For **hard or “unsolved” style** items (curated `sorry`, formalized Olympiad
 
 Nothing in that story *requires* an LLM to be the author of the proof. Lemma’s role is to be the **trustless checkpoint**: fixed goal, reproducible verify, transparent payout rules. **Publicizing a major result** (paper, blog, Mathlib PR) is separate from verification but encouraged culturally—and large wins can still be shared *after* the on-chain check, the same way any open-source contribution is.
 
-The **steady, high-frequency lane** may stay automation-heavy for throughput; the **bounty lane** is where human-scale timelines (days to months) and **submit-when-ready** behavior naturally fit.
+The **steady, high-frequency lane** stays automation-heavy for throughput at launch; the **bounty lane** is where human-scale timelines (days to months) and **submit-when-ready** behavior fit once that optional track exists.
 
 ---
 
@@ -42,15 +42,13 @@ The **steady, high-frequency lane** may stay automation-heavy for throughput; th
 
 Phases below are **sequenced**, not mutually exclusive—some security and problem-supply work can start early.
 
-### 1. Economics v0 (simple, legible)
+### 1. Economics v0 (launch) → v1 (second lane)
 
-Before sophisticated game theory, the subnet needs **rules people can reason about**:
+**v0 — bootstrapping:** Launch with **one steady, high-frequency lane**: predictable verify cost, automation-friendly, easy for miners to participate and **earn emissions** while the subnet economy kicks off. Prefer **simple rules** people can explain without heavy game theory—e.g. **static** emission per solved item or per epoch. **Goal:** validators and miners can describe payouts in **one page**.
 
-- **Two lanes:** a **high-frequency** track (steady work, predictable verify cost; often automation-friendly) and an **optional bounty** track (longer-horizon items; **offline proving** then **submit when ready**, as above).
-- **Simple rewards first:** e.g. **static** emission per solved item or per epoch, plus **rollover** when no one solves a bounty—avoid early dependence on time-escalating bounties that encourage last-minute sniping.
-- **Cadence tuned by lane:** e.g. ~**30 days** per bounty rotation for *curated* formalized-hard / `sorry`-class work is a reasonable default; **open conjectures** should be treated as “usually unsolved this cycle,” not “must finish in N days.”
+**Not at launch:** the **second lane** (opt-in **bounty** / long-horizon tasks, **offline proving** then **submit when ready**, higher rewards, manual-scale work—see **Bounty lane** above). That is **v1-phase**: introduce it **after** the base economy is mature, so higher-stakes opt-in work does not compete with kicking off broad miner participation.
 
-**Goal:** miners and validators can explain payouts in one page.
+**v1 — when ready:** add the optional bounty track; **rollover** when no one solves a bounty; avoid early reliance on time-escalating prize clocks that encourage last-minute sniping. **Cadence** can differ by lane—e.g. ~**30 days** per bounty rotation for *curated* formalized-hard / `sorry`-class work; **open conjectures** stay “usually unsolved this cycle,” not “must finish in N days.”
 
 ### 2. Security & trust model (system around Lean)
 
@@ -67,7 +65,7 @@ Lean is strict; the **surrounding software** must not be the weak link:
 A live subnet needs a **curated feed** of problems—not only generators, but **governance** over difficulty, verify time, and rotation:
 
 - **Tiers** (e.g. easy → extreme) backed by **catalog or generated** sources, with explicit **verify budgets**.
-- **“Unsolved” / bounty lane:** mostly **Mathlib-style `sorry`** cleanup and similar formalized gaps (high value, bounded difficulty variance); **rare** true frontier items only with clear expectations. Solvers may work **offline** and **submit when ready** (see **Bounty lane** above).
+- **“Unsolved” / bounty lane (v1):** mostly **Mathlib-style `sorry`** cleanup and similar formalized gaps (high value, bounded difficulty variance); **rare** true frontier items only with clear expectations. Solvers may work **offline** and **submit when ready** (see **Bounty lane** above)—rolled out after the steady lane is stable.
 - **Automation + human gates** so an epoch does not randomly alternate between trivial and intractable.
 
 **Goal:** every live challenge has a **known class**, **expected verify cost**, and **clear rotation policy**.
