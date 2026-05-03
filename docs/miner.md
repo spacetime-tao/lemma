@@ -1,6 +1,6 @@
 # Miner
 
-Walkthrough: [getting-started.md](getting-started.md) — `btcli`, `lemma setup`, `lemma-run`. Prefer prompts over hand-editing `.env` (`lemma configure chain`, `configure prover`, `configure axon`).
+Walkthrough: [getting-started.md](getting-started.md) — **`btcli`** (Bittensor CLI), `lemma setup`, `lemma-run`. Prefer prompts over hand-editing `.env` (`lemma configure chain`, `configure prover`, `configure axon`).
 
 Inference: Chutes when prompted works for most setups.
 
