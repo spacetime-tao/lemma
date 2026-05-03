@@ -28,6 +28,7 @@ Wallet keys: create with `btcli` first. Details: [docs/GETTING_STARTED.md](docs/
 
 ## Documentation
 
+- [Vision & roadmap](docs/VISION.md)
 - [Getting started](docs/GETTING_STARTED.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Production](docs/PRODUCTION.md)
