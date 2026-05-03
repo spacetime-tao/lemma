@@ -156,8 +156,6 @@ Within one validator, a round finishes before the code waits for the **next subn
 
 [Chutes](https://chutes.ai/) is OpenAI-compatible HTTP. Forward HTTP wait / `LEMMA_LLM_HTTP_TIMEOUT_S` are not the same as provider billing.
 
-Lemma vs Affine (SN64): Affine ties miners to Chutes for evaluation; Lemma subnet emissions are independent.
-
 ## Inference cost (approximate)
 
 Roughly: (challenges answered) × ($/challenge). Measure from logs.
@@ -249,7 +247,3 @@ One sampled problem per validator round. The forward HTTP wait (block-derived) b
 ## Comparator / lean-eval
 
 Core: `lake build` + axiom allowlist + cheat scan. Optional: [comparator.md](comparator.md); stricter isolation may follow [lean-eval](https://github.com/leanprover/lean-eval).
-
-## Affine comparison
-
-Affine validators grade via a fixed Chutes path. Lemma judges after Lean passes; operators should pin one judge stack on a live subnet.

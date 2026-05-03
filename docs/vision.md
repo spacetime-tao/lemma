@@ -1,10 +1,10 @@
 # Vision & roadmap
 
-Lemma is a **Bittensor subnet** where participants answer formal math challenges in **Lean 4**: they submit a **proof script** (and, on the default path, a **reasoning trace**). Validators **verify proofs** in an isolated Lean environment (typically Docker). An **LLM judge** scores how well the trace explains the work when a trace is part of the submission. **Weights on chain** follow from that pipeline.
+Lemma is a **Bittensor subnet** where participants answer formal math challenges in **Lean 4**: they submit a **proof script** (and, on the default path, a **reasoning trace**). Validators **verify proofs** in **Docker** (lean-sandbox image). An **LLM judge** scores how well the trace explains the work when a trace is part of the submission. **Weights on chain** follow from that pipeline.
 
 **Important distinction:** what the subnet *must* check mechanically is the **proof script against the locked `theorem`**. *How* that script was produced—autonomous model, human mathematician, or a mixed team—is largely **out of band** for Lean. Today’s reference miner is LLM-driven; the **bounty / long-horizon lane** is explicitly compatible with **offline work** and **human-led** formalization, as long as the final submission passes verification.
 
-This document is for **contributors and partners** who want the long-term direction—not only the current implementation.
+This document is for **contributors and partners** who want the long-term direction—not only the current implementation. Today’s code is still largely **proof-of-concept**; you can nevertheless **run on** **Subnet 467 (Lemma)** on **Bittensor testnet** while that matures. **Finney** is mainnet—a separate network.
 
 ---
 
@@ -20,7 +20,7 @@ The trade-off is discipline elsewhere: the **statement must be fixed**, the **pr
 
 The codebase already demonstrates an **end-to-end loop**: sample or generate a `Problem`, send a `LemmaChallenge`, run a prover (the bundled path is **LLM-backed**), verify with `lake` / sandbox tooling, optionally judge the trace, and participate in normal miner/validator flows. Operator tooling (`lemma` CLI, env setup, docs, CI) exists so others can reproduce that loop locally.
 
-**Near-term bar:** a new miner can join with documented steps, run against **known-formalized** problems, and get **consistent scoring** without bespoke support.
+**Near-term bar:** a new miner can join with documented steps, use **known-formalized** problems locally, and get **consistent scoring** without bespoke support.
 
 ---
 

@@ -1,14 +1,18 @@
 # Lemma
 
-Bittensor subnet: miners submit **Lean 4** proofs and reasoning traces; validators verify in Docker and score traces with an LLM judge.
+> **Lemma** — verified reasoning for mathematics on [Bittensor](https://docs.learnbittensor.org/). Miners use **LLMs** (large language models: neural nets trained to generate text/code) to **attack theorems**—here, a *theorem* is a precise logical claim written in **Lean**. They answer by producing a **proof**: Lean source that the kernel checks mechanically. They also submit an **informal** step-by-step explanation (natural language) of how they found that proof. **Validators** run two checks: the proof **either passes** (type-checks against the fixed statement) **or fails**; if it passes, a pinned **LLM judge** scores how clear and faithful the informal trace is, so emissions can compare miners fairly.
 
-**First-time path:** open [docs/getting-started.md](docs/getting-started.md) — install, keys, `lemma setup`, miner, validator (all copy-paste blocks). **Direction:** [docs/vision.md](docs/vision.md).
+Validators verify proofs in **Docker** (lean-sandbox image).
+
+**Status:** The codebase is still largely **proof-of-concept**, but you can **register and run on** **Subnet 467 — Lemma** on **Bittensor testnet** (`--network test`, `NETUID=467` after `lemma configure chain`). **Finney** is Bittensor **mainnet** (a different network). Full copy-paste flow: [getting-started](docs/getting-started.md). Economics, security, and long-term direction: [vision](docs/vision.md).
+
+**First-time path:** [docs/getting-started.md](docs/getting-started.md) — install, keys, `lemma setup`, miner, validator (copy-paste blocks).
 
 ## Quick start
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
-git clone <repository-url>
+git clone https://github.com/spacetime-tao/lemma.git
 cd lemma
 uv sync --extra dev
 source .venv/bin/activate
@@ -17,7 +21,7 @@ lemma
 
 `lemma` with no args opens the interactive menu (`setup`, `doctor`, `docs`, …). Create wallets with `btcli` before registering; exact commands are in **getting-started**.
 
-## Docs (lowercase filenames)
+## Docs
 
 | Topic | File |
 | ----- | ---- |

@@ -1,10 +1,11 @@
 # Getting started
 
-End-to-end: **uv** + repo → **keys** → **`lemma setup`** → **miner or validator**. Sections below are copy-paste commands (swap `<repository-url>`, wallet names, and paths).
+End-to-end: **uv** + repo → **keys** → **`lemma setup`** → **miner or validator**. Sections below are copy-paste commands (swap wallet names and paths if yours differ).
 
 - Run `lemma` or `lemma start` for the interactive menu (`setup`, `doctor`, `docs`, `status`, dry-runs, `meta`).
 - Inference defaults: [Chutes](https://chutes.ai) OpenAI-compatible `https://llm.chutes.ai/v1` (see `.env.example`). Other OpenAI-compatible stacks use the same env vars.
 - After setup: `lemma status`, then `lemma problems` (or `lemma problems show --current`). Deep reference: [faq](faq.md).
+- **On-chain try:** Lemma runs on **Bittensor testnet** (`--network test`), **netuid 467**. **Finney** is mainnet—do not confuse the two. The repo is still largely proof-of-concept; long-term direction is in [vision](vision.md).
 
 ## Install uv
 
@@ -15,7 +16,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 ## Clone and sync
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/spacetime-tao/lemma.git
 cd lemma
 uv sync --extra dev
 ```
@@ -59,11 +60,11 @@ Incremental: `lemma configure chain`, `configure prover`, `configure judge`, `co
 
 ## Register on-chain
 
-Match `--network` / endpoints to `lemma configure chain` (default finney).
+Point `lemma configure chain` at the same network you use with `btcli`. **Lemma (Subnet 467)** is on **testnet** (`test`), not Finney (Finney is **mainnet**).
 
 ```bash
-./scripts/lemma-run btcli subnet show --netuid <NETUID> --network finney
-./scripts/lemma-run btcli subnet register --netuid <NETUID> --wallet.name my_wallet --wallet.hotkey miner
+./scripts/lemma-run btcli subnet show --netuid 467 --network test
+./scripts/lemma-run btcli subnet register --netuid 467 --network test --wallet.name my_wallet --wallet.hotkey miner
 ```
 
 ## Miner

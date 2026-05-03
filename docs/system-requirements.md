@@ -8,19 +8,19 @@ Rough guidance for one machine; scale for heavy workloads.
 | -------- | ----- |
 | CPU | Few cores; inference often remote. |
 | RAM | 4–8 GB typical. |
-| Disk | Small env + logs; Lean toolchain only if proving locally. |
+| Disk | Small checkout + logs; a full local **Lean** toolchain + Mathlib cache only if you prove or verify on-host (e.g. `lemma try-prover --host-lean`, dev workflows). |
 | Network | Inbound `AXON_PORT` (default 8091); outbound to prover API. |
-| Docker | Not required for consensus. |
+| Docker | Optional for miners unless you run local verify mirroring validators. |
 
 ## Validator
 
 | Resource | Notes |
 | -------- | ----- |
 | CPU | 2+ cores. |
-| RAM | ≥ 8 GB; 16 GB if Docker + local judge LLM. |
+| RAM | **≥ 16 GB** recommended: Docker sandbox + Lake/Mathlib workspace caches, plus OS headroom. The **judge** calls a remote OpenAI-compatible API (default **Chutes**); validators do not load judge weights locally. |
 | Disk | ≥ 20 GB for images and caches. |
-| Docker | Production verification uses the lean-sandbox image. `LEMMA_USE_DOCKER=0` for host-only debugging. |
-| Judge | Default Chutes; vLLM alternative ([models.md](models.md)). |
+| Docker | **Required** for production: lean-sandbox image. `LEMMA_USE_DOCKER=false` is for **local debugging only**, not a supported production mode. |
+| Judge | Pinned **Chutes** stack per subnet policy — see [models.md](models.md). |
 
 ## Rounds and timeouts
 

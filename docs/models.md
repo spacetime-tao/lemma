@@ -31,6 +31,4 @@ Set `PROVER_PROVIDER=openai`, `OPENAI_BASE_URL`, `OPENAI_API_KEY`, and `PROVER_M
 
 The live miner (`lemma miner`) starts solving **as soon as** a validator forwards a challenge — no deliberate wait for block ticks. `lemma try-prover` is separate (manual smoke test).
 
-## vLLM
-
-`OPENAI_BASE_URL=http://127.0.0.1:8000/v1` (or `host.docker.internal` from containers). Realign `uv run lemma meta` with the subnet.
+Custom `OPENAI_BASE_URL` / keys for the **prover** are normal (any OpenAI-compatible host you operate). The **subnet judge** for validators stays on the pinned Chutes stack above—self-hosted judge endpoints are not the default production path.
