@@ -2,7 +2,7 @@
 
 End-to-end: **uv** + repo → **keys** → **`lemma setup`** → **miner or validator**. Sections below are copy-paste commands (swap wallet names and paths if yours differ).
 
-- Run `lemma` or `lemma start` for the interactive menu (`setup`, `doctor`, `docs`, `status`, dry-runs, `meta`).
+- Run `lemma start` for the interactive guided menu (`setup`, `doctor`, `docs`, `status`, dry-runs, `meta`). Run `lemma` alone for command help (same as `lemma --help`).
 - Inference defaults: [Chutes](https://chutes.ai) OpenAI-compatible `https://llm.chutes.ai/v1` (see `.env.example`). Other OpenAI-compatible stacks use the same env vars.
 - After setup: `lemma status`, then `lemma problems` (or `lemma problems show --current`). Deep reference: [faq](faq.md).
 - **On-chain try:** Lemma runs on **Bittensor testnet** (`--network test`), **netuid 467**. **Finney** is mainnet—do not confuse the two. The repo is still largely proof-of-concept; long-term direction is in [vision](vision.md).

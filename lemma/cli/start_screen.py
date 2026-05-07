@@ -362,161 +362,70 @@ def show_start_here(ctx: click.Context | None = None, *, group: click.Group | No
     n_menu = len(_MENU)
     ve = (os.environ.get("VIRTUAL_ENV") or "").strip()
 
-    click.echo(stylize("\nLemma — START HERE\n", fg="cyan", bold=True), nl=False)
+    click.echo(stylize("\nlemma start — guided picks\n", fg="cyan", bold=True), nl=False)
 
     act = venv_activate_script()
     courtesy_path = ve or (str(act) if act else "")
     if courtesy_path:
         click.echo(
-            stylize(
-                "Courtesy — this `lemma` process is already using a virtualenv:\n  ",
-                fg="green",
-                dim=True,
-            )
+            stylize("Using venv: ", dim=True)
             + stylize(courtesy_path, fg="green")
             + stylize(
-                "\n  `uv run lemma …` loads `.venv` for **this** command (same packages as "
-                "`source .venv/bin/activate`). Your outer shell prompt does not change until you activate "
-                "manually — run ",
+                "  (`uv run lemma …` uses the same packages; `lemma env` prints `source …/activate`.)\n",
                 dim=True,
-            )
-            + stylize("lemma env", fg="cyan")
-            + stylize(" for the exact `source …` line. Optional: ", dim=True)
-            + stylize(".envrc.example", fg="cyan")
-            + stylize(" + direnv auto-activate when you `cd` here.\n", dim=True),
+            ),
             nl=False,
         )
     else:
         click.echo(
             stylize(
-                "Tip: from the repo root run `uv sync --extra dev`, then `uv run lemma`.\n",
+                "Tip: `uv sync --extra dev` then `source .venv/bin/activate` or `uv run lemma start`.\n",
                 fg="yellow",
-                dim=True,
             ),
             err=True,
         )
 
-    if ve:
-        click.echo(
-            stylize(
-                "Interactive menu — not a shell:\n"
-                f"  • At Next step, type only a number 1–{n_menu} or a name (e.g. ",
-                dim=True,
-            )
-            + stylize("doctor", fg="green")
-            + stylize(", ", dim=True)
-            + stylize("7", fg="green")
-            + stylize(" for try-prover). ", dim=True)
-            + stylize("No", fg="red")
-            + stylize(" ", dim=True)
-            + stylize("source", fg="yellow")
-            + stylize(", ", dim=True)
-            + stylize("cd", fg="yellow")
-            + stylize(", ", dim=True)
-            + stylize("uv", fg="yellow")
-            + stylize(", and no word ", dim=True)
-            + stylize("lemma", fg="yellow")
-            + stylize(" on that line.\n", dim=True)
-            + stylize(
-                "  • From a real shell (outside this prompt): ",
-                dim=True,
-            )
-            + stylize("lemma 7", fg="green")
-            + stylize(" = try-prover; ", dim=True)
-            + stylize("lemma 7 --verify", fg="green")
-            + stylize("; menu step ", dim=True)
-            + stylize("3 --open faq", fg="green")
-            + stylize(".\n", dim=True),
-            nl=False,
-        )
-    else:
-        click.echo(
-            stylize("Two different places:\n", dim=True)
-            + stylize("  • Your ", dim=True)
-            + stylize("macOS / terminal", fg="yellow")
-            + stylize(" — run shell commands: ", dim=True)
-            + stylize("uv sync --extra dev", fg="green")
-            + stylize(", then ", dim=True)
-            + stylize("source .venv/bin/activate", fg="green")
-            + stylize(" and ", dim=True)
-            + stylize("lemma doctor", fg="green")
-            + stylize(", or use ", dim=True)
-            + stylize("uv run lemma doctor", fg="green")
-            + stylize(" without activating the venv.\n", dim=True)
-            + stylize("  • The ", dim=True)
-            + stylize("Next step", fg="cyan")
-            + stylize(" line below (interactive only) — type ", dim=True)
-            + stylize("only", fg="yellow")
-            + stylize(" a number 1–", dim=True)
-            + stylize(str(n_menu), fg="yellow")
-            + stylize(" or a short name (e.g. ", dim=True)
-            + stylize("doctor", fg="green")
-            + stylize(", ", dim=True)
-            + stylize("7", fg="green")
-            + stylize(" for try-prover). ", dim=True)
-            + stylize("No", fg="red")
-            + stylize(" ", dim=True)
-            + stylize("source", fg="yellow")
-            + stylize(", ", dim=True)
-            + stylize("cd", fg="yellow")
-            + stylize(", ", dim=True)
-            + stylize("uv", fg="yellow")
-            + stylize(", and no word ", dim=True)
-            + stylize("lemma", fg="yellow")
-            + stylize(" on that line.\n", dim=True),
-            nl=False,
-        )
-        click.echo(
-            stylize("From your real shell, optional shortcuts: ", dim=True)
-            + stylize("lemma 7", fg="green")
-            + stylize(" = try-prover, ", dim=True)
-            + stylize("lemma 7 --verify", fg="green")
-            + stylize(" with verify; in the menu, step ", dim=True)
-            + stylize("3", fg="yellow")
-            + stylize(" accepts ", dim=True)
-            + stylize("3 --open faq", fg="green")
-            + stylize(".\n", dim=True),
-            nl=False,
-        )
-
     click.echo(
         stylize(
-            "\nWhat you can do next:\n"
-            "  • Continue here — at ",
+            f"At “Next step”, type only a number 1–{n_menu} or a command name (e.g. ",
             dim=True,
         )
-        + stylize("Next step", fg="cyan")
-        + stylize(
-            ", press Enter for default (1 = setup) or type a number 1–"
-            f"{n_menu} / a command name to run that item.\n"
-            "  • Or leave first — press Ctrl+C",
-            dim=True,
-        )
+        + stylize("doctor", fg="green")
+        + stylize(", ", dim=True)
+        + stylize("7", fg="green")
+        + stylize(" = try-prover). ", dim=True)
+        + stylize("Not", fg="red")
+        + stylize(" a shell — no ", dim=True)
+        + stylize("source", fg="yellow")
+        + stylize(", ", dim=True)
+        + stylize("cd", fg="yellow")
+        + stylize(", ", dim=True)
+        + stylize("uv", fg="yellow")
+        + stylize(", or ", dim=True)
+        + stylize("lemma …", fg="yellow")
+        + stylize(" on that line.\n", dim=True)
+        + stylize("From a normal shell: ", dim=True)
+        + stylize("lemma 7", fg="green")
+        + stylize(" / ", dim=True)
+        + stylize("lemma 7 --verify", fg="green")
+        + stylize(" skip this prompt.\n", dim=True),
+        nl=False,
+    )
+
+    click.echo(
+        stylize("\nPick one (default ", dim=True)
+        + stylize("1 = setup", fg="cyan")
+        + stylize("). Ctrl+C to exit", dim=True)
         + (
-            stylize(
-                " (then install/fix env with `uv sync --extra dev` or `source .venv/bin/activate` if needed).\n",
-                dim=True,
-            )
+            stylize(" (then `lemma env` / `uv sync` if needed).\n", dim=True)
             if ve
-            else (
-                stylize(
-                    ", run ",
-                    dim=True,
-                )
-                + stylize("uv sync --extra dev", fg="yellow")
-                + stylize(" / ", dim=True)
-                + stylize("source .venv/bin/activate", fg="yellow")
-                + stylize(" in your terminal, then run ", dim=True)
-                + stylize("lemma", fg="green")
-                + stylize(" or ", dim=True)
-                + stylize("lemma start", fg="green")
-                + stylize(" again.\n", dim=True)
-            )
+            else stylize(" — run `uv sync` / activate first if commands fail.\n", dim=True)
         ),
         nl=False,
     )
     max_key = max(len(item.key) for item in _MENU)
     num_width = len(str(len(_MENU)))
+    click.echo(stylize("  " + "—" * min(72, 12 + max_key + num_width), dim=True))
     for i, item in enumerate(_MENU, start=1):
         num = stylize(f"{i:>{num_width}}", fg="yellow")
         name = stylize(item.key.ljust(max_key), fg="green")
@@ -524,15 +433,20 @@ def show_start_here(ctx: click.Context | None = None, *, group: click.Group | No
         if item.billing:
             rest = rest + "  " + stylize(item.billing, fg="blue", bold=True)
         click.echo(f"  {num}  {name}  {rest}")
+    click.echo(stylize("  " + "—" * min(72, 12 + max_key + num_width), dim=True))
     click.echo(
-        stylize("\nDefaults: see docs/faq.md (timeouts, seeds). ", dim=True)
+        stylize("More: ", dim=True)
+        + stylize("docs/faq.md", fg="cyan")
+        + stylize(" · ", dim=True)
         + stylize("docs/getting-started.md", fg="cyan")
-        + stylize(" for the full path.\n", dim=True),
+        + stylize("\n", dim=True),
         nl=False,
     )
 
     if ctx is None or group is None or not sys.stdin.isatty():
-        click.echo(stylize("Tip: run `lemma start` for this menu.", dim=True))
+        click.echo(
+            stylize("Non-interactive: use shell commands (e.g. `lemma doctor`) — menu needs a TTY.", dim=True),
+        )
         return
 
     default_step = "1"

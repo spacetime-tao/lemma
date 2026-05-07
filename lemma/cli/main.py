@@ -25,19 +25,33 @@ from lemma.common.logging import setup_logging
 from lemma.problems.factory import get_problem_source, resolve_problem
 
 
-@click.group(invoke_without_command=True)
+@click.group(invoke_without_command=True, context_settings={"max_content_width": 100})
 @click.pass_context
 @click.version_option(version=__version__)
 def main(ctx: click.Context) -> None:
-    """Lemma subnet — Lean proofs + reasoning traces.
+    """Lemma subnet — Lean proofs + reasoning traces (Bittensor).
 
-    Run with no subcommand to open the START HERE menu (`lemma start`).
-    Run `lemma N` (e.g. `lemma 7`) to jump straight to menu item N (same as `lemma start --quick-select N`).
+    \b
+    Common commands:
+      lemma start     Guided picks (setup, doctor, miner, validator, …)
+      lemma doctor    Config + keys + chain sanity
+      lemma --help    Full command list
     """
     if ctx.invoked_subcommand is None:
-        from lemma.cli.start_screen import show_start_here
-
-        show_start_here(ctx, group=main)
+        click.echo(
+            stylize("Lemma ", fg="cyan", bold=True)
+            + stylize(__version__, dim=True)
+            + stylize("  —  ", dim=True)
+            + stylize("lemma start", fg="green")
+            + stylize(" guided menu · ", dim=True)
+            + stylize("lemma doctor", fg="green")
+            + stylize(" checks · ", dim=True)
+            + stylize("lemma COMMAND --help", fg="green")
+            + stylize(" for one command\n", dim=True),
+            nl=False,
+        )
+        click.echo(ctx.get_help())
+        return
 
 
 @main.command("start")
@@ -51,7 +65,7 @@ def main(ctx: click.Context) -> None:
 )
 @click.pass_context
 def start_cmd(ctx: click.Context, quick_select: int | None) -> None:
-    """STEP-BY-STEP onboarding (same as running `lemma` with no arguments)."""
+    """Guided onboarding menu (numbered picks: setup, doctor, miner, …)."""
     from lemma.cli.start_screen import run_quick_menu_step, show_start_here
 
     if quick_select is not None:
@@ -170,22 +184,28 @@ def doctor_cmd() -> None:
     ok = True
     keys_ok = True
     root = Path.cwd()
-    click.echo(stylize("Lemma doctor\n", fg="cyan", bold=True), nl=False)
+    click.echo(stylize("\nlemma doctor", fg="cyan", bold=True))
+    click.echo(stylize("─" * 42, dim=True))
+
+    click.echo(stylize("\n1  Environment", fg="cyan", bold=True))
     if (root / ".venv").is_dir():
-        click.echo("  OK  .venv (uv sync --extra dev)")
+        click.echo(stylize("   OK", fg="green") + "    .venv present (`uv sync --extra dev`)")
     else:
-        click.echo("  MISSING .venv — run: uv sync --extra dev", err=True)
+        click.echo(stylize("   MISS", fg="red") + "  .venv — run: uv sync --extra dev", err=True)
         ok = False
     try:
         s = LemmaSettings()
-        click.echo(f"  OK  config  NETUID={s.netuid}  problem_source={s.problem_source}")
+        click.echo(stylize("\n2  Configuration (.env)", fg="cyan", bold=True))
+        click.echo(
+            stylize("   OK", fg="green")
+            + f"    NETUID={s.netuid}  problem_source={s.problem_source}",
+        )
         key_lines, keys_ok = _doctor_api_lines(s)
         for ln in key_lines:
-            click.echo(f"  {ln}")
+            click.echo(f"   {ln}")
         click.echo(
             stylize(
-                "  (Inference lines above reflect active config — `.env` wins over shell exports unless "
-                "LEMMA_PREFER_PROCESS_ENV=1.)",
+                "   (Keys above follow active config — `.env` wins over shell unless LEMMA_PREFER_PROCESS_ENV=1.)",
                 dim=True,
             ),
         )
@@ -193,33 +213,26 @@ def doctor_cmd() -> None:
         pp2 = (s.prover_provider or "anthropic").lower()
         if jp2 in ("openai", "chutes"):
             click.echo(
-                stylize(
-                    f"  Judge   JUDGE_PROVIDER={jp2}  OPENAI_MODEL={s.openai_model!r} @ {s.openai_base_url!r}",
-                    dim=True,
-                ),
+                stylize("   ·", dim=True)
+                + f"    Judge   JUDGE_PROVIDER={jp2}  OPENAI_MODEL={s.openai_model!r} @ {s.openai_base_url!r}",
             )
         elif jp2 == "anthropic":
-            click.echo(stylize(f"  Judge   ANTHROPIC_MODEL={s.anthropic_model!r}", dim=True))
+            click.echo(stylize("   ·", dim=True) + f"    Judge   ANTHROPIC_MODEL={s.anthropic_model!r}")
         if pp2 == "openai":
             pm = s.prover_model or s.openai_model
             purl = s.prover_openai_base_url_resolved()
             click.echo(
-                stylize(
-                    f"  Prover  model={pm!r} @ {purl!r}  "
-                    f"(miner — set PROVER_OPENAI_BASE_URL / PROVER_OPENAI_API_KEY to differ from judge)",
-                    dim=True,
-                ),
+                stylize("   ·", dim=True)
+                + f"    Prover  model={pm!r} @ {purl!r}  (miner may use PROVER_* to differ from judge)",
             )
         elif pp2 == "anthropic":
             pm = s.prover_model or s.anthropic_model
             click.echo(
-                stylize(
-                    f"  Prover  model={pm!r}  "
-                    f"(miner prover — PROVER_MODEL is not used when scoring as a validator)",
-                    dim=True,
-                ),
+                stylize("   ·", dim=True)
+                + f"    Prover  model={pm!r}",
             )
-        forward_wait: float | None = None
+
+        click.echo(stylize("\n3  Timeouts (vs validator forward window)", fg="cyan", bold=True))
         try:
             from lemma.common.block_deadline import forward_wait_at_chain_head
             from lemma.common.subtensor import get_subtensor
@@ -244,8 +257,8 @@ def doctor_cmd() -> None:
             if llm_t > hi + 0.01:
                 click.echo(
                     stylize(
-                        "  WARN  LEMMA_LLM_HTTP_TIMEOUT_S exceeds LEMMA_FORWARD_WAIT_MAX_S — "
-                        "prover reads cannot finish inside any validator’s axon wait.",
+                        "   WARN  LEMMA_LLM_HTTP_TIMEOUT_S exceeds LEMMA_FORWARD_WAIT_MAX_S — "
+                        "prover cannot finish inside any validator axon wait window.",
                         fg="yellow",
                     ),
                     err=True,
@@ -253,23 +266,22 @@ def doctor_cmd() -> None:
             elif llm_t > fw + 0.01:
                 click.echo(
                     stylize(
-                        f"  Note  Forward HTTP wait at this head is ~{fw:.0f}s (varies by block). "
-                        f"LEMMA_LLM_HTTP_TIMEOUT_S={llm_t:.0f}s is fine earlier in the window; "
-                        "lower it only if miners drop near rotations.",
+                        f"   OK    LLM timeout {llm_t:.0f}s > this-head forward wait ~{fw:.0f}s "
+                        f"(normal near a seed edge; lower LLM timeout only if miners time out late-window).",
                         dim=True,
                     ),
                 )
             else:
                 click.echo(
                     stylize(
-                        f"  OK  timeouts  LLM HTTP wait ≤ forward HTTP wait (~{fw:.0f}s at current head)",
+                        f"   OK    LLM timeout ≤ forward wait at this head (~{fw:.0f}s)",
                         dim=True,
                     ),
                 )
         elif s.llm_http_timeout_s > s.forward_wait_max_s + 0.01:
             click.echo(
                 stylize(
-                    "  WARN  LEMMA_LLM_HTTP_TIMEOUT_S > LEMMA_FORWARD_WAIT_MAX_S — "
+                    "   WARN  LEMMA_LLM_HTTP_TIMEOUT_S > LEMMA_FORWARD_WAIT_MAX_S — "
                     "cannot fit any round’s forward wait.",
                     fg="yellow",
                 ),
@@ -278,38 +290,38 @@ def doctor_cmd() -> None:
         else:
             click.echo(
                 stylize(
-                    "  INFO  forward HTTP wait is block-derived — "
-                    "connect chain RPC for a precise LLM vs forward check.",
+                    "   INFO  Connect chain RPC for a block-accurate LLM vs forward-wait check.",
                     dim=True,
                 ),
             )
         if not (s.judge_profile_expected_sha256 or "").strip():
             click.echo(
                 stylize(
-                    "  Tip   validators need JUDGE_PROFILE_SHA256_EXPECTED — run `lemma configure subnet-pins` "
-                    "after aligning judge env (copy from `lemma meta --raw`).",
+                    "   Tip   Validators: set JUDGE_PROFILE_SHA256_EXPECTED (`lemma configure subnet-pins`; "
+                    "copy from `lemma meta --raw`).",
                     dim=True,
                 ),
             )
     except Exception as e:  # noqa: BLE001
-        click.echo(f"CONFIG ERROR: {e}", err=True)
+        click.echo(stylize("CONFIG ERROR: ", fg="red") + str(e), err=True)
         finish_cli_output()
         raise SystemExit(1) from e
+
+    click.echo(stylize("\n4  Chain RPC", fg="cyan", bold=True))
     try:
         from lemma.common.subtensor import get_subtensor
 
         head = int(get_subtensor(s).get_current_block())
-        click.echo(f"  OK  chain RPC  head_block={head}")
+        click.echo(stylize("   OK", fg="green") + f"    head_block={head}")
     except Exception as e:  # noqa: BLE001
-        click.echo(f"  SKIP  chain RPC (offline OK): {e}")
+        click.echo(stylize("   SKIP", fg="yellow") + f"  (offline OK): {e}")
     click.echo(
         stylize(
-            "\n"
-            "  Next:\n"
-            "    • `lemma env` — print `source …/.venv/bin/activate` for bare `lemma` / `btcli`\n"
-            "    • `lemma meta` — judge + template hashes (subnet alignment)\n"
-            "    • `lemma validator-check` — before `lemma validator` (READY / NOT READY)\n"
-            "    • `lemma start` · `lemma configure --help` · `lemma docs --pick`\n",
+            "\n5  Next commands\n"
+            "     lemma env              — print `source …/activate`\n"
+            "     lemma meta             — judge + template hashes\n"
+            "     lemma validator-check  — before `lemma validator`\n"
+            "     lemma start            — guided menu  ·  lemma configure --help  ·  lemma docs --pick\n",
             dim=True,
         ),
         nl=False,
@@ -320,13 +332,13 @@ def doctor_cmd() -> None:
     if not keys_ok:
         click.echo(
             stylize(
-                "\ndoctor: WARN — inference keys (validators need judge; miners need prover)",
+                "\nSummary: WARN — add missing inference keys (judge for validators; prover for miners).",
                 fg="yellow",
             ),
             err=True,
         )
     else:
-        click.echo(stylize("\ndoctor: OK", fg="green"))
+        click.echo(stylize("\nSummary: OK", fg="green"))
     finish_cli_output()
 
 
