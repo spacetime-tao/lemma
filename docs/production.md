@@ -41,3 +41,16 @@ Document `EMPTY_EPOCH_WEIGHTS_POLICY`, `SET_WEIGHTS_*`, block-derived forward wa
 ## Comparator
 
 Optional post-verify hook ([comparator.md](comparator.md)).
+
+## Remote Lean verify worker (`lemma lean-worker`)
+
+When `LEMMA_LEAN_VERIFY_REMOTE_URL` points at an HTTP worker:
+
+- **Bind:** Prefer **`127.0.0.1`** on the same host as the consumer; avoid exposing **`0.0.0.0:8787`** on the public internet without a reverse proxy.
+- **Auth:** Set matching **`LEMMA_LEAN_VERIFY_REMOTE_BEARER`** on client and worker (Bearer token).
+- **TLS:** The built-in worker is **plain HTTP**. For cross-network use, terminate TLS in front (nginx, Caddy, cloud LB) or keep verify on a private VPC.
+- **Health:** `GET /health` on the worker returns JSON `{"status":"ok"}` for probes.
+
+## Docker socket on validator/miner hosts
+
+Processes that can run arbitrary containers (or `docker exec` into pinned workers) effectively have **root on the host**. Pin **`LEAN_SANDBOX_IMAGE`** by digest where policy allows, restrict who can edit `.env`, and treat the Docker socket as a **high-privilege** dependency.

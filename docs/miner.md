@@ -24,6 +24,10 @@ Validators decide whether your proof typechecks; the miner process does not rece
 - When a validator forward starts, logs include **`my_uid`** and **`my_incentive`** from the **chain metagraph** (same column family as `lemma leaderboard`) — a snapshot of subnet incentive for your hotkey, not a grade on this theorem.
 - At **INFO** you get **`miner answered`** when the reply is ready; **`local_lean=`** is `PASS` / `FAIL` / … only if **`LEMMA_MINER_LOCAL_VERIFY=1`**. That flag is **optional**: validators always run Lean on your submission — enable local verify only if you want early PASS/FAIL on your machine (costs Docker CPU per forward while debugging). **`miner_forward_summary`** (default on) adds session rollups.
 
+- Set `LEMMA_MINER_FORWARD_TIMELINE=1` for **three INFO lines per forward**: **`miner timeline 1 RECEIVE`** (theorem, `deadline_block` vs current head, HTTP/wall time budgets, short statement preview), **`miner timeline 2 SOLVED`** (prover wall time, sizes), **`miner timeline 3 OUTCOME`** (`local_lean` if `LEMMA_MINER_LOCAL_VERIFY=1`, else a hint). Then **`miner answered`** as today. **Validator judge + final weights are not returned on the axon** — only optional **local Lean** mirrors validator proof-checking on your machine.
+
+- Set `LEMMA_MINER_NOTIFY_ON_ANSWER=1` for a **terminal bell** plus a **macOS notification** when a forward reply is ready (same moment as the `miner answered` log line). Non-macOS: bell only.
+
 - Set `LEMMA_MINER_LOG_FORWARDS=1` to log each forward: reasoning excerpt and `proof_script` excerpt at INFO; raw model output is logged at DEBUG (enable e.g. `LOG_LEVEL=DEBUG` to see it).
 - Set `LEMMA_MINER_LOCAL_VERIFY=1` to run the same sandbox `lake build` as validators after the prover returns (requires Docker and `LEAN_SANDBOX_IMAGE` / timeouts aligned with your subnet). Logs `miner local verify OK` or `FAIL` with reason.
 

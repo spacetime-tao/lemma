@@ -629,6 +629,23 @@ class LemmaSettings(BaseSettings):
             "Disable for quieter logs."
         ),
     )
+    miner_forward_timeline: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("LEMMA_MINER_FORWARD_TIMELINE", "miner_forward_timeline"),
+        description=(
+            "Per forward, log three INFO lines: (1) RECEIVE with deadline vs chain head, (2) SOLVED after prover, "
+            "(3) OUTCOME with local_lean or hint to enable LEMMA_MINER_LOCAL_VERIFY. "
+            "Final validator Lean+judge is not returned on the axon."
+        ),
+    )
+    miner_notify_on_answer: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("LEMMA_MINER_NOTIFY_ON_ANSWER", "miner_notify_on_answer"),
+        description=(
+            "After each successful forward reply: terminal bell + macOS Notification Center banner "
+            "(osascript). No-op on non-macOS except the bell."
+        ),
+    )
     miner_local_verify: bool = Field(
         default=False,
         validation_alias=AliasChoices("LEMMA_MINER_LOCAL_VERIFY", "miner_local_verify"),

@@ -14,7 +14,8 @@ on:
       - master
     # Only rebuild when relevant files change
     paths:
-      - 'validator.py'
+      - 'lemma/**'
+      - 'compose/**'
       - 'pyproject.toml'
       - 'Dockerfile'
       - '.github/workflows/docker-publish.yml'

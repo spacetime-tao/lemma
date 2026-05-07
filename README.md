@@ -21,6 +21,8 @@ lemma
 
 `lemma` with no args opens the interactive menu (`setup`, `doctor`, `docs`, …). Create wallets with the **`btcli`** command from official **[bittensor-cli](https://pypi.org/project/bittensor-cli/)** (installed via **`bittensor[cli]`** when you `uv sync`—see **getting-started** for PyPI package names vs the `btcli` executable).
 
+**Validator entrypoint:** use **`lemma validator`** (or Docker `ENTRYPOINT ["lemma"]` / `CMD ["validator"]`). Do **not** run `python validator.py` at the repo root — that file is a **stub** that exits with instructions; the old “burn 100% to UID 0” demo script lives under **`examples/legacy_subnet_burn_validator.py`** only.
+
 ## Docs
 
 | Topic | File |

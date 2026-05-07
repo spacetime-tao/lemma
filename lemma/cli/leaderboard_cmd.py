@@ -44,7 +44,12 @@ def run_leaderboard(settings: LemmaSettings, *, top: int, sort: str) -> None:
         if uid < len(axons) and axons[uid] is not None:
             ax = axons[uid]
             try:
-                ip = str(getattr(ax, "ip_str", None) or getattr(ax, "ip", "") or "")
+                raw_ip = getattr(ax, "ip_str", None)
+                if raw_ip:
+                    ip = str(raw_ip)
+                else:
+                    lip = getattr(ax, "ip", None)
+                    ip = str(lip() if callable(lip) else (lip or ""))
             except Exception:
                 ip = ""
         rows.append((uid, stake, inc, tru, ip, hk_short))

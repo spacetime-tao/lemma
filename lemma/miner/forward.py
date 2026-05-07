@@ -12,6 +12,7 @@ from loguru import logger
 
 from lemma.common.config import LemmaSettings
 from lemma.lean.verify_runner import run_lean_verify
+from lemma.miner.answer_notify import notify_miner_answer_sent_async
 from lemma.miner.daily_budget import allow_daily_forward
 from lemma.miner.gating import MetagraphCache, metagraph_incentive_for_hotkey
 from lemma.miner.limits import reject_synopsis, synapse_payload_error
@@ -22,6 +23,15 @@ from lemma.protocol import LemmaChallenge
 
 _stats_lock = threading.Lock()
 _stats: dict[str, float | int] = {"forwards": 0, "local_ok": 0, "local_fail": 0, "solve_s_total": 0.0}
+
+
+def _optional_chain_head(settings: LemmaSettings) -> int | None:
+    try:
+        from lemma.common.subtensor import get_subtensor
+
+        return int(get_subtensor(settings).get_current_block())
+    except Exception:
+        return None
 
 
 def _excerpt(text: str, max_chars: int = 12_000) -> str:
@@ -83,17 +93,54 @@ def make_forward(
             except Exception as e:  # noqa: BLE001
                 logger.debug("miner forward incentive snapshot skipped: {}", e)
 
-        logger.info(
-            "miner forward: solving theorem_id={} metronome_id={} my_uid={} my_incentive={}",
-            synapse.theorem_id,
-            synapse.metronome_id,
-            my_uid_s,
-            my_inc_s,
-        )
+        if settings.miner_forward_timeline:
+            head = _optional_chain_head(settings)
+            dbv = synapse.deadline_block
+            bleft: int | str = "?"
+            if head is not None and dbv is not None and int(dbv) > 0:
+                bleft = max(0, int(dbv) - int(head))
+            budget = float(getattr(synapse, "timeout", 0) or 0)
+            du = int(synapse.deadline_unix) if synapse.deadline_unix else 0
+            wall_deadline_in = max(0.0, float(du) - time.time()) if du else 0.0
+            preview = (synapse.theorem_statement or "").replace("\n", " ").strip()
+            if len(preview) > 200:
+                preview = preview[:197] + "…"
+            logger.info(
+                "miner timeline 1 RECEIVE theorem_id={} metronome_id={} deadline_block={} chain_head={} "
+                "blocks_to_deadline={} axon_http_budget_s={:.0f} wall_deadline_in_s={:.0f} my_uid={} my_incentive={} "
+                "statement_preview={!r}",
+                synapse.theorem_id,
+                synapse.metronome_id,
+                dbv if dbv is not None else None,
+                head,
+                bleft,
+                budget,
+                wall_deadline_in,
+                my_uid_s,
+                my_inc_s,
+                preview,
+            )
+        else:
+            logger.info(
+                "miner forward: solving theorem_id={} metronome_id={} my_uid={} my_incentive={}",
+                synapse.theorem_id,
+                synapse.metronome_id,
+                my_uid_s,
+                my_inc_s,
+            )
         t0 = time.perf_counter()
         async with sem:
             trace, proof, steps = await prover.solve(synapse)
         solve_s = time.perf_counter() - t0
+
+        if settings.miner_forward_timeline:
+            logger.info(
+                "miner timeline 2 SOLVED theorem_id={} prover_s={:.2f}s proof_chars={} trace_chars={}",
+                synapse.theorem_id,
+                solve_s,
+                len(proof or ""),
+                len(trace or ""),
+            )
 
         prob_meta = None
         split = "?"
@@ -159,6 +206,22 @@ def make_forward(
                     local_lean_status = "ERROR"
                     logger.warning("miner local verify error theorem_id={}: {}", synapse.theorem_id, e)
 
+        if settings.miner_forward_timeline:
+            if settings.miner_local_verify:
+                logger.info(
+                    "miner timeline 3 OUTCOME theorem_id={} local_lean={} "
+                    "(Lean on this machine like validators; judge scores are not returned on the axon)",
+                    synapse.theorem_id,
+                    local_lean_status,
+                )
+            else:
+                logger.info(
+                    "miner timeline 3 OUTCOME theorem_id={} local_lean=off — "
+                    "set LEMMA_MINER_LOCAL_VERIFY=1 for Lean PASS/FAIL here; "
+                    "validator judge + final weighting stay off-axon",
+                    synapse.theorem_id,
+                )
+
         if settings.miner_forward_summary:
             with _stats_lock:
                 _stats["forwards"] = int(_stats["forwards"]) + 1
@@ -204,6 +267,16 @@ def make_forward(
             len(trace or ""),
             local_lean_status,
         )
+        if settings.miner_notify_on_answer:
+            logger.debug(
+                "miner answer notify: dispatching bell/banner theorem_id={}",
+                synapse.theorem_id,
+            )
+            notify_miner_answer_sent_async(
+                theorem_id=synapse.theorem_id,
+                solve_s=solve_s,
+                local_lean=local_lean_status,
+            )
         return synapse
 
     return forward

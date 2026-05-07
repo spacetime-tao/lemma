@@ -81,7 +81,12 @@ class MinerService:
             "Each forward: log starts with my_uid / my_incentive (chain metagraph, like `lemma leaderboard`); "
             "ends with miner answered + local_lean=…",
         )
-        if not s.miner_log_forwards:
+        if s.miner_forward_timeline:
+            logger.info(
+                "LEMMA_MINER_FORWARD_TIMELINE=1 — watch miner timeline 1 RECEIVE → 2 SOLVED → 3 OUTCOME "
+                "(then miner answered). Add LEMMA_MINER_LOCAL_VERIFY=1 for Lean PASS/FAIL on this machine."
+            )
+        elif not s.miner_log_forwards:
             logger.info(
                 "LEMMA_MINER_LOCAL_VERIFY: optional. Validators run Lean on your reply anyway — enable locally "
                 "only if you want PASS/FAIL in logs before send (extra Docker per forward). "

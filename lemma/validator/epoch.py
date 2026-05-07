@@ -159,6 +159,24 @@ async def run_epoch(
             continue
         candidates.append((uid, resp))
 
+    if not candidates and uids:
+        n_ch = sum(1 for r in responses if isinstance(r, LemmaChallenge))
+        n_ok = sum(1 for r in responses if isinstance(r, LemmaChallenge) and r.is_success)
+        n_proof = sum(
+            1
+            for r in responses
+            if isinstance(r, LemmaChallenge) and r.is_success and (r.proof_script or "").strip()
+        )
+        logger.warning(
+            "epoch no miner candidates: queried_uids={} lemma_challenge_responses={} synapse_success={} "
+            "success_with_proof={} — miners unreachable/timed out, returned errors, empty proof, or "
+            "body_hash mismatch (see earlier uid= warnings). Check metagraph axon IP:port and inbound firewall.",
+            len(uids),
+            n_ch,
+            n_ok,
+            n_proof,
+        )
+
     verify_sem = asyncio.Semaphore(max(1, settings.lemma_lean_verify_max_concurrent))
 
     async def _verify_one(uid: int, resp: LemmaChallenge) -> tuple[int, LemmaChallenge, VerifyResult] | None:
