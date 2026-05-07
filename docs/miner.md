@@ -26,8 +26,6 @@ Validators decide whether your proof typechecks; the miner process does not rece
 
 - Set `LEMMA_MINER_FORWARD_TIMELINE=1` for **three INFO lines per forward**: **`miner timeline 1 RECEIVE`** (theorem, `deadline_block` vs current head, HTTP/wall time budgets, short statement preview), **`miner timeline 2 SOLVED`** (prover wall time, sizes), **`miner timeline 3 OUTCOME`** (`local_lean` if `LEMMA_MINER_LOCAL_VERIFY=1`, else a hint). Then **`miner answered`** as today. **Validator judge + final weights are not returned on the axon** — only optional **local Lean** mirrors validator proof-checking on your machine.
 
-- Set `LEMMA_MINER_NOTIFY_ON_ANSWER=1` for a **terminal bell** plus a **macOS notification** when a forward reply is ready (same moment as the `miner answered` log line). Non-macOS: bell only.
-
 - Set `LEMMA_MINER_LOG_FORWARDS=1` to log each forward: reasoning excerpt and `proof_script` excerpt at INFO; raw model output is logged at DEBUG (enable e.g. `LOG_LEVEL=DEBUG` to see it).
 - Set `LEMMA_MINER_LOCAL_VERIFY=1` to run the same sandbox `lake build` as validators after the prover returns (requires Docker and `LEAN_SANDBOX_IMAGE` / timeouts aligned with your subnet). Logs `miner local verify OK` or `FAIL` with reason.
 

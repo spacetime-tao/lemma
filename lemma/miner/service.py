@@ -77,24 +77,17 @@ class MinerService:
             s.axon_port,
             wallet.hotkey.ss58_address,
         )
+        bits = [
+            f"forward_timeline={'on' if s.miner_forward_timeline else 'off'}",
+            f"local_lean_verify={'on' if s.miner_local_verify else 'off'}",
+            f"log_forwards={'on' if s.miner_log_forwards else 'off'}",
+            f"forward_summary={'on' if s.miner_forward_summary else 'off'}",
+        ]
+        logger.info("Miner visibility: {} (set in .env; `lemma miner observability` for detail)", "  ".join(bits))
         logger.info(
-            "Each forward: log starts with my_uid / my_incentive (chain metagraph, like `lemma leaderboard`); "
-            "ends with miner answered + local_lean=…",
+            "Per forward: my_uid / my_incentive at start; ends with miner answered (+ local_lean= if local verify on)."
         )
-        if s.miner_forward_timeline:
-            logger.info(
-                "LEMMA_MINER_FORWARD_TIMELINE=1 — watch miner timeline 1 RECEIVE → 2 SOLVED → 3 OUTCOME "
-                "(then miner answered). Add LEMMA_MINER_LOCAL_VERIFY=1 for Lean PASS/FAIL on this machine."
-            )
-        elif not s.miner_log_forwards:
-            logger.info(
-                "LEMMA_MINER_LOCAL_VERIFY: optional. Validators run Lean on your reply anyway — enable locally "
-                "only if you want PASS/FAIL in logs before send (extra Docker per forward). "
-                "LEMMA_MINER_LOG_FORWARDS=1 for excerpts — or `lemma miner observability`.",
-            )
-        logger.info(
-            "Miner running — press Ctrl+C to stop and return to your shell.",
-        )
+        logger.info("Miner running — Ctrl+C to stop.")
         try:
             while True:
                 time.sleep(60)

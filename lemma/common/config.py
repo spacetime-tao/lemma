@@ -638,14 +638,6 @@ class LemmaSettings(BaseSettings):
             "Final validator Lean+judge is not returned on the axon."
         ),
     )
-    miner_notify_on_answer: bool = Field(
-        default=False,
-        validation_alias=AliasChoices("LEMMA_MINER_NOTIFY_ON_ANSWER", "miner_notify_on_answer"),
-        description=(
-            "After each successful forward reply: terminal bell + macOS Notification Center banner "
-            "(osascript). No-op on non-macOS except the bell."
-        ),
-    )
     miner_local_verify: bool = Field(
         default=False,
         validation_alias=AliasChoices("LEMMA_MINER_LOCAL_VERIFY", "miner_local_verify"),

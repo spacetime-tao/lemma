@@ -17,42 +17,38 @@ def show_miner_menu(ctx: click.Context) -> None:
     click.echo(stylize("\nLemma — miner\n", fg="cyan", bold=True), nl=False)
     click.echo(
         stylize(
-            "The axon listens on AXON_PORT; validators send theorem challenges and your prover returns JSON.\n",
+            "Validators reach your axon on AXON_PORT; each forward runs the prover, then logs the reply.\n",
             dim=True,
         ),
         nl=False,
     )
     click.echo(
-        "  "
-        + stylize("1", fg="yellow")
-        + "  "
-        + stylize("start", fg="green")
-        + "           Run the miner server (bind port, wait for forwards)\n"
-        "  "
-        + stylize("2", fg="yellow")
-        + "  "
-        + stylize("dry-run", fg="green")
-        + "        Print axon / env summary only — no server\n"
-        "  "
-        + stylize("3", fg="yellow")
-        + "  "
-        + stylize("observability", fg="green")
-        + "  What you can see in this terminal (logs vs chain)\n"
-        "  "
-        + stylize("4", fg="yellow")
-        + "  "
-        + stylize("quit", fg="green")
-        + "             Exit\n",
-        nl=False,
-    )
-    click.echo(
         stylize(
-            "Shell (non-interactive): ",
+            "Tip: set LEMMA_MINER_FORWARD_TIMELINE=1 in .env for RECEIVE → SOLVED → OUTCOME lines per forward; "
+            "add LEMMA_MINER_LOCAL_VERIFY=1 for Lean PASS/FAIL in logs (Docker).\n",
             dim=True,
+        ),
+    )
+    w = 14
+    rows = (
+        ("1", "start", "Run axon (bind port, wait for forwards)"),
+        ("2", "dry-run", "Print axon / env only — no server"),
+        ("3", "observability", "What logs show vs what chain shows"),
+        ("4", "quit", "Exit"),
+    )
+    click.echo(stylize("  " + "—" * 56, dim=True))
+    for num, name, desc in rows:
+        click.echo(
+            "  "
+            + stylize(num, fg="yellow")
+            + "  "
+            + stylize(name.ljust(w), fg="green")
+            + stylize(desc, dim=True),
         )
+    click.echo(stylize("  " + "—" * 56, dim=True))
+    click.echo(
+        stylize("Non-interactive: ", dim=True)
         + stylize("lemma miner start", fg="yellow")
-        + stylize("  ·  ", dim=True)
-        + stylize("lemma miner start --max-forwards-per-day 50", fg="yellow")
         + stylize("  ·  ", dim=True)
         + stylize("lemma miner dry-run", fg="yellow")
         + stylize("  ·  ", dim=True)
@@ -62,12 +58,6 @@ def show_miner_menu(ctx: click.Context) -> None:
     )
 
     if not sys.stdin.isatty():
-        click.echo(
-            stylize(
-                "Non-interactive: `lemma miner start` · `lemma miner dry-run` · `lemma miner observability`.",
-                dim=True,
-            ),
-        )
         return
 
     choice = (click.prompt("Choose 1–4", default="1") or "1").strip().lower()

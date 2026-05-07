@@ -12,7 +12,6 @@ from loguru import logger
 
 from lemma.common.config import LemmaSettings
 from lemma.lean.verify_runner import run_lean_verify
-from lemma.miner.answer_notify import notify_miner_answer_sent_async
 from lemma.miner.daily_budget import allow_daily_forward
 from lemma.miner.gating import MetagraphCache, metagraph_incentive_for_hotkey
 from lemma.miner.limits import reject_synopsis, synapse_payload_error
@@ -267,16 +266,6 @@ def make_forward(
             len(trace or ""),
             local_lean_status,
         )
-        if settings.miner_notify_on_answer:
-            logger.debug(
-                "miner answer notify: dispatching bell/banner theorem_id={}",
-                synapse.theorem_id,
-            )
-            notify_miner_answer_sent_async(
-                theorem_id=synapse.theorem_id,
-                solve_s=solve_s,
-                local_lean=local_lean_status,
-            )
         return synapse
 
     return forward

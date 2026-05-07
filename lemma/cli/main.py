@@ -972,6 +972,16 @@ def _miner_emit_observability_panel() -> None:
     click.echo(stylize("On this machine (stdout / logs)\n", fg="cyan", bold=True), nl=False)
     click.echo(
         "  "
+        + stylize("LEMMA_MINER_FORWARD_TIMELINE=1", fg="yellow")
+        + stylize(
+            " — three INFO lines per forward: RECEIVE (deadline vs head), SOLVED, OUTCOME "
+            "(best view in this terminal).\n",
+            dim=True,
+        ),
+        nl=False,
+    )
+    click.echo(
+        "  "
         + stylize("LEMMA_MINER_LOG_FORWARDS=1", fg="yellow")
         + stylize(
             " — log INFO excerpts of reasoning + proof_script each forward (set in `.env` before ",
@@ -1002,7 +1012,7 @@ def _miner_emit_observability_panel() -> None:
     )
     click.echo(
         "  "
-        + stylize("LEMMA_LOG_LEVEL=DEBUG", fg="yellow")
+        + stylize("LOG_LEVEL=DEBUG", fg="yellow")
         + stylize(" — more verbose prover logging when debugging.\n", dim=True),
         nl=False,
     )
