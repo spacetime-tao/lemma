@@ -56,7 +56,7 @@ Registration and stake: [Bittensor CLI](https://docs.learnbittensor.org/).
 
 ## Configure (`lemma setup`)
 
-Prompts for chain (Bittensor **testnet** only: `NETUID=467`); wallet names, API keys, axon port, judge and Lean image settings. **Finney (mainnet) is TBD** in the wizard — do not use fake `NETUID` values (e.g. sn0 is the root on Finney). Seeds from `.env.example` if `.env` is missing.
+**Chain:** the wizard only sets **Bittensor testnet** and writes **`NETUID=467`** (no separate netuid question). Then: wallet names, API keys, axon port, judge, and (for validators) Lean image. **Finney (mainnet) is TBD** for `lemma configure chain` — hand-edit `.env` if Lemma later registers on mainnet; see comments in `.env.example`. Seeds from `.env.example` if `.env` is missing.
 
 ```bash
 ./scripts/lemma-run lemma setup
@@ -66,7 +66,7 @@ Incremental: `lemma configure chain`, `configure prover`, `configure judge`, `co
 
 ## Register on-chain
 
-Point `lemma configure chain` at the same network you use with `btcli`. **Lemma (Subnet 467)** is on **testnet** (`test`), not Finney (Finney is **mainnet**).
+Use the same network/netuid with `btcli` as in `.env`: **Lemma (Subnet 467)** on **testnet** (`SUBTENSOR_NETWORK=test`), not Finney (mainnet).
 
 ```bash
 ./scripts/lemma-run btcli subnet show --netuid 467 --network test
