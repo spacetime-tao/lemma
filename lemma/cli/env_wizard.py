@@ -362,8 +362,9 @@ def collect_prover_updates() -> dict[str, str]:
     if backend == "chutes":
         click.echo(
             stylize(
-                "Chutes: OpenAI-compatible API at llm.chutes.ai (URL is preset). Use your Chutes token; "
-                "then choose any model id from the marketplace (default matches the subnet judge model).\n",
+                "Chutes: OpenAI-compatible API at llm.chutes.ai (URL is preset). Use your Chutes token. "
+                f"PROVER_MODEL is the Chutes catalog id string, e.g. {CHUTES_DEFAULT_MODEL!r} on Enter, "
+                "or deepseek-ai/DeepSeek-R1-0528-TEE — list ids from Chutes (curl …/v1/models).\n",
                 dim=True,
             ),
             nl=False,
@@ -397,8 +398,8 @@ def collect_prover_updates() -> dict[str, str]:
     elif backend == "gemini":
         click.echo(
             stylize(
-                "Gemini: Google’s OpenAI-compat base URL is preset; your Google AI Studio key is used next. "
-                "Then pick a tier or type a model id.\n",
+                "Gemini: URL preset; Google AI Studio key next. PROVER_MODEL becomes e.g. gemini-flash-latest "
+                "(menu presets) or a typed id such as gemini-3.1-pro-preview (see Google’s model names).\n",
                 dim=True,
             ),
             nl=False,
@@ -422,7 +423,8 @@ def collect_prover_updates() -> dict[str, str]:
     elif backend == "anthropic":
         click.echo(
             stylize(
-                "Anthropic: native Claude API (not OpenAI-format JSON). URL is preset for Anthropic’s SDK shape.\n",
+                "Anthropic: native Claude API (not OpenAI-compatible JSON). URL is preset. "
+                f"Example PROVER_MODEL: {DEFAULT_ANTHROPIC_MODEL!r} (default on Enter) or claude-sonnet-4-20250514.\n",
                 dim=True,
             ),
             nl=False,
@@ -449,7 +451,8 @@ def collect_prover_updates() -> dict[str, str]:
     elif backend == "openai":
         click.echo(
             stylize(
-                "OpenAI: Chat Completions at api.openai.com (URL preset). You must type a model id — no default.\n",
+                "OpenAI: Chat Completions at api.openai.com (URL preset). Type PROVER_MODEL exactly as OpenAI names "
+                "it, e.g. gpt-4o, gpt-5.1, o4-mini — no default.\n",
                 dim=True,
             ),
             nl=False,
@@ -480,8 +483,10 @@ def collect_prover_updates() -> dict[str, str]:
     elif backend == "custom_openai":
         click.echo(
             stylize(
-                "Custom: use any server that exposes OpenAI-compatible /v1/chat/completions "
-                "(LiteLLM, vLLM, a gateway, …). Paste base URL + API key + model id.\n",
+                "Custom: any host with OpenAI-compatible /v1/chat/completions. Base URL + key + PROVER_MODEL — "
+                "the model string is whatever that host expects (Together, Groq, local vLLM, … all differ). "
+                "Examples: base https://api.together.xyz/v1 with model meta-llama/Llama-3.3-70B-Instruct-Turbo; "
+                "local http://127.0.0.1:8000/v1 with the id shown by your server’s /v1/models.\n",
                 dim=True,
             ),
             nl=False,
