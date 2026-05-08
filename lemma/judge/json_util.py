@@ -10,6 +10,10 @@ from lemma.judge.base import RubricScore
 
 _EXPECTED_KEYS = frozenset({"coherence", "exploration", "clarity"})
 
+# Prefer spans that open like JSON rubrics so preamble `{ ... }` (set notation, prose) does not
+# steal brace-balancing from the real object.
+_RUBRIC_KEY_OPEN = re.compile(r'\{\s*"(?:coherence|exploration|clarity)"\s*:')
+
 
 def _strip_markdown_fence(text: str) -> str:
     t = text.strip()
@@ -17,6 +21,39 @@ def _strip_markdown_fence(text: str) -> str:
         t = re.sub(r"^```[a-zA-Z0-9]*\s*\n?", "", t)
         t = re.sub(r"\n?```\s*$", "", t)
     return t.strip()
+
+
+def _balanced_object_at(text: str, start: int) -> str | None:
+    """Return the brace-balanced `{...}` substring starting at ``start``, or None."""
+    n = len(text)
+    if start < 0 or start >= n or text[start] != "{":
+        return None
+    depth = 0
+    in_str = False
+    esc = False
+    quote = ""
+    j = start
+    while j < n:
+        ch = text[j]
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == quote:
+                in_str = False
+        else:
+            if ch in "\"'":
+                in_str = True
+                quote = ch
+            elif ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    return text[start : j + 1]
+        j += 1
+    return None
 
 
 def _extract_balanced_objects(text: str) -> list[str]:
@@ -28,39 +65,31 @@ def _extract_balanced_objects(text: str) -> list[str]:
         if text[i] != "{":
             i += 1
             continue
-        start = i
-        depth = 0
-        in_str = False
-        esc = False
-        quote = ""
-        j = i
-        found = False
-        while j < n:
-            ch = text[j]
-            if in_str:
-                if esc:
-                    esc = False
-                elif ch == "\\":
-                    esc = True
-                elif ch == quote:
-                    in_str = False
-            else:
-                if ch in "\"'":
-                    in_str = True
-                    quote = ch
-                elif ch == "{":
-                    depth += 1
-                elif ch == "}":
-                    depth -= 1
-                    if depth == 0:
-                        out.append(text[start : j + 1])
-                        i = j + 1
-                        found = True
-                        break
-            j += 1
-        if not found:
-            i = start + 1
+        span = _balanced_object_at(text, i)
+        if span is not None:
+            out.append(span)
+            i += len(span)
+        else:
+            i += 1
     return out
+
+
+def _anchored_rubric_json_spans(text: str) -> list[str]:
+    """Brace-balanced spans that open like ``{\"coherence\"`` / ``{\"exploration\"`` / ``{\"clarity\"``.
+
+    Reduces false positives when the model emits unrelated ``{ ... }`` before the rubric JSON.
+    """
+    spans: list[str] = []
+    seen_start: set[int] = set()
+    for m in _RUBRIC_KEY_OPEN.finditer(text):
+        st = m.start()
+        if st in seen_start:
+            continue
+        seen_start.add(st)
+        span = _balanced_object_at(text, st)
+        if span:
+            spans.append(span)
+    return spans
 
 
 def _validate_rubric_dict(data: dict[str, Any]) -> RubricScore:
@@ -94,7 +123,16 @@ def parse_rubric_json(text: str) -> RubricScore:
     except json.JSONDecodeError:
         pass
 
-    # 2) Balanced { ... } slices
+    # 2) Rubric-shaped openings first (robust when prose contains unrelated `{ ... }`).
+    for frag in _anchored_rubric_json_spans(raw):
+        try:
+            obj = json.loads(frag)
+            if isinstance(obj, dict):
+                candidates.append(obj)
+        except json.JSONDecodeError:
+            continue
+
+    # 3) Any balanced { ... } slices (legacy path; keys may appear in any order in fragment)
     for frag in _extract_balanced_objects(raw):
         try:
             obj = json.loads(frag)
@@ -108,10 +146,8 @@ def parse_rubric_json(text: str) -> RubricScore:
     for obj in candidates:
         try:
             score = _validate_rubric_dict(obj)
-        except ValueError as e:
-            msg = str(e)
-            if "exactly keys" in msg or "out of range" in msg:
-                raise
+        except ValueError:
+            # Wrong-shape dicts are skipped so a later rubric object can still win (prose + junk JSON).
             continue
         except (TypeError, KeyError):
             continue

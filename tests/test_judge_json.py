@@ -21,14 +21,45 @@ def test_parse_rubric_json_rejects_multiple_distinct_objects() -> None:
 
 def test_parse_rubric_json_rejects_extra_keys() -> None:
     text = '{"coherence": 0.5, "exploration": 0.5, "clarity": 0.5, "hack": 1}'
-    with pytest.raises(ValueError, match="exactly keys"):
+    with pytest.raises(ValueError, match="found 0 candidate"):
         parse_rubric_json(text)
 
 
 def test_parse_rubric_json_rejects_out_of_range() -> None:
     text = '{"coherence": 1.5, "exploration": 0.5, "clarity": 0.5}'
-    with pytest.raises(ValueError, match="out of range"):
+    with pytest.raises(ValueError, match="found 0 candidate"):
         parse_rubric_json(text)
+
+
+def test_parse_rubric_json_skips_junk_object_then_accepts_rubric() -> None:
+    text = (
+        '{"wrong": true} '
+        '{"coherence": 0.8, "exploration": 0.7, "clarity": 0.9}'
+    )
+    s = parse_rubric_json(text)
+    assert s.coherence == pytest.approx(0.8)
+    assert s.exploration == pytest.approx(0.7)
+    assert s.clarity == pytest.approx(0.9)
+
+
+def test_parse_rubric_json_set_notation_preamble_then_rubric() -> None:
+    text = (
+        "Consider the set { x | x > 0 }. "
+        '{"coherence": 0.6, "exploration": 0.5, "clarity": 0.4}'
+    )
+    s = parse_rubric_json(text)
+    assert s.composite == pytest.approx((0.6 + 0.5 + 0.4) / 3.0)
+
+
+def test_parse_rubric_json_exploration_first_after_prose() -> None:
+    text = (
+        "Here is my verdict. "
+        '{"exploration": 0.2, "coherence": 0.3, "clarity": 0.4}'
+    )
+    s = parse_rubric_json(text)
+    assert s.exploration == pytest.approx(0.2)
+    assert s.coherence == pytest.approx(0.3)
+    assert s.clarity == pytest.approx(0.4)
 
 
 def test_parse_rubric_json_strips_markdown_fence() -> None:
