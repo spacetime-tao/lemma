@@ -135,6 +135,14 @@ def collect_lean_image_updates() -> dict[str, str]:
 
 _JUDGE_BACKENDS_ORDERED: tuple[str, ...] = ("chutes", "anthropic", "openai", "custom_openai")
 _PROVER_BACKENDS_ORDERED: tuple[str, ...] = ("chutes", "gemini", "anthropic", "openai", "custom_openai")
+# One-line hint per slug (prover menu — all options described equally).
+_PROVER_BACKEND_HINTS: dict[str, str] = {
+    "chutes": "Chutes OpenAI-compatible API at llm.chutes.ai — pick any model id from the catalog.",
+    "gemini": "Gemini via Google AI Studio key; uses Google’s OpenAI-compatible base URL (no URL paste).",
+    "anthropic": "Anthropic Claude (native Anthropic API, not OpenAI-shaped).",
+    "openai": "OpenAI’s hosted API (api.openai.com).",
+    "custom_openai": "Any other OpenAI-compatible host — you supply base URL + model id.",
+}
 
 
 def _resolve_backend_token(raw: str, ordered: tuple[str, ...]) -> str:
@@ -163,6 +171,7 @@ def _prompt_backend_menu(
     ordered: tuple[str, ...],
     default_slug: str,
     preamble: str,
+    slug_hints: dict[str, str] | None = None,
 ) -> str:
     default_num = ordered.index(default_slug) + 1
     click.echo(preamble, nl=False)
@@ -179,10 +188,10 @@ def _prompt_backend_menu(
         nl=False,
     )
     for i, name in enumerate(ordered, start=1):
-        click.echo(
-            stylize(f"  {i}  ", fg="green", bold=True) + stylize(name, fg="cyan") + "\n",
-            nl=False,
-        )
+        line = stylize(f"  {i}  ", fg="green", bold=True) + stylize(name, fg="cyan")
+        if slug_hints and name in slug_hints:
+            line += stylize(f" — {slug_hints[name]}", dim=True)
+        click.echo(line + "\n", nl=False)
     raw = click.prompt(
         stylize("Backend", fg="green"),
         default=str(default_num),
@@ -205,20 +214,15 @@ def _backend_choice(role_label: str) -> str:
 
 
 def _prover_backend_choice() -> str:
-    preamble = (
-        stylize(
-            "Prover (writes Submission.lean when you mine) — pick an API. ",
-            dim=True,
-        )
-        + stylize("chutes", fg="yellow")
-        + stylize(" = any Chutes model id you choose. ", dim=True)
-        + stylize("gemini", fg="yellow")
-        + stylize(" = Google AI Studio key + fixed Gemini OpenAI URL (no URL typing).\n", dim=True)
+    preamble = stylize(
+        "Prover LLM — writes Submission.lean when you mine. Each backend below is a different provider:\n",
+        dim=True,
     )
     return _prompt_backend_menu(
         ordered=_PROVER_BACKENDS_ORDERED,
         default_slug="chutes",
         preamble=preamble,
+        slug_hints=_PROVER_BACKEND_HINTS,
     )
 
 
