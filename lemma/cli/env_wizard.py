@@ -136,11 +136,11 @@ def collect_lean_image_updates() -> dict[str, str]:
 _JUDGE_BACKENDS_ORDERED: tuple[str, ...] = ("chutes", "anthropic", "openai", "custom_openai")
 _PROVER_BACKENDS_ORDERED: tuple[str, ...] = ("chutes", "gemini", "anthropic", "openai", "custom_openai")
 _PROVER_BACKEND_HINTS: dict[str, str] = {
-    "chutes": "Pick Chutes model id (Enter = suggested default).",
-    "gemini": "Pick a tier from the menu or type any Gemini id.",
-    "anthropic": "Pick Claude model id (Enter = suggested default).",
-    "openai": "Type OpenAI model id (required).",
-    "custom_openai": "Paste OpenAI-compat base URL + model id.",
+    "chutes": "After API key: one prompt for model id (Enter accepts default).",
+    "gemini": "After API key: menu for Flash/Pro/Lite or custom Gemini id.",
+    "anthropic": "After API key: one prompt for Claude model id (Enter accepts default).",
+    "openai": "After API key: one prompt — type model id (no default).",
+    "custom_openai": "After API key: paste base URL + model id.",
 }
 
 
@@ -209,10 +209,9 @@ def _backend_choice(role_label: str) -> str:
 
 def _prover_backend_choice() -> str:
     preamble = (
-        stylize("Mining prover — which vendor runs the LLM (writes Submission.lean)?\n", dim=True)
+        stylize("Mining prover — where should inference run (writes Submission.lean)?\n", dim=True)
         + stylize(
-            "For 1–4 the wizard already knows the API URL — you only enter keys and model id. "
-            "For 5 you paste your own OpenAI-compatible base URL.\n",
+            "1–4: vendor URL is built in. 5: you paste an OpenAI-compatible base URL.\n",
             dim=True,
         )
     )
