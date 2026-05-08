@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 from lemma.lean.sandbox import LeanSandbox, VerifyResult
-from lemma.lean.workspace import workspace_template_cache_key
+from lemma.lean.workspace import workspace_verify_cache_key
 from lemma.problems.base import Problem
 
 
@@ -22,8 +22,13 @@ def _minimal_problem() -> Problem:
 
 def test_warm_cache_verifies_in_slot_dir_not_temp(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     p = _minimal_problem()
+    sub = """import Mathlib
+namespace Submission
+theorem t_test : True := by trivial
+end Submission
+"""
     cache = tmp_path / "ws_cache"
-    key = workspace_template_cache_key(p)
+    key = workspace_verify_cache_key(p, sub, include_submission_fingerprint=False)
     slot = cache / key
     slot.mkdir(parents=True)
     (slot / ".lake").mkdir()
@@ -36,11 +41,6 @@ def test_warm_cache_verifies_in_slot_dir_not_temp(tmp_path: Path, monkeypatch: p
         return VerifyResult(passed=True, reason="ok")
 
     monkeypatch.setattr(LeanSandbox, "_verify_host", fake_host)
-    sub = """import Mathlib
-namespace Submission
-theorem t_test : True := by trivial
-end Submission
-"""
     sb = LeanSandbox(use_docker=False, timeout_s=30, workspace_cache_dir=cache)
     vr = sb.verify(p, sub)
     assert vr.passed

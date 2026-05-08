@@ -25,6 +25,7 @@ This document tracks **post-audit** mechanism changes in Lemma: proof-centric sc
 | Training export profiles | **`LEMMA_TRAINING_EXPORT_JSONL`** optional JSONL; **`LEMMA_TRAINING_EXPORT_PROFILE`** = **`full`** (proof + rubric + `pareto_weight`) or **`reasoning_only`** (schema v2 — trace fields without proof, judge labels, or weights). See [training_export.md](training_export.md). |
 | Generated template RNG | Chain seed is **SHA256-mixed** before template selection (`lemma_generated_rng_v1`) so adjacent seeds pick less correlated templates; **`LEMMA_GENERATED_LEGACY_PLAIN_RNG=1`** restores legacy `Random(seed)`. Problem ids remain **`gen/<chain_seed>`**. |
 | Problem seed RPC slack | **`LEMMA_PROBLEM_SEED_CHAIN_HEAD_SLACK_BLOCKS`** pulls chain head back before `resolve_problem_seed` and forward HTTP deadline math — reduces ±1 RPC skew at quantize edges (`lemma/common/problem_seed.py`). |
+| Lean workspace cache key | Default **template-only** slot under **`LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR`**; optional **`LEMMA_LEAN_WORKSPACE_CACHE_INCLUDE_SUBMISSION_HASH=1`** appends proof-body fingerprint (`workspace_verify_cache_key` in `lemma/lean/workspace.py`). |
 
 ## Generated registry
 
@@ -36,6 +37,7 @@ Adding templates changes `generated_registry_sha256`. Operators must run `lemma 
 - Dedup: `lemma/scoring/dedup.py`
 - Reputation: `lemma/scoring/reputation.py`
 - Problem mix: `lemma/problems/generated.py` (`expand_seed_for_problem_rng`), `lemma/common/problem_seed.py` (`mix_sub_problem_seed`)
+- Lean cache: `lemma/lean/workspace.py` (`workspace_verify_cache_key`), `lemma/lean/sandbox.py`
 - Miner attest: `lemma/protocol_attest.py`, `lemma/miner/forward.py`, `lemma/validator/epoch.py`
 - Commit–reveal: `lemma/protocol_commit_reveal.py`, `lemma/miner/forward.py`, `lemma/validator/epoch.py`
 - Judge profile attest: `lemma/validator/judge_profile_attest.py`, `lemma/validator/service.py`, `lemma/cli/validator_check.py`

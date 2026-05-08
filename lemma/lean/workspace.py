@@ -24,6 +24,26 @@ def workspace_template_cache_key(problem: Problem) -> str:
     return h.hexdigest()[:48]
 
 
+def workspace_verify_cache_key(
+    problem: Problem,
+    submission_src: str,
+    *,
+    include_submission_fingerprint: bool,
+) -> str:
+    """Disk slot id for ``LeanSandbox.verify`` — template key, optionally plus proof text.
+
+    Default (fingerprint off): one warm ``.lake`` per theorem template; ``Submission.lean`` is overwritten
+    each verify (incremental ``lake build Submission``).
+
+    With fingerprint on: distinct proof bodies use distinct cache subdirs (more isolation, less reuse).
+    """
+    base = workspace_template_cache_key(problem)
+    if not include_submission_fingerprint:
+        return base
+    fp = hashlib.sha256(submission_src.encode("utf-8")).hexdigest()[:16]
+    return f"{base}_{fp}"
+
+
 def materialize_workspace(
     dest: Path,
     problem: Problem,

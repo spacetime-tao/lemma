@@ -553,6 +553,17 @@ class LemmaSettings(BaseSettings):
             "(same subnet epoch = same template for all miners). Creates subdirs; prune manually if huge."
         ),
     )
+    lemma_lean_workspace_cache_include_submission_hash: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "LEMMA_LEAN_WORKSPACE_CACHE_INCLUDE_SUBMISSION_HASH",
+            "lemma_lean_workspace_cache_include_submission_hash",
+        ),
+        description=(
+            "If true, cache slot names include a truncated SHA256 of Submission.lean (distinct proofs never "
+            "share a directory; more disk vs template-only keys). Default false."
+        ),
+    )
     lemma_lean_docker_worker: str | None = Field(
         default=None,
         validation_alias=AliasChoices(

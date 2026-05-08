@@ -41,7 +41,7 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 
 - [x] **`deadline_block` enforcement** — Validator drops responses when chain head ≥ synapse `deadline_block` after the forward returns.
 - [x] **Cross-validator problem alignment** — **`LEMMA_PROBLEM_SEED_CHAIN_HEAD_SLACK_BLOCKS`** subtracts from RPC head before seed + forward deadline (`effective_chain_head_for_problem_seed`); CLI/status/rehearsal paths aligned. See [catalog-sources.md](catalog-sources.md).
-- [ ] **Workspace cache key** — Include submission/proof fingerprint so distinct miners don’t share incremental-build identity incorrectly.
+- [x] **Workspace cache key** — Optional **`LEMMA_LEAN_WORKSPACE_CACHE_INCLUDE_SUBMISSION_HASH=1`**: cache slot includes truncated SHA256 of `Submission.lean` (`workspace_verify_cache_key` in `lemma/lean/workspace.py`). Default off (template-only key; faster reuse).
 
 ### Trust & sybil
 

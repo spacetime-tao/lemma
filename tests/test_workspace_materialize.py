@@ -2,7 +2,11 @@
 
 from pathlib import Path
 
-from lemma.lean.workspace import materialize_workspace, workspace_template_cache_key
+from lemma.lean.workspace import (
+    materialize_workspace,
+    workspace_template_cache_key,
+    workspace_verify_cache_key,
+)
 from lemma.problems.base import Problem
 
 
@@ -21,6 +25,22 @@ def _minimal_problem() -> Problem:
 def test_workspace_template_cache_key_stable() -> None:
     p = _minimal_problem()
     assert workspace_template_cache_key(p) == workspace_template_cache_key(p)
+
+
+def test_workspace_verify_cache_key_matches_template_when_no_fingerprint() -> None:
+    p = _minimal_problem()
+    assert workspace_verify_cache_key(p, "namespace Submission\n", include_submission_fingerprint=False) == (
+        workspace_template_cache_key(p)
+    )
+
+
+def test_workspace_verify_cache_key_splits_on_proof_when_enabled() -> None:
+    p = _minimal_problem()
+    a = workspace_verify_cache_key(p, "a", include_submission_fingerprint=True)
+    b = workspace_verify_cache_key(p, "b", include_submission_fingerprint=True)
+    assert a != b
+    assert a.startswith(workspace_template_cache_key(p))
+    assert "_" in a
 
 
 def test_materialize_preserve_lake_keeps_dot_lake(tmp_path: Path) -> None:

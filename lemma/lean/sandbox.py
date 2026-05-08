@@ -25,7 +25,7 @@ from lemma.lean.cheats import (
     scan_submission_for_cheats,
 )
 from lemma.lean.comparator_hook import hook_failure_reason, run_comparator_hook
-from lemma.lean.workspace import materialize_workspace, workspace_template_cache_key
+from lemma.lean.workspace import materialize_workspace, workspace_verify_cache_key
 from lemma.problems.base import Problem
 
 
@@ -190,6 +190,7 @@ class LeanSandbox:
         use_docker: bool = True,
         workspace_cache_dir: Path | None = None,
         docker_worker: str | None = None,
+        workspace_cache_include_submission_hash: bool = False,
     ) -> None:
         self.image = image
         self.cpu = cpu
@@ -199,6 +200,7 @@ class LeanSandbox:
         # Caller passes resolved preference (typically ``LemmaSettings.lean_use_docker``).
         self.use_docker = bool(use_docker)
         self.workspace_cache_dir = workspace_cache_dir
+        self.workspace_cache_include_submission_hash = bool(workspace_cache_include_submission_hash)
         # Prefer explicit constructor / LemmaSettings (`.env`); ``os.environ`` alone is not populated from
         # pydantic's dotenv load unless the process exported the variable.
         _dw = docker_worker if docker_worker is not None else os.environ.get("LEMMA_LEAN_DOCKER_WORKER")
@@ -223,7 +225,11 @@ class LeanSandbox:
         inplace = False
         if self.workspace_cache_dir is not None:
             self.workspace_cache_dir.mkdir(parents=True, exist_ok=True)
-            cache_key = workspace_template_cache_key(problem)
+            cache_key = workspace_verify_cache_key(
+                problem,
+                submission_src,
+                include_submission_fingerprint=self.workspace_cache_include_submission_hash,
+            )
             slot = self.workspace_cache_dir / cache_key
             if slot.is_dir() and (slot / ".lake").is_dir():
                 work = slot
