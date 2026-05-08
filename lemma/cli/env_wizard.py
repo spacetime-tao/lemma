@@ -135,13 +135,6 @@ def collect_lean_image_updates() -> dict[str, str]:
 
 _JUDGE_BACKENDS_ORDERED: tuple[str, ...] = ("chutes", "anthropic", "openai", "custom_openai")
 _PROVER_BACKENDS_ORDERED: tuple[str, ...] = ("chutes", "gemini", "anthropic", "openai", "custom_openai")
-_PROVER_BACKEND_HINTS: dict[str, str] = {
-    "chutes": "Preset URL — key, then model id (Enter = default).",
-    "gemini": "Preset URL — key, then tier menu or custom id.",
-    "anthropic": "Anthropic API — key, then model id (Enter = default).",
-    "openai": "api.openai.com — key, then model id (required).",
-    "custom_openai": "Paste URL + key + model id.",
-}
 
 
 def _resolve_backend_token(raw: str, ordered: tuple[str, ...]) -> str:
@@ -185,7 +178,7 @@ def _prompt_backend_menu(
             dim=True,
         )
         + stylize(f"{default_num} ({default_slug})", fg="cyan")
-        + stylize(". Gray text is extra context, not part of the name.\n", dim=True),
+        + stylize(".\n", dim=True),
         nl=False,
     )
     raw = click.prompt(
@@ -218,7 +211,6 @@ def _prover_backend_choice() -> str:
         ordered=_PROVER_BACKENDS_ORDERED,
         default_slug="chutes",
         preamble=preamble,
-        slug_hints=_PROVER_BACKEND_HINTS,
     )
 
 
@@ -368,6 +360,14 @@ def collect_prover_updates() -> dict[str, str]:
     backend = _prover_backend_choice().lower()
     updates: dict[str, str]
     if backend == "chutes":
+        click.echo(
+            stylize(
+                "Chutes: OpenAI-compatible API at llm.chutes.ai (URL is preset). Use your Chutes token; "
+                "then choose any model id from the marketplace (default matches the subnet judge model).\n",
+                dim=True,
+            ),
+            nl=False,
+        )
         key = _require_secret("Chutes API key (prover)")
         click.echo(
             stylize(
@@ -395,6 +395,14 @@ def collect_prover_updates() -> dict[str, str]:
             nl=False,
         )
     elif backend == "gemini":
+        click.echo(
+            stylize(
+                "Gemini: Google’s OpenAI-compat base URL is preset; your Google AI Studio key is used next. "
+                "Then pick a tier or type a model id.\n",
+                dim=True,
+            ),
+            nl=False,
+        )
         key = _require_secret("Google AI Studio / Gemini API key (OpenAI-compatible)")
         model = _prompt_gemini_prover_model()
         updates = {
@@ -412,6 +420,13 @@ def collect_prover_updates() -> dict[str, str]:
             nl=False,
         )
     elif backend == "anthropic":
+        click.echo(
+            stylize(
+                "Anthropic: native Claude API (not OpenAI-format JSON). URL is preset for Anthropic’s SDK shape.\n",
+                dim=True,
+            ),
+            nl=False,
+        )
         key = _require_secret("Anthropic API key (prover)")
         model = click.prompt(
             stylize("PROVER_MODEL", fg="green")
@@ -432,6 +447,13 @@ def collect_prover_updates() -> dict[str, str]:
             nl=False,
         )
     elif backend == "openai":
+        click.echo(
+            stylize(
+                "OpenAI: Chat Completions at api.openai.com (URL preset). You must type a model id — no default.\n",
+                dim=True,
+            ),
+            nl=False,
+        )
         key = _require_secret("OpenAI API key (prover)")
         model = click.prompt(
             stylize("PROVER_MODEL", fg="green") + stylize(" (e.g. gpt-4o)", dim=True),
@@ -456,24 +478,15 @@ def collect_prover_updates() -> dict[str, str]:
             nl=False,
         )
     elif backend == "custom_openai":
-        key = _require_secret("OpenAI-compatible API key (prover)")
         click.echo(
             stylize(
-                "Gemini (Google AI Studio key): set PROVER_OPENAI_BASE_URL to\n  ",
-                dim=True,
-            )
-            + stylize("https://generativelanguage.googleapis.com/v1beta/openai/", fg="yellow")
-            + stylize(
-                "\n  and PROVER_MODEL to a Gemini id (e.g. ",
-                dim=True,
-            )
-            + stylize("gemini-2.0-flash", fg="green")
-            + stylize(
-                ", or the exact id from AI Studio). See https://ai.google.dev/gemini-api/docs/openai\n",
+                "Custom: use any server that exposes OpenAI-compatible /v1/chat/completions "
+                "(LiteLLM, vLLM, a gateway, …). Paste base URL + API key + model id.\n",
                 dim=True,
             ),
             nl=False,
         )
+        key = _require_secret("OpenAI-compatible API key (prover)")
         url = click.prompt(
             "PROVER_OPENAI_BASE_URL",
             default="",
