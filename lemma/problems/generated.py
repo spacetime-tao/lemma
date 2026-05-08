@@ -455,15 +455,15 @@ def _b_finset_filter_card_le_medium(rng: random.Random, topic: str, seed: int, n
 def _b_sum_range_succ_nat_medium(rng: random.Random, topic: str, seed: int, name: str) -> Problem:
     n = rng.randint(2, 18)
     body = f"""theorem {name} :
-    (∑ i in Finset.range ({n} + 1), (i : Nat)) = (∑ i in Finset.range {n}, (i : Nat)) + {n} := by
+    (∑ i ∈ Finset.range ({n} + 1), (i : Nat)) = (∑ i ∈ Finset.range {n}, (i : Nat)) + ({n} : Nat) := by
   sorry"""
     return _mk_problem(
         seed=seed,
         topic=topic,
         split="medium",
         theorem_name=name,
-        type_expr=f"(∑ i in Finset.range ({n} + 1), (i : Nat)) = "
-        f"(∑ i in Finset.range {n}, (i : Nat)) + {n}",
+        type_expr=f"(∑ i ∈ Finset.range ({n} + 1), (i : Nat)) = "
+        f"(∑ i ∈ Finset.range {n}, (i : Nat)) + ({n} : Nat)",
         challenge_body=body,
     )
 
