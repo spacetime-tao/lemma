@@ -2,6 +2,8 @@
 
 This document tracks **post-audit** mechanism changes in Lemma: proof-centric scoring, deduplication, EMA reputation, expanded templates, and reserved protocol hooks.
 
+**Checklist (done vs open):** [incentive-roadmap.md](incentive-roadmap.md).
+
 ## Implemented (defaults)
 
 | Mechanism | Env / behavior |
