@@ -28,6 +28,7 @@ This document tracks **post-audit** mechanism changes in Lemma: proof-centric sc
 | Lean workspace cache key | Default **template-only** slot under **`LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR`**; optional **`LEMMA_LEAN_WORKSPACE_CACHE_INCLUDE_SUBMISSION_HASH=1`** appends proof-body fingerprint (`workspace_verify_cache_key` in `lemma/lean/workspace.py`). |
 | Sybil / identity (documentation) | Coldkey dedup and identical-submission dedup are **not** sybil-proof — see [sybil_economics.md](sybil_economics.md) and [`knowledge/sybil.realities.yaml`](../knowledge/sybil.realities.yaml). |
 | Validator Lean load (documentation) | **`LEMMA_LEAN_VERIFY_MAX_CONCURRENT`**, **`LEMMA_JUDGE_MAX_CONCURRENT`**, optional **`LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION`** when attest on — see [validator_lean_load.md](validator_lean_load.md). |
+| Transport (documentation) | Dendrite/Axon + **`LemmaChallenge`** body-hash integrity vs **`computed_body_hash`** — see [transport.md](transport.md); [`knowledge/subnet.invariants.yaml`](../knowledge/subnet.invariants.yaml) deprecates Axon-first **new** designs in favor of HTTP + Epistula. |
 
 ## Generated registry
 
@@ -42,6 +43,7 @@ Adding templates changes `generated_registry_sha256`. Operators must run `lemma 
 - Lean cache: `lemma/lean/workspace.py` (`workspace_verify_cache_key`), `lemma/lean/sandbox.py`
 - Sybil / economics (operators): [sybil_economics.md](sybil_economics.md), `knowledge/sybil.realities.yaml`
 - Validator throughput: [validator_lean_load.md](validator_lean_load.md)
+- Transport / integrity: [transport.md](transport.md), `lemma/protocol.py`
 - Miner attest: `lemma/protocol_attest.py`, `lemma/miner/forward.py`, `lemma/validator/epoch.py`
 - Commit–reveal: `lemma/protocol_commit_reveal.py`, `lemma/miner/forward.py`, `lemma/validator/epoch.py`
 - Judge profile attest: `lemma/validator/judge_profile_attest.py`, `lemma/validator/service.py`, `lemma/cli/validator_check.py`

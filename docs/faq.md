@@ -20,7 +20,7 @@ No subnet is perfectly ungameable; the goal is to make the easiest strategy also
 
 One-line mental model: public deterministic rules are okay; you still need correct Lean proofs and strong judged reasoning under the same pinned validator policy.
 
-For post-audit scoring changes (proof/judge blend, dedup, EMA, multi-theorem epochs, reserved protocol flags), see [incentive_migration.md](incentive_migration.md). For a **living checklist** of shipped items and known gaps, see [incentive-roadmap.md](incentive-roadmap.md). **Sybil / coldkey dedup** is *not* identity verification — see [sybil_economics.md](sybil_economics.md).
+For post-audit scoring changes (proof/judge blend, dedup, EMA, multi-theorem epochs, reserved protocol flags), see [incentive_migration.md](incentive_migration.md). For a **living checklist** of shipped items and known gaps, see [incentive-roadmap.md](incentive-roadmap.md). **Sybil / coldkey dedup** is *not* identity verification — see [sybil_economics.md](sybil_economics.md). **Dendrite/Axon + synapse body-hash** — see [transport.md](transport.md).
 
 ## Validators querying your axon many times
 

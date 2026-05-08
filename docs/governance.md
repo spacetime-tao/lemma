@@ -38,6 +38,10 @@ Production: one pinned stack; `JUDGE_PROFILE_SHA256_EXPECTED`. Dev may use multi
 
 Coldkey dedup and identical-submission dedup reduce certain games but **do not** prove unique humans. Read [sybil_economics.md](sybil_economics.md) and [`knowledge/sybil.realities.yaml`](../knowledge/sybil.realities.yaml) before relying on dedup as “security.”
 
+## Wire transport
+
+Validator→miner calls use Bittensor Dendrite/Axon today; synapse **`body_hash`** vs **`computed_body_hash`** catches tampering — [transport.md](transport.md).
+
 ## Comparator
 
 Optional hook ([comparator.md](comparator.md)). If any validator enables it, all must share `LEMMA_COMPARATOR_CMD` or scores diverge.

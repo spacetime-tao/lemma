@@ -6,6 +6,8 @@ Walkthrough: [getting-started.md](getting-started.md) — `lemma setup` (validat
 
 Validators **always** wait for subnet epoch boundaries before each round — no timer-only mode; every operator shares the same on-chain cadence.
 
+Validator→miner transport uses Bittensor Dendrite/Axon and synapse body-hash integrity — [transport.md](transport.md).
+
 Judge: Chutes when prompted is the documented default; Anthropic and custom OpenAI-compatible URLs optional.
 
 ## Test scoring (simple map)

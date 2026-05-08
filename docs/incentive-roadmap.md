@@ -54,7 +54,7 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 
 ### Transport (long-term)
 
-- [ ] **Axon/Dendrite** — Document current synapse + body-hash rationale; plan HTTP + Epistula (or successor) when feasible (`knowledge/subnet.invariants.yaml` deprecation note).
+- [x] **Axon/Dendrite** — [transport.md](transport.md): current Dendrite/synapse + body-hash integrity; relation to `knowledge/subnet.invariants.yaml` deprecation for **new** designs vs Lemma’s shipping stack.
 
 ### Judge input robustness
 
