@@ -12,6 +12,8 @@ class ScoredEntry:
     reasoning_score: float
     tokens: int
     composite: float
+    #: Fingerprint of (theorem, proof, trace) for identical-output dedup (optional).
+    submission_fp: str = ""
 
 
 def _dominates(a: ScoredEntry, b: ScoredEntry) -> bool:

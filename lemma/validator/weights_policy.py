@@ -10,6 +10,7 @@ def build_full_weights(
     weights_by_uid: dict[int, float],
     *,
     empty_policy: Literal["skip", "uniform"],
+    exclude_uid: int | None = None,
 ) -> tuple[list[float], bool]:
     """
     Build length-``n`` weight vector.
@@ -31,6 +32,14 @@ def build_full_weights(
         return [], True
 
     if empty_policy == "uniform":
+        if exclude_uid is not None and 0 <= exclude_uid < n and n > 1:
+            denom = max(1, n - 1)
+            u = 1.0 / denom
+            full = [0.0] * n
+            for i in range(n):
+                if i != exclude_uid:
+                    full[i] = u
+            return full, False
         u = 1.0 / n
         return [u] * n, False
 

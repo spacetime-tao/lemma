@@ -1,0 +1,37 @@
+from lemma.scoring.pareto import ScoredEntry
+from lemma.scoring.reputation import ReputationStore, apply_ema_to_entries, load_reputation, save_reputation
+
+
+def test_apply_ema_smoothes() -> None:
+    entries = [
+        ScoredEntry(uid=1, reasoning_score=1.0, tokens=10, composite=1.0, submission_fp=""),
+    ]
+    out, ema, _instant = apply_ema_to_entries(
+        entries,
+        alpha=0.5,
+        credibility_exponent=1.0,
+        prev_ema={1: 0.0},
+    )
+    assert abs(out[0].reasoning_score - 0.5) < 1e-9
+    assert abs(ema[1] - 0.5) < 1e-9
+
+
+def test_apply_ema_alpha_zero_no_smoothing() -> None:
+    entries = [ScoredEntry(uid=1, reasoning_score=0.7, tokens=3, composite=0.7, submission_fp="")]
+    out, ema, _ = apply_ema_to_entries(
+        entries,
+        alpha=0.0,
+        credibility_exponent=1.0,
+        prev_ema={1: 0.2},
+    )
+    assert abs(out[0].reasoning_score - 0.7) < 1e-9
+    assert abs(ema[1] - 0.7) < 1e-9
+
+
+def test_reputation_roundtrip(tmp_path) -> None:
+    p = tmp_path / "rep.json"
+    s = ReputationStore(ema_by_uid={0: 0.25, 3: 0.9})
+    save_reputation(p, s)
+    s2 = load_reputation(p)
+    assert s2.ema_by_uid[0] == 0.25
+    assert s2.ema_by_uid[3] == 0.9

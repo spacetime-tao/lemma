@@ -21,3 +21,12 @@ def test_empty_uniform() -> None:
     full, skip = build_full_weights(3, {}, empty_policy="uniform")
     assert not skip
     assert all(abs(x - 1 / 3) < 1e-9 for x in full)
+
+
+def test_empty_uniform_excludes_validator_uid() -> None:
+    full, skip = build_full_weights(4, {}, empty_policy="uniform", exclude_uid=2)
+    assert not skip
+    assert full[2] == 0.0
+    assert abs(sum(full) - 1.0) < 1e-9
+    for i in (0, 1, 3):
+        assert abs(full[i] - 1.0 / 3.0) < 1e-9

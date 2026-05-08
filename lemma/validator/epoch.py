@@ -5,13 +5,14 @@ from __future__ import annotations
 import asyncio
 import os
 import time
+from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 
 import bittensor as bt
 from loguru import logger
 
 from lemma.common.block_deadline import compute_forward_deadline_and_wait
-from lemma.common.problem_seed import resolve_problem_seed
+from lemma.common.problem_seed import mix_sub_problem_seed, resolve_problem_seed
 from lemma.common.split_timeout import split_timeout_multiplier
 from lemma.common.subtensor import get_subtensor
 from lemma.common.uids import axon_list_for_uids
@@ -22,10 +23,12 @@ from lemma.judge.fingerprint import rubric_sha256
 from lemma.judge.openai_judge import OpenAIJudge
 from lemma.lean.sandbox import VerifyResult
 from lemma.lean.verify_runner import run_lean_verify
-from lemma.problems.base import ProblemSource
+from lemma.problems.base import Problem, ProblemSource
 from lemma.protocol import LemmaChallenge, synapse_miner_response_integrity_ok
 from lemma.reasoning.format import effective_reasoning_text
+from lemma.scoring.dedup import dedup_coldkeys, dedup_identical_submissions
 from lemma.scoring.pareto import ScoredEntry, pareto_weights
+from lemma.scoring.reputation import apply_ema_to_entries, load_reputation, save_reputation
 from lemma.scoring.rewards import entry_from_scores
 from lemma.validator import query as q
 from lemma.validator.training_export import append_epoch_jsonl, training_record
@@ -83,6 +86,40 @@ def _build_judge(settings: LemmaSettings, dry_run: bool) -> Judge:
     )
 
 
+def _coldkey_for_uid(metagraph: object, uid: int) -> str:
+    cks = getattr(metagraph, "coldkeys", None)
+    if cks is None:
+        return f"uid:{uid}"
+    try:
+        v = cks[uid]
+        if hasattr(v, "item"):
+            return str(v.item())
+        return str(v)
+    except Exception:
+        return f"uid:{uid}"
+
+
+def _merge_multi_round_entries(uid_groups: dict[int, list[ScoredEntry]]) -> list[ScoredEntry]:
+    merged: list[ScoredEntry] = []
+    for uid, es in uid_groups.items():
+        if len(es) == 1:
+            merged.append(es[0])
+            continue
+        rs = sum(e.reasoning_score for e in es) / len(es)
+        ts = int(round(sum(e.tokens for e in es) / len(es)))
+        cs = sum(e.composite for e in es) / len(es)
+        merged.append(
+            ScoredEntry(
+                uid=uid,
+                reasoning_score=rs,
+                tokens=ts,
+                composite=cs,
+                submission_fp="",
+            ),
+        )
+    return merged
+
+
 async def run_epoch(
     settings: LemmaSettings,
     problem_source: ProblemSource,
@@ -117,141 +154,219 @@ async def run_epoch(
         quantize_blocks=settings.problem_seed_quantize_blocks,
         subtensor=subtensor,
     )
-    problem = problem_source.sample(seed=problem_seed)
-    verify_timeout_s = settings.lean_verify_timeout_s
-    wait_scale = 1.0
-    if settings.timeout_scale_by_split:
-        wait_scale = split_timeout_multiplier(
-            problem.split,
-            settings.timeout_split_easy_mult,
-            settings.timeout_split_medium_mult,
-            settings.timeout_split_hard_mult,
-        )
-        verify_timeout_s = max(1, int(round(float(settings.lean_verify_timeout_s) * wait_scale)))
 
-    deadline_block, forward_wait_s = compute_forward_deadline_and_wait(
-        settings=settings,
-        subtensor=subtensor,
-        cur_block=int(cur_block),
-        seed_tag=problem_seed_tag,
-        wait_scale=wait_scale,
-    )
-
-    synapse = LemmaChallenge(
-        theorem_id=problem.id,
-        theorem_statement=problem.challenge_source(),
-        imports=list(problem.imports),
-        lean_toolchain=problem.lean_toolchain,
-        mathlib_rev=problem.mathlib_rev,
-        deadline_unix=int(time.time()) + int(forward_wait_s),
-        deadline_block=deadline_block,
-        metronome_id=str(problem_seed),
-        timeout=forward_wait_s,
-    )
-
-    axons = axon_list_for_uids(metagraph, uids)
-    # Use async context manager so aiohttp ClientSession closes cleanly (avoids bittensor __del__ warnings).
-    async with bt.Dendrite(wallet=wallet) as dendrite:
-        responses = await q.query_miners(dendrite, axons, synapse, timeout=forward_wait_s)
-
+    rep_store = load_reputation(settings.lemma_reputation_state_path)
     judge = _build_judge(settings, dry_run)
 
-    candidates: list[tuple[int, LemmaChallenge]] = []
-    for uid, resp in zip(uids, responses, strict=True):
-        if not isinstance(resp, LemmaChallenge):
-            continue
-        if not resp.is_success:
-            continue
-        if not synapse_miner_response_integrity_ok(resp):
-            logger.warning(
-                "uid={} dropping response: synapse body_hash does not match computed_body_hash "
-                "(tampered payload or miner/validator version skew)",
-                uid,
-            )
-            continue
-        if not resp.proof_script:
-            continue
-        candidates.append((uid, resp))
-
-    if not candidates and uids:
-        n_ch = sum(1 for r in responses if isinstance(r, LemmaChallenge))
-        n_ok = sum(1 for r in responses if isinstance(r, LemmaChallenge) and r.is_success)
-        n_proof = sum(
-            1
-            for r in responses
-            if isinstance(r, LemmaChallenge) and r.is_success and (r.proof_script or "").strip()
-        )
-        logger.warning(
-            "epoch no miner candidates: queried_uids={} lemma_challenge_responses={} synapse_success={} "
-            "success_with_proof={} — miners unreachable/timed out, returned errors, empty proof, or "
-            "body_hash mismatch (see earlier uid= warnings). Check metagraph axon IP:port and inbound firewall.",
-            len(uids),
-            n_ch,
-            n_ok,
-            n_proof,
-        )
-
-    verify_sem = asyncio.Semaphore(max(1, settings.lemma_lean_verify_max_concurrent))
-
-    async def _verify_one(uid: int, resp: LemmaChallenge) -> tuple[int, LemmaChallenge, VerifyResult] | None:
-        async with verify_sem:
-            vr = await asyncio.to_thread(
-                run_lean_verify,
-                settings,
-                verify_timeout_s=verify_timeout_s,
-                problem=problem,
-                proof_script=resp.proof_script,
-            )
-        if not vr.passed:
-            logger.debug("uid={} verify failed: {}", uid, vr.reason)
-            return None
-        return (uid, resp, vr)
-
-    verified_results = await asyncio.gather(*[_verify_one(u, r) for u, r in candidates])
-    verified = [x for x in verified_results if x is not None]
-
-    judge_errors = 0
-    export_path = settings.training_export_jsonl
+    k_problems = max(1, int(settings.lemma_epoch_problem_count))
+    aggregate: dict[int, list[ScoredEntry]] = defaultdict(list)
     training_rows: list[dict[str, Any]] = []
-    judge_sem = asyncio.Semaphore(max(1, settings.lemma_judge_max_concurrent))
+    export_path = settings.training_export_jsonl
 
-    async def _score_one(item: tuple[int, LemmaChallenge, VerifyResult]) -> ScoredEntry | None:
-        nonlocal judge_errors
-        uid, resp, _vr = item
-        trace_text = effective_reasoning_text(resp)
-        try:
-            async with judge_sem:
-                rubric = await judge.score(
-                    resp.theorem_statement,
-                    trace_text,
-                    resp.proof_script or "",
+    total_verified = 0
+    total_scored = 0
+    judge_errors = 0
+    judge_parse_rejects = 0
+    dedup_dropped = 0
+    coldkey_dropped = 0
+    last_problem: Problem | None = None
+
+    export_lock = asyncio.Lock()
+
+    async with bt.Dendrite(wallet=wallet) as dendrite:
+        for sub_k in range(k_problems):
+            seed_k = problem_seed if k_problems == 1 else mix_sub_problem_seed(problem_seed, sub_k)
+            problem = problem_source.sample(seed=seed_k)
+            last_problem = problem
+
+            verify_timeout_s = settings.lean_verify_timeout_s
+            wait_scale = 1.0
+            if settings.timeout_scale_by_split:
+                wait_scale = split_timeout_multiplier(
+                    problem.split,
+                    settings.timeout_split_easy_mult,
+                    settings.timeout_split_medium_mult,
+                    settings.timeout_split_hard_mult,
                 )
-        except Exception as e:  # noqa: BLE001
-            judge_errors += 1
-            logger.warning("judge failed uid={} err={}", uid, e)
-            return None
-        if export_path:
-            training_rows.append(
-                training_record(
-                    block=cur_block,
-                    theorem_id=problem.id,
-                    uid=uid,
-                    resp=resp,
-                    rubric=rubric,
-                )
+                verify_timeout_s = max(1, int(round(float(settings.lean_verify_timeout_s) * wait_scale)))
+
+            deadline_block, forward_wait_s = compute_forward_deadline_and_wait(
+                settings=settings,
+                subtensor=subtensor,
+                cur_block=int(cur_block),
+                seed_tag=problem_seed_tag,
+                wait_scale=wait_scale,
             )
-        return entry_from_scores(uid, rubric, trace_text)
 
-    scored = [x for x in await asyncio.gather(*[_score_one(v) for v in verified]) if x is not None]
+            synapse = LemmaChallenge(
+                theorem_id=problem.id,
+                theorem_statement=problem.challenge_source(),
+                imports=list(problem.imports),
+                lean_toolchain=problem.lean_toolchain,
+                mathlib_rev=problem.mathlib_rev,
+                deadline_unix=int(time.time()) + int(forward_wait_s),
+                deadline_block=deadline_block,
+                metronome_id=str(seed_k),
+                timeout=forward_wait_s,
+            )
+
+            axons = axon_list_for_uids(metagraph, uids)
+            responses = await q.query_miners(dendrite, axons, synapse, timeout=forward_wait_s)
+
+            candidates: list[tuple[int, LemmaChallenge]] = []
+            for uid, resp in zip(uids, responses, strict=True):
+                if not isinstance(resp, LemmaChallenge):
+                    continue
+                if not resp.is_success:
+                    continue
+                if not synapse_miner_response_integrity_ok(resp):
+                    logger.warning(
+                        "uid={} dropping response: synapse body_hash does not match computed_body_hash "
+                        "(tampered payload or miner/validator version skew)",
+                        uid,
+                    )
+                    continue
+                if not resp.proof_script:
+                    continue
+                candidates.append((uid, resp))
+
+            if not candidates and uids:
+                n_ch = sum(1 for r in responses if isinstance(r, LemmaChallenge))
+                n_ok = sum(1 for r in responses if isinstance(r, LemmaChallenge) and r.is_success)
+                n_proof = sum(
+                    1
+                    for r in responses
+                    if isinstance(r, LemmaChallenge) and r.is_success and (r.proof_script or "").strip()
+                )
+                logger.warning(
+                    "epoch sub_round={}/{} no miner candidates: queried_uids={} lemma_challenge_responses={} "
+                    "synapse_success={} success_with_proof={}",
+                    sub_k + 1,
+                    k_problems,
+                    len(uids),
+                    n_ch,
+                    n_ok,
+                    n_proof,
+                )
+
+            verify_sem = asyncio.Semaphore(max(1, settings.lemma_lean_verify_max_concurrent))
+
+            async def _verify_one(
+                uid: int,
+                resp: LemmaChallenge,
+                *,
+                _sem: asyncio.Semaphore = verify_sem,
+                _vto: int = verify_timeout_s,
+                _prob: Problem = problem,
+            ) -> tuple[int, LemmaChallenge, VerifyResult] | None:
+                async with _sem:
+                    vr = await asyncio.to_thread(
+                        run_lean_verify,
+                        settings,
+                        verify_timeout_s=_vto,
+                        problem=_prob,
+                        proof_script=resp.proof_script,
+                    )
+                if not vr.passed:
+                    logger.debug("uid={} verify failed: {}", uid, vr.reason)
+                    return None
+                return (uid, resp, vr)
+
+            verified_results = await asyncio.gather(*[_verify_one(u, r) for u, r in candidates])
+            verified = [x for x in verified_results if x is not None]
+            total_verified += len(verified)
+
+            judge_sem = asyncio.Semaphore(max(1, settings.lemma_judge_max_concurrent))
+
+            async def _score_one(
+                item: tuple[int, LemmaChallenge, VerifyResult],
+                *,
+                _jsem: asyncio.Semaphore = judge_sem,
+                _theorem_id: str = problem.id,
+            ) -> tuple[ScoredEntry | None, str]:
+                uid_i, resp_i, _vr = item
+                trace_text = effective_reasoning_text(resp_i)
+                try:
+                    async with _jsem:
+                        rubric = await judge.score(
+                            resp_i.theorem_statement,
+                            trace_text,
+                            resp_i.proof_script or "",
+                        )
+                except ValueError as err_parse:
+                    logger.warning("judge parse/validation failed uid={} err={}", uid_i, err_parse)
+                    return None, "parse"
+                except Exception as err_judge:  # noqa: BLE001
+                    logger.warning("judge failed uid={} err={}", uid_i, err_judge)
+                    return None, "error"
+                if export_path:
+                    async with export_lock:
+                        training_rows.append(
+                            training_record(
+                                block=cur_block,
+                                theorem_id=_theorem_id,
+                                uid=uid_i,
+                                resp=resp_i,
+                                rubric=rubric,
+                            ),
+                        )
+                ent = entry_from_scores(
+                    uid_i,
+                    rubric,
+                    trace_text,
+                    theorem_statement=resp_i.theorem_statement,
+                    proof_script=resp_i.proof_script or "",
+                    proof_weight=settings.lemma_score_proof_weight,
+                    token_model=settings.lemma_pareto_token_model,
+                )
+                return ent, "ok"
+
+            score_pairs = await asyncio.gather(*[_score_one(v) for v in verified])
+            scored_sub: list[ScoredEntry] = []
+            for ent, tag in score_pairs:
+                if tag == "parse":
+                    judge_parse_rejects += 1
+                    judge_errors += 1
+                elif tag == "error":
+                    judge_errors += 1
+                elif ent is not None:
+                    scored_sub.append(ent)
+            total_scored += len(scored_sub)
+
+            if settings.lemma_scoring_dedup_identical and scored_sub:
+                scored_sub, ddrop = dedup_identical_submissions(scored_sub, lambda e: e.submission_fp)
+                dedup_dropped += ddrop
+
+            for e in scored_sub:
+                aggregate[e.uid].append(e)
+
+    scored = _merge_multi_round_entries(aggregate)
+
+    if settings.lemma_scoring_coldkey_dedup and scored:
+        scored, ckdrop = dedup_coldkeys(scored, lambda u: _coldkey_for_uid(metagraph, u))
+        coldkey_dropped += ckdrop
+
+    alpha = float(settings.lemma_reputation_ema_alpha)
+    if alpha > 0.0 and scored and not dry_run:
+        scored, rep_store.ema_by_uid, _ = apply_ema_to_entries(
+            scored,
+            alpha=alpha,
+            credibility_exponent=settings.lemma_reputation_credibility_exponent,
+            prev_ema=rep_store.ema_by_uid,
+        )
+        try:
+            save_reputation(settings.lemma_reputation_state_path, rep_store)
+        except OSError as e:
+            logger.warning("could not save reputation state: {}", e)
+
     weights_by_uid = pareto_weights(scored)
 
     logger.debug(
         "epoch concurrency caps used: LEMMA_LEAN_VERIFY_MAX_CONCURRENT={} LEMMA_JUDGE_MAX_CONCURRENT={} "
-        "candidates={} verified={}",
+        "k_problems={}",
         settings.lemma_lean_verify_max_concurrent,
         settings.lemma_judge_max_concurrent,
-        len(candidates),
-        len(verified),
+        k_problems,
     )
 
     if export_path and training_rows:
@@ -266,23 +381,31 @@ async def run_epoch(
         n,
         weights_by_uid,
         empty_policy=settings.empty_epoch_weights_policy,
+        exclude_uid=my_uid if isinstance(my_uid, int) else None,
     )
 
     elapsed = time.perf_counter() - t_epoch
+    split = last_problem.split if last_problem else "?"
+    thm = last_problem.id if last_problem else "?"
     logger.info(
         "lemma_epoch_summary chain_head_block={} problem_seed={} problem_seed_tag={} split={} "
-        "theorem_id={} verified={} scored={} pareto_entries={} judge_errors={} skip_set_weights={} "
-        "seconds={:.2f}  "
-        "[verified=Lean proof OK; scored=judge rubric applied; pareto_entries=weight rows]",
+        "theorem_id={} k_problems={} verified={} scored={} pareto_entries={} "
+        "judge_errors={} judge_parse_rejects={} dedup_dropped={} coldkey_dropped={} "
+        "skip_set_weights={} seconds={:.2f}  "
+        "[verified=Lean proof OK; scored=proof+judge blend then EMA/dedup; pareto_entries=weight rows]",
         cur_block,
         problem_seed,
         problem_seed_tag,
-        problem.split,
-        problem.id,
-        len(verified),
-        len(scored),
+        split,
+        thm,
+        k_problems,
+        total_verified,
+        total_scored,
         len(weights_by_uid),
         judge_errors,
+        judge_parse_rejects,
+        dedup_dropped,
+        coldkey_dropped,
         skip_chain_write,
         elapsed,
     )

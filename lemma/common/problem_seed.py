@@ -126,6 +126,11 @@ def problem_sample_seed_block(chain_head_block: int, quantize_blocks: int) -> in
     return (b // q) * q
 
 
+def mix_sub_problem_seed(base_seed: int, sub_round: int) -> int:
+    """Secondary seed for ``LEMMA_EPOCH_PROBLEM_COUNT`` > 1 (deterministic, avoids collision with base)."""
+    return int(base_seed) + int(sub_round) * 1_000_003
+
+
 def subnet_epoch_index_seed(chain_head_block: int, netuid: int, tempo: int) -> int:
     """Epoch bucket index; uses stride ``tempo + 1`` (same as ``blocks_until_next_epoch``).
 

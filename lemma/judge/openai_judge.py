@@ -7,6 +7,7 @@ from openai import AsyncOpenAI
 from lemma.common.async_llm_retry import TRANSIENT_OPENAI_COMPAT, async_llm_retry
 from lemma.judge.base import RubricScore
 from lemma.judge.json_util import parse_rubric_json
+from lemma.judge.prompt_sanitize import sanitize_miner_fenced_block
 from lemma.judge.prompts import RUBRIC_SYSTEM, RUBRIC_USER_TEMPLATE
 
 
@@ -34,7 +35,11 @@ class OpenAIJudge:
         self._retry_attempts = max(1, int(retry_attempts))
 
     async def score(self, theorem: str, trace: str, proof: str) -> RubricScore:
-        user = RUBRIC_USER_TEMPLATE.format(theorem=theorem, trace=trace or "", proof=proof or "")
+        user = RUBRIC_USER_TEMPLATE.format(
+            theorem=sanitize_miner_fenced_block("theorem", theorem),
+            trace=sanitize_miner_fenced_block("trace", trace),
+            proof=sanitize_miner_fenced_block("proof", proof),
+        )
 
         async def _call() -> str:
             resp = await self._client.chat.completions.create(

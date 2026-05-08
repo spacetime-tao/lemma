@@ -595,6 +595,104 @@ class LemmaSettings(BaseSettings):
         description="Append one JSON object per scored miner per epoch (PRM dataset export).",
     )
 
+    # Scoring / incentive hard-migration (validators)
+    lemma_score_proof_weight: float = Field(
+        default=0.65,
+        ge=0.0,
+        le=1.0,
+        validation_alias=AliasChoices("LEMMA_SCORE_PROOF_WEIGHT", "lemma_score_proof_weight"),
+        description=(
+            "Blend intrinsic proof-text heuristic with judge rubric: "
+            "round_score = w * proof_intrinsic + (1-w) * judge_composite."
+        ),
+    )
+    lemma_scoring_dedup_identical: bool = Field(
+        default=True,
+        validation_alias=AliasChoices(
+            "LEMMA_SCORING_DEDUP_IDENTICAL",
+            "lemma_scoring_dedup_identical",
+        ),
+        description="Collapse identical (theorem, proof, trace) submissions; keep best round score per cluster.",
+    )
+    lemma_scoring_coldkey_dedup: bool = Field(
+        default=True,
+        validation_alias=AliasChoices(
+            "LEMMA_SCORING_COLDKEY_DEDUP",
+            "lemma_scoring_coldkey_dedup",
+        ),
+        description="Keep only the best-scoring hotkey per coldkey (metagraph.coldkeys) each epoch.",
+    )
+    lemma_reputation_ema_alpha: float = Field(
+        default=0.08,
+        ge=0.0,
+        le=1.0,
+        validation_alias=AliasChoices(
+            "LEMMA_REPUTATION_EMA_ALPHA",
+            "lemma_reputation_ema_alpha",
+        ),
+        description="EMA smoothing for per-UID scores before Pareto weights (0 disables smoothing).",
+    )
+    lemma_reputation_credibility_exponent: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=4.0,
+        validation_alias=AliasChoices(
+            "LEMMA_REPUTATION_CREDIBILITY_EXPONENT",
+            "lemma_reputation_credibility_exponent",
+        ),
+        description="Multiply EMA score by credibility**exponent (1.0 = off; reserved for future credibility EMA).",
+    )
+    lemma_reputation_state_path: Path | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "LEMMA_REPUTATION_STATE_PATH",
+            "lemma_reputation_state_path",
+        ),
+        description="JSON file for per-UID EMA persistence (default: ~/.lemma/validator_reputation.json).",
+    )
+    lemma_epoch_problem_count: int = Field(
+        default=1,
+        ge=1,
+        le=32,
+        validation_alias=AliasChoices(
+            "LEMMA_EPOCH_PROBLEM_COUNT",
+            "lemma_epoch_problem_count",
+        ),
+        description="Number of distinct theorems sampled per validator epoch (sequential miner queries).",
+    )
+    lemma_pareto_token_model: str = Field(
+        default="gpt-4",
+        validation_alias=AliasChoices(
+            "LEMMA_PARETO_TOKEN_MODEL",
+            "lemma_pareto_token_model",
+        ),
+        description="tiktoken model name for Pareto trace-length axis (approximate).",
+    )
+    lemma_commit_reveal_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "LEMMA_COMMIT_REVEAL_ENABLED",
+            "lemma_commit_reveal_enabled",
+        ),
+        description="Reserved: two-phase commit-reveal for miner proofs (not yet wired).",
+    )
+    lemma_miner_verify_attest_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "LEMMA_MINER_VERIFY_ATTEST_ENABLED",
+            "lemma_miner_verify_attest_enabled",
+        ),
+        description="Reserved: miners submit signed Lean verify attestations (not yet wired).",
+    )
+    lemma_judge_profile_attest_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "LEMMA_JUDGE_PROFILE_ATTEST_ENABLED",
+            "lemma_judge_profile_attest_enabled",
+        ),
+        description="Reserved: cross-validator judge profile attestation (not yet wired).",
+    )
+
     # Miner — resource limits and validator gate
     miner_min_validator_stake: float = Field(
         default=0.0,

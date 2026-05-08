@@ -8,6 +8,20 @@
 2. Among passing proofs, the LLM judge scores the reasoning trace.
 3. Pareto weighting favors better scores and shorter traces ([`pareto.py`](../lemma/scoring/pareto.py)).
 
+## Known gameability surfaces (plain language)
+
+No subnet is perfectly ungameable; the goal is to make the easiest strategy also the useful one.
+
+- **Predictable problem selection:** if the pool is tiny/static, miners can pre-solve. Mitigation: rotate/expand templates and keep registry upgrades coordinated.
+- **Prompt injection in miner traces:** miners can write manipulative text, but it is untrusted input. Mitigation: Lean pass is required first, judge uses a fixed rubric/schema, and validators keep judge stack pins aligned.
+- **Latency and infra advantages:** warm caches and faster hardware can win ties. Mitigation: this is visible/expected operational competition, and correctness still requires Lean.
+- **Judge-style over-optimization:** miners may tune wording for rubric points. Mitigation: Pareto combines rubric with brevity and operators can evolve rubric/profile hashes.
+- **Config drift across validators:** mismatched judge/model/config breaks fairness. Mitigation: publish one canonical stack and enforce `JUDGE_PROFILE_SHA256_EXPECTED`.
+
+One-line mental model: public deterministic rules are okay; you still need correct Lean proofs and strong judged reasoning under the same pinned validator policy.
+
+For post-audit scoring changes (proof/judge blend, dedup, EMA, multi-theorem epochs, reserved protocol flags), see [incentive_migration.md](incentive_migration.md).
+
 ## Validators querying your axon many times
 
 Each forward is its own response. **Rewards are not a lifetime XP total.** They come from how you **rank in validator rounds where your answer is actually scored** and validators run **`set_weights`**. Doing well in **several** scored rounds can matter across **those** rounds; repeating the same success **offline** does not by itself stack on-chain.

@@ -1,0 +1,13 @@
+import pytest
+from lemma.common.config import LemmaSettings
+from lemma.validator.protocol_migration import validate_protocol_feature_flags
+
+
+def test_validate_flags_ok_by_default() -> None:
+    validate_protocol_feature_flags(LemmaSettings())
+
+
+def test_commit_reveal_flag_errors() -> None:
+    s = LemmaSettings.model_construct(lemma_commit_reveal_enabled=True)
+    with pytest.raises(SystemExit, match="not implemented"):
+        validate_protocol_feature_flags(s)

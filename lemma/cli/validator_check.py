@@ -129,6 +129,27 @@ def run_validator_check(settings: LemmaSettings) -> int:
                 "ANTHROPIC_API_KEY missing — validator will use FakeJudge (not for production scoring).",
             )
 
+    if (
+        settings.lemma_commit_reveal_enabled
+        or settings.lemma_miner_verify_attest_enabled
+        or settings.lemma_judge_profile_attest_enabled
+    ):
+        fatal.append(
+            "Reserved protocol flags are enabled (LEMMA_COMMIT_REVEAL_ENABLED / "
+            "LEMMA_MINER_VERIFY_ATTEST_ENABLED / LEMMA_JUDGE_PROFILE_ATTEST_ENABLED) but are not "
+            "implemented yet — see docs/incentive_migration.md",
+        )
+
+    click.echo(
+        stylize(
+            f"INFO scoring  LEMMA_SCORE_PROOF_WEIGHT={settings.lemma_score_proof_weight}  "
+            f"LEMMA_REPUTATION_EMA_ALPHA={settings.lemma_reputation_ema_alpha}  "
+            f"LEMMA_EPOCH_PROBLEM_COUNT={settings.lemma_epoch_problem_count}  "
+            "(docs/incentive_migration.md)",
+            dim=True,
+        ),
+    )
+
     # --- Chain + wallet / UID ---
     subtensor: bt.Subtensor | None = None
     head: int | None = None

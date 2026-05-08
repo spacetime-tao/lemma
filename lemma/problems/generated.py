@@ -396,6 +396,92 @@ def _b_finset_union_card_hard(rng: random.Random, topic: str, seed: int, name: s
     )
 
 
+def _b_mul_add_distrib_nat_medium(rng: random.Random, topic: str, seed: int, name: str) -> Problem:
+    a, b, c = rng.randint(1, 30), rng.randint(1, 30), rng.randint(1, 30)
+    body = f"""theorem {name} : ({a} + {b}) * {c} = {a} * {c} + {b} * {c} := by
+  sorry"""
+    return _mk_problem(
+        seed=seed,
+        topic=topic,
+        split="medium",
+        theorem_name=name,
+        type_expr=f"({a} + {b}) * {c} = {a} * {c} + {b} * {c}",
+        challenge_body=body,
+    )
+
+
+def _b_sq_nonneg_real_medium(rng: random.Random, topic: str, seed: int, name: str) -> Problem:
+    body = f"""theorem {name} (x : ℝ) : x * x ≥ 0 := by
+  sorry"""
+    return _mk_problem(
+        seed=seed,
+        topic=topic,
+        split="medium",
+        theorem_name=name,
+        type_expr="∀ x : ℝ, x * x ≥ 0",
+        challenge_body=body,
+    )
+
+
+def _b_abs_triangle_int_medium(rng: random.Random, topic: str, seed: int, name: str) -> Problem:
+    body = f"""theorem {name} (x y : ℤ) : |x + y| ≤ |x| + |y| := by
+  sorry"""
+    return _mk_problem(
+        seed=seed,
+        topic=topic,
+        split="medium",
+        theorem_name=name,
+        type_expr="∀ x y : ℤ, |x + y| ≤ |x| + |y|",
+        challenge_body=body,
+    )
+
+
+def _b_finset_filter_card_le_medium(rng: random.Random, topic: str, seed: int, name: str) -> Problem:
+    n = rng.randint(3, 24)
+    body = f"""theorem {name} (P : Nat → Prop) [DecidablePred P] :
+    (Finset.filter P (Finset.range {n})).card ≤ (Finset.range {n}).card := by
+  sorry"""
+    return _mk_problem(
+        seed=seed,
+        topic=topic,
+        split="medium",
+        theorem_name=name,
+        type_expr=f"∀ (P : Nat → Prop) [DecidablePred P], "
+        f"(Finset.filter P (Finset.range {n})).card ≤ (Finset.range {n}).card",
+        challenge_body=body,
+    )
+
+
+def _b_sum_range_succ_nat_medium(rng: random.Random, topic: str, seed: int, name: str) -> Problem:
+    n = rng.randint(2, 18)
+    body = f"""theorem {name} :
+    (∑ i in Finset.range ({n} + 1), (i : Nat)) = (∑ i in Finset.range {n}, (i : Nat)) + {n} := by
+  sorry"""
+    return _mk_problem(
+        seed=seed,
+        topic=topic,
+        split="medium",
+        theorem_name=name,
+        type_expr=f"(∑ i in Finset.range ({n} + 1), (i : Nat)) = "
+        f"(∑ i in Finset.range {n}, (i : Nat)) + {n}",
+        challenge_body=body,
+    )
+
+
+def _b_pow_two_mul_self_nat_hard(rng: random.Random, topic: str, seed: int, name: str) -> Problem:
+    k = rng.randint(2, 9)
+    body = f"""theorem {name} (m : Nat) : m ^ {k} * m = m ^ ({k} + 1) := by
+  sorry"""
+    return _mk_problem(
+        seed=seed,
+        topic=topic,
+        split="hard",
+        theorem_name=name,
+        type_expr=f"∀ m : Nat, m ^ {k} * m = m ^ ({k} + 1)",
+        challenge_body=body,
+    )
+
+
 def _bind_builder(builder_index: int, fn: BuilderFn) -> Callable[[random.Random, str, int], Problem]:
     """Capture builder index so theorem names stay unique per (seed, template)."""
 
@@ -438,6 +524,12 @@ _RAW_BUILDERS: tuple[tuple[Split, BuilderFn], ...] = (
     ("hard", _b_inf_many_primes_hard),
     ("hard", _b_sqrt2_irrational_hard),
     ("hard", _b_finset_union_card_hard),
+    ("medium", _b_mul_add_distrib_nat_medium),
+    ("medium", _b_sq_nonneg_real_medium),
+    ("medium", _b_abs_triangle_int_medium),
+    ("medium", _b_finset_filter_card_le_medium),
+    ("medium", _b_sum_range_succ_nat_medium),
+    ("hard", _b_pow_two_mul_self_nat_hard),
 )
 
 # Consensus-critical: append-only ordering; indices appear in ``_theorem_name``.
