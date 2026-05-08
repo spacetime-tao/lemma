@@ -33,6 +33,11 @@ CHAIN_ENDPOINT_TEST = "wss://test.finney.opentensor.ai:443"
 # Lemma subnet on testnet
 LEMMA_TESTNET_NETUID = 467
 
+# Finney (mainnet) — not wired in ``collect_chain_updates`` yet. When Lemma registers on Finney, add a
+# branch here (and a wizard/menu option if desired). Standard RPC is:
+#   ``wss://entrypoint-finney.opentensor.ai:443``
+# Set ``NETUID`` to the assigned subnet id (not sn0 — that is the root network).
+
 
 def _require_secret(prompt: str) -> str:
     key = click.prompt(prompt, hide_input=True).strip()
