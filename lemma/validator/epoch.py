@@ -25,6 +25,11 @@ from lemma.lean.sandbox import VerifyResult
 from lemma.lean.verify_runner import run_lean_verify
 from lemma.problems.base import Problem, ProblemSource
 from lemma.protocol import LemmaChallenge, synapse_miner_response_integrity_ok
+from lemma.protocol_attest import (
+    attest_spot_should_full_verify,
+    miner_verify_attest_message,
+    verify_miner_verify_attest_signature,
+)
 from lemma.reasoning.format import effective_reasoning_text
 from lemma.scoring.dedup import dedup_coldkeys, dedup_identical_submissions
 from lemma.scoring.pareto import ScoredEntry, pareto_weights
@@ -99,6 +104,19 @@ def _coldkey_for_uid(metagraph: object, uid: int) -> str:
         return f"uid:{uid}"
 
 
+def _hotkey_ss58_for_uid(metagraph: object, uid: int) -> str | None:
+    hks = getattr(metagraph, "hotkeys", None)
+    if hks is None:
+        return None
+    try:
+        v = hks[uid]
+        if hasattr(v, "item"):
+            return str(v.item())
+        return str(v)
+    except Exception:
+        return None
+
+
 def _merge_multi_round_entries(uid_groups: dict[int, list[ScoredEntry]]) -> list[ScoredEntry]:
     merged: list[ScoredEntry] = []
     for uid, es in uid_groups.items():
@@ -170,6 +188,7 @@ async def run_epoch(
     dedup_dropped = 0
     coldkey_dropped = 0
     deadline_rejects = 0
+    attest_rejects = 0
     last_problem: Problem | None = None
 
     export_lock = asyncio.Lock()
@@ -242,6 +261,37 @@ async def run_epoch(
                     continue
                 candidates.append((uid, resp))
 
+            if settings.lemma_miner_verify_attest_enabled:
+                filt_att: list[tuple[int, LemmaChallenge]] = []
+                for uid_a, resp_a in candidates:
+                    sig_a = (resp_a.miner_verify_attest_signature_hex or "").strip()
+                    if not sig_a:
+                        attest_rejects += 1
+                        logger.warning(
+                            "uid={} dropping response: miner_verify_attest_signature_hex missing",
+                            uid_a,
+                        )
+                        continue
+                    hk_a = _hotkey_ss58_for_uid(metagraph, uid_a)
+                    if not hk_a:
+                        attest_rejects += 1
+                        logger.warning("uid={} dropping response: no metagraph hotkey", uid_a)
+                        continue
+                    msg_a = miner_verify_attest_message(resp_a)
+                    if not verify_miner_verify_attest_signature(
+                        hotkey_ss58=hk_a,
+                        message=msg_a,
+                        signature_hex=sig_a,
+                    ):
+                        attest_rejects += 1
+                        logger.warning(
+                            "uid={} dropping response: miner_verify_attest signature invalid",
+                            uid_a,
+                        )
+                        continue
+                    filt_att.append((uid_a, resp_a))
+                candidates = filt_att
+
             if not candidates and uids:
                 n_ch = sum(1 for r in responses if isinstance(r, LemmaChallenge))
                 n_ok = sum(1 for r in responses if isinstance(r, LemmaChallenge) and r.is_success)
@@ -262,6 +312,11 @@ async def run_epoch(
                 )
 
             verify_sem = asyncio.Semaphore(max(1, settings.lemma_lean_verify_max_concurrent))
+            spot_frac = (
+                float(settings.lemma_miner_verify_attest_spot_verify_fraction)
+                if settings.lemma_miner_verify_attest_enabled
+                else 1.0
+            )
 
             async def _verify_one(
                 uid: int,
@@ -271,6 +326,18 @@ async def run_epoch(
                 _vto: int = verify_timeout_s,
                 _prob: Problem = problem,
             ) -> tuple[int, LemmaChallenge, VerifyResult] | None:
+                if settings.lemma_miner_verify_attest_enabled:
+                    if not attest_spot_should_full_verify(
+                        uid=uid,
+                        theorem_id=_prob.id,
+                        metronome_id=str(resp.metronome_id or ""),
+                        spot_verify_fraction=spot_frac,
+                    ):
+                        return (
+                            uid,
+                            resp,
+                            VerifyResult(passed=True, reason="attest_trusted"),
+                        )
                 async with _sem:
                     vr = await asyncio.to_thread(
                         run_lean_verify,
@@ -416,6 +483,7 @@ async def run_epoch(
         "lemma_epoch_summary chain_head_block={} problem_seed={} problem_seed_tag={} split={} "
         "theorem_id={} k_problems={} verified={} scored={} pareto_entries={} "
         "judge_errors={} judge_parse_rejects={} dedup_dropped={} coldkey_dropped={} deadline_rejects={} "
+        "attest_rejects={} "
         "skip_set_weights={} seconds={:.2f}  "
         "[verified=Lean proof OK; scored=proof+judge blend then EMA/dedup; pareto_entries=weight rows]",
         cur_block,
@@ -432,6 +500,7 @@ async def run_epoch(
         dedup_dropped,
         coldkey_dropped,
         deadline_rejects,
+        attest_rejects,
         skip_chain_write,
         elapsed,
     )

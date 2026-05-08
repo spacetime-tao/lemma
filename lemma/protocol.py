@@ -100,6 +100,13 @@ class LemmaChallenge(bt.Synapse):
         default=None,
         description="Optional miner metadata: model id, revision, temperature.",
     )
+    miner_verify_attest_signature_hex: str | None = Field(
+        default=None,
+        description=(
+            "Optional Sr25519 signature (hex, 128 chars) over ``protocol_attest.miner_verify_attest_message`` "
+            "when ``LEMMA_MINER_VERIFY_ATTEST_ENABLED=1``. Not part of ``body_hash``."
+        ),
+    )
 
     def deserialize(self) -> LemmaChallenge:
         """No-op: strings are already JSON-safe."""

@@ -25,10 +25,8 @@ This doc is for **operators and contributors** planning work—not step-by-step 
 
 Validator raises at startup if any of these is set to `1` until implemented—see [incentive_migration.md](incentive_migration.md).
 
-**Next slice:** implement `LEMMA_MINER_VERIFY_ATTEST_ENABLED` (synapse commitment + hotkey-signed digest + validator policy).
-
 - [ ] `LEMMA_COMMIT_REVEAL_ENABLED` — commit/reveal for anti-leak / copy pools
-- [ ] `LEMMA_MINER_VERIFY_ATTEST_ENABLED` — miner-signed verify artifacts + spot-check
+- [x] `LEMMA_MINER_VERIFY_ATTEST_ENABLED` — Sr25519 hotkey signature + deterministic spot full-verify fraction (`LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION`; miners require `LEMMA_MINER_LOCAL_VERIFY=1`)
 - [ ] `LEMMA_JUDGE_PROFILE_ATTEST_ENABLED` — cross-validator judge profile agreement
 
 ---
@@ -61,7 +59,7 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 
 ### Compute placement
 
-- [ ] **Validator Lean load** — Prefer miner-side verify + attest when `LEMMA_MINER_VERIFY_ATTEST_ENABLED` ships; until then document cost and trust tradeoffs (see `knowledge/subnet.invariants.yaml` compute distribution).
+- [ ] **Validator Lean load** — Lower **`LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION`** only after miners run attest + local verify; document trust vs CPU tradeoffs (`knowledge/subnet.invariants.yaml` compute distribution).
 
 ### Transport (long-term)
 

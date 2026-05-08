@@ -19,18 +19,18 @@ This document tracks **post-audit** mechanism changes in Lemma: proof-centric sc
 | Empty-epoch uniform | Validator UID excluded from uniform weights when possible. |
 | Response deadline | After each forward, responses with `deadline_block` set are dropped if chain head is already at or past that block (late HTTP completions are not scored). |
 | Frozen miniF2F catalog | `LEMMA_PROBLEM_SOURCE=frozen` requires **`LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`** (fail-closed otherwise). |
+| Miner verify attest | **`LEMMA_MINER_VERIFY_ATTEST_ENABLED=1`** — miners must run **`LEMMA_MINER_LOCAL_VERIFY=1`**, local Lean PASS, then Sr25519-sign `protocol_attest.miner_verify_attest_message(synapse)` into **`miner_verify_attest_signature_hex`**. Validators verify against metagraph hotkeys; **`LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION`** (default **1.0** = always full Docker verify) selects a deterministic subset for full Lean (lower values reduce validator CPU — trust tradeoff). |
 
 ## Reserved flags (not implemented)
 
 These fail validator startup if set to `1`:
 
 - `LEMMA_COMMIT_REVEAL_ENABLED` — two-phase commit / reveal for proofs (anti copy-pool gossip).
-- `LEMMA_MINER_VERIFY_ATTEST_ENABLED` — miners submit signed Lean verify artifacts; validators spot-check.
 - `LEMMA_JUDGE_PROFILE_ATTEST_ENABLED` — cross-validator agreement on judge profile hash (on-chain or quorum).
 
-Implementations should extend the synapse / signing path and add explicit tests before enabling defaults.
+**Implemented:** `LEMMA_MINER_VERIFY_ATTEST_ENABLED` — see table row above and `lemma/protocol_attest.py`.
 
-**Planned order (see [incentive-roadmap.md](incentive-roadmap.md)):** miner-side verify attestation first (cuts validator Lean load when paired with spot-checks), then commit–reveal and judge-profile quorum / chain hooks as designed.
+**Next:** commit–reveal and judge-profile quorum / chain hooks as designed ([incentive-roadmap.md](incentive-roadmap.md)).
 
 ## Generated registry
 
@@ -42,3 +42,4 @@ Adding templates changes `generated_registry_sha256`. Operators must run `lemma 
 - Dedup: `lemma/scoring/dedup.py`
 - Reputation: `lemma/scoring/reputation.py`
 - Problem mix: `lemma/problems/generated.py`, `lemma/common/problem_seed.py` (`mix_sub_problem_seed`)
+- Miner attest: `lemma/protocol_attest.py`, `lemma/miner/forward.py`, `lemma/validator/epoch.py`

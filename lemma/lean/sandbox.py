@@ -165,6 +165,7 @@ VerifyReason = Literal[
     "docker_error",
     "remote_error",
     "comparator_rejected",
+    "attest_trusted",
 ]
 
 

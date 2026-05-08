@@ -718,7 +718,23 @@ class LemmaSettings(BaseSettings):
             "LEMMA_MINER_VERIFY_ATTEST_ENABLED",
             "lemma_miner_verify_attest_enabled",
         ),
-        description="Reserved: miners submit signed Lean verify attestations (not yet wired).",
+        description=(
+            "Validators require Sr25519 attest signatures on miner responses; miners must run "
+            "`LEMMA_MINER_LOCAL_VERIFY=1` and sign after local PASS. See docs/incentive_migration.md."
+        ),
+    )
+    lemma_miner_verify_attest_spot_verify_fraction: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=1.0,
+        validation_alias=AliasChoices(
+            "LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION",
+            "lemma_miner_verify_attest_spot_verify_fraction",
+        ),
+        description=(
+            "Deterministic fraction of miner responses that still run full validator Lean verify "
+            "(rest trusted via attest only). 1.0 = always verify (default); 0.15 ≈ 15% heavy verify."
+        ),
     )
     lemma_judge_profile_attest_enabled: bool = Field(
         default=False,
