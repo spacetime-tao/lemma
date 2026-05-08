@@ -21,6 +21,7 @@ from lemma.common.config import LemmaSettings
 from lemma.common.logging import setup_logging
 from lemma.common.problem_seed import (
     blocks_until_challenge_may_change,
+    effective_chain_head_for_problem_seed,
     format_next_theorem_countdown,
     resolve_problem_seed,
 )
@@ -166,8 +167,10 @@ def _run_try_prover_session(
     except Exception as e:  # noqa: BLE001
         raise click.ClickException(str(e)) from e
 
+    slack_b = int(settings.lemma_problem_seed_chain_head_slack_blocks or 0)
+    seed_head = effective_chain_head_for_problem_seed(head, slack_b)
     problem_seed, seed_tag = resolve_problem_seed(
-        chain_head_block=head,
+        chain_head_block=seed_head,
         netuid=settings.netuid,
         mode=settings.problem_seed_mode,
         quantize_blocks=settings.problem_seed_quantize_blocks,
@@ -178,7 +181,7 @@ def _run_try_prover_session(
     deadline_block, timeout_s = compute_forward_deadline_and_wait(
         settings=settings,
         subtensor=subtensor,
-        cur_block=head,
+        cur_block=seed_head,
         seed_tag=seed_tag,
         wait_scale=1.0,
     )

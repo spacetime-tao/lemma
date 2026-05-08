@@ -24,6 +24,7 @@ This document tracks **post-audit** mechanism changes in Lemma: proof-centric sc
 | Judge profile peer attest | **`LEMMA_JUDGE_PROFILE_ATTEST_ENABLED=1`** — after pins match, HTTP GET each URL in **`LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS`** (comma-separated); response must be **plain 64-char hex** or JSON **`{"judge_profile_sha256":"..."}`** equal to this validator’s **`judge_profile_sha256`**. **`LEMMA_JUDGE_PROFILE_ATTEST_SKIP=1`** skips peer probes (solo / dev; logs WARN). Run **`lemma validator judge-attest-serve`** on peers to expose `GET /lemma/judge_profile_sha256`. Implementation: `lemma/validator/judge_profile_attest.py`. |
 | Training export profiles | **`LEMMA_TRAINING_EXPORT_JSONL`** optional JSONL; **`LEMMA_TRAINING_EXPORT_PROFILE`** = **`full`** (proof + rubric + `pareto_weight`) or **`reasoning_only`** (schema v2 — trace fields without proof, judge labels, or weights). See [training_export.md](training_export.md). |
 | Generated template RNG | Chain seed is **SHA256-mixed** before template selection (`lemma_generated_rng_v1`) so adjacent seeds pick less correlated templates; **`LEMMA_GENERATED_LEGACY_PLAIN_RNG=1`** restores legacy `Random(seed)`. Problem ids remain **`gen/<chain_seed>`**. |
+| Problem seed RPC slack | **`LEMMA_PROBLEM_SEED_CHAIN_HEAD_SLACK_BLOCKS`** pulls chain head back before `resolve_problem_seed` and forward HTTP deadline math — reduces ±1 RPC skew at quantize edges (`lemma/common/problem_seed.py`). |
 
 ## Generated registry
 

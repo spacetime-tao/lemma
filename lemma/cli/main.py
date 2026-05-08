@@ -911,6 +911,7 @@ def status_cmd() -> None:
     from lemma.common.block_deadline import forward_wait_at_chain_head
     from lemma.common.problem_seed import (
         blocks_until_challenge_may_change,
+        effective_chain_head_for_problem_seed,
         format_next_theorem_countdown,
     )
     from lemma.common.subtensor import get_subtensor
@@ -937,6 +938,8 @@ def status_cmd() -> None:
         chain_head_block=block,
     )
     problem_seed, seed_tag = ps2, st2
+    slack_b = int(settings.lemma_problem_seed_chain_head_slack_blocks or 0)
+    seed_head = effective_chain_head_for_problem_seed(block, slack_b)
     p = src.sample(seed=problem_seed)
     from lemma.cli.problem_views import echo_problem_card
 
@@ -964,10 +967,13 @@ def status_cmd() -> None:
     )
     click.echo(stylize("Chain & seed", fg="cyan"))
     click.echo(stylize("  chain_head       ", dim=True) + str(block))
+    if slack_b > 0:
+        click.echo(stylize("  problem_seed_chain_head ", dim=True) + str(seed_head))
+        click.echo(stylize("  slack_blocks     ", dim=True) + str(slack_b))
     click.echo(stylize("  problem_seed     ", dim=True) + str(problem_seed))
     click.echo(stylize("  seed_tag         ", dim=True) + str(seed_tag))
     _bl, _ = blocks_until_challenge_may_change(
-        chain_head_block=block,
+        chain_head_block=seed_head,
         netuid=settings.netuid,
         mode=settings.problem_seed_mode,
         quantize_blocks=settings.problem_seed_quantize_blocks,
@@ -975,7 +981,7 @@ def status_cmd() -> None:
         subtensor=subtensor,
     )
     _countdown = format_next_theorem_countdown(
-        chain_head_block=block,
+        chain_head_block=seed_head,
         blocks_until_theorem_changes=_bl,
         seconds_per_block=float(settings.block_time_sec_estimate),
     )
@@ -1995,7 +2001,7 @@ def problems_show(problem_id: str | None, current: bool, block: int | None) -> N
     With no arguments, defaults to ``--current`` (live chain head). Otherwise give exactly one of:
     PROBLEM_ID, ``--current`` / ``-c``, or ``--block N``.
     """
-    from lemma.common.problem_seed import resolve_problem_seed
+    from lemma.common.problem_seed import effective_chain_head_for_problem_seed, resolve_problem_seed
 
     settings = LemmaSettings()
     src = get_problem_source(settings)
@@ -2019,8 +2025,10 @@ def problems_show(problem_id: str | None, current: bool, block: int | None) -> N
 
         subtensor = get_subtensor(settings)
         head = int(subtensor.get_current_block())
+        slack_b = int(settings.lemma_problem_seed_chain_head_slack_blocks or 0)
+        seed_head = effective_chain_head_for_problem_seed(head, slack_b)
         seed, tag = resolve_problem_seed(
-            chain_head_block=head,
+            chain_head_block=seed_head,
             netuid=settings.netuid,
             mode=settings.problem_seed_mode,
             quantize_blocks=settings.problem_seed_quantize_blocks,
@@ -2037,14 +2045,14 @@ def problems_show(problem_id: str | None, current: bool, block: int | None) -> N
         )
         click.echo(
             stylize(
-                f"chain_head={head}  problem_seed={seed}  seed_tag={tag}\n",
+                f"chain_head={head}  problem_seed_chain_head={seed_head}  problem_seed={seed}  seed_tag={tag}\n",
                 dim=True,
             ),
             nl=False,
         )
         echo_next_theorem_countdown(
             settings,
-            chain_head_block=head,
+            chain_head_block=seed_head,
             seed_tag=tag,
             subtensor=subtensor,
         )
@@ -2058,8 +2066,10 @@ def problems_show(problem_id: str | None, current: bool, block: int | None) -> N
 
         subtensor = get_subtensor(settings)
         head = int(block)
+        slack_bb = int(settings.lemma_problem_seed_chain_head_slack_blocks or 0)
+        seed_head_b = effective_chain_head_for_problem_seed(head, slack_bb)
         seed, tag = resolve_problem_seed(
-            chain_head_block=head,
+            chain_head_block=seed_head_b,
             netuid=settings.netuid,
             mode=settings.problem_seed_mode,
             quantize_blocks=settings.problem_seed_quantize_blocks,
@@ -2077,14 +2087,14 @@ def problems_show(problem_id: str | None, current: bool, block: int | None) -> N
         )
         click.echo(
             stylize(
-                f"chain_head={head}  problem_seed={seed}  seed_tag={tag}\n",
+                f"chain_head={head}  problem_seed_chain_head={seed_head_b}  problem_seed={seed}  seed_tag={tag}\n",
                 dim=True,
             ),
             nl=False,
         )
         echo_next_theorem_countdown(
             settings,
-            chain_head_block=head,
+            chain_head_block=seed_head_b,
             seed_tag=tag,
             subtensor=subtensor,
         )

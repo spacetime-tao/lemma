@@ -40,7 +40,7 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 ### Validator protocol & fairness
 
 - [x] **`deadline_block` enforcement** — Validator drops responses when chain head ≥ synapse `deadline_block` after the forward returns.
-- [ ] **Cross-validator problem alignment** — Reduce RPC/skew splits at epoch boundaries (shared quantize / agreed head) so EMA compares like-with-like.
+- [x] **Cross-validator problem alignment** — **`LEMMA_PROBLEM_SEED_CHAIN_HEAD_SLACK_BLOCKS`** subtracts from RPC head before seed + forward deadline (`effective_chain_head_for_problem_seed`); CLI/status/rehearsal paths aligned. See [catalog-sources.md](catalog-sources.md).
 - [ ] **Workspace cache key** — Include submission/proof fingerprint so distinct miners don’t share incremental-build identity incorrectly.
 
 ### Trust & sybil

@@ -12,6 +12,10 @@ Two modes:
 
 Neither mode replaces governance alignment on ``LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`` /
 ``LEMMA_PROBLEM_SEED_MODE``, ``LEMMA_PROBLEM_SOURCE``, and identical code/registry hashes.
+
+Optional ``LEMMA_PROBLEM_SEED_CHAIN_HEAD_SLACK_BLOCKS`` subtracts from the RPC head before computing
+the seed (see ``effective_chain_head_for_problem_seed``) so validators that disagree by ±1 block still
+match at quantize boundaries.
 """
 
 from __future__ import annotations
@@ -129,6 +133,16 @@ def problem_sample_seed_block(chain_head_block: int, quantize_blocks: int) -> in
 def mix_sub_problem_seed(base_seed: int, sub_round: int) -> int:
     """Secondary seed for ``LEMMA_EPOCH_PROBLEM_COUNT`` > 1 (deterministic, avoids collision with base)."""
     return int(base_seed) + int(sub_round) * 1_000_003
+
+
+def effective_chain_head_for_problem_seed(chain_head_block: int, slack_blocks: int) -> int:
+    """Subtract ``slack_blocks`` from RPC head before ``resolve_problem_seed`` / forward deadline math.
+
+    Honest validators can disagree by ±1 on ``get_current_block()`` across endpoints; pulling the head
+    back slightly aligns quantize windows and subnet_epoch buckets without gossip.
+    """
+    s = max(0, int(slack_blocks))
+    return max(0, int(chain_head_block) - s)
 
 
 def subnet_epoch_index_seed(chain_head_block: int, netuid: int, tempo: int) -> int:

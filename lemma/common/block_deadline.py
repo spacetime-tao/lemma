@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 from lemma.common.config import LemmaSettings
-from lemma.common.problem_seed import blocks_until_quantize_boundary
+from lemma.common.problem_seed import (
+    blocks_until_quantize_boundary,
+    effective_chain_head_for_problem_seed,
+    resolve_problem_seed,
+)
 
 
 def _clamp_forward_wait_s(settings: LemmaSettings, raw_s: float) -> float:
@@ -63,12 +67,14 @@ def forward_wait_at_chain_head(
 ) -> tuple[int, str, int, float]:
     """Resolve the problem seed at ``chain_head_block`` and return forward HTTP wait (blocks × time, clamped).
 
+    Applies ``LEMMA_PROBLEM_SEED_CHAIN_HEAD_SLACK_BLOCKS`` to match ``run_epoch``.
+
     Returns ``(problem_seed, seed_tag, deadline_block, forward_wait_s)`` for status/doctor output.
     """
-    from lemma.common.problem_seed import resolve_problem_seed
-
+    slack = int(settings.lemma_problem_seed_chain_head_slack_blocks or 0)
+    head_eff = effective_chain_head_for_problem_seed(int(chain_head_block), slack)
     problem_seed, seed_tag = resolve_problem_seed(
-        chain_head_block=int(chain_head_block),
+        chain_head_block=head_eff,
         netuid=settings.netuid,
         mode=settings.problem_seed_mode,
         quantize_blocks=settings.problem_seed_quantize_blocks,
@@ -77,7 +83,7 @@ def forward_wait_at_chain_head(
     deadline_block, forward_wait_s = compute_forward_deadline_and_wait(
         settings=settings,
         subtensor=subtensor,
-        cur_block=int(chain_head_block),
+        cur_block=head_eff,
         seed_tag=seed_tag,
         wait_scale=wait_scale,
     )

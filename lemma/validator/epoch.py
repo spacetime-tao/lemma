@@ -12,7 +12,11 @@ import bittensor as bt
 from loguru import logger
 
 from lemma.common.block_deadline import compute_forward_deadline_and_wait
-from lemma.common.problem_seed import mix_sub_problem_seed, resolve_problem_seed
+from lemma.common.problem_seed import (
+    effective_chain_head_for_problem_seed,
+    mix_sub_problem_seed,
+    resolve_problem_seed,
+)
 from lemma.common.split_timeout import split_timeout_multiplier
 from lemma.common.subtensor import get_subtensor
 from lemma.common.uids import axon_list_for_uids
@@ -153,7 +157,9 @@ async def run_epoch(
     wallet = bt.Wallet(name=vc, hotkey=vh)
     subtensor = get_subtensor(settings)
     netuid = settings.netuid
-    cur_block = subtensor.get_current_block()
+    cur_block = int(subtensor.get_current_block())
+    slack_b = int(settings.lemma_problem_seed_chain_head_slack_blocks or 0)
+    seed_head = effective_chain_head_for_problem_seed(cur_block, slack_b)
     metagraph = subtensor.metagraph(netuid)
     raw_n = metagraph.n
     n = int(raw_n.item()) if hasattr(raw_n, "item") else int(raw_n)
@@ -171,7 +177,7 @@ async def run_epoch(
     logger.debug("canonical judge rubric sha256={}", rubric_sha256())
 
     problem_seed, problem_seed_tag = resolve_problem_seed(
-        chain_head_block=int(cur_block),
+        chain_head_block=seed_head,
         netuid=netuid,
         mode=settings.problem_seed_mode,
         quantize_blocks=settings.problem_seed_quantize_blocks,
@@ -220,7 +226,7 @@ async def run_epoch(
             deadline_block, forward_wait_s = compute_forward_deadline_and_wait(
                 settings=settings,
                 subtensor=subtensor,
-                cur_block=int(cur_block),
+                cur_block=seed_head,
                 seed_tag=problem_seed_tag,
                 wait_scale=wait_scale,
             )
@@ -380,13 +386,14 @@ async def run_epoch(
                 _sem: asyncio.Semaphore = verify_sem,
                 _vto: int = verify_timeout_s,
                 _prob: Problem = problem,
+                _spot_frac: float = spot_frac,
             ) -> tuple[int, LemmaChallenge, VerifyResult] | None:
                 if settings.lemma_miner_verify_attest_enabled:
                     if not attest_spot_should_full_verify(
                         uid=uid,
                         theorem_id=_prob.id,
                         metronome_id=str(resp.metronome_id or ""),
-                        spot_verify_fraction=spot_frac,
+                        spot_verify_fraction=_spot_frac,
                     ):
                         return (
                             uid,
@@ -541,13 +548,16 @@ async def run_epoch(
     split = last_problem.split if last_problem else "?"
     thm = last_problem.id if last_problem else "?"
     logger.info(
-        "lemma_epoch_summary chain_head_block={} problem_seed={} problem_seed_tag={} split={} "
+        "lemma_epoch_summary chain_head_block={} problem_seed_chain_head={} problem_seed_slack_blocks={} "
+        "problem_seed={} problem_seed_tag={} split={} "
         "theorem_id={} k_problems={} verified={} scored={} pareto_entries={} "
         "judge_errors={} judge_parse_rejects={} dedup_dropped={} coldkey_dropped={} deadline_rejects={} "
         "attest_rejects={} commit_reveal_rejects={} "
         "skip_set_weights={} seconds={:.2f}  "
         "[verified=Lean proof OK; scored=proof+judge blend then EMA/dedup; pareto_entries=weight rows]",
         cur_block,
+        seed_head,
+        slack_b,
         problem_seed,
         problem_seed_tag,
         split,

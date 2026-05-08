@@ -97,6 +97,20 @@ class LemmaSettings(BaseSettings):
             "subnet_epoch: seed from subnet Tempo stride via chain RPC (alternative cadence)."
         ),
     )
+    lemma_problem_seed_chain_head_slack_blocks: int = Field(
+        default=0,
+        ge=0,
+        le=128,
+        validation_alias=AliasChoices(
+            "LEMMA_PROBLEM_SEED_CHAIN_HEAD_SLACK_BLOCKS",
+            "lemma_problem_seed_chain_head_slack_blocks",
+        ),
+        description=(
+            "Subtract this many blocks from RPC chain head before problem_seed resolution and forward HTTP "
+            "deadline math (same value used for both). Default 0; try 1 if validators disagree on theorem by "
+            "one block near quantize boundaries."
+        ),
+    )
     minif2f_catalog_path: Path | None = Field(
         default=None,
         validation_alias=AliasChoices("LEMMA_MINIF2F_CATALOG_PATH", "minif2f_catalog_path"),

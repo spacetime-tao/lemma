@@ -1,12 +1,39 @@
 from lemma.common.problem_seed import (
     blocks_until_challenge_may_change,
     blocks_until_quantize_boundary,
+    effective_chain_head_for_problem_seed,
     first_block_of_next_seed_window,
     format_next_theorem_countdown,
     problem_sample_seed_block,
     resolve_problem_seed,
     subnet_epoch_index_seed,
 )
+
+
+def test_effective_chain_head_for_problem_seed() -> None:
+    assert effective_chain_head_for_problem_seed(100, 0) == 100
+    assert effective_chain_head_for_problem_seed(100, 1) == 99
+    assert effective_chain_head_for_problem_seed(0, 5) == 0
+
+
+def test_slack_aligns_quantize_straddlers() -> None:
+    """Slack=1 maps blocks 199 and 200 to the same quantize seed (q=100)."""
+    class _ST:
+        pass
+
+    q = 100
+    seeds = []
+    for raw in (199, 200):
+        h = effective_chain_head_for_problem_seed(raw, 1)
+        s, _ = resolve_problem_seed(
+            chain_head_block=h,
+            netuid=1,
+            mode="quantize",
+            quantize_blocks=q,
+            subtensor=_ST(),
+        )
+        seeds.append(s)
+    assert seeds[0] == seeds[1] == 100
 
 
 def test_problem_sample_seed_block_quantizes() -> None:
