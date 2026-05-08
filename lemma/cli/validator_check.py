@@ -118,9 +118,10 @@ def run_validator_check(settings: LemmaSettings) -> int:
     # --- Judge keys ---
     jp = (settings.judge_provider or "chutes").lower()
     if jp in ("openai", "chutes"):
-        if not (settings.openai_api_key or "").strip():
+        if not (settings.judge_openai_api_key_resolved() or "").strip():
             warn.append(
-                "OPENAI_API_KEY missing — validator will use FakeJudge (not for production scoring).",
+                "JUDGE_OPENAI_API_KEY (or legacy OPENAI_API_KEY) missing — validator will use FakeJudge "
+                "(not for production scoring).",
             )
     elif jp == "anthropic":
         if not (settings.anthropic_api_key or "").strip():

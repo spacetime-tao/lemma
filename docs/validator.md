@@ -2,9 +2,23 @@
 
 Walkthrough: [getting-started.md](getting-started.md) — `lemma setup` (validator or both) sets judge and `LEAN_SANDBOX_IMAGE` via prompts.
 
+**Short checklist:** `bash scripts/prebuild_lean_image.sh` → **`lemma rehearsal`** (prover + Lean + judge preview) → `lemma validator-check` until READY → `lemma validator start` (or **validator-check** then **validator** from `lemma start`). Same keys/chain setup as a miner if you run both roles.
+
 Validators **always** wait for subnet epoch boundaries before each round — no timer-only mode; every operator shares the same on-chain cadence.
 
 Judge: Chutes when prompted is the documented default; Anthropic and custom OpenAI-compatible URLs optional.
+
+## Test scoring (simple map)
+
+| What you want | Command |
+| --- | --- |
+| **End-to-end** preview (prover → Lean → judge) on the live theorem | **`lemma rehearsal`** (default Lean on; `--no-verify` to skip) |
+| Exercise **prover** only | `lemma try-prover` (add `--verify` for local Lean) |
+| Exercise **judge** alone on text files you saved | `lemma judge --trace reasoning.txt` (optional `--theorem` / `--proof` paths) |
+| Rehearse the **full validator** without `set_weights` | `lemma validator dry-run` — rubric step uses **FakeJudge** by default; set **`LEMMA_DRY_RUN_REAL_JUDGE=1`** to bill the real judge during dry-run |
+| Only print validator-related env | `lemma validator-dry` (not a scoring run) |
+
+`LEMMA_FAKE_JUDGE=1` forces FakeJudge everywhere (including live `lemma validator start` where the subnet expects a real Chutes judge — use only for local experiments).
 
 ## System requirements (Docker)
 
@@ -37,6 +51,8 @@ Requires the **`docker`** CLI on `PATH` for `exec`. CPU/memory limits apply to h
 **Docker Desktop (macOS):** Bind-mounted caches pay a large FS tax; **`scripts/start_lean_docker_worker.sh`** uses **`:delegated`** on Darwin. For local iteration, host `lake` ( **`LEMMA_ALLOW_HOST_LEAN=1`** + **`try-prover --host-lean`**) can be faster than Docker on a laptop; production validators should run on **Linux + local SSD** — not Docker Desktop on a Mac — for representative latency.
 
 **Bootstrap helper:** `scripts/start_lean_docker_worker.sh` loads `.env` and starts the worker (requires **`LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR`**). Put **`LEMMA_LEAN_DOCKER_WORKER`** in **`.env`** (Lemma reads it via **`LemmaSettings`** — exporting it in the shell alone is not enough unless **`LEMMA_PREFER_PROCESS_ENV=1`**). Use **`./scripts/start_lean_docker_worker.sh --update-dotenv`** to append the line automatically when missing.
+
+**One-shot dev warm-up (SSD cache + worker):** from the repo root, **`bash scripts/dev-lean-warm.sh`** creates **`./.lemma-lean-cache`** (unless you already set **`LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR`**), starts the long-lived worker, and with **`--update-dotenv`** appends **`LEMMA_LEAN_DOCKER_WORKER`** when missing. Keep that cache directory between runs so Mathlib and **`.lake`** stay warm.
 
 ### Remote Lean verify pool (same operator, second machine)
 
@@ -71,7 +87,7 @@ bash scripts/prebuild_lean_image.sh
 ./scripts/lemma-run lemma validator
 ```
 
-Local smoke without LLM cost: `export LEMMA_FAKE_JUDGE=1`.
+For a cheap local loop without any inference HTTP, you can set **`LEMMA_FAKE_JUDGE=1`** — not for production validators on the real subnet. Prefer **`lemma judge --trace …`** to test only the judge stack, or **`lemma validator dry-run`** with the default FakeJudge in the rubric step.
 
 ## Fingerprints
 

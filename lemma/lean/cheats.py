@@ -89,7 +89,6 @@ def lake_build_environment_failed(lean_output: str) -> bool:
         or "network is unreachable" in t
         or "failed to download" in t
         or "tls handshake" in t
-        or "connection refused" in t
     )
 
 

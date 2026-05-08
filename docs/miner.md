@@ -2,6 +2,8 @@
 
 Walkthrough: [getting-started.md](getting-started.md) — **`btcli`** (Bittensor CLI), `lemma setup`, `lemma-run`. Prefer prompts over hand-editing `.env` (`lemma configure chain`, `configure prover`, `configure axon`).
 
+**Short checklist:** `lemma setup` → coldkey funded → `btcli subnet register` on the same network/netuid as `.env` → `lemma miner dry-run` → **`lemma rehearsal`** (see prover + Lean + judge on the live theorem) → fix axon IP/port if needed → `lemma miner start`. Run `lemma` for colored command help plus the same path in one glance; `lemma start` opens the guided menu (**miner-dry** then **miner**).
+
 Inference: Chutes when prompted works for most setups.
 
 ## Run

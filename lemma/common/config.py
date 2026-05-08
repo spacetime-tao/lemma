@@ -212,6 +212,18 @@ class LemmaSettings(BaseSettings):
     openai_api_key: str | None = Field(
         default=None,
         validation_alias=AliasChoices("OPENAI_API_KEY", "openai_api_key"),
+        description=(
+            "Legacy fallback: Chutes/OpenAI-compatible API key for the **judge** when JUDGE_OPENAI_API_KEY is unset. "
+            "Prefer JUDGE_OPENAI_API_KEY so Gemini/prover keys can live under PROVER_OPENAI_API_KEY only."
+        ),
+    )
+    judge_openai_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("JUDGE_OPENAI_API_KEY", "judge_openai_api_key"),
+        description=(
+            "Chutes/OpenAI-compatible API key used **only** by the judge (scores traces). "
+            "If unset, the judge falls back to OPENAI_API_KEY."
+        ),
     )
     openai_model: str = Field(
         default=CANONICAL_JUDGE_OPENAI_MODEL,
@@ -670,6 +682,14 @@ class LemmaSettings(BaseSettings):
         if pk is not None and str(pk).strip():
             return pk
         return self.openai_api_key
+
+    def judge_openai_api_key_resolved(self) -> str | None:
+        """API key for judge when ``JUDGE_PROVIDER`` is chutes/openai; prefers ``JUDGE_OPENAI_API_KEY``."""
+        jk = (self.judge_openai_api_key or "").strip()
+        if jk:
+            return jk
+        ok = (self.openai_api_key or "").strip()
+        return ok or None
 
     def validator_wallet_names(self) -> tuple[str, str]:
         """Cold/hot key names for signing and metagraph (validator). Falls back to BT_WALLET_*."""

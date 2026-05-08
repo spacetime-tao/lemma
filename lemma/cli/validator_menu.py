@@ -19,44 +19,55 @@ def show_validator_menu(ctx: click.Context) -> None:
     click.echo(stylize("\nLemma — validator\n", fg="cyan", bold=True), nl=False)
     click.echo(
         stylize(
-            "1–2 run the real scoring loop (miners, Lean, judge). 3–4 do not run scoring — they only print.\n",
+            "1–2 run the scoring loop (miners, Lean, rubric). 3–4 only print — no rounds.\n",
             dim=True,
         ),
         nl=False,
     )
     click.echo(
-        "  "
-        + stylize("1", fg="yellow")
-        + "  "
-        + stylize("start", fg="green")
-        + "          Live loop until Ctrl+C — includes set_weights on chain\n"
-        "  "
-        + stylize("2", fg="yellow")
-        + "  "
-        + stylize("dry-run", fg="green")
-        + "      Same live loop as 1, but never set_weights (still queries miners / Lean / judge)\n"
-        "  "
-        + stylize("3", fg="yellow")
-        + "  "
-        + stylize("config", fg="green")
-        + "        Read `.env` and print a summary — no rounds, no miners (`lemma validator-dry`)\n"
-        "  "
-        + stylize("4", fg="yellow")
-        + "  "
-        + stylize("check", fg="green")
-        + "        Pre-flight checklist — RPC, wallet UID, subnet pins, Docker → READY or NOT READY\n"
-        "  "
-        + stylize("5", fg="yellow")
-        + "  "
-        + stylize("quit", fg="green")
-        + "         Exit\n",
-        nl=False,
+        stylize(
+            "First time: ",
+            dim=True,
+        )
+        + stylize("bash scripts/prebuild_lean_image.sh", fg="green")
+        + stylize(" → ", dim=True)
+        + stylize("lemma validator-check", fg="green")
+        + stylize(" → ", dim=True)
+        + stylize("lemma validator start", fg="green")
+        + stylize("  ·  docs/validator.md\n", dim=True),
     )
     click.echo(
         stylize(
-            "Shell: ",
+            "Preview: ",
             dim=True,
         )
+        + stylize("lemma rehearsal", fg="green")
+        + stylize(" = live theorem → prover → Lean → judge. ", dim=True)
+        + stylize("lemma judge --trace FILE", fg="green")
+        + stylize(" = judge-only. ", dim=True)
+        + stylize("This menu’s dry-run", fg="yellow")
+        + stylize(" runs the full pipeline; stub judge unless LEMMA_DRY_RUN_REAL_JUDGE=1.\n", dim=True),
+    )
+    w = 14
+    rows = (
+        ("1", "start", "Live loop until Ctrl+C — includes set_weights on chain"),
+        ("2", "dry-run", "Same as 1 but no set_weights; judge=FakeJudge unless LEMMA_DRY_RUN_REAL_JUDGE=1"),
+        ("3", "config", "Print `.env` summary — no rounds (`lemma validator-dry`)"),
+        ("4", "check", "Pre-flight: RPC, wallet UID, Docker → READY or NOT READY"),
+        ("5", "quit", "Exit"),
+    )
+    click.echo(stylize("  " + "—" * 56, dim=True))
+    for num, name, desc in rows:
+        click.echo(
+            "  "
+            + stylize(num, fg="yellow")
+            + "  "
+            + stylize(name.ljust(w), fg="green")
+            + stylize(desc, dim=True),
+        )
+    click.echo(stylize("  " + "—" * 56, dim=True))
+    click.echo(
+        stylize("Non-interactive: ", dim=True)
         + stylize("lemma validator start", fg="yellow")
         + stylize("  ·  ", dim=True)
         + stylize("lemma validator dry-run", fg="yellow")

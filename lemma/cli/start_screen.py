@@ -39,8 +39,13 @@ _MENU: tuple[_MenuItem, ...] = (
     _MenuItem("problems", "Print the live challenge (the file with `sorry` you are meant to prove)"),
     _MenuItem(
         "try-prover",
-        "Ask your prover to solve the current challenge on your machine",
-        "Bills your LLM API",
+        "Prover-only on the live theorem (lighter; add `--verify` for Lean)",
+        "Bills your prover API",
+    ),
+    _MenuItem(
+        "rehearsal",
+        "Scoring preview — live theorem → prover → Lean (on) → judge rubric (validators & miners)",
+        "Bills prover + judge; needs Docker or host lake for verify",
     ),
     _MenuItem("miner-dry", "See how your miner would look to the network — no server, no traffic"),
     _MenuItem(
@@ -49,11 +54,14 @@ _MENU: tuple[_MenuItem, ...] = (
     ),
     _MenuItem(
         "validator-dry",
-        "Print validator env from `.env` — no scoring rounds (for live rounds without weights use "
-        "`lemma validator dry-run`)",
+        "Print validator env from `.env` only — no scoring (for full rehearsal without weights: "
+        "`lemma validator dry-run`; judge-only files: `lemma judge --trace …`)",
     ),
     _MenuItem("miner", "Start your miner so validators can send you challenges"),
-    _MenuItem("validator", "Run the full validator: check proofs, judge, and update weights on chain"),
+    _MenuItem(
+        "validator",
+        "Full loop — start sets weights; dry-run skips weights (FakeJudge unless LEMMA_DRY_RUN_REAL_JUDGE=1)",
+    ),
     _MenuItem("meta", "Show fingerprints of your judge and problem code (should match the rest of the subnet)"),
     _MenuItem("leaderboard", "On-chain stake and rewards — not a scoreboard for math proofs"),
     _MenuItem("configure", "Update one slice of `.env` (e.g. chain, API, port, Lean) without hand-editing"),
@@ -159,11 +167,13 @@ def _parse_docs_menu_extras(extra: list[str]) -> dict[str, object]:
     )
 
 
-def _parse_try_prover_menu_extras(extra: list[str], *, menu_assume_yes: bool) -> dict[str, object]:
-    """Parse argv fragments after the menu step for `lemma try-prover`."""
+def _parse_try_prover_menu_extras(
+    extra: list[str], *, menu_assume_yes: bool, default_verify: bool = False
+) -> dict[str, object]:
+    """Parse argv fragments after the menu step for `lemma try-prover` / `lemma rehearsal`."""
     kwargs: dict[str, object] = {
         "assume_yes": menu_assume_yes,
-        "do_verify": False,
+        "do_verify": default_verify,
         "block": None,
         "retry_attempts": None,
         "host_lean": False,
@@ -198,16 +208,16 @@ def _parse_try_prover_menu_extras(extra: list[str], *, menu_assume_yes: bool) ->
             i += 1
         else:
             raise click.UsageError(
-                "After try-prover, optional flags: `--verify`, `--host-lean`, `--docker-verify`, `--block N`, "
-                "`--retry-attempts N`, `-y`. "
-                f"See `lemma try-prover --help`. Got: {' '.join(extra)}",
+                "After try-prover / rehearsal, optional flags: `--verify`, `--no-verify`, `--host-lean`, "
+                "`--docker-verify`, `--block N`, `--retry-attempts N`, `-y`. "
+                f"See `lemma try-prover --help` / `lemma rehearsal --help`. Got: {' '.join(extra)}",
             )
     if kwargs["host_lean"] and kwargs["docker_verify"]:
         raise click.UsageError("Use only one of --host-lean and --docker-verify.")
     return kwargs
 
 
-_STEPS_ALLOWING_EXTRAS = frozenset({"docs", "try-prover"})
+_STEPS_ALLOWING_EXTRAS = frozenset({"docs", "try-prover", "rehearsal"})
 
 
 def dispatch_menu_command(
@@ -223,7 +233,7 @@ def dispatch_menu_command(
         click.echo(
             stylize(
                 f"Ignoring extra arguments ({' '.join(extra)}). "
-                "Only steps 3 (docs) and 7 (try-prover) accept flags here; "
+                "Only steps docs, try-prover, and rehearsal accept flags here; "
                 f"otherwise run e.g. `lemma {key}` with flags in your shell.",
                 fg="yellow",
             ),
@@ -294,6 +304,7 @@ def dispatch_menu_command(
         "glossary": ("glossary", {}),
         "status": ("status", {}),
         "try-prover": ("try-prover", {"assume_yes": menu_assume_yes_for_try_prover}),
+        "rehearsal": ("rehearsal", {"assume_yes": menu_assume_yes_for_try_prover}),
         "miner-dry": ("miner-dry", {}),
         "validator-check": ("validator-check", {}),
         "validator-dry": ("validator-dry", {}),
@@ -314,12 +325,13 @@ def dispatch_menu_command(
         except click.UsageError as e:
             click.echo(stylize(str(e), fg="red"), err=True)
             return
-    elif key == "try-prover":
+    elif key in ("try-prover", "rehearsal"):
         try:
             merged.update(
                 _parse_try_prover_menu_extras(
                     extra,
                     menu_assume_yes=bool(base_kwargs.get("assume_yes")),
+                    default_verify=(key == "rehearsal"),
                 ),
             )
         except click.UsageError as e:
@@ -360,9 +372,53 @@ def run_quick_menu_step(ctx: click.Context, *, group: click.Group, step: int) ->
 def show_start_here(ctx: click.Context | None = None, *, group: click.Group | None = None) -> None:
     """Print the onboarding roadmap and optionally branch into another command."""
     n_menu = len(_MENU)
+    keys = _menu_keys()
+    try_menu_n = keys.index("try-prover") + 1
+    rehearsal_menu_n = keys.index("rehearsal") + 1
     ve = (os.environ.get("VIRTUAL_ENV") or "").strip()
 
     click.echo(stylize("\nlemma start — guided picks\n", fg="cyan", bold=True), nl=False)
+    click.echo(
+        stylize("If you ", dim=True)
+        + stylize("mine", fg="yellow", bold=True)
+        + stylize(": ", dim=True)
+        + stylize("setup", fg="green")
+        + stylize(" → ", dim=True)
+        + stylize("register (btcli)", fg="green")
+        + stylize(" → ", dim=True)
+        + stylize("miner-dry", fg="green")
+        + stylize(" → ", dim=True)
+        + stylize("miner", fg="green")
+        + stylize("\n", dim=True),
+        nl=False,
+    )
+    click.echo(
+        stylize("If you ", dim=True)
+        + stylize("validate", fg="yellow", bold=True)
+        + stylize(": ", dim=True)
+        + stylize("prebuild Lean image (script)", fg="green")
+        + stylize(" → ", dim=True)
+        + stylize("validator-check", fg="green")
+        + stylize(" → ", dim=True)
+        + stylize("validator", fg="green")
+        + stylize("\n", dim=True),
+        nl=False,
+    )
+
+    click.echo(
+        stylize("Test tools: ", dim=True)
+        + stylize("lemma rehearsal", fg="green")
+        + stylize(" = live theorem → prover → Lean → judge (main preview). ", dim=True)
+        + stylize("try-prover", fg="green")
+        + stylize(" = prover only · ", dim=True)
+        + stylize("lemma judge --trace FILE", fg="green")
+        + stylize(" = judge on saved text. ", dim=True)
+        + stylize("validator dry-run", fg="green")
+        + stylize(" = full epoch, no weights; ", dim=True)
+        + stylize("FakeJudge", fg="yellow")
+        + stylize(" unless LEMMA_DRY_RUN_REAL_JUDGE=1.\n", dim=True),
+        nl=False,
+    )
 
     act = venv_activate_script()
     courtesy_path = ve or (str(act) if act else "")
@@ -392,8 +448,8 @@ def show_start_here(ctx: click.Context | None = None, *, group: click.Group | No
         )
         + stylize("doctor", fg="green")
         + stylize(", ", dim=True)
-        + stylize("7", fg="green")
-        + stylize(" = try-prover). ", dim=True)
+        + stylize(str(rehearsal_menu_n), fg="green")
+        + stylize(" = rehearsal). ", dim=True)
         + stylize("Not", fg="red")
         + stylize(" a shell — no ", dim=True)
         + stylize("source", fg="yellow")
@@ -405,10 +461,14 @@ def show_start_here(ctx: click.Context | None = None, *, group: click.Group | No
         + stylize("lemma …", fg="yellow")
         + stylize(" on that line.\n", dim=True)
         + stylize("From a normal shell: ", dim=True)
-        + stylize("lemma 7", fg="green")
+        + stylize(f"lemma {try_menu_n}", fg="green")
         + stylize(" / ", dim=True)
-        + stylize("lemma 7 --verify", fg="green")
-        + stylize(" skip this prompt.\n", dim=True),
+        + stylize(f"lemma {try_menu_n} --verify", fg="green")
+        + stylize(" (prover) · ", dim=True)
+        + stylize(f"lemma {rehearsal_menu_n}", fg="green")
+        + stylize(" / ", dim=True)
+        + stylize(f"lemma {rehearsal_menu_n} --no-verify", fg="green")
+        + stylize(" (rehearsal) skip this prompt.\n", dim=True),
         nl=False,
     )
 
@@ -480,7 +540,8 @@ def show_start_here(ctx: click.Context | None = None, *, group: click.Group | No
         click.echo(
             stylize(
                 f"{e} "
-                f"Use a number 1–{len(_MENU)} or a command name; optional flags only after docs / try-prover "
+                f"Use a number 1–{len(_MENU)} or a command name; optional flags only after docs / try-prover / "
+                "rehearsal "
                 "(e.g. `3 --open faq`). For anything else run `lemma <command>` in your shell.",
                 fg="red",
             ),

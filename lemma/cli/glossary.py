@@ -41,6 +41,16 @@ def print_glossary() -> None:
             "`lemma status` only shows quantize_blocks when mode is quantize (otherwise it’s irrelevant noise).",
         ),
         (
+            "lemma rehearsal (recommended preview)",
+            "One command: sample the **same live theorem** as validators → call **your prover** → optional "
+            "**Lean verify** (Docker by default, or host `lake` with `LEMMA_ALLOW_HOST_LEAN=1` + `--host-lean`) → "
+            "run **your judge rubric** on the informal trace + Submission.lean. Bills **prover + judge** APIs; "
+            "no axon traffic and no `set_weights`.\n"
+            "`lemma try-prover` is prover-only (lighter). `lemma judge --trace FILE` scores text you already saved. "
+            "`lemma validator dry-run` runs the full metagraph epoch without weights (FakeJudge in the rubric step "
+            "unless `LEMMA_DRY_RUN_REAL_JUDGE=1`).",
+        ),
+        (
             "try-prover vs try-prover --verify",
             "Both paths ask the LLM for **text**: reasoning plus the contents of Submission.lean as a **string**.\n"
             "Running `lemma try-prover` in a terminal prompts once before billing your API (`--yes` skips it; "
@@ -49,7 +59,8 @@ def print_glossary() -> None:
             "`--verify` runs a local Lean build (default: Docker when LEMMA_USE_DOCKER=1, like validators; host `lake` "
             "only with LEMMA_ALLOW_HOST_LEAN=1 and --host-lean) — similar *idea* to the validator’s Lean step, "
             "but only on your machine.\n"
-            "It does **not** run the LLM **judge** (scores). Validators still run Lean + judge themselves.",
+            "It does **not** run the LLM **judge** (scores) by itself — use **`lemma rehearsal`** for prover + Lean + "
+            "judge in one run, or run the judge step separately (`lemma judge --trace …`).",
         ),
         (
             "miner-dry vs miner",
@@ -59,9 +70,12 @@ def print_glossary() -> None:
         (
             "validator-dry vs validator dry-run vs validator",
             "`lemma validator-dry` — print env only, no scoring.\n"
-            "`lemma validator dry-run` — full scoring rounds without set_weights.\n"
+            "`lemma validator dry-run` — full scoring rounds without set_weights; **FakeJudge** in the rubric step "
+            "unless **LEMMA_DRY_RUN_REAL_JUDGE=1** (then live judge HTTP, still no weights).\n"
             "`lemma validator start` — full rounds including set_weights.\n"
-            "`lemma validator-check` — pre-flight READY / NOT READY before any of the above.",
+            "`lemma validator-check` — pre-flight READY / NOT READY before any of the above.\n"
+            "`lemma judge --trace FILE` — judge LLM only on files (not a scoring epoch).\n"
+            "`lemma rehearsal` — end-to-end prover + Lean + judge on the live theorem (see glossary).",
         ),
         (
             "validator-check",

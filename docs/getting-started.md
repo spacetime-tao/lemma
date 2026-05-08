@@ -7,6 +7,12 @@ End-to-end: **uv** + repo → **keys** → **`lemma setup`** → **miner or vali
 - After setup: `lemma status`, then `lemma problems` (or `lemma problems show --current`). Deep reference: [faq](faq.md).
 - **On-chain try:** Lemma runs on **Bittensor testnet** (`--network test`), **netuid 467**. **Finney** is mainnet—do not confuse the two. The repo is still largely proof-of-concept; long-term direction is in [vision](vision.md).
 
+## Paths at a glance
+
+**Miner (most common first path):** `uv sync` → keys (`btcli`) → `lemma setup` → fund wallet → `btcli subnet register --netuid 467 --network test …` → `lemma miner dry-run` (or **miner-dry** from `lemma start`) → **`lemma rehearsal`** (optional: live theorem → prover → Lean → judge preview) → open `AXON_PORT` → `lemma miner start`. Details: [miner.md](miner.md).
+
+**Validator:** same env/keys/setup as above, then **`bash scripts/prebuild_lean_image.sh`** (first build is large) → **`lemma rehearsal`** (recommended preview) → `lemma validator-check` → `lemma validator start`. Prefer `lemma validator` / `lemma validator dry-run` over ad-hoc Python entrypoints. Details: [validator.md](validator.md).
+
 ## Install uv
 
 ```bash

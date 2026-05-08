@@ -19,7 +19,7 @@ from pathlib import Path
 import click
 
 from lemma import __version__
-from lemma.cli.style import finish_cli_output, stylize
+from lemma.cli.style import colors_enabled, finish_cli_output, stylize
 from lemma.common.config import LemmaSettings
 from lemma.common.logging import setup_logging
 from lemma.problems.factory import get_problem_source, resolve_problem
@@ -33,9 +33,10 @@ def main(ctx: click.Context) -> None:
 
     \b
     Common commands:
-      lemma start     Guided picks (setup, doctor, miner, validator, …)
-      lemma doctor    Config + keys + chain sanity
-      lemma --help    Full command list
+      lemma start      Guided picks (setup, doctor, miner, validator, …)
+      lemma rehearsal  Live theorem → prover → Lean → judge (scoring preview)
+      lemma doctor     Config + keys + chain sanity
+      lemma --help     Full command list
     """
     if ctx.invoked_subcommand is None:
         click.echo(
@@ -50,7 +51,38 @@ def main(ctx: click.Context) -> None:
             + stylize(" for one command\n", dim=True),
             nl=False,
         )
-        click.echo(ctx.get_help())
+        click.echo(ctx.get_help(), color=colors_enabled())
+        click.echo(stylize("Typical paths", fg="cyan", bold=True))
+        click.echo(
+            "  "
+            + stylize("Miner", fg="yellow", bold=True)
+            + stylize("       ", dim=True)
+            + stylize("lemma setup", fg="green")
+            + stylize(" → ", dim=True)
+            + stylize("btcli subnet register …", fg="green")
+            + stylize(" → ", dim=True)
+            + stylize("lemma miner dry-run", fg="green")
+            + stylize(" → ", dim=True)
+            + stylize("lemma miner start", fg="green"),
+        )
+        click.echo(
+            "  "
+            + stylize("Validator", fg="yellow", bold=True)
+            + stylize("  ", dim=True)
+            + stylize("bash scripts/prebuild_lean_image.sh", fg="green")
+            + stylize(" → ", dim=True)
+            + stylize("lemma validator-check", fg="green")
+            + stylize(" → ", dim=True)
+            + stylize("lemma validator start", fg="green"),
+        )
+        click.echo(
+            "  "
+            + stylize("Preview", fg="yellow", bold=True)
+            + stylize("  ", dim=True)
+            + stylize("lemma rehearsal", fg="green")
+            + stylize(" — prover + Lean + judge on the live theorem (costs APIs)", dim=True),
+        )
+        click.echo(stylize("  Docs: docs/getting-started.md · docs/miner.md · docs/validator.md\n", dim=True))
         return
 
 
@@ -149,8 +181,12 @@ def _doctor_api_lines(s: LemmaSettings) -> tuple[list[str], bool]:
     for role, kind in tasks:
         if kind == "openai":
             if role == "Judge":
-                ok = _present(s.openai_api_key)
-                key_hint = "OPENAI_API_KEY"
+                ok = _present(s.judge_openai_api_key_resolved())
+                key_hint = (
+                    "JUDGE_OPENAI_API_KEY"
+                    if (s.judge_openai_api_key or "").strip()
+                    else "JUDGE_OPENAI_API_KEY or OPENAI_API_KEY"
+                )
             else:
                 ok = _present(s.prover_openai_api_key_resolved())
                 key_hint = (
@@ -321,6 +357,8 @@ def doctor_cmd() -> None:
             "     lemma env              — print `source …/activate`\n"
             "     lemma meta             — judge + template hashes\n"
             "     lemma validator-check  — before `lemma validator`\n"
+            "     lemma rehearsal        — prover + Lean + judge on the live theorem (preview before miner/validator)\n"
+            "     lemma try-prover       — prover only  ·  lemma judge --trace FILE — judge on files\n"
             "     lemma start            — guided menu  ·  lemma configure --help  ·  lemma docs --pick\n",
             dim=True,
         ),
@@ -726,7 +764,11 @@ def try_prover_cmd(
     host_lean: bool,
     docker_verify: bool,
 ) -> None:
-    """Manual one-shot prover run (like a dry exercise); the live axon miner solves each forward immediately."""
+    """Manual one-shot prover on the live theorem (lighter than ``lemma rehearsal``).
+
+    Add ``--verify`` for local Lean only. For **prover + Lean + judge rubric** in one command (validators
+    and miners previewing the scored path), use ``lemma rehearsal``.
+    """
     from lemma.cli.try_prover import assert_try_prover_host_lean_allowed, run_try_prover
 
     if not assume_yes:
@@ -757,6 +799,104 @@ def try_prover_cmd(
     else:
         lean_use_docker = None
     run_try_prover(
+        settings,
+        verify=do_verify,
+        block=block,
+        prover_llm_retry_attempts=retry_attempts,
+        lean_use_docker=lean_use_docker,
+    )
+
+
+@main.command("rehearsal")
+@click.option(
+    "--verify/--no-verify",
+    "do_verify",
+    default=True,
+    help=(
+        "After the prover answers, run `lake build` on Submission.lean (default: on; same Docker/host rules "
+        "as `lemma try-prover --verify`). Use `--no-verify` to skip Lean and only run prover + judge."
+    ),
+)
+@click.option(
+    "--block",
+    type=int,
+    default=None,
+    help="Pretend chain head is this block when resolving the problem seed.",
+)
+@click.option(
+    "--yes",
+    "-y",
+    "assume_yes",
+    is_flag=True,
+    default=False,
+    help="Skip the confirmation prompt (for scripts; still bills prover + judge APIs).",
+)
+@click.option(
+    "--retry-attempts",
+    "retry_attempts",
+    type=click.IntRange(1, 32),
+    default=None,
+    help="Override LEMMA_PROVER_LLM_RETRY_ATTEMPTS for this run only (default: from .env).",
+)
+@click.option(
+    "--host-lean",
+    "host_lean",
+    is_flag=True,
+    default=False,
+    help="Only with --verify: force host `lake` instead of Docker (requires LEMMA_ALLOW_HOST_LEAN=1).",
+)
+@click.option(
+    "--docker-verify",
+    "docker_verify",
+    is_flag=True,
+    default=False,
+    help="Only with --verify: force the Docker Lean sandbox.",
+)
+def rehearsal_cmd(
+    do_verify: bool,
+    block: int | None,
+    assume_yes: bool,
+    retry_attempts: int | None,
+    host_lean: bool,
+    docker_verify: bool,
+) -> None:
+    """One-shot scoring preview: live theorem → your prover → Lean (default) → your judge rubric.
+
+    Same stacks miners and validators use for a forward + rubric, without an axon or ``set_weights``.
+    Requires chain RPC (like ``lemma status``). For Lean verify, Docker is the default subnet path; see
+    ``bash scripts/prebuild_lean_image.sh`` and docs/getting-started.md.
+    """
+    from lemma.cli.try_prover import assert_try_prover_host_lean_allowed, run_rehearsal
+
+    if not assume_yes:
+        if not sys.stdin.isatty():
+            raise click.ClickException(
+                "Non-interactive terminal: `lemma rehearsal` bills prover + judge APIs. "
+                "Run again with --yes to confirm, or use a TTY.",
+            )
+        click.echo(
+            stylize(
+                "rehearsal runs your prover, optionally Lean verify, then your judge — same cost shape as "
+                "one scored forward (without chain writes).",
+                fg="yellow",
+                bold=True,
+            ),
+        )
+        if not click.confirm("Continue?", default=False):
+            raise click.Abort()
+
+    if host_lean and docker_verify:
+        raise click.ClickException("Use only one of --host-lean and --docker-verify.")
+    settings = LemmaSettings()
+    assert_try_prover_host_lean_allowed(settings, verify=do_verify, host_lean=host_lean)
+    lean_use_docker: bool | None
+    if host_lean:
+        lean_use_docker = False
+    elif docker_verify:
+        lean_use_docker = True
+    else:
+        lean_use_docker = None
+    run_rehearsal(
         settings,
         verify=do_verify,
         block=block,
@@ -1079,7 +1219,10 @@ def _miner_run_axon(max_forwards_per_day: int | None) -> None:
 @main.group(
     "miner",
     invoke_without_command=True,
-    help="Miner axon — receive validator forwards and run the prover LLM.",
+    help=(
+        "Miner axon — receive validator forwards and run the prover LLM. "
+        "Typical path: lemma setup → btcli subnet register → lemma miner dry-run → lemma miner start."
+    ),
 )
 @click.option(
     "--dry-run",
@@ -1261,7 +1404,7 @@ def configure_judge(env_path: Path | None) -> None:
     help="Default: ./.env",
 )
 def configure_prover(env_path: Path | None) -> None:
-    """Set miner prover LLM (Chutes recommended, or Anthropic / custom OpenAI-compatible)."""
+    """Set miner prover LLM (Chutes, Gemini preset, Anthropic, or custom OpenAI-compatible)."""
     from lemma.cli.env_wizard import collect_prover_updates
     from lemma.common.env_file import merge_dotenv
 
@@ -1400,14 +1543,22 @@ def _validator_run_blocking(*, dry_run: bool) -> None:
 @main.group(
     "validator",
     invoke_without_command=True,
-    help="Validator — query miners, Lean verify, LLM judge, optional set_weights.",
+    help=(
+        "Validator — query miners, Lean verify, LLM judge, optional set_weights. "
+        "Local scoring preview (no metagraph): lemma rehearsal. "
+        "Judge-only on files: lemma judge --trace FILE. "
+        "Typical path: bash scripts/prebuild_lean_image.sh → lemma validator-check → lemma validator start."
+    ),
 )
 @click.option(
     "--dry-run",
     "legacy_dry",
     is_flag=True,
     default=False,
-    help="Run rounds without set_weights (legacy shortcut for `lemma validator dry-run`).",
+    help=(
+        "Run rounds without set_weights (legacy shortcut for `lemma validator dry-run`). "
+        "Same FakeJudge default as dry-run unless LEMMA_DRY_RUN_REAL_JUDGE=1."
+    ),
 )
 @click.pass_context
 def validator_group(ctx: click.Context, legacy_dry: bool) -> None:
@@ -1423,13 +1574,27 @@ def validator_group(ctx: click.Context, legacy_dry: bool) -> None:
 
 
 @validator_group.command("start", help="Run scoring rounds until Ctrl+C.")
-@click.option("--dry-run", is_flag=True, default=False, help="No on-chain set_weights this session.")
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help=(
+        "No on-chain set_weights this session. Judge defaults to FakeJudge unless LEMMA_DRY_RUN_REAL_JUDGE=1."
+    ),
+)
 def validator_start_cmd(dry_run: bool) -> None:
     dr = dry_run or os.environ.get("LEMMA_DRY_RUN") == "1"
     _validator_run_blocking(dry_run=dr)
 
 
-@validator_group.command("dry-run", help="Scoring rounds without set_weights.")
+@validator_group.command(
+    "dry-run",
+    help=(
+        "Full scoring epochs without set_weights (chain + miners + Lean). "
+        "Judge defaults to FakeJudge; set LEMMA_DRY_RUN_REAL_JUDGE=1 for live judge HTTP. "
+        "Judge-only smoke test: lemma judge --trace FILE."
+    ),
+)
 def validator_group_dry_run_cmd() -> None:
     _validator_run_blocking(dry_run=True)
 
@@ -1483,15 +1648,31 @@ def validator_dry_cmd() -> None:
     click.echo("")
     click.echo(
         stylize(
-            "  • Reads config only (your `.env` / environment). Nothing runs: no miners queried, no Lean, "
-            "no judge HTTP, no chain writes.",
+            "  Prints a config summary from `.env` / the environment only — no miners queried, no Lean, "
+            "no judge HTTP, no chain writes. Use it to eyeball wallets, netuid, judge URL, and timeouts before "
+            "a real validator session.\n",
             dim=True,
         )
     )
     click.echo("")
+    click.echo(stylize("See also", fg="cyan", bold=True))
+    click.echo("")
     click.echo(
         stylize(
-            "  • Use it to eyeball wallets, netuid, judge URL, and timeouts before a real validator session.",
+            "  • `lemma rehearsal` — live theorem → prover → Lean (optional) → judge rubric (preview stacks).\n",
+            dim=True,
+        )
+    )
+    click.echo(
+        stylize(
+            "  • `lemma judge --trace FILE` — rubric only (you supply saved trace / proof files).\n",
+            dim=True,
+        )
+    )
+    click.echo(
+        stylize(
+            "  • `lemma validator dry-run` — full scoring epochs without set_weights; judge defaults to "
+            "FakeJudge (set LEMMA_DRY_RUN_REAL_JUDGE=1 for live judge HTTP).\n",
             dim=True,
         )
     )
@@ -1517,6 +1698,16 @@ def validator_dry_cmd() -> None:
     click.echo(f"  JUDGE_PROVIDER={settings.judge_provider}")
     click.echo(f"  OPENAI_BASE_URL={settings.openai_base_url}")
     click.echo(f"  OPENAI_MODEL={settings.openai_model}")
+    jk = settings.judge_openai_api_key_resolved()
+    if jk:
+        src = (
+            "JUDGE_OPENAI_API_KEY"
+            if (settings.judge_openai_api_key or "").strip()
+            else "OPENAI_API_KEY (legacy fallback)"
+        )
+        click.echo(stylize(f"  Judge OpenAI key: present (from {src})", dim=True))
+    else:
+        click.echo(stylize("  Judge OpenAI key: (missing — FakeJudge)", dim=True))
     prov_base = (settings.prover_openai_base_url or "").strip()
     if prov_base:
         click.echo(f"  PROVER_OPENAI_BASE_URL={settings.prover_openai_base_url_resolved()}")
@@ -1650,53 +1841,85 @@ def lean_worker_cmd(host: str, port: int) -> None:
     serve_forever(host, port)
 
 
-@main.command("judge")
-@click.option("--theorem", type=click.Path(exists=True))
-@click.option("--trace", type=click.Path(exists=True), required=True)
-@click.option("--proof", type=click.Path(exists=True))
-def judge_cmd(theorem: str | None, trace: str, proof: str | None) -> None:
-    """Smoke-test the LLM judge (requires API keys unless LEMMA_FAKE_JUDGE=1)."""
-    from lemma.judge.anthropic_judge import AnthropicJudge
-    from lemma.judge.base import Judge
-    from lemma.judge.fake import FakeJudge
-    from lemma.judge.openai_judge import OpenAIJudge
+@main.command(
+    "judge",
+    context_settings={"max_content_width": 100},
+    epilog=(
+        "Mental model: like `lemma try-prover` for miners (one-shot LLM check), but for the **validator judge** "
+        "only — no chain sampling step, no Lean verify.\n"
+        "\n"
+        "For **prover + Lean + judge** on the live subnet theorem in one command, prefer `lemma rehearsal`.\n"
+        "For a full scoring rehearsal without writing weights, use `lemma validator dry-run` (Lean + pipeline; "
+        "judge defaults to FakeJudge — set LEMMA_DRY_RUN_REAL_JUDGE=1 to use your real judge there).\n"
+        "\n"
+        "Each flag is a path to a UTF-8 text file. Theorem and proof default to “(none)” in the rubric if omitted.\n"
+        "\n"
+        "Examples:\n"
+        "  lemma judge --trace reasoning.txt\n"
+        "  lemma judge --trace trace.txt --theorem Challenge.lean --proof Submission.lean\n"
+        "\n"
+        "Configure like a validator: lemma configure judge (or lemma setup). With JUDGE_OPENAI_API_KEY (or legacy "
+        "OPENAI_API_KEY), the real model runs; otherwise FakeJudge (no HTTP). LEMMA_FAKE_JUDGE=1 forces FakeJudge "
+        "even with keys."
+    ),
+)
+@click.option(
+    "--theorem",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=None,
+    help="Optional. Path to theorem / Challenge.lean text sent to the rubric as “Formal theorem”.",
+)
+@click.option(
+    "--trace",
+    "trace_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=None,
+    help=(
+        "Required. Path to the informal reasoning trace (miner-style narrative or numbered steps) "
+        "the subnet judge scores."
+    ),
+)
+@click.option(
+    "--proof",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=None,
+    help="Optional. Path to Submission.lean (or proof text) for the rubric’s proof section.",
+)
+def judge_cmd(
+    theorem: Path | None,
+    trace_path: Path | None,
+    proof: Path | None,
+) -> None:
+    """One-shot judge rubric on local files (validator judge only — no Lean / metagraph / set_weights).
+
+    For an end-to-end preview (prover → Lean → judge) on the live theorem, use ``lemma rehearsal``.
+    For the full scoring loop without on-chain weights, use ``lemma validator dry-run``.
+    Pass ``--trace PATH`` to a UTF-8 file; it is not a flag-only switch.
+    """
+    if trace_path is None:
+        raise click.UsageError(
+            "Missing --trace PATH: PATH must be a file containing the informal reasoning trace "
+            "(plain UTF-8 text), e.g. a copy of what your miner logs as reasoning.\n\n"
+            "  lemma judge --trace ./my_trace.txt\n"
+            "  lemma judge --help   # full options and examples"
+        )
 
     settings = LemmaSettings()
     setup_logging(settings.log_level)
-    th = Path(theorem).read_text(encoding="utf-8") if theorem else "(none)"
-    tr = Path(trace).read_text(encoding="utf-8")
-    pr = Path(proof).read_text(encoding="utf-8") if proof else "(none)"
+    th = theorem.read_text(encoding="utf-8") if theorem else "(none)"
+    tr = trace_path.read_text(encoding="utf-8")
+    pr = proof.read_text(encoding="utf-8") if proof else "(none)"
 
-    async def _run() -> None:
-        if os.environ.get("LEMMA_FAKE_JUDGE") == "1":
-            j: Judge = FakeJudge()
-        elif (settings.judge_provider or "").lower() in ("openai", "chutes") and settings.openai_api_key:
-            jto = float(settings.judge_llm_http_timeout_s or settings.llm_http_timeout_s)
-            j = OpenAIJudge(
-                settings.openai_api_key,
-                settings.openai_model,
-                base_url=settings.openai_base_url,
-                temperature=settings.judge_temperature,
-                max_tokens=settings.judge_max_tokens,
-                timeout=jto,
-                retry_attempts=settings.judge_llm_retry_attempts,
-            )
-        elif settings.anthropic_api_key:
-            jto = float(settings.judge_llm_http_timeout_s or settings.llm_http_timeout_s)
-            j = AnthropicJudge(
-                settings.anthropic_api_key,
-                settings.anthropic_model,
-                temperature=settings.judge_temperature,
-                max_tokens=settings.judge_max_tokens,
-                timeout=jto,
-                retry_attempts=settings.judge_llm_retry_attempts,
-            )
-        else:
-            j = FakeJudge()
-        score = await j.score(th, tr, pr)
-        click.echo(score.model_dump_json(indent=2))
+    from lemma.cli.judge_hints import echo_judge_http_failure_hints
+    from lemma.judge.one_shot import score_rubric
 
-    asyncio.run(_run())
+    try:
+        score = asyncio.run(score_rubric(settings, th, tr, pr))
+    except Exception as e:  # noqa: BLE001
+        click.echo(stylize(f"Judge error: {e}", fg="red", bold=True), err=True)
+        echo_judge_http_failure_hints(e, settings)
+        raise SystemExit(1) from e
+    click.echo(score.model_dump_json(indent=2))
 
 
 @main.group("problems", invoke_without_command=True)

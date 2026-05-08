@@ -29,6 +29,17 @@ def show_miner_menu(ctx: click.Context) -> None:
             dim=True,
         ),
     )
+    click.echo(
+        stylize("First time: ", dim=True)
+        + stylize("lemma setup", fg="green")
+        + stylize(" → ", dim=True)
+        + stylize("btcli subnet register …", fg="green")
+        + stylize(" → ", dim=True)
+        + stylize("lemma miner dry-run", fg="green")
+        + stylize(" → ", dim=True)
+        + stylize("lemma miner start", fg="green")
+        + stylize("  ·  docs/miner.md\n", dim=True),
+    )
     w = 14
     rows = (
         ("1", "start", "Run axon (bind port, wait for forwards)"),

@@ -26,6 +26,7 @@ from lemma.common.problem_seed import (
 )
 from lemma.common.subtensor import get_subtensor
 from lemma.lean.cheats import lake_build_environment_failed
+from lemma.lean.sandbox import VerifyResult
 from lemma.lean.verify_runner import run_lean_verify
 from lemma.miner.prover import LLMProver
 from lemma.problems.factory import get_problem_source
@@ -89,6 +90,25 @@ def assert_try_prover_host_lean_allowed(settings: LemmaSettings, *, verify: bool
         )
 
 
+async def _rehearsal_judge_block(settings: LemmaSettings, problem: object, etext: str, proof: str) -> int:
+    """Print rubric JSON; return 0 on success, 1 on failure."""
+    from lemma.judge.one_shot import score_rubric
+
+    click.echo("")
+    click.echo(stylize("— Judge rubric (validator judge stack) —", fg="cyan", bold=True))
+    th = problem.challenge_source()  # type: ignore[union-attr]
+    try:
+        score = await score_rubric(settings, th, etext, proof or "")
+    except Exception as e:  # noqa: BLE001
+        click.echo(stylize(f"Judge error: {e}", fg="red", bold=True), err=True)
+        from lemma.cli.judge_hints import echo_judge_http_failure_hints
+
+        echo_judge_http_failure_hints(e, settings)
+        return 1
+    click.echo(score.model_dump_json(indent=2))
+    return 0
+
+
 def resolve_try_prover_workspace_cache(settings: LemmaSettings) -> Path | None:
     """Warm-cache directory for ``try-prover --verify``: env wins; else ``~/.cache/lemma-lean-workspace``."""
     if settings.lean_verify_workspace_cache_dir is not None:
@@ -121,8 +141,10 @@ def _run_try_prover_session(
     verify: bool,
     block: int | None,
     lean_use_docker: bool | None = None,
+    judge_after: bool = False,
 ) -> int:
     """Run chain setup, LLM, optional Lean verify; return process exit code."""
+    session_label = "rehearsal" if judge_after else "try-prover"
     use_docker = resolve_try_prover_use_docker(
         verify=verify,
         explicit_use_docker=lean_use_docker,
@@ -172,10 +194,10 @@ def _run_try_prover_session(
         timeout=timeout_s,
     )
 
-    click.echo(stylize(f"lemma {__version__} — try-prover", fg="cyan", bold=True))
+    click.echo(stylize(f"lemma {__version__} — {session_label}", fg="cyan", bold=True))
     click.echo(
         stylize(
-            "Stop anytime: Ctrl+C once → exits try-prover and returns you to the shell (exit 130).",
+            f"Stop anytime: Ctrl+C once → exits {session_label} and returns you to the shell (exit 130).",
             fg="green",
             bold=True,
         ),
@@ -189,13 +211,40 @@ def _run_try_prover_session(
         ),
         err=True,
     )
-    click.echo(
-        stylize(
-            "This bills your prover API (Chutes, Anthropic, …) — same as handling one validator forward.",
-            fg="yellow",
-            bold=True,
-        ),
-    )
+    if judge_after:
+        click.echo(
+            stylize(
+                "Rehearsal — live theorem (chain) → your prover → Lean when --verify (default on) → your judge "
+                "rubric. Same stacks as a forward + score path; no axon and no set_weights.",
+                fg="yellow",
+                bold=True,
+            ),
+            err=True,
+        )
+        click.echo(
+            stylize(
+                "Lean: use Docker (default) or host lake (`LEMMA_ALLOW_HOST_LEAN=1` + `--host-lean`). "
+                "First time: `bash scripts/prebuild_lean_image.sh` — see docs/getting-started.md.",
+                dim=True,
+            ),
+            err=True,
+        )
+        click.echo(
+            stylize(
+                "Bills prover + judge APIs and uses CPU/disk for Lean verify (when enabled).",
+                fg="yellow",
+                bold=True,
+            ),
+            err=True,
+        )
+    else:
+        click.echo(
+            stylize(
+                "This bills your prover API (Chutes, Anthropic, …) — same as handling one validator forward.",
+                fg="yellow",
+                bold=True,
+            ),
+        )
     click.echo(
         stylize(
             f"chain_head_block={head}  problem_seed={problem_seed}  seed_tag={seed_tag}",
@@ -305,7 +354,7 @@ def _run_try_prover_session(
                 err=True,
             )
             click.echo(
-                stylize("try-prover: stopped — LLM transport error (exit 2)", fg="red", bold=True),
+                stylize(f"{session_label}: stopped — LLM transport error (exit 2)", fg="red", bold=True),
                 err=True,
             )
             flush_stdio()
@@ -314,7 +363,7 @@ def _run_try_prover_session(
             click.echo(stylize(f"Prover error: {e}", fg="red", bold=True), err=True)
             _echo_prover_api_error_hints(e)
             click.echo(
-                stylize("try-prover: stopped — prover API error (exit 1)", fg="red", bold=True),
+                stylize(f"{session_label}: stopped — prover API error (exit 1)", fg="red", bold=True),
                 err=True,
             )
             flush_stdio()
@@ -342,6 +391,7 @@ def _run_try_prover_session(
         click.echo(stylize(f"(effective reasoning chars for judge: {len(etext)})", dim=True))
 
         lean_ok: bool | None = None
+        lean_vr: VerifyResult | None = None
         if verify and (proof or "").strip():
             ws_cache = resolve_try_prover_workspace_cache(settings)
             eff_settings = settings.model_copy(
@@ -396,7 +446,10 @@ def _run_try_prover_session(
                     )
             click.echo(
                 stylize(
-                    "Lean verify may take many minutes on a cold Mathlib build — Ctrl+C aborts and exits.",
+                    "Lean verify may take many minutes on a **cold** Mathlib workspace — Ctrl+C aborts. "
+                    "Keep it hot: reuse the same LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR (or try-prover default cache); "
+                    "set LEMMA_LEAN_DOCKER_WORKER + docker exec for steady-state; or host `lake` with "
+                    "`--host-lean` when LEMMA_ALLOW_HOST_LEAN=1. See docs/validator.md (Docker / warm workspace).",
                     dim=True,
                 ),
             )
@@ -417,6 +470,7 @@ def _run_try_prover_session(
                 proof_script=proof,
             )
             lean_ok = bool(vr.passed)
+            lean_vr = vr
             if vr.passed:
                 click.echo(stylize("PASS", fg="green") + f"  ({vr.build_seconds:.2f}s)")
             else:
@@ -426,7 +480,18 @@ def _run_try_prover_session(
                     click.echo("")
                 tail = (vr.stderr_tail or "") + (vr.stdout_tail or "")
                 tail_lower = tail.lower()
-                if lake_build_environment_failed(tail):
+                if lean_vr is not None and lean_vr.reason == "remote_error":
+                    click.echo(
+                        stylize(
+                            "Hint: Remote Lean verify could not reach LEMMA_LEAN_VERIFY_REMOTE_URL (connection "
+                            "refused, timeout, or TLS). Start `lemma lean-worker` if you use localhost:8787, fix "
+                            "the URL, or unset LEMMA_LEAN_VERIFY_REMOTE_URL to verify locally (Docker or "
+                            "`--host-lean` with LEMMA_ALLOW_HOST_LEAN=1).",
+                            dim=True,
+                        ),
+                        err=True,
+                    )
+                elif lake_build_environment_failed(tail):
                     click.echo(
                         stylize(
                             "Hint: `lake` could not reach the network (e.g. GitHub for Mathlib). "
@@ -463,29 +528,61 @@ def _run_try_prover_session(
                 err=True,
             )
 
+        if verify and lean_ok is False:
+            if lean_vr is not None and lean_vr.reason == "remote_error":
+                fail_msg = (
+                    f"{session_label}: finished — Lean verify FAIL (exit 1): remote POST /verify failed "
+                    "(see hint above; not necessarily a bad proof script)."
+                )
+            else:
+                fail_msg = (
+                    f"{session_label}: finished — Lean verify FAIL (exit 1). "
+                    "Fix the proof or Mathlib setup; ensure Docker can run the sandbox image "
+                    "or use --host-lean for host lake."
+                )
+            click.echo(stylize(fail_msg, fg="red", bold=True), err=True)
+            return 1
+
+        if judge_after:
+            j_rc = await _rehearsal_judge_block(settings, problem, etext, proof or "")
+            if j_rc != 0:
+                click.echo(
+                    stylize(f"{session_label}: judge step failed (exit 1)", fg="red", bold=True),
+                    err=True,
+                )
+                flush_stdio()
+                return 1
+
         click.echo("")
+        rubric_note = " · rubric scored" if judge_after else ""
         if lean_ok is True:
-            click.echo(stylize("try-prover: finished — LLM OK, Lean verify PASS (exit 0)", fg="green"))
-            return 0
-        if lean_ok is False:
             click.echo(
                 stylize(
-                    "try-prover: finished — Lean verify FAIL (exit 1). "
-                    "Fix the proof or Mathlib setup; ensure Docker can run the sandbox image "
-                    "or use --host-lean for host lake.",
-                    fg="red",
-                    bold=True,
+                    f"{session_label}: finished — LLM OK, Lean verify PASS{rubric_note} (exit 0)",
+                    fg="green",
                 ),
-                err=True,
             )
-            return 1
+            return 0
         if verify:
-            click.echo(stylize("try-prover: finished — LLM OK, nothing to compile (exit 0)", fg="green"))
+            click.echo(
+                stylize(
+                    f"{session_label}: finished — LLM OK, nothing to compile{rubric_note} (exit 0)",
+                    fg="green",
+                ),
+            )
+            return 0
+        if judge_after:
+            click.echo(
+                stylize(
+                    f"{session_label}: finished — LLM OK{rubric_note} (exit 0)",
+                    fg="green",
+                ),
+            )
             return 0
         click.echo(
             stylize(
-                "try-prover: finished — LLM OK (exit 0). Lean was not run; run "
-                "`lemma try-prover --verify` to compile Submission.lean locally.",
+                f"{session_label}: finished — LLM OK (exit 0). Lean was not run; run "
+                "`lemma try-prover --verify` or `lemma rehearsal` to compile Submission.lean locally.",
                 fg="green",
             ),
         )
@@ -512,6 +609,7 @@ def run_try_prover(
             verify=verify,
             block=block,
             lean_use_docker=lean_use_docker,
+            judge_after=False,
         )
     except KeyboardInterrupt:
         click.echo("")
@@ -531,6 +629,46 @@ def run_try_prover(
     if exit_code != 130 and exit_code != 0:
         click.echo("try-prover: done (non-zero exit). See messages above.", err=True)
     # Reset streams + /dev/tty (see finish_cli_output) — IDE terminals often need the latter for the prompt.
+    finish_cli_output()
+    if exit_code != 0:
+        raise SystemExit(exit_code)
+
+
+def run_rehearsal(
+    settings: LemmaSettings,
+    *,
+    verify: bool,
+    block: int | None,
+    prover_llm_retry_attempts: int | None = None,
+    lean_use_docker: bool | None = None,
+) -> None:
+    """Live theorem → prover → optional Lean → judge rubric (one operator-run scoring preview)."""
+    if prover_llm_retry_attempts is not None:
+        settings = settings.model_copy(update={"prover_llm_retry_attempts": prover_llm_retry_attempts})
+    exit_code = 1
+    try:
+        exit_code = _run_try_prover_session(
+            settings,
+            verify=verify,
+            block=block,
+            lean_use_docker=lean_use_docker,
+            judge_after=True,
+        )
+    except KeyboardInterrupt:
+        click.echo("")
+        click.echo(
+            stylize(
+                "rehearsal: interrupted (Ctrl+C) — exit 130. "
+                "You are back at the shell; if the prompt did not redraw, press Enter once.",
+                fg="yellow",
+                bold=True,
+            ),
+            err=True,
+        )
+        exit_code = 130
+
+    if exit_code != 130 and exit_code != 0:
+        click.echo("rehearsal: done (non-zero exit). See messages above.", err=True)
     finish_cli_output()
     if exit_code != 0:
         raise SystemExit(exit_code)

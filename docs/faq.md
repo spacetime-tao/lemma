@@ -22,13 +22,15 @@ The miner’s LLM uses the **fixed in-repo** `PROVER_SYSTEM` in [`lemma/miner/pr
 
 **`lemma try-prover`** is a **local** dry run: it calls **your** prover API and prints output. It does **not** talk to validators or write scores on-chain.
 
+**`lemma rehearsal`** chains the same prover + Lean path (defaults match **`lemma try-prover --verify`**) and then calls **your judge** on the informal trace + `Submission.lean` — still local, still no axon / no `set_weights`, but closer to how a scored forward feels.
+
 **`--verify`** (after the LLM returns) runs **`lake build`** **on your machine** to check that `Submission.lean` compiles — the same *kind* of kernel check validators use, but **only locally**:
 
 - **`lemma validator`:** **`lemma validator` refuses to start** if **`LEMMA_USE_DOCKER=false`** — validators must use Docker. **`lemma verify`** / miners may still use **`LEMMA_USE_DOCKER=false`** where policy allows (local tooling only).
 - **`try-prover --verify`:** Defaults to the **same Docker sandbox** as validators when **`LEMMA_USE_DOCKER=true`**. Host `lake` is opt-in: **`--host-lean`** or **`LEMMA_TRY_PROVER_HOST_VERIFY=1`**, and only if **`LEMMA_ALLOW_HOST_LEAN=1`** in **`.env`**.
 - **`lemma verify --host-lean`:** Host `lake` only with **`LEMMA_ALLOW_HOST_LEAN=1`**. Otherwise use Docker (default). Still **local**, not on-chain scoring.
 
-To see what validators would sample, use **`lemma status`** / **`lemma problems`**; actual rewards come only when a validator **forwards** to your axon and runs the full round (Lean + judge), not from `try-prover`.
+To see what validators would sample, use **`lemma status`** / **`lemma problems`**; actual rewards come only when a validator **forwards** to your axon and runs the full round (Lean + judge), not from `try-prover` or `rehearsal`.
 
 ## Validator pipeline (each round)
 
@@ -42,7 +44,7 @@ Miners use a separate prover API to generate proofs.
 
 Yes. In [Google AI Studio](https://aistudio.google.com) you can create an API key tied to a normal Google account (subject to Google’s terms and quotas). Gemini exposes an **OpenAI-compatible** HTTP API; see Google’s [OpenAI compatibility](https://ai.google.dev/gemini-api/docs/openai) doc.
 
-For Lemma’s **prover** (miner), use the OpenAI-compatible path: `PROVER_PROVIDER=openai`, set `OPENAI_BASE_URL` to Gemini’s OpenAI base URL (see that doc — typically `https://generativelanguage.googleapis.com/v1beta/openai/`), put your Gemini key in `OPENAI_API_KEY`, and set `PROVER_MODEL` to a Gemini model id (e.g. `gemini-2.0-flash` or whatever the docs list). You can run `lemma configure prover` and choose **custom OpenAI-compatible**, or merge those keys into `.env`. Validators use a **separate** judge configuration (`JUDGE_PROVIDER`, `OPENAI_MODEL`, …); do not confuse prover and judge env vars.
+For Lemma’s **prover** (miner), use the OpenAI-compatible path: `PROVER_PROVIDER=openai`, set `PROVER_OPENAI_BASE_URL` to Gemini’s OpenAI base URL (see that doc — typically `https://generativelanguage.googleapis.com/v1beta/openai/`), put your Gemini key in **`PROVER_OPENAI_API_KEY`**, and set `PROVER_MODEL` to a Gemini model id (e.g. `gemini-flash-latest` or `gemini-2.0-flash`). Easiest: run **`lemma configure prover`** and choose **`gemini`** — the wizard asks only for your key and a numbered model (it writes the URL and `PROVER_*` for you). You can still use **custom OpenAI-compatible** in that wizard for other hosts, or merge keys into `.env` by hand. Validators use a **separate** judge stack: **`JUDGE_OPENAI_API_KEY`** (Chutes inference token) plus `OPENAI_BASE_URL` / `OPENAI_MODEL` — do not reuse the Gemini key for Chutes.
 
 **If you see HTTP 404** mentioning `gen-lang-client-…` or `models/... is not found`, you accidentally used a **Google AI Studio internal id** (or a UI-only string) as `PROVER_MODEL`. Replace it with a **public model name** from the [models](https://ai.google.dev/gemini-api/docs/models) list (e.g. `gemini-2.0-flash`), not a `gen-lang-client-*` value.
 
@@ -233,7 +235,7 @@ Logs: `lemma_epoch_summary`; optional JSONL. No built-in dashboard ([production.
 1. `uv sync`; `.env` with test endpoint, `NETUID`, wallets.
 2. Register (`btcli`).
 3. Miner: reachable axon; prover keys.
-4. Validator: Lean image; `uv run lemma meta`; `uv run lemma validator` (`--dry-run`, `LEMMA_FAKE_JUDGE=1` when testing).
+4. Validator: Lean image; `uv run lemma meta`; smoke-test judge on files with `lemma judge --trace …`; full rehearsal without weights: `lemma validator dry-run` (FakeJudge by default; `LEMMA_DRY_RUN_REAL_JUDGE=1` for live judge); `LEMMA_FAKE_JUDGE=1` only for fully local stubs.
 5. Confirm `set_weights` when ready.
 
 ## Throughput

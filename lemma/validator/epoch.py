@@ -36,15 +36,29 @@ if TYPE_CHECKING:
 
 
 def _build_judge(settings: LemmaSettings, dry_run: bool) -> Judge:
-    if dry_run or os.environ.get("LEMMA_FAKE_JUDGE") == "1":
+    """Return the judge implementation for this epoch.
+
+    ``LEMMA_FAKE_JUDGE=1`` always yields ``FakeJudge``.
+
+    Validator **dry-run** epochs default to ``FakeJudge`` so rehearsal loops stay cheap and deterministic.
+    Set ``LEMMA_DRY_RUN_REAL_JUDGE=1`` to use the configured live judge (same HTTP stack as production) while
+    still skipping ``set_weights``.
+    """
+    if os.environ.get("LEMMA_FAKE_JUDGE") == "1":
         return FakeJudge()
+    use_stub_in_dry = dry_run and os.environ.get("LEMMA_DRY_RUN_REAL_JUDGE", "").strip() != "1"
+    if use_stub_in_dry:
+        logger.info("dry-run epoch: using FakeJudge (set LEMMA_DRY_RUN_REAL_JUDGE=1 for live judge HTTP)")
+        return FakeJudge()
+    if dry_run:
+        logger.info("LEMMA_DRY_RUN_REAL_JUDGE=1 — using live judge in dry-run (set_weights still skipped)")
     to = float(settings.judge_llm_http_timeout_s or settings.llm_http_timeout_s)
     ra = max(1, int(settings.judge_llm_retry_attempts))
     prov = (settings.judge_provider or "chutes").lower()
     if prov in ("openai", "chutes"):
-        key = settings.openai_api_key
+        key = settings.judge_openai_api_key_resolved()
         if not key:
-            logger.warning("OPENAI_API_KEY missing; using FakeJudge")
+            logger.warning("JUDGE_OPENAI_API_KEY / OPENAI_API_KEY missing; using FakeJudge")
             return FakeJudge()
         return OpenAIJudge(
             key,

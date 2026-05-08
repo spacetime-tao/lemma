@@ -17,6 +17,15 @@ CHUTES_DEFAULT_MODEL = CANONICAL_JUDGE_OPENAI_MODEL
 # Matches LemmaSettings.anthropic_model default (prover falls back if PROVER_MODEL unset).
 DEFAULT_ANTHROPIC_MODEL = "claude-3-5-sonnet-20241022"
 
+# Google Gemini OpenAI-compatible API (miner prover only in the wizard).
+GEMINI_OPENAI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
+# (menu number, PROVER_MODEL id, one-line hint). Google may retarget `-latest` aliases over time.
+_GEMINI_PRESET_ROWS: tuple[tuple[str, str, str], ...] = (
+    ("1", "gemini-pro-latest", "Pro tier — strongest; highest typical $/token (tiered by context)."),
+    ("2", "gemini-flash-latest", "Flash — strong default for miners; mid-range $/token."),
+    ("3", "gemini-flash-lite-latest", "Flash-Lite — cheaper / faster when quality tradeoffs are OK."),
+)
+
 # Official entrypoints (Bittensor docs — mainnet vs testnet).
 CHAIN_ENDPOINT_FINNEY = "wss://entrypoint-finney.opentensor.ai:443"
 CHAIN_ENDPOINT_TEST = "wss://test.finney.opentensor.ai:443"
@@ -156,6 +165,85 @@ def _backend_choice(role_label: str) -> str:
     )
 
 
+def _prover_backend_choice() -> str:
+    click.echo(
+        stylize(
+            "Prover (writes Submission.lean when you mine) — pick an API. ",
+            dim=True,
+        )
+        + stylize("chutes", fg="yellow")
+        + stylize(" = any Chutes model id you choose. ", dim=True)
+        + stylize("gemini", fg="yellow")
+        + stylize(" = Google AI Studio key + fixed Gemini OpenAI URL (no URL typing).\n", dim=True),
+        nl=False,
+    )
+    return click.prompt(
+        stylize("Backend", fg="green"),
+        type=click.Choice(["chutes", "gemini", "anthropic", "custom_openai"], case_sensitive=False),
+        default="chutes",
+    )
+
+
+def _prompt_gemini_prover_model() -> str:
+    """Return PROVER_MODEL for Gemini OpenAI-compat (preset slug or custom id)."""
+    click.echo(
+        stylize(
+            "Gemini `-latest` ids follow Google’s current default for that tier; pricing and the concrete model "
+            "can change when Google updates the alias. Pin a versioned id in `.env` if you need stability.\n",
+            dim=True,
+        ),
+        nl=False,
+    )
+    click.echo(
+        stylize(
+            "Cost (rough): Google charges per million input tokens and per million output tokens. "
+            "After a few runs, check usage in Google AI Studio / Cloud billing. To estimate one call yourself: "
+            "(prompt_tokens / 1e6) * price_in + (completion_tokens / 1e6) * price_out using the current table at ",
+            dim=True,
+        )
+        + stylize("https://ai.google.dev/pricing", fg="yellow")
+        + stylize(
+            ". Lemma caps how large a completion can be with LEMMA_PROVER_MAX_TOKENS in `.env` (that is only an "
+            "upper bound — real output is often smaller).\n",
+            dim=True,
+        ),
+        nl=False,
+    )
+    click.echo(stylize("Pick a model (number):\n", dim=True), nl=False)
+    for num, mid, blurb in _GEMINI_PRESET_ROWS:
+        click.echo(
+            stylize(f"  {num} ", fg="green", bold=True)
+            + stylize(mid, fg="cyan")
+            + stylize(f" — {blurb}\n", dim=True),
+            nl=False,
+        )
+    click.echo(
+        stylize("  4 ", fg="green", bold=True)
+        + stylize("other Gemini id", fg="cyan")
+        + stylize(" — you type the exact model string (same URL as above).\n", dim=True),
+        nl=False,
+    )
+    choice = click.prompt(
+        stylize("Model", fg="green"),
+        type=click.Choice(["1", "2", "3", "4"], case_sensitive=False),
+        default="2",
+        show_default=True,
+    ).strip()
+    if choice == "4":
+        mid = click.prompt(
+            stylize("Gemini model id", fg="green") + stylize(" (e.g. gemini-2.0-flash)", dim=True),
+            default="",
+            show_default=False,
+        ).strip()
+        if not mid:
+            raise click.UsageError("Gemini model id cannot be empty.")
+        return mid
+    for num, mid, _blurb in _GEMINI_PRESET_ROWS:
+        if choice == num:
+            return mid
+    raise click.UsageError(f"Unexpected Gemini model choice: {choice!r}")
+
+
 def collect_judge_updates() -> dict[str, str]:
     backend = _backend_choice("Judge (scores miner proofs + traces)").lower()
     updates: dict[str, str]
@@ -163,13 +251,13 @@ def collect_judge_updates() -> dict[str, str]:
         key = _require_secret("Chutes API key (OpenAI-compatible)")
         updates = {
             "JUDGE_PROVIDER": "chutes",
-            "OPENAI_API_KEY": key,
+            "JUDGE_OPENAI_API_KEY": key,
             "OPENAI_BASE_URL": CHUTES_OPENAI_BASE_URL,
             "OPENAI_MODEL": CHUTES_DEFAULT_MODEL,
         }
         click.echo(
             stylize(
-                "→ will write judge settings + API key to .env (key not printed). "
+                "→ will write judge URL/model + JUDGE_OPENAI_API_KEY to .env (key not printed). "
                 f"Model  {CHUTES_DEFAULT_MODEL}  (change later: `lemma configure judge`)\n",
                 dim=True,
             ),
@@ -207,7 +295,7 @@ def collect_judge_updates() -> dict[str, str]:
             raise click.UsageError("OPENAI_BASE_URL and OPENAI_MODEL are required for custom OpenAI-compatible.")
         updates = {
             "JUDGE_PROVIDER": "openai",
-            "OPENAI_API_KEY": key,
+            "JUDGE_OPENAI_API_KEY": key,
             "OPENAI_BASE_URL": url,
             "OPENAI_MODEL": model,
         }
@@ -215,14 +303,14 @@ def collect_judge_updates() -> dict[str, str]:
 
 
 def collect_prover_updates() -> dict[str, str]:
-    backend = _backend_choice("Prover (writes Submission.lean when you mine)").lower()
+    backend = _prover_backend_choice().lower()
     updates: dict[str, str]
     if backend == "chutes":
         key = _require_secret("Chutes API key (prover)")
         click.echo(
             stylize(
                 "PROVER_MODEL / PROVER_OPENAI_BASE_URL are miner-only; the judge uses OPENAI_MODEL / OPENAI_BASE_URL "
-                "(set via `lemma configure judge`).",
+                "and JUDGE_OPENAI_API_KEY (set via `lemma configure judge`).",
                 dim=True,
             )
         )
@@ -234,7 +322,7 @@ def collect_prover_updates() -> dict[str, str]:
         use_model = model or CHUTES_DEFAULT_MODEL
         updates = {
             "PROVER_PROVIDER": "openai",
-            "OPENAI_API_KEY": key,
+            "PROVER_OPENAI_API_KEY": key,
             "PROVER_OPENAI_BASE_URL": CHUTES_OPENAI_BASE_URL,
             "PROVER_MODEL": use_model,
         }
@@ -242,6 +330,23 @@ def collect_prover_updates() -> dict[str, str]:
             stylize("→ will write prover + key to .env; prover model ", dim=True)
             + stylize(use_model, fg="green")
             + stylize("\n", dim=True),
+            nl=False,
+        )
+    elif backend == "gemini":
+        key = _require_secret("Google AI Studio / Gemini API key (OpenAI-compatible)")
+        model = _prompt_gemini_prover_model()
+        updates = {
+            "PROVER_PROVIDER": "openai",
+            "PROVER_OPENAI_API_KEY": key,
+            "PROVER_OPENAI_BASE_URL": GEMINI_OPENAI_BASE_URL,
+            "PROVER_MODEL": model,
+        }
+        click.echo(
+            stylize("→ will write PROVER_* for Gemini at ", dim=True)
+            + stylize(GEMINI_OPENAI_BASE_URL, fg="yellow")
+            + stylize("; model ", dim=True)
+            + stylize(model, fg="green")
+            + stylize(" (key not printed).\n", dim=True),
             nl=False,
         )
     elif backend == "anthropic":
@@ -295,7 +400,7 @@ def collect_prover_updates() -> dict[str, str]:
             )
         updates = {
             "PROVER_PROVIDER": "openai",
-            "OPENAI_API_KEY": key,
+            "PROVER_OPENAI_API_KEY": key,
             "PROVER_OPENAI_BASE_URL": url,
             "PROVER_MODEL": model,
         }
