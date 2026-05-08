@@ -22,8 +22,8 @@ from lemma.problems.factory import resolve_problem
 from lemma.protocol import LemmaChallenge
 from lemma.protocol_attest import miner_verify_attest_message, sign_miner_verify_attest
 from lemma.protocol_commit_reveal import (
-    commitment_hex_from_preimage,
     commit_preimage_v1,
+    commitment_hex_from_preimage,
     reasoning_blob_for_commit,
 )
 
@@ -337,7 +337,10 @@ def make_forward(
                 return reject_synopsis(
                     synapse,
                     400,
-                    "LEMMA_MINER_VERIFY_ATTEST_ENABLED requires local Lean verify PASS (set LEMMA_MINER_LOCAL_VERIFY=1)",
+                    (
+                        "LEMMA_MINER_VERIFY_ATTEST_ENABLED requires local Lean verify PASS "
+                        "(set LEMMA_MINER_LOCAL_VERIFY=1)"
+                    ),
                 )
             msg = miner_verify_attest_message(synapse)
             synapse.miner_verify_attest_signature_hex = sign_miner_verify_attest(wallet, msg)

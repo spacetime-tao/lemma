@@ -10,10 +10,6 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from lemma.protocol import LemmaChallenge, ReasoningStep
 
 _MAGIC = b"LemmaCommitRevealV1"
 

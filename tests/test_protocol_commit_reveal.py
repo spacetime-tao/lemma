@@ -1,8 +1,8 @@
 """Commit–reveal preimage consistency."""
 
 from lemma.protocol_commit_reveal import (
-    commitment_hex_from_preimage,
     commit_preimage_v1,
+    commitment_hex_from_preimage,
     reasoning_blob_for_commit,
     verify_reveal_against_commitment,
 )

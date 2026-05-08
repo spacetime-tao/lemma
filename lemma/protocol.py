@@ -109,7 +109,10 @@ class LemmaChallenge(bt.Synapse):
     )
     commit_reveal_phase: str = Field(
         default="off",
-        description='Commit–reveal round: "off" (single phase), "commit" (hash only), or "reveal" (full proof + nonce).',
+        description=(
+            'Commit–reveal round: "off" (single phase), "commit" (hash only), '
+            'or "reveal" (full proof + nonce).'
+        ),
     )
     proof_commitment_hex: str | None = Field(
         default=None,

@@ -1,7 +1,6 @@
 """Miner verify attestation helpers."""
 
 import bittensor as bt
-
 from lemma.protocol import LemmaChallenge
 from lemma.protocol_attest import (
     attest_spot_should_full_verify,
