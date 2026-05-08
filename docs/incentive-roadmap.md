@@ -50,7 +50,7 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 
 ### Compute placement
 
-- [ ] **Validator Lean load** — Lower **`LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION`** only after miners run attest + local verify; document trust vs CPU tradeoffs (`knowledge/subnet.invariants.yaml` compute distribution).
+- [x] **Validator Lean load** — [validator_lean_load.md](validator_lean_load.md): concurrency caps, **`LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION`** trust vs CPU, remote verify worker; aligns with [`knowledge/subnet.invariants.yaml`](../knowledge/subnet.invariants.yaml) `compute_distribution`.
 
 ### Transport (long-term)
 

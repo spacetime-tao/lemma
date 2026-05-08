@@ -118,7 +118,7 @@ Timeout values are subnet policy: the operator publishes a single canonical `.en
 
 **What happens if the judge times out or errors?** That UID is **skipped** for scoring for the round (failure is logged; `judge_errors` in the epoch summary). Other judged miners are still scored.
 
-Concurrency caps (`LEMMA_LEAN_VERIFY_MAX_CONCURRENT`, `LEMMA_JUDGE_MAX_CONCURRENT`) limit how many proofs are processed at once; extra work **queues**, it is not dropped because the chain moved.
+Concurrency caps (`LEMMA_LEAN_VERIFY_MAX_CONCURRENT`, `LEMMA_JUDGE_MAX_CONCURRENT`) limit how many proofs are processed at once; extra work **queues**, it is not dropped because the chain moved. With miner attest enabled, **`LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION`** trades CPU vs trust — see [validator_lean_load.md](validator_lean_load.md).
 
 ## What can exceed the defaults?
 

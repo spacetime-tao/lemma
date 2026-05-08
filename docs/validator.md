@@ -52,6 +52,8 @@ Requires the **`docker`** CLI on `PATH` for `exec`. CPU/memory limits apply to h
 
 **Bootstrap helper:** `scripts/start_lean_docker_worker.sh` loads `.env` and starts the worker (requires **`LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR`**). Put **`LEMMA_LEAN_DOCKER_WORKER`** in **`.env`** (Lemma reads it via **`LemmaSettings`** — exporting it in the shell alone is not enough unless **`LEMMA_PREFER_PROCESS_ENV=1`**). Use **`./scripts/start_lean_docker_worker.sh --update-dotenv`** to append the line automatically when missing.
 
+**Throughput:** concurrency caps, attest spot-verify fraction (when **`LEMMA_MINER_VERIFY_ATTEST_ENABLED=1`**), and optional remote verify worker — [validator_lean_load.md](validator_lean_load.md).
+
 **One-shot dev warm-up (SSD cache + worker):** from the repo root, **`bash scripts/dev-lean-warm.sh`** creates **`./.lemma-lean-cache`** (unless you already set **`LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR`**), starts the long-lived worker, and with **`--update-dotenv`** appends **`LEMMA_LEAN_DOCKER_WORKER`** when missing. Keep that cache directory between runs so Mathlib and **`.lake`** stay warm.
 
 ### Remote Lean verify pool (same operator, second machine)

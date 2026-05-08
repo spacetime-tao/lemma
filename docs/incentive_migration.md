@@ -27,6 +27,7 @@ This document tracks **post-audit** mechanism changes in Lemma: proof-centric sc
 | Problem seed RPC slack | **`LEMMA_PROBLEM_SEED_CHAIN_HEAD_SLACK_BLOCKS`** pulls chain head back before `resolve_problem_seed` and forward HTTP deadline math — reduces ±1 RPC skew at quantize edges (`lemma/common/problem_seed.py`). |
 | Lean workspace cache key | Default **template-only** slot under **`LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR`**; optional **`LEMMA_LEAN_WORKSPACE_CACHE_INCLUDE_SUBMISSION_HASH=1`** appends proof-body fingerprint (`workspace_verify_cache_key` in `lemma/lean/workspace.py`). |
 | Sybil / identity (documentation) | Coldkey dedup and identical-submission dedup are **not** sybil-proof — see [sybil_economics.md](sybil_economics.md) and [`knowledge/sybil.realities.yaml`](../knowledge/sybil.realities.yaml). |
+| Validator Lean load (documentation) | **`LEMMA_LEAN_VERIFY_MAX_CONCURRENT`**, **`LEMMA_JUDGE_MAX_CONCURRENT`**, optional **`LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION`** when attest on — see [validator_lean_load.md](validator_lean_load.md). |
 
 ## Generated registry
 
@@ -40,6 +41,7 @@ Adding templates changes `generated_registry_sha256`. Operators must run `lemma 
 - Problem mix: `lemma/problems/generated.py` (`expand_seed_for_problem_rng`), `lemma/common/problem_seed.py` (`mix_sub_problem_seed`)
 - Lean cache: `lemma/lean/workspace.py` (`workspace_verify_cache_key`), `lemma/lean/sandbox.py`
 - Sybil / economics (operators): [sybil_economics.md](sybil_economics.md), `knowledge/sybil.realities.yaml`
+- Validator throughput: [validator_lean_load.md](validator_lean_load.md)
 - Miner attest: `lemma/protocol_attest.py`, `lemma/miner/forward.py`, `lemma/validator/epoch.py`
 - Commit–reveal: `lemma/protocol_commit_reveal.py`, `lemma/miner/forward.py`, `lemma/validator/epoch.py`
 - Judge profile attest: `lemma/validator/judge_profile_attest.py`, `lemma/validator/service.py`, `lemma/cli/validator_check.py`
