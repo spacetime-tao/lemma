@@ -107,6 +107,72 @@ name = "Submission"
     (dest / "lakefile.toml").write_text(lake, encoding="utf-8")
 
 
+def _bisect_multiplex_failures(problems: list[Problem], image: str, *, initial_log_tail: str) -> list[str]:
+    """Find failing template(s) without N separate workspaces (saves CI disk).
+
+    When the all-in-one multiplex fails, binary-search which subset fails so we only run
+    ``O(log n)`` multiplex builds, each in its own temp dir that is deleted immediately.
+    """
+    messages: list[str] = []
+
+    def isolate(batch: list[Problem]) -> None:
+        if len(batch) == 1:
+            tmp = Path(tempfile.mkdtemp(prefix="lemma-tpl-bisect-"))
+            try:
+                _materialize_multiplex(tmp, batch)
+                code, out = _lake_build_only(tmp, image)
+                if code != 0:
+                    p = batch[0]
+                    bi = p.extra.get("builder_index")
+                    messages.append(
+                        f"ISOLATED FAIL builder_index={bi} id={p.id} "
+                        f"template_fn={p.extra.get('template_fn')} exit={code}\n{out[-16000:]}"
+                    )
+                else:
+                    messages.append(
+                        f"ISOLATED OK builder_index={batch[0].extra.get('builder_index')} "
+                        f"id={batch[0].id} — passes alone; failure may be interaction with other "
+                        f"theorems in multiplex or flake. Multiplex tail:\n{initial_log_tail[-8000:]}"
+                    )
+            finally:
+                shutil.rmtree(tmp, ignore_errors=True)
+            return
+
+        mid = len(batch) // 2
+        left, right = batch[:mid], batch[mid:]
+        tmp_l = Path(tempfile.mkdtemp(prefix="lemma-tpl-bisect-"))
+        try:
+            _materialize_multiplex(tmp_l, left)
+            code_l, out_l = _lake_build_only(tmp_l, image)
+        finally:
+            shutil.rmtree(tmp_l, ignore_errors=True)
+
+        if code_l != 0:
+            isolate(left)
+            return
+
+        tmp_r = Path(tempfile.mkdtemp(prefix="lemma-tpl-bisect-"))
+        try:
+            _materialize_multiplex(tmp_r, right)
+            code_r, out_r = _lake_build_only(tmp_r, image)
+        finally:
+            shutil.rmtree(tmp_r, ignore_errors=True)
+
+        if code_r != 0:
+            isolate(right)
+            return
+
+        messages.append(
+            "Bisection: both halves built OK in isolation but full multiplex failed — "
+            "possible cross-theorem name clash or CI flake.\n"
+            f"Left multiplex log tail:\n{out_l[-6000:]}\n---\nRight multiplex log tail:\n"
+            f"{out_r[-6000:]}\n---\nFull multiplex tail:\n{initial_log_tail[-8000:]}"
+        )
+
+    isolate(problems)
+    return messages
+
+
 def _lake_build_only(work: Path, image: str) -> tuple[int, str]:
     """Return (exit_code, combined_output)."""
     inner = (
@@ -176,20 +242,26 @@ def main() -> int:
                     file=sys.stderr,
                 )
                 print(
-                    "Falling back to per-template checks to isolate the failing builder(s)...",
+                    "Bisecting multiplex subsets (disk-friendly) to isolate failing builder(s)...",
                     file=sys.stderr,
                 )
-                # Continue into per-template mode for actionable failure output.
-            else:
-                print(f"OK: {len(problems)} generated templates lake build in one workspace ({image})")
-                return 0
+                for msg in _bisect_multiplex_failures(problems, image, initial_log_tail=out):
+                    print(msg, "\n---\n", file=sys.stderr)
+                return 1
+            print(f"OK: {len(problems)} generated templates lake build in one workspace ({image})")
+            return 0
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
+    # Slow / disk-heavy: one workspace per template (only when multiplex disabled).
+    print(
+        "WARN: CI_TEMPLATE_MULTIPLEX=0 — per-template Docker builds (high disk use).",
+        file=sys.stderr,
+    )
+    from lemma.lean.workspace import materialize_workspace
+
     failures: list[str] = []
     for bi in sorted(seed_map.keys()):
-        from lemma.lean.workspace import materialize_workspace
-
         seed = seed_map[bi]
         p = src.sample(seed)
         stub = p.submission_stub()
