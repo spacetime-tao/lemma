@@ -37,8 +37,8 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 
 ### Scoring & objective
 
-- [ ] **Proof intrinsic signal** — Today’s heuristic (length / `by` tokens / lines) is gameable via comments and conflicts with “short correct proof” style. Replace with elaborator-backed metrics, comment-stripped heuristics, remove intrinsic weight, or another non-padding proxy.
-- [ ] **Credibility multiplier** — Wire `cred_mult` from verification / consistency signals (`cred_mult = 1.0` is a placeholder); align with `LEMMA_REPUTATION_CREDIBILITY_EXPONENT`.
+- [x] **Proof intrinsic (partial)** — Lean `--` / `/- … -/` stripped before the heuristic (`LEMMA_PROOF_INTRINSIC_STRIP_COMMENTS`, default on). **Still open:** replace length/`by` proxy with elaborator-backed metrics, lower default weight, or remove intrinsic entirely.
+- [x] **Credibility multiplier** — Per-UID verify-pass EMA persisted in reputation JSON; score uses `(credibility ** LEMMA_REPUTATION_CREDIBILITY_EXPONENT)` after EMA smoothing (`LEMMA_REPUTATION_VERIFY_CREDIBILITY_ALPHA`, default 0.08; set to **0** to freeze credibility updates).
 - [ ] **Training export** — Revisit what validators emit once intrinsic/scoring stabilize so exports don’t teach deterministic gaming targets.
 
 ### Problem supply & predictability
@@ -48,7 +48,7 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 
 ### Validator protocol & fairness
 
-- [ ] **`deadline_block` enforcement** — Drop or penalize responses after the synapse deadline on the validator (field is hash-bound today).
+- [x] **`deadline_block` enforcement** — Validator drops responses when chain head ≥ synapse `deadline_block` after the forward returns.
 - [ ] **Cross-validator problem alignment** — Reduce RPC/skew splits at epoch boundaries (shared quantize / agreed head) so EMA compares like-with-like.
 - [ ] **Workspace cache key** — Include submission/proof fingerprint so distinct miners don’t share incremental-build identity incorrectly.
 

@@ -169,6 +169,7 @@ async def run_epoch(
     judge_parse_rejects = 0
     dedup_dropped = 0
     coldkey_dropped = 0
+    deadline_rejects = 0
     last_problem: Problem | None = None
 
     export_lock = asyncio.Lock()
@@ -212,6 +213,7 @@ async def run_epoch(
 
             axons = axon_list_for_uids(metagraph, uids)
             responses = await q.query_miners(dendrite, axons, synapse, timeout=forward_wait_s)
+            block_after_query = int(subtensor.get_current_block())
 
             candidates: list[tuple[int, LemmaChallenge]] = []
             for uid, resp in zip(uids, responses, strict=True):
@@ -225,6 +227,16 @@ async def run_epoch(
                         "(tampered payload or miner/validator version skew)",
                         uid,
                     )
+                    continue
+                db = resp.deadline_block
+                if db is not None and block_after_query >= int(db):
+                    logger.warning(
+                        "uid={} dropping response: chain block {} >= deadline_block {} (late)",
+                        uid,
+                        block_after_query,
+                        db,
+                    )
+                    deadline_rejects += 1
                     continue
                 if not resp.proof_script:
                     continue
@@ -276,6 +288,16 @@ async def run_epoch(
             verified = [x for x in verified_results if x is not None]
             total_verified += len(verified)
 
+            vca = float(settings.lemma_reputation_verify_credibility_alpha)
+            if not dry_run and vca > 0.0 and candidates:
+                ca = max(1e-9, min(1.0, vca))
+                passed_uids = {t[0] for t in verified}
+                for uid, _resp in candidates:
+                    outcome = 1.0 if uid in passed_uids else 0.0
+                    old_c = rep_store.credibility_by_uid.get(uid, 1.0)
+                    new_c = ca * outcome + (1.0 - ca) * old_c
+                    rep_store.credibility_by_uid[uid] = max(0.0, min(1.0, new_c))
+
             judge_sem = asyncio.Semaphore(max(1, settings.lemma_judge_max_concurrent))
 
             async def _score_one(
@@ -318,6 +340,7 @@ async def run_epoch(
                     proof_script=resp_i.proof_script or "",
                     proof_weight=settings.lemma_score_proof_weight,
                     token_model=settings.lemma_pareto_token_model,
+                    proof_intrinsic_strip_comments=settings.lemma_proof_intrinsic_strip_comments,
                 )
                 return ent, "ok"
 
@@ -347,12 +370,14 @@ async def run_epoch(
         coldkey_dropped += ckdrop
 
     alpha = float(settings.lemma_reputation_ema_alpha)
-    if alpha > 0.0 and scored and not dry_run:
+    cred_exp = float(settings.lemma_reputation_credibility_exponent)
+    if scored and not dry_run and (alpha > 0.0 or cred_exp > 0.0):
         scored, rep_store.ema_by_uid, _ = apply_ema_to_entries(
             scored,
             alpha=alpha,
-            credibility_exponent=settings.lemma_reputation_credibility_exponent,
+            credibility_exponent=cred_exp,
             prev_ema=rep_store.ema_by_uid,
+            credibility_by_uid=dict(rep_store.credibility_by_uid),
         )
         try:
             save_reputation(settings.lemma_reputation_state_path, rep_store)
@@ -390,7 +415,7 @@ async def run_epoch(
     logger.info(
         "lemma_epoch_summary chain_head_block={} problem_seed={} problem_seed_tag={} split={} "
         "theorem_id={} k_problems={} verified={} scored={} pareto_entries={} "
-        "judge_errors={} judge_parse_rejects={} dedup_dropped={} coldkey_dropped={} "
+        "judge_errors={} judge_parse_rejects={} dedup_dropped={} coldkey_dropped={} deadline_rejects={} "
         "skip_set_weights={} seconds={:.2f}  "
         "[verified=Lean proof OK; scored=proof+judge blend then EMA/dedup; pareto_entries=weight rows]",
         cur_block,
@@ -406,6 +431,7 @@ async def run_epoch(
         judge_parse_rejects,
         dedup_dropped,
         coldkey_dropped,
+        deadline_rejects,
         skip_chain_write,
         elapsed,
     )

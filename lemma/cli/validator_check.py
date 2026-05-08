@@ -144,6 +144,9 @@ def run_validator_check(settings: LemmaSettings) -> int:
         stylize(
             f"INFO scoring  LEMMA_SCORE_PROOF_WEIGHT={settings.lemma_score_proof_weight}  "
             f"LEMMA_REPUTATION_EMA_ALPHA={settings.lemma_reputation_ema_alpha}  "
+            f"LEMMA_REPUTATION_VERIFY_CREDIBILITY_ALPHA={settings.lemma_reputation_verify_credibility_alpha}  "
+            f"LEMMA_REPUTATION_CREDIBILITY_EXPONENT={settings.lemma_reputation_credibility_exponent}  "
+            f"LEMMA_PROOF_INTRINSIC_STRIP_COMMENTS={int(settings.lemma_proof_intrinsic_strip_comments)}  "
             f"LEMMA_EPOCH_PROBLEM_COUNT={settings.lemma_epoch_problem_count}  "
             "(docs/incentive_migration.md)",
             dim=True,

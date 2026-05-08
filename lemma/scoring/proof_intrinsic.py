@@ -6,13 +6,31 @@ import math
 import re
 
 
-def proof_intrinsic_score(proof_script: str) -> float:
+def strip_lean_comments_for_intrinsic(src: str) -> str:
+    """Best-effort removal of Lean ``--`` line comments and ``/- ... -/`` blocks.
+
+    Imperfect inside string literals, but removes the dominant comment-padding pattern for
+    ``proof_intrinsic_score``. Innermost ``/- ... -/`` pairs are stripped repeatedly until stable.
+    """
+    out = src or ""
+    while "/-" in out:
+        new = re.sub(r"/-[\s\S]*?-/", "", out, count=1)
+        if new == out:
+            break
+        out = new
+    out = re.sub(r"--[^\n]*", "", out)
+    return out
+
+
+def proof_intrinsic_score(proof_script: str, *, strip_comments: bool = True) -> float:
     """Return a score in ``[0, 1]`` from proof length / structure proxies.
 
     This is not a measure of mathematical difficulty — only a coarse signal to reduce
     judge-only dominance when combined with ``LEMMA_SCORE_PROOF_WEIGHT``.
     """
     s = (proof_script or "").strip()
+    if strip_comments:
+        s = strip_lean_comments_for_intrinsic(s).strip()
     if not s:
         return 0.0
     n_chars = len(s)

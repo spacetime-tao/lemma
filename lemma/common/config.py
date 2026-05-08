@@ -640,7 +640,31 @@ class LemmaSettings(BaseSettings):
             "LEMMA_REPUTATION_CREDIBILITY_EXPONENT",
             "lemma_reputation_credibility_exponent",
         ),
-        description="Multiply EMA score by credibility**exponent (1.0 = off; reserved for future credibility EMA).",
+        description=(
+            "Multiply EMA-smoothed score by (verify credibility)**exponent. "
+            "Exponent 0 disables the multiplier (always 1). Default 1 applies full credibility curve."
+        ),
+    )
+    lemma_reputation_verify_credibility_alpha: float = Field(
+        default=0.08,
+        ge=0.0,
+        le=1.0,
+        validation_alias=AliasChoices(
+            "LEMMA_REPUTATION_VERIFY_CREDIBILITY_ALPHA",
+            "lemma_reputation_verify_credibility_alpha",
+        ),
+        description=(
+            "EMA alpha for per-UID verify credibility (1.0 = Lean verify passed, 0.0 = failed). "
+            "0 disables updates; new UIDs start at credibility 1.0."
+        ),
+    )
+    lemma_proof_intrinsic_strip_comments: bool = Field(
+        default=True,
+        validation_alias=AliasChoices(
+            "LEMMA_PROOF_INTRINSIC_STRIP_COMMENTS",
+            "lemma_proof_intrinsic_strip_comments",
+        ),
+        description="Strip Lean line/block comments before proof_intrinsic heuristic (reduces comment-padding).",
     )
     lemma_reputation_state_path: Path | None = Field(
         default=None,

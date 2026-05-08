@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -15,12 +15,16 @@ class ReputationStore:
     """EMA scores per miner UID (validator process)."""
 
     ema_by_uid: dict[int, float]
-    version: int = 1
+    credibility_by_uid: dict[int, float] = field(default_factory=dict)
+    version: int = 2
 
     def to_json(self) -> dict[str, Any]:
         return {
             "version": self.version,
             "ema_by_uid": {str(k): v for k, v in sorted(self.ema_by_uid.items())},
+            "credibility_by_uid": {
+                str(k): v for k, v in sorted(self.credibility_by_uid.items())
+            },
         }
 
     @classmethod
@@ -29,8 +33,13 @@ class ReputationStore:
         ema: dict[int, float] = {}
         for k, v in raw.items():
             ema[int(k)] = float(v)
-        ver = int(data.get("version", 1))
-        return cls(ema_by_uid=ema, version=ver)
+        cred: dict[int, float] = {}
+        raw_c = data.get("credibility_by_uid")
+        if isinstance(raw_c, dict):
+            for k, v in raw_c.items():
+                cred[int(k)] = float(v)
+        ver = int(data.get("version", 2))
+        return cls(ema_by_uid=ema, credibility_by_uid=cred, version=ver)
 
 
 def default_reputation_path() -> Path:
@@ -64,13 +73,18 @@ def apply_ema_to_entries(
     alpha: float,
     credibility_exponent: float,
     prev_ema: dict[int, float],
+    credibility_by_uid: dict[int, float] | None = None,
 ) -> tuple[list[ScoredEntry], dict[int, float], dict[int, float]]:
     """Return entries with ``reasoning_score``/``composite`` replaced by EMA-smoothed values.
+
+    ``credibility_by_uid`` holds per-UID verify-pass EMA in ``[0, 1]`` (default 1.0 if missing).
+    Final score uses ``smoothed * (credibility ** credibility_exponent)``.
 
     Returns ``(new_entries, new_ema_map, round_instant_scores)``.
     """
     raw_alpha = float(alpha)
     exp_p = max(0.0, float(credibility_exponent))
+    cred_map = credibility_by_uid or {}
     instant: dict[int, float] = {e.uid: float(e.reasoning_score) for e in entries}
     new_ema: dict[int, float] = dict(prev_ema)
 
@@ -84,7 +98,7 @@ def apply_ema_to_entries(
             a = max(1e-9, min(1.0, raw_alpha))
             smoothed = a * r + (1.0 - a) * old
         new_ema[e.uid] = smoothed
-        cred_mult = 1.0  # reserved: credibility EMA multiplier
+        cred_mult = max(0.0, min(1.0, float(cred_map.get(e.uid, 1.0))))
         final = smoothed * (cred_mult**exp_p)
         out.append(
             ScoredEntry(
