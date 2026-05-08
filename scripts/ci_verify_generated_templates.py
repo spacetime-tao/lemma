@@ -136,10 +136,18 @@ def _lake_build_only(work: Path, image: str) -> tuple[int, str]:
         text = out.decode("utf-8", errors="replace") if isinstance(out, bytes) else str(out)
         return 0, text
     except docker.errors.ContainerError as e:
-        err_b = e.stderr or b""
-        out_b = e.stdout or b""
+        # docker SDK exposes ``stderr`` on ContainerError; ``stdout`` is not guaranteed.
+        err_b = getattr(e, "stderr", b"") or b""
+        out_b = getattr(e, "stdout", b"") or b""
+        if not err_b and hasattr(e, "container") and e.container is not None:
+            try:
+                err_b = e.container.logs(stdout=False, stderr=True) or b""
+                if not out_b:
+                    out_b = e.container.logs(stdout=True, stderr=False) or b""
+            except Exception:
+                pass
         text = err_b.decode("utf-8", errors="replace") + out_b.decode("utf-8", errors="replace")
-        return int(e.exit_status), text
+        return int(getattr(e, "exit_status", 1)), text
     except Exception as e:
         return 1, str(e)
 
