@@ -34,6 +34,10 @@ uv run lemma meta
 
 Production: one pinned stack; `JUDGE_PROFILE_SHA256_EXPECTED`. Dev may use multiple backends.
 
+## Sybil and multi-account incentives
+
+Coldkey dedup and identical-submission dedup reduce certain games but **do not** prove unique humans. Read [sybil_economics.md](sybil_economics.md) and [`knowledge/sybil.realities.yaml`](../knowledge/sybil.realities.yaml) before relying on dedup as “security.”
+
 ## Comparator
 
 Optional hook ([comparator.md](comparator.md)). If any validator enables it, all must share `LEMMA_COMPARATOR_CMD` or scores diverge.
