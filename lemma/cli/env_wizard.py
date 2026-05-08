@@ -54,33 +54,12 @@ def collect_chain_updates() -> dict[str, str]:
         + stylize(" coldkeys / hotkeys.\n", dim=True),
         nl=False,
     )
-    click.echo(
-        stylize(
-            "This wizard targets Bittensor testnet only: NETUID ",
-            dim=True,
-        )
-        + stylize(str(LEMMA_TESTNET_NETUID), fg="yellow")
-        + stylize(" (Lemma). ", dim=True)
-        + stylize("Finney (mainnet) is TBD", fg="yellow")
-        + stylize(
-            " — do not use arbitrary NETUID placeholders (e.g. sn0 is the root network on Finney).\n",
-            dim=True,
-        ),
-        nl=False,
-    )
     network, endpoint = "test", CHAIN_ENDPOINT_TEST
     netuid = LEMMA_TESTNET_NETUID
     click.echo(
-        stylize(
-            f"→ SUBTENSOR_NETWORK={network}  NETUID={netuid}  endpoint below.\n",
-            dim=True,
-        ),
-        nl=False,
-    )
-
-    click.echo(
-        stylize(f"→ {network}", fg="cyan")
-        + stylize("  ", dim=True)
+        stylize("→ ", dim=True)
+        + stylize(network, fg="cyan")
+        + stylize(f"  NETUID {netuid}  ", dim=True)
         + stylize(endpoint, dim=True)
         + "\n",
         nl=False,
@@ -628,11 +607,13 @@ def run_setup(env_path: Path, role: str) -> None:
     click.echo("")
     click.echo(stylize("── Done ──", fg="green", bold=True))
     click.echo(
-        stylize("  • Register on-chain with ", dim=True)
-        + stylize("btcli", fg="yellow")
-        + stylize(" as needed; add TAO to the ", dim=True)
+        stylize("  • Send TAO to your ", dim=True)
         + stylize("coldkey", fg="yellow")
-        + stylize(" (not the hotkey) for fees and registration.\n", dim=True),
+        + stylize(" for registration fees (", dim=True)
+        + stylize("hotkeys", fg="yellow")
+        + stylize(" are not funded), then register on-chain with ", dim=True)
+        + stylize("btcli", fg="yellow")
+        + stylize(".\n", dim=True),
         nl=False,
     )
     if role in ("validator", "both"):
