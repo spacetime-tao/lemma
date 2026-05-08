@@ -110,6 +110,12 @@ def run_validator_check(settings: LemmaSettings) -> int:
                 "lemma validator requires LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED when "
                 "LEMMA_PROBLEM_SOURCE=generated (run `lemma configure subnet-pins`).",
             )
+    if (settings.problem_source or "").strip().lower() == "frozen":
+        if not settings.lemma_dev_allow_frozen_problem_source:
+            fatal.append(
+                "LEMMA_PROBLEM_SOURCE=frozen requires LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1 "
+                "(public eval catalog). Use generated for subnet traffic — see docs/catalog-sources.md",
+            )
 
     judge_policy = validator_judge_stack_strict_issue(settings)
     if judge_policy:

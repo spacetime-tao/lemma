@@ -8,7 +8,7 @@ This document tracks **post-audit** mechanism changes in Lemma: proof-centric sc
 
 | Mechanism | Env / behavior |
 |-----------|----------------|
-| Proof + judge blend | `LEMMA_SCORE_PROOF_WEIGHT` (default **0.65**); judge gets **1 − weight**. |
+| Proof + judge blend | `LEMMA_SCORE_PROOF_WEIGHT` (default **0.35** intrinsic / **0.65** judge composite); tune per subnet policy. |
 | Identical submission dedup | `LEMMA_SCORING_DEDUP_IDENTICAL=1` — same `(theorem, proof, trace)` keeps best score. |
 | Coldkey dedup | `LEMMA_SCORING_COLDKEY_DEDUP=1` — one hotkey per coldkey (metagraph). |
 | EMA reputation | `LEMMA_REPUTATION_EMA_ALPHA` (default **0.08**); state file `LEMMA_REPUTATION_STATE_PATH` or `~/.lemma/validator_reputation.json`. |
@@ -18,6 +18,7 @@ This document tracks **post-audit** mechanism changes in Lemma: proof-centric sc
 | Judge hardening | Fenced miner blocks + strict single-object JSON rubric parse. |
 | Empty-epoch uniform | Validator UID excluded from uniform weights when possible. |
 | Response deadline | After each forward, responses with `deadline_block` set are dropped if chain head is already at or past that block (late HTTP completions are not scored). |
+| Frozen miniF2F catalog | `LEMMA_PROBLEM_SOURCE=frozen` requires **`LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`** (fail-closed otherwise). |
 
 ## Reserved flags (not implemented)
 
@@ -28,6 +29,8 @@ These fail validator startup if set to `1`:
 - `LEMMA_JUDGE_PROFILE_ATTEST_ENABLED` — cross-validator agreement on judge profile hash (on-chain or quorum).
 
 Implementations should extend the synapse / signing path and add explicit tests before enabling defaults.
+
+**Planned order (see [incentive-roadmap.md](incentive-roadmap.md)):** miner-side verify attestation first (cuts validator Lean load when paired with spot-checks), then commit–reveal and judge-profile quorum / chain hooks as designed.
 
 ## Generated registry
 

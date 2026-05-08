@@ -14,6 +14,8 @@ Publish `generated_registry_sha256`; validators may set `LEMMA_GENERATED_REGISTR
 
 ## Frozen catalog (`LEMMA_PROBLEM_SOURCE=frozen`)
 
+Requires **`LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`** (public eval catalog — not default for subnet-like traffic).
+
 1. Build JSON ([catalog-sources.md](catalog-sources.md)).
 2. Update `catalog_manifest.json`.
 3. Rebuild sandbox image if toolchain pins change.

@@ -99,7 +99,7 @@ Parity: `./scripts/lemma-run lemma meta` — [governance.md](governance.md).
 ## Problem source
 
 - `LEMMA_PROBLEM_SOURCE=generated` (default): block height seeds templates.
-- `frozen`: catalog JSON — [catalog-sources.md](catalog-sources.md).
+- `frozen`: catalog JSON — requires **`LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`** (public eval set); see [catalog-sources.md](catalog-sources.md).
 
 More tuning: `.env.example` and `lemma configure` where possible.
 

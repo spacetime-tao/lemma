@@ -63,6 +63,17 @@ class LemmaSettings(BaseSettings):
         validation_alias=AliasChoices("LEMMA_PROBLEM_SOURCE", "problem_source"),
         description="generated = seed-expanded templates; frozen = minif2f_frozen.json catalog.",
     )
+    lemma_dev_allow_frozen_problem_source: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE",
+            "lemma_dev_allow_frozen_problem_source",
+        ),
+        description=(
+            "Allow LEMMA_PROBLEM_SOURCE=frozen (bundled public-eval catalog). Default false — "
+            "subnet-like deployments should use generated templates."
+        ),
+    )
     problem_seed_quantize_blocks: int = Field(
         default=100,
         ge=1,
@@ -597,13 +608,14 @@ class LemmaSettings(BaseSettings):
 
     # Scoring / incentive hard-migration (validators)
     lemma_score_proof_weight: float = Field(
-        default=0.65,
+        default=0.35,
         ge=0.0,
         le=1.0,
         validation_alias=AliasChoices("LEMMA_SCORE_PROOF_WEIGHT", "lemma_score_proof_weight"),
         description=(
             "Blend intrinsic proof-text heuristic with judge rubric: "
-            "round_score = w * proof_intrinsic + (1-w) * judge_composite."
+            "round_score = w * proof_intrinsic + (1-w) * judge_composite. "
+            "Default favors judge composite over the heuristic (see docs/incentive_migration.md)."
         ),
     )
     lemma_scoring_dedup_identical: bool = Field(

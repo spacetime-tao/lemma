@@ -1,5 +1,9 @@
 # Catalog sources (`frozen` mode)
 
+**Production-style deployments:** use **`LEMMA_PROBLEM_SOURCE=generated`** (default). The frozen catalog is a **public eval set** — enable only on purpose.
+
+To use frozen JSON, set **`LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`** in `.env` together with **`LEMMA_PROBLEM_SOURCE=frozen`**. Without this flag, `get_problem_source` and `lemma validator-check` reject frozen mode.
+
 Validators with `LEMMA_PROBLEM_SOURCE=frozen` read `lemma/problems/minif2f_frozen.json`. Rebuild with:
 
 ```bash

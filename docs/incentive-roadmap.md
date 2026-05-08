@@ -25,6 +25,8 @@ This doc is for **operators and contributors** planning work—not step-by-step 
 
 Validator raises at startup if any of these is set to `1` until implemented—see [incentive_migration.md](incentive_migration.md).
 
+**Next slice:** implement `LEMMA_MINER_VERIFY_ATTEST_ENABLED` (synapse commitment + hotkey-signed digest + validator policy).
+
 - [ ] `LEMMA_COMMIT_REVEAL_ENABLED` — commit/reveal for anti-leak / copy pools
 - [ ] `LEMMA_MINER_VERIFY_ATTEST_ENABLED` — miner-signed verify artifacts + spot-check
 - [ ] `LEMMA_JUDGE_PROFILE_ATTEST_ENABLED` — cross-validator judge profile agreement
@@ -37,14 +39,14 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 
 ### Scoring & objective
 
-- [x] **Proof intrinsic (partial)** — Lean `--` / `/- … -/` stripped before the heuristic (`LEMMA_PROOF_INTRINSIC_STRIP_COMMENTS`, default on). **Still open:** replace length/`by` proxy with elaborator-backed metrics, lower default weight, or remove intrinsic entirely.
+- [x] **Proof intrinsic (partial)** — Lean `--` / `/- … -/` stripped before the heuristic (`LEMMA_PROOF_INTRINSIC_STRIP_COMMENTS`, default on). Default **`LEMMA_SCORE_PROOF_WEIGHT=0.35`** favors judge composite over the heuristic. **Still open:** elaborator-backed metrics or further weight tuning.
 - [x] **Credibility multiplier** — Per-UID verify-pass EMA persisted in reputation JSON; score uses `(credibility ** LEMMA_REPUTATION_CREDIBILITY_EXPONENT)` after EMA smoothing (`LEMMA_REPUTATION_VERIFY_CREDIBILITY_ALPHA`, default 0.08; set to **0** to freeze credibility updates).
 - [ ] **Training export** — Revisit what validators emit once intrinsic/scoring stabilize so exports don’t teach deterministic gaming targets.
 
 ### Problem supply & predictability
 
 - [ ] **Template / seed predictability** — Expand or diversify problem draws; align reserved hooks with reducing enumerable pools.
-- [ ] **`LEMMA_PROBLEM_SOURCE=frozen` (miniF2F)** — Remove, gate behind dev-only profile, or fail-closed in production paths.
+- [x] **`LEMMA_PROBLEM_SOURCE=frozen` (miniF2F)** — Fail-closed unless **`LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`** (`get_problem_source`, `validator-check`).
 
 ### Validator protocol & fairness
 

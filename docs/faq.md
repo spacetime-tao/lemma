@@ -91,7 +91,7 @@ Think of **informal reasoning** as “explain your math before the Lean file.”
 | Mode | Behavior |
 | ---- | -------- |
 | `LEMMA_PROBLEM_SOURCE=generated` | Block seed → templates ([`generated.py`](../lemma/problems/generated.py)). |
-| `frozen` | Rows from `minif2f_frozen.json`. |
+| `frozen` | Rows from `minif2f_frozen.json` — opt-in via **`LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`** (see [catalog-sources.md](catalog-sources.md)). |
 
 Template or catalog changes need coordinated upgrades ([governance.md](governance.md)).
 
