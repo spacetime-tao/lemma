@@ -25,7 +25,7 @@ This doc is for **operators and contributors** planning work—not step-by-step 
 
 Validator raises at startup if any of these is set to `1` until implemented—see [incentive_migration.md](incentive_migration.md).
 
-- [ ] `LEMMA_COMMIT_REVEAL_ENABLED` — commit/reveal for anti-leak / copy pools
+- [x] `LEMMA_COMMIT_REVEAL_ENABLED` — two-phase commit (`proof_commitment_hex`) then reveal (proof + nonce); `lemma/protocol_commit_reveal.py`
 - [x] `LEMMA_MINER_VERIFY_ATTEST_ENABLED` — Sr25519 hotkey signature + deterministic spot full-verify fraction (`LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION`; miners require `LEMMA_MINER_LOCAL_VERIFY=1`)
 - [ ] `LEMMA_JUDGE_PROFILE_ATTEST_ENABLED` — cross-validator judge profile agreement
 

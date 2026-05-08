@@ -20,17 +20,17 @@ This document tracks **post-audit** mechanism changes in Lemma: proof-centric sc
 | Response deadline | After each forward, responses with `deadline_block` set are dropped if chain head is already at or past that block (late HTTP completions are not scored). |
 | Frozen miniF2F catalog | `LEMMA_PROBLEM_SOURCE=frozen` requires **`LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`** (fail-closed otherwise). |
 | Miner verify attest | **`LEMMA_MINER_VERIFY_ATTEST_ENABLED=1`** — miners must run **`LEMMA_MINER_LOCAL_VERIFY=1`**, local Lean PASS, then Sr25519-sign `protocol_attest.miner_verify_attest_message(synapse)` into **`miner_verify_attest_signature_hex`**. Validators verify against metagraph hotkeys; **`LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION`** (default **1.0** = always full Docker verify) selects a deterministic subset for full Lean (lower values reduce validator CPU — trust tradeoff). |
+| Commit–reveal | **`LEMMA_COMMIT_REVEAL_ENABLED=1`** — validator sends two forwards per sub-round: **`commit_reveal_phase=commit`** (miners return **`proof_commitment_hex`**, SHA256 of canonical preimage — see `lemma/protocol_commit_reveal.py`) then **`commit_reveal_phase=reveal`** (full proof + **`commit_reveal_nonce_hex`**). Responses without a matching commit are dropped. Doubles axon round-trip latency vs single-phase. |
 
 ## Reserved flags (not implemented)
 
 These fail validator startup if set to `1`:
 
-- `LEMMA_COMMIT_REVEAL_ENABLED` — two-phase commit / reveal for proofs (anti copy-pool gossip).
 - `LEMMA_JUDGE_PROFILE_ATTEST_ENABLED` — cross-validator agreement on judge profile hash (on-chain or quorum).
 
-**Implemented:** `LEMMA_MINER_VERIFY_ATTEST_ENABLED` — see table row above and `lemma/protocol_attest.py`.
+**Implemented:** `LEMMA_MINER_VERIFY_ATTEST_ENABLED` (`lemma/protocol_attest.py`); `LEMMA_COMMIT_REVEAL_ENABLED` (`lemma/protocol_commit_reveal.py`).
 
-**Next:** commit–reveal and judge-profile quorum / chain hooks as designed ([incentive-roadmap.md](incentive-roadmap.md)).
+**Next:** judge-profile quorum / chain hooks as designed ([incentive-roadmap.md](incentive-roadmap.md)).
 
 ## Generated registry
 
@@ -43,3 +43,4 @@ Adding templates changes `generated_registry_sha256`. Operators must run `lemma 
 - Reputation: `lemma/scoring/reputation.py`
 - Problem mix: `lemma/problems/generated.py`, `lemma/common/problem_seed.py` (`mix_sub_problem_seed`)
 - Miner attest: `lemma/protocol_attest.py`, `lemma/miner/forward.py`, `lemma/validator/epoch.py`
+- Commit–reveal: `lemma/protocol_commit_reveal.py`, `lemma/miner/forward.py`, `lemma/validator/epoch.py`

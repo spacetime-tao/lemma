@@ -107,6 +107,18 @@ class LemmaChallenge(bt.Synapse):
             "when ``LEMMA_MINER_VERIFY_ATTEST_ENABLED=1``. Not part of ``body_hash``."
         ),
     )
+    commit_reveal_phase: str = Field(
+        default="off",
+        description='Commit–reveal round: "off" (single phase), "commit" (hash only), or "reveal" (full proof + nonce).',
+    )
+    proof_commitment_hex: str | None = Field(
+        default=None,
+        description="SHA256 preimage commitment hex (64 chars), phase commit only; not in body_hash.",
+    )
+    commit_reveal_nonce_hex: str | None = Field(
+        default=None,
+        description="32-byte nonce as 64 hex chars; phase reveal only; not in body_hash.",
+    )
 
     def deserialize(self) -> LemmaChallenge:
         """No-op: strings are already JSON-safe."""

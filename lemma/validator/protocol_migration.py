@@ -14,11 +14,6 @@ if TYPE_CHECKING:
 
 def validate_protocol_feature_flags(settings: LemmaSettings) -> None:
     """Raise ``SystemExit`` if an unsupported protocol flag is enabled."""
-    if settings.lemma_commit_reveal_enabled:
-        raise SystemExit(
-            "LEMMA_COMMIT_REVEAL_ENABLED=1 is not implemented yet.\n"
-            "See docs/incentive_migration.md — disable the flag or use an older release.",
-        )
     if settings.lemma_judge_profile_attest_enabled:
         raise SystemExit(
             "LEMMA_JUDGE_PROFILE_ATTEST_ENABLED=1 is not implemented yet.\n"

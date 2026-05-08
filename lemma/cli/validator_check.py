@@ -135,10 +135,9 @@ def run_validator_check(settings: LemmaSettings) -> int:
                 "ANTHROPIC_API_KEY missing — validator will use FakeJudge (not for production scoring).",
             )
 
-    if settings.lemma_commit_reveal_enabled or settings.lemma_judge_profile_attest_enabled:
+    if settings.lemma_judge_profile_attest_enabled:
         fatal.append(
-            "Reserved protocol flags are enabled (LEMMA_COMMIT_REVEAL_ENABLED / "
-            "LEMMA_JUDGE_PROFILE_ATTEST_ENABLED) but are not implemented yet — "
+            "Reserved protocol flag LEMMA_JUDGE_PROFILE_ATTEST_ENABLED is enabled but not implemented yet — "
             "see docs/incentive_migration.md",
         )
 
@@ -152,6 +151,7 @@ def run_validator_check(settings: LemmaSettings) -> int:
             f"LEMMA_EPOCH_PROBLEM_COUNT={settings.lemma_epoch_problem_count}  "
             f"LEMMA_MINER_VERIFY_ATTEST_ENABLED={int(settings.lemma_miner_verify_attest_enabled)}  "
             f"LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION={settings.lemma_miner_verify_attest_spot_verify_fraction}  "
+            f"LEMMA_COMMIT_REVEAL_ENABLED={int(settings.lemma_commit_reveal_enabled)}  "
             "(docs/incentive_migration.md)",
             dim=True,
         ),

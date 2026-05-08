@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from lemma.common.config import LemmaSettings
 from lemma.protocol import LemmaChallenge
+from lemma.protocol_commit_reveal import looks_like_commitment_hex
 
 
 def _reasoning_payload_len(synapse: LemmaChallenge) -> int:
@@ -18,6 +19,16 @@ def synapse_payload_error(synapse: LemmaChallenge, settings: LemmaSettings) -> s
     stmt = synapse.theorem_statement or ""
     if len(stmt) > settings.synapse_max_statement_chars:
         return "theorem_statement too large"
+    phase = (synapse.commit_reveal_phase or "off").strip().lower()
+    pc = (synapse.proof_commitment_hex or "").strip()
+    if phase == "commit" and pc:
+        if not looks_like_commitment_hex(pc):
+            return "proof_commitment_hex must be 64 hex chars"
+        if (synapse.proof_script or "").strip() or (synapse.reasoning_trace or "").strip():
+            return "commit phase response must not include proof_script or reasoning_trace"
+        if synapse.reasoning_steps:
+            return "commit phase response must not include reasoning_steps"
+        return None
     if _reasoning_payload_len(synapse) > settings.synapse_max_trace_chars:
         return "reasoning_trace or reasoning_steps too large"
     pr = synapse.proof_script or ""

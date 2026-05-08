@@ -710,7 +710,10 @@ class LemmaSettings(BaseSettings):
             "LEMMA_COMMIT_REVEAL_ENABLED",
             "lemma_commit_reveal_enabled",
         ),
-        description="Reserved: two-phase commit-reveal for miner proofs (not yet wired).",
+        description=(
+            "Two-phase challenge: validator queries commit (hash) then reveal (proof + nonce). "
+            "See docs/incentive_migration.md and lemma/protocol_commit_reveal.py."
+        ),
     )
     lemma_miner_verify_attest_enabled: bool = Field(
         default=False,

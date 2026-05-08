@@ -30,6 +30,11 @@ from lemma.protocol_attest import (
     miner_verify_attest_message,
     verify_miner_verify_attest_signature,
 )
+from lemma.protocol_commit_reveal import (
+    looks_like_commitment_hex,
+    reasoning_blob_for_commit,
+    verify_reveal_against_commitment,
+)
 from lemma.reasoning.format import effective_reasoning_text
 from lemma.scoring.dedup import dedup_coldkeys, dedup_identical_submissions
 from lemma.scoring.pareto import ScoredEntry, pareto_weights
@@ -189,6 +194,7 @@ async def run_epoch(
     coldkey_dropped = 0
     deadline_rejects = 0
     attest_rejects = 0
+    commit_reveal_rejects = 0
     last_problem: Problem | None = None
 
     export_lock = asyncio.Lock()
@@ -218,20 +224,39 @@ async def run_epoch(
                 wait_scale=wait_scale,
             )
 
-            synapse = LemmaChallenge(
-                theorem_id=problem.id,
-                theorem_statement=problem.challenge_source(),
-                imports=list(problem.imports),
-                lean_toolchain=problem.lean_toolchain,
-                mathlib_rev=problem.mathlib_rev,
-                deadline_unix=int(time.time()) + int(forward_wait_s),
-                deadline_block=deadline_block,
-                metronome_id=str(seed_k),
-                timeout=forward_wait_s,
-            )
+            base_syn: dict[str, object] = {
+                "theorem_id": problem.id,
+                "theorem_statement": problem.challenge_source(),
+                "imports": list(problem.imports),
+                "lean_toolchain": problem.lean_toolchain,
+                "mathlib_rev": problem.mathlib_rev,
+                "deadline_unix": int(time.time()) + int(forward_wait_s),
+                "deadline_block": deadline_block,
+                "metronome_id": str(seed_k),
+                "timeout": forward_wait_s,
+            }
 
             axons = axon_list_for_uids(metagraph, uids)
-            responses = await q.query_miners(dendrite, axons, synapse, timeout=forward_wait_s)
+            commits_by_uid: dict[int, str] = {}
+            if settings.lemma_commit_reveal_enabled:
+                syn_commit = LemmaChallenge(**base_syn, commit_reveal_phase="commit")
+                responses_commit = await q.query_miners(
+                    dendrite,
+                    axons,
+                    syn_commit,
+                    timeout=forward_wait_s,
+                )
+                for uid_c, resp_c in zip(uids, responses_commit, strict=True):
+                    if not isinstance(resp_c, LemmaChallenge) or not resp_c.is_success:
+                        continue
+                    hx = (resp_c.proof_commitment_hex or "").strip()
+                    if looks_like_commitment_hex(hx):
+                        commits_by_uid[uid_c] = hx.lower().removeprefix("0x")
+                synapse = LemmaChallenge(**base_syn, commit_reveal_phase="reveal")
+                responses = await q.query_miners(dendrite, axons, synapse, timeout=forward_wait_s)
+            else:
+                synapse = LemmaChallenge(**base_syn, commit_reveal_phase="off")
+                responses = await q.query_miners(dendrite, axons, synapse, timeout=forward_wait_s)
             block_after_query = int(subtensor.get_current_block())
 
             candidates: list[tuple[int, LemmaChallenge]] = []
@@ -260,6 +285,35 @@ async def run_epoch(
                 if not resp.proof_script:
                     continue
                 candidates.append((uid, resp))
+
+            if settings.lemma_commit_reveal_enabled:
+                filt_cr: list[tuple[int, LemmaChallenge]] = []
+                for uid_cr, resp_cr in candidates:
+                    exp = commits_by_uid.get(uid_cr)
+                    if not exp:
+                        commit_reveal_rejects += 1
+                        logger.warning(
+                            "uid={} dropping reveal: missing commit phase or invalid commit",
+                            uid_cr,
+                        )
+                        continue
+                    rblob = reasoning_blob_for_commit(resp_cr.reasoning_trace, resp_cr.reasoning_steps)
+                    if not verify_reveal_against_commitment(
+                        expected_commitment_hex=exp,
+                        theorem_id=resp_cr.theorem_id or "",
+                        metronome_id=str(resp_cr.metronome_id or ""),
+                        nonce_hex=resp_cr.commit_reveal_nonce_hex or "",
+                        proof_script=resp_cr.proof_script or "",
+                        reasoning_blob=rblob,
+                    ):
+                        commit_reveal_rejects += 1
+                        logger.warning(
+                            "uid={} dropping reveal: commit preimage mismatch",
+                            uid_cr,
+                        )
+                        continue
+                    filt_cr.append((uid_cr, resp_cr))
+                candidates = filt_cr
 
             if settings.lemma_miner_verify_attest_enabled:
                 filt_att: list[tuple[int, LemmaChallenge]] = []
@@ -483,7 +537,7 @@ async def run_epoch(
         "lemma_epoch_summary chain_head_block={} problem_seed={} problem_seed_tag={} split={} "
         "theorem_id={} k_problems={} verified={} scored={} pareto_entries={} "
         "judge_errors={} judge_parse_rejects={} dedup_dropped={} coldkey_dropped={} deadline_rejects={} "
-        "attest_rejects={} "
+        "attest_rejects={} commit_reveal_rejects={} "
         "skip_set_weights={} seconds={:.2f}  "
         "[verified=Lean proof OK; scored=proof+judge blend then EMA/dedup; pareto_entries=weight rows]",
         cur_block,
@@ -501,6 +555,7 @@ async def run_epoch(
         coldkey_dropped,
         deadline_rejects,
         attest_rejects,
+        commit_reveal_rejects,
         skip_chain_write,
         elapsed,
     )

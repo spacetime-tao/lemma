@@ -5,6 +5,7 @@ waiting for block/time windows (manual ``lemma try-prover`` is separate and oper
 """
 
 import asyncio
+import secrets
 import threading
 import time
 
@@ -20,9 +21,17 @@ from lemma.miner.prover import Prover
 from lemma.problems.factory import resolve_problem
 from lemma.protocol import LemmaChallenge
 from lemma.protocol_attest import miner_verify_attest_message, sign_miner_verify_attest
+from lemma.protocol_commit_reveal import (
+    commitment_hex_from_preimage,
+    commit_preimage_v1,
+    reasoning_blob_for_commit,
+)
 
 _stats_lock = threading.Lock()
 _stats: dict[str, float | int] = {"forwards": 0, "local_ok": 0, "local_fail": 0, "solve_s_total": 0.0}
+
+_cr_lock = threading.Lock()
+_commit_reveal_cache: dict[tuple[str, str], tuple[str, str, str, list | None]] = {}
 
 
 def _optional_chain_head(settings: LemmaSettings) -> int | None:
@@ -129,19 +138,44 @@ def make_forward(
                 my_uid_s,
                 my_inc_s,
             )
-        t0 = time.perf_counter()
-        async with sem:
-            trace, proof, steps = await prover.solve(synapse)
-        solve_s = time.perf_counter() - t0
+        phase = (synapse.commit_reveal_phase or "off").strip().lower()
+        solve_s = 0.0
+        trace, proof, steps = "", "", None
+        if phase == "reveal":
+            key = (synapse.theorem_id, synapse.metronome_id)
+            with _cr_lock:
+                cached = _commit_reveal_cache.pop(key, None)
+            if cached is None:
+                return reject_synopsis(
+                    synapse,
+                    400,
+                    "commit-reveal: reveal phase but no cached commit entry",
+                )
+            nonce_hex, proof, trace, steps = cached
+            synapse.commit_reveal_nonce_hex = nonce_hex
+        else:
+            t0 = time.perf_counter()
+            async with sem:
+                trace, proof, steps = await prover.solve(synapse)
+            solve_s = time.perf_counter() - t0
 
         if settings.miner_forward_timeline:
-            logger.info(
-                "miner timeline 2 SOLVED theorem_id={} prover_s={:.2f}s proof_chars={} trace_chars={}",
-                synapse.theorem_id,
-                solve_s,
-                len(proof or ""),
-                len(trace or ""),
-            )
+            if phase == "reveal":
+                logger.info(
+                    "miner timeline 2 REVEAL theorem_id={} metronome_id={} proof_chars={} trace_chars={}",
+                    synapse.theorem_id,
+                    synapse.metronome_id,
+                    len(proof or ""),
+                    len(trace or ""),
+                )
+            else:
+                logger.info(
+                    "miner timeline 2 SOLVED theorem_id={} prover_s={:.2f}s proof_chars={} trace_chars={}",
+                    synapse.theorem_id,
+                    solve_s,
+                    len(proof or ""),
+                    len(trace or ""),
+                )
 
         prob_meta = None
         split = "?"
@@ -249,6 +283,46 @@ def make_forward(
                 lok,
                 lfail,
             )
+
+        if phase == "commit":
+            if settings.miner_local_verify and local_lean_status != "PASS":
+                return reject_synopsis(
+                    synapse,
+                    400,
+                    "commit phase requires local Lean PASS before publishing commitment "
+                    f"(status={local_lean_status})",
+                )
+            rblob = reasoning_blob_for_commit(trace, steps)
+            nonce_b = secrets.token_bytes(32)
+            pre = commit_preimage_v1(
+                theorem_id=synapse.theorem_id or "",
+                metronome_id=str(synapse.metronome_id or ""),
+                nonce=nonce_b,
+                proof_script=proof or "",
+                reasoning_blob=rblob,
+            )
+            ch = commitment_hex_from_preimage(pre)
+            ck = (synapse.theorem_id, synapse.metronome_id)
+            with _cr_lock:
+                _commit_reveal_cache[ck] = (nonce_b.hex(), proof or "", trace or "", steps)
+            synapse.proof_commitment_hex = ch
+            synapse.commit_reveal_phase = "commit"
+            synapse.proof_script = ""
+            synapse.reasoning_trace = ""
+            synapse.reasoning_steps = None
+            synapse.commit_reveal_nonce_hex = None
+            synapse.model_card = prover_model_card_text(settings)
+            synapse.miner_verify_attest_signature_hex = None
+            err = synapse_payload_error(synapse, settings)
+            if err:
+                return reject_synopsis(synapse, 413, err)
+            logger.info(
+                "miner commit phase theorem_id={} metronome_id={} commitment_prefix={}",
+                synapse.theorem_id,
+                synapse.metronome_id,
+                ch[:16],
+            )
+            return synapse
 
         synapse.reasoning_steps = steps
         synapse.reasoning_trace = trace
