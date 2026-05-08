@@ -628,9 +628,11 @@ def run_setup(env_path: Path, role: str) -> None:
     click.echo("")
     click.echo(stylize("── Done ──", fg="green", bold=True))
     click.echo(
-        stylize("  • Register / fund hotkeys with ", dim=True)
+        stylize("  • Register on-chain with ", dim=True)
         + stylize("btcli", fg="yellow")
-        + stylize(" as needed.\n", dim=True),
+        + stylize(" as needed; add TAO to the ", dim=True)
+        + stylize("coldkey", fg="yellow")
+        + stylize(" (not the hotkey) for fees and registration.\n", dim=True),
         nl=False,
     )
     if role in ("validator", "both"):
