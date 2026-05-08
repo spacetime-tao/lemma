@@ -2,6 +2,22 @@
 
 Lemma uses OpenAI-compatible HTTP (`/v1/chat/completions`). [Chutes](https://chutes.ai/) is the default documented host.
 
+## What “OpenAI-compatible” means
+
+Many providers (Chutes, **official OpenAI**, Google’s **Gemini OpenAI shim**, vLLM, LiteLLM, local gateways) expose the **same HTTP shape** that OpenAI’s Chat Completions API made standard:
+
+- **Request:** JSON with a `model` id and a `messages` array (roles + text).
+- **Response:** JSON with the assistant’s text in a **Chat Completions**-style structure.
+- **Transport:** the client appends paths like **`/v1/chat/completions`** to a **base URL** you configure (e.g. `https://llm.chutes.ai/v1` or `https://api.openai.com/v1`).
+
+So “OpenAI-compatible” is about the **wire format** (how the request/response is packed), not about which company’s *weights* you are running. The same logical model could be offered behind different bases; Lemma’s prover and judge (when `JUDGE_PROVIDER` is `chutes` or `openai`) use the **OpenAI-compatible** client path for those hosts.
+
+**Not the same thing:** Google’s **native** Gemini REST API under `…/v1beta/models/…:generateContent` uses a **different** JSON schema (`contents` / `parts`, etc.). Lemma does **not** use that path today for the main prover; it uses the **OpenAI-compatible** base `https://generativelanguage.googleapis.com/v1beta/openai/` so the same `AsyncOpenAI` code can talk to Gemini. See Google’s [OpenAI compatibility](https://ai.google.dev/gemini-api/docs/openai) docs.
+
+**Anthropic** is different again: it has its own API (`/v1/messages`, separate fields). Lemma uses **`AsyncAnthropic`** when `PROVER_PROVIDER=anthropic` / `JUDGE_PROVIDER=anthropic`.
+
+Interactive setup (`lemma configure judge` / `configure prover`) lets you type a **number** or the **backend name** so you don’t have to remember slugs.
+
 ## Catalog
 
 ```bash

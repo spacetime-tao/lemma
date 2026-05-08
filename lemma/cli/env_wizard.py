@@ -149,36 +149,79 @@ def collect_lean_image_updates() -> dict[str, str]:
     return {"LEAN_SANDBOX_IMAGE": img}
 
 
-def _backend_choice(role_label: str) -> str:
-    click.echo(
-        stylize(
-            f"{role_label} — pick an API. ",
-            dim=True,
+_JUDGE_BACKENDS_ORDERED: tuple[str, ...] = ("chutes", "anthropic", "openai", "custom_openai")
+_PROVER_BACKENDS_ORDERED: tuple[str, ...] = ("chutes", "gemini", "anthropic", "openai", "custom_openai")
+
+
+def _resolve_backend_token(raw: str, ordered: tuple[str, ...]) -> str:
+    """Accept ``1`` … ``n`` or an exact backend slug (case-insensitive)."""
+    s = raw.strip()
+    if not s:
+        return ordered[0]
+    low = s.lower()
+    if low.isdigit():
+        n = int(low)
+        if 1 <= n <= len(ordered):
+            return ordered[n - 1]
+        raise click.UsageError(
+            f"Invalid number {n!r}. Type 1–{len(ordered)} or one of: {', '.join(ordered)}."
         )
-        + stylize("chutes", fg="yellow")
-        + stylize(" matches the subnet’s recommended stack (https://llm.chutes.ai/v1).\n", dim=True),
-        nl=False,
+    for b in ordered:
+        if low == b.lower():
+            return b
+    raise click.UsageError(
+        f"Unknown backend {raw!r}. Type 1–{len(ordered)} or one of: {', '.join(ordered)}."
     )
+
+
+def _prompt_backend_menu(
+    *,
+    ordered: tuple[str, ...],
+    default_slug: str,
+    preamble: str,
+) -> str:
+    default_num = ordered.index(default_slug) + 1
+    click.echo(preamble, nl=False)
     click.echo(
-        stylize(
-            "Choices: chutes · anthropic · openai (hosted api.openai.com) · custom_openai (self-hosted or other URL). "
-            "Press Enter for default ",
-            dim=True,
-        )
-        + stylize("chutes", fg="cyan")
+        stylize("Pick a backend — type a ", dim=True)
+        + stylize("number", fg="yellow")
+        + stylize(" (1–", dim=True)
+        + stylize(str(len(ordered)), fg="yellow")
+        + stylize(") or the ", dim=True)
+        + stylize("name", fg="yellow")
+        + stylize(" (e.g. chutes). Press Enter for default ", dim=True)
+        + stylize(f"{default_num} = {default_slug}", fg="cyan")
         + stylize(".\n", dim=True),
         nl=False,
     )
-    return click.prompt(
+    for i, name in enumerate(ordered, start=1):
+        click.echo(
+            stylize(f"  {i}  ", fg="green", bold=True) + stylize(name, fg="cyan") + "\n",
+            nl=False,
+        )
+    raw = click.prompt(
         stylize("Backend", fg="green"),
-        type=click.Choice(["chutes", "anthropic", "openai", "custom_openai"], case_sensitive=False),
-        default="chutes",
+        default=str(default_num),
         show_default=False,
+    )
+    return _resolve_backend_token(raw, ordered)
+
+
+def _backend_choice(role_label: str) -> str:
+    preamble = (
+        stylize(f"{role_label} — pick an API. ", dim=True)
+        + stylize("chutes", fg="yellow")
+        + stylize(" matches the subnet’s recommended stack (https://llm.chutes.ai/v1).\n", dim=True)
+    )
+    return _prompt_backend_menu(
+        ordered=_JUDGE_BACKENDS_ORDERED,
+        default_slug="chutes",
+        preamble=preamble,
     )
 
 
 def _prover_backend_choice() -> str:
-    click.echo(
+    preamble = (
         stylize(
             "Prover (writes Submission.lean when you mine) — pick an API. ",
             dim=True,
@@ -186,24 +229,12 @@ def _prover_backend_choice() -> str:
         + stylize("chutes", fg="yellow")
         + stylize(" = any Chutes model id you choose. ", dim=True)
         + stylize("gemini", fg="yellow")
-        + stylize(" = Google AI Studio key + fixed Gemini OpenAI URL (no URL typing).\n", dim=True),
-        nl=False,
+        + stylize(" = Google AI Studio key + fixed Gemini OpenAI URL (no URL typing).\n", dim=True)
     )
-    click.echo(
-        stylize(
-            "Choices: chutes · gemini · anthropic · openai (hosted api.openai.com) · custom_openai (other base URL). "
-            "Press Enter for default ",
-            dim=True,
-        )
-        + stylize("chutes", fg="cyan")
-        + stylize(".\n", dim=True),
-        nl=False,
-    )
-    return click.prompt(
-        stylize("Backend", fg="green"),
-        type=click.Choice(["chutes", "gemini", "anthropic", "openai", "custom_openai"], case_sensitive=False),
-        default="chutes",
-        show_default=False,
+    return _prompt_backend_menu(
+        ordered=_PROVER_BACKENDS_ORDERED,
+        default_slug="chutes",
+        preamble=preamble,
     )
 
 
