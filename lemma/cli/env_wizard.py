@@ -13,6 +13,7 @@ from lemma.common.env_file import merge_dotenv
 
 # Subnet default stack (see .env.example and docs/models.md)
 CHUTES_OPENAI_BASE_URL = "https://llm.chutes.ai/v1"
+OFFICIAL_OPENAI_BASE_URL = "https://api.openai.com/v1"
 CHUTES_DEFAULT_MODEL = CANONICAL_JUDGE_OPENAI_MODEL
 # Matches LemmaSettings.anthropic_model default (prover falls back if PROVER_MODEL unset).
 DEFAULT_ANTHROPIC_MODEL = "claude-3-5-sonnet-20241022"
@@ -158,10 +159,21 @@ def _backend_choice(role_label: str) -> str:
         + stylize(" matches the subnet’s recommended stack (https://llm.chutes.ai/v1).\n", dim=True),
         nl=False,
     )
+    click.echo(
+        stylize(
+            "Choices: chutes · anthropic · openai (hosted api.openai.com) · custom_openai (self-hosted or other URL). "
+            "Press Enter for default ",
+            dim=True,
+        )
+        + stylize("chutes", fg="cyan")
+        + stylize(".\n", dim=True),
+        nl=False,
+    )
     return click.prompt(
         stylize("Backend", fg="green"),
-        type=click.Choice(["chutes", "anthropic", "custom_openai"], case_sensitive=False),
+        type=click.Choice(["chutes", "anthropic", "openai", "custom_openai"], case_sensitive=False),
         default="chutes",
+        show_default=False,
     )
 
 
@@ -177,10 +189,21 @@ def _prover_backend_choice() -> str:
         + stylize(" = Google AI Studio key + fixed Gemini OpenAI URL (no URL typing).\n", dim=True),
         nl=False,
     )
+    click.echo(
+        stylize(
+            "Choices: chutes · gemini · anthropic · openai (hosted api.openai.com) · custom_openai (other base URL). "
+            "Press Enter for default ",
+            dim=True,
+        )
+        + stylize("chutes", fg="cyan")
+        + stylize(".\n", dim=True),
+        nl=False,
+    )
     return click.prompt(
         stylize("Backend", fg="green"),
-        type=click.Choice(["chutes", "gemini", "anthropic", "custom_openai"], case_sensitive=False),
+        type=click.Choice(["chutes", "gemini", "anthropic", "openai", "custom_openai"], case_sensitive=False),
         default="chutes",
+        show_default=False,
     )
 
 
@@ -269,11 +292,33 @@ def collect_judge_updates() -> dict[str, str]:
             "JUDGE_PROVIDER": "anthropic",
             "ANTHROPIC_API_KEY": key,
         }
-    else:
+    elif backend == "openai":
+        key = _require_secret("OpenAI API key")
+        model = click.prompt(
+            stylize("OPENAI_MODEL", fg="green") + stylize(" (e.g. gpt-4o)", dim=True),
+            default="",
+            show_default=False,
+        ).strip()
+        if not model:
+            raise click.UsageError("OPENAI_MODEL is required for OpenAI.")
+        updates = {
+            "JUDGE_PROVIDER": "openai",
+            "JUDGE_OPENAI_API_KEY": key,
+            "OPENAI_BASE_URL": OFFICIAL_OPENAI_BASE_URL,
+            "OPENAI_MODEL": model,
+        }
+        click.echo(
+            stylize(
+                f"→ will write OPENAI_BASE_URL={OFFICIAL_OPENAI_BASE_URL!r} and OPENAI_MODEL (key not printed).\n",
+                dim=True,
+            ),
+            nl=False,
+        )
+    elif backend == "custom_openai":
         key = _require_secret("OpenAI-compatible API key")
         click.echo(
             stylize(
-                "Gemini (Google AI Studio): OPENAI_BASE_URL\n  ",
+                "Examples — Gemini (Google AI Studio): OPENAI_BASE_URL\n  ",
                 dim=True,
             )
             + stylize("https://generativelanguage.googleapis.com/v1beta/openai/", fg="yellow")
@@ -286,7 +331,7 @@ def collect_judge_updates() -> dict[str, str]:
             nl=False,
         )
         url = click.prompt(
-            "OPENAI_BASE_URL (e.g. https://api.openai.com/v1 or http://127.0.0.1:8000/v1)",
+            "OPENAI_BASE_URL (e.g. http://127.0.0.1:8000/v1 or a gateway)",
             default="",
             show_default=False,
         ).strip()
@@ -299,6 +344,8 @@ def collect_judge_updates() -> dict[str, str]:
             "OPENAI_BASE_URL": url,
             "OPENAI_MODEL": model,
         }
+    else:
+        raise click.UsageError(f"Unexpected backend: {backend!r}")
     return updates
 
 
@@ -369,7 +416,31 @@ def collect_prover_updates() -> dict[str, str]:
             + stylize("\n", dim=True),
             nl=False,
         )
-    else:
+    elif backend == "openai":
+        key = _require_secret("OpenAI API key (prover)")
+        model = click.prompt(
+            stylize("PROVER_MODEL", fg="green") + stylize(" (e.g. gpt-4o)", dim=True),
+            default="",
+            show_default=False,
+        ).strip()
+        if not model:
+            raise click.UsageError("PROVER_MODEL is required for OpenAI.")
+        updates = {
+            "PROVER_PROVIDER": "openai",
+            "PROVER_OPENAI_API_KEY": key,
+            "PROVER_OPENAI_BASE_URL": OFFICIAL_OPENAI_BASE_URL,
+            "PROVER_MODEL": model,
+        }
+        click.echo(
+            stylize(
+                f"→ will write PROVER_OPENAI_BASE_URL={OFFICIAL_OPENAI_BASE_URL!r}; model ",
+                dim=True,
+            )
+            + stylize(model, fg="green")
+            + stylize(" (key not printed).\n", dim=True),
+            nl=False,
+        )
+    elif backend == "custom_openai":
         key = _require_secret("OpenAI-compatible API key (prover)")
         click.echo(
             stylize(
@@ -404,6 +475,8 @@ def collect_prover_updates() -> dict[str, str]:
             "PROVER_OPENAI_BASE_URL": url,
             "PROVER_MODEL": model,
         }
+    else:
+        raise click.UsageError(f"Unexpected backend: {backend!r}")
     return updates
 
 
