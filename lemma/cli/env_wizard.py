@@ -137,11 +137,11 @@ _JUDGE_BACKENDS_ORDERED: tuple[str, ...] = ("chutes", "anthropic", "openai", "cu
 _PROVER_BACKENDS_ORDERED: tuple[str, ...] = ("chutes", "gemini", "anthropic", "openai", "custom_openai")
 # One-line hint per slug (prover menu — all options described equally).
 _PROVER_BACKEND_HINTS: dict[str, str] = {
-    "chutes": "Chutes — endpoint is preset; choose any model id from the catalog.",
-    "gemini": "Gemini — Google AI Studio key; endpoint is preset.",
-    "anthropic": "Anthropic Claude — preset Anthropic API.",
-    "openai": "OpenAI — preset api.openai.com; choose model id.",
-    "custom_openai": "Other OpenAI-compat host — paste base URL + model id (only option that prompts for URL).",
+    "chutes": "Preset endpoint; next prompt sets PROVER_MODEL (default offered — override with any Chutes id).",
+    "gemini": "Preset endpoint; next step is a preset tier menu or a custom Gemini model id.",
+    "anthropic": "Preset Anthropic API; next prompt sets PROVER_MODEL (default Claude id — edit if you want).",
+    "openai": "Preset api.openai.com; next prompt requires PROVER_MODEL (you type it — no default).",
+    "custom_openai": "Paste OpenAI-compat base URL + model id (only backend that asks for URL).",
 }
 
 
