@@ -145,7 +145,7 @@ _PROVER_BACKEND_HINTS: dict[str, str] = {
 
 
 def _resolve_backend_token(raw: str, ordered: tuple[str, ...]) -> str:
-    """Accept ``1`` … ``n`` or an exact backend slug (case-insensitive)."""
+    """Accept ``1`` … ``n`` or an exact backend keyword from ``ordered`` (case-insensitive)."""
     s = raw.strip()
     if not s:
         return ordered[0]
@@ -174,18 +174,29 @@ def _prompt_backend_menu(
 ) -> str:
     default_num = ordered.index(default_slug) + 1
     click.echo(preamble, nl=False)
-    click.echo(
-        stylize(
-            f"Enter 1–{len(ordered)} or the slug; Enter alone → {default_num} ({default_slug}).\n",
-            dim=True,
-        ),
-        nl=False,
-    )
     for i, name in enumerate(ordered, start=1):
         line = stylize(f"  {i}  ", fg="green", bold=True) + stylize(name, fg="cyan")
         if slug_hints and name in slug_hints:
             line += stylize(f" — {slug_hints[name]}", dim=True)
         click.echo(line + "\n", nl=False)
+    click.echo(
+        stylize(
+            "How to answer: type an integer matching the row (",
+            dim=True,
+        )
+        + stylize(f"1–{len(ordered)}", fg="yellow")
+        + stylize(
+            "), or type the backend keyword in the left column (same spelling; ignore the gray hint on the right).\n",
+            dim=True,
+        ),
+        nl=False,
+    )
+    click.echo(
+        stylize("Press Enter without typing to keep the default ", dim=True)
+        + stylize(f"{default_num} — {default_slug}", fg="cyan")
+        + stylize(".\n", dim=True),
+        nl=False,
+    )
     raw = click.prompt(
         stylize("Backend", fg="green"),
         default=str(default_num),
