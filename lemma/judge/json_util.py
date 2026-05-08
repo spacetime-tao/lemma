@@ -141,13 +141,37 @@ def parse_rubric_json(text: str) -> RubricScore:
         except json.JSONDecodeError:
             continue
 
+    # Same object may be collected via whole-string, anchored, and balanced paths — dedupe for counts.
+    deduped: list[dict[str, Any]] = []
+    seen_sig: set[str] = set()
+    for obj in candidates:
+        sig = json.dumps(obj, sort_keys=True, separators=(",", ":"))
+        if sig in seen_sig:
+            continue
+        seen_sig.add(sig)
+        deduped.append(obj)
+    candidates = deduped
+
     valid: list[RubricScore] = []
     seen: set[tuple[float, float, float]] = set()
+    reject_wrong_keys = 0
+    reject_out_of_range = 0
+    sample_wrong_keys: str | None = None
+    sample_out_of_range: str | None = None
     for obj in candidates:
         try:
             score = _validate_rubric_dict(obj)
-        except ValueError:
+        except ValueError as e:
             # Wrong-shape dicts are skipped so a later rubric object can still win (prose + junk JSON).
+            msg = str(e)
+            if "exactly keys" in msg:
+                reject_wrong_keys += 1
+                if sample_wrong_keys is None:
+                    sample_wrong_keys = msg[:240]
+            elif "out of range" in msg:
+                reject_out_of_range += 1
+                if sample_out_of_range is None:
+                    sample_out_of_range = msg[:240]
             continue
         except (TypeError, KeyError):
             continue
@@ -158,8 +182,18 @@ def parse_rubric_json(text: str) -> RubricScore:
                 valid.append(score)
 
     if len(valid) != 1:
-        raise ValueError(
+        bits: list[str] = [
             f"judge output must contain exactly one valid rubric object; "
-            f"found {len(valid)} candidate(s); raw_head={raw[:400]!r}",
-        )
+            f"found {len(valid)} valid candidate(s); parsed_dict_candidates={len(candidates)}",
+        ]
+        if reject_wrong_keys or reject_out_of_range:
+            bits.append(
+                f"rejections: wrong_keys={reject_wrong_keys} out_of_range={reject_out_of_range}",
+            )
+            if sample_wrong_keys is not None:
+                bits.append(f"sample_wrong_keys={sample_wrong_keys!r}")
+            if sample_out_of_range is not None:
+                bits.append(f"sample_out_of_range={sample_out_of_range!r}")
+        bits.append(f"raw_head={raw[:400]!r}")
+        raise ValueError("; ".join(bits))
     return valid[0]

@@ -21,13 +21,13 @@ def test_parse_rubric_json_rejects_multiple_distinct_objects() -> None:
 
 def test_parse_rubric_json_rejects_extra_keys() -> None:
     text = '{"coherence": 0.5, "exploration": 0.5, "clarity": 0.5, "hack": 1}'
-    with pytest.raises(ValueError, match="found 0 candidate"):
+    with pytest.raises(ValueError, match=r"wrong_keys=1.*sample_wrong_keys="):
         parse_rubric_json(text)
 
 
 def test_parse_rubric_json_rejects_out_of_range() -> None:
     text = '{"coherence": 1.5, "exploration": 0.5, "clarity": 0.5}'
-    with pytest.raises(ValueError, match="found 0 candidate"):
+    with pytest.raises(ValueError, match=r"out_of_range=1.*sample_out_of_range="):
         parse_rubric_json(text)
 
 
