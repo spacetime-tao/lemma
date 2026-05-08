@@ -1,7 +1,7 @@
-"""Gated protocol / incentive features not yet fully wired (hard-migration hooks).
+"""Gated protocol / incentive features (hard-migration hooks).
 
 See ``docs/incentive_migration.md`` for design. Environment flags default to **off**; turning on an
-unimplemented feature fails fast at validator startup (except implemented attest modes).
+unimplemented feature should fail fast at validator startup (see ``validate_protocol_feature_flags``).
 """
 
 from __future__ import annotations
@@ -12,10 +12,6 @@ if TYPE_CHECKING:
     from lemma.common.config import LemmaSettings
 
 
-def validate_protocol_feature_flags(settings: LemmaSettings) -> None:
+def validate_protocol_feature_flags(_settings: LemmaSettings) -> None:
     """Raise ``SystemExit`` if an unsupported protocol flag is enabled."""
-    if settings.lemma_judge_profile_attest_enabled:
-        raise SystemExit(
-            "LEMMA_JUDGE_PROFILE_ATTEST_ENABLED=1 is not implemented yet.\n"
-            "See docs/incentive_migration.md — disable the flag or use an older release.",
-        )
+    pass

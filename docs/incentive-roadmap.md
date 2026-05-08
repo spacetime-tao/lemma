@@ -1,6 +1,6 @@
 # Incentive roadmap & checklist
 
-Living tracker for **mechanism work**: what shipped with the hard-migration, what is **reserved** behind env flags, and **known gaps** to close next. For behavior and env details, see [incentive_migration.md](incentive_migration.md).
+Living tracker for **mechanism work**: what shipped with the hard-migration, env-gated protocol hooks, and **known gaps** to close next. For behavior and env details, see [incentive_migration.md](incentive_migration.md).
 
 This doc is for **operators and contributors** planning work—not step-by-step exploit writeups. Threat-model specifics belong in private review.
 
@@ -18,16 +18,7 @@ This doc is for **operators and contributors** planning work—not step-by-step 
 - [x] Canonical judge stack pin at validator startup (operator-aligned)
 - [x] Generated template registry SHA pin at startup
 - [x] Synapse body-hash integrity check when `computed_body_hash` is present
-
----
-
-## Reserved protocol hooks (declared, fail-fast if enabled)
-
-Validator raises at startup if any of these is set to `1` until implemented—see [incentive_migration.md](incentive_migration.md).
-
-- [x] `LEMMA_COMMIT_REVEAL_ENABLED` — two-phase commit (`proof_commitment_hex`) then reveal (proof + nonce); `lemma/protocol_commit_reveal.py`
-- [x] `LEMMA_MINER_VERIFY_ATTEST_ENABLED` — Sr25519 hotkey signature + deterministic spot full-verify fraction (`LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION`; miners require `LEMMA_MINER_LOCAL_VERIFY=1`)
-- [ ] `LEMMA_JUDGE_PROFILE_ATTEST_ENABLED` — cross-validator judge profile agreement
+- [x] `LEMMA_JUDGE_PROFILE_ATTEST_ENABLED` — HTTP peer quorum vs local `judge_profile_sha256` (`LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS`, optional `LEMMA_JUDGE_PROFILE_ATTEST_SKIP`); `lemma validator judge-attest-serve`
 
 ---
 

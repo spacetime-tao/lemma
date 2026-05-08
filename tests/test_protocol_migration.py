@@ -1,4 +1,3 @@
-import pytest
 from lemma.common.config import LemmaSettings
 from lemma.validator.protocol_migration import validate_protocol_feature_flags
 
@@ -13,7 +12,7 @@ def test_validate_flags_ok_with_commit_reveal() -> None:
     )
 
 
-def test_judge_profile_attest_flag_errors() -> None:
-    s = LemmaSettings.model_construct(lemma_judge_profile_attest_enabled=True)
-    with pytest.raises(SystemExit, match="not implemented"):
-        validate_protocol_feature_flags(s)
+def test_validate_flags_ok_with_judge_profile_attest() -> None:
+    validate_protocol_feature_flags(
+        LemmaSettings.model_construct(lemma_judge_profile_attest_enabled=True),
+    )

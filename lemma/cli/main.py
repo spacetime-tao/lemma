@@ -1599,6 +1599,25 @@ def validator_group_dry_run_cmd() -> None:
     _validator_run_blocking(dry_run=True)
 
 
+@validator_group.command(
+    "judge-attest-serve",
+    help=(
+        "Tiny HTTP server: GET /lemma/judge_profile_sha256 (text/plain hash for peer quorum). "
+        "Pair with LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS on other validators."
+    ),
+)
+@click.option("--host", default="127.0.0.1", show_default=True)
+@click.option("--port", default=8799, type=int, show_default=True)
+def validator_judge_attest_serve_cmd(host: str, port: int) -> None:
+    """Expose local judge_profile_sha256 for LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS probes."""
+    from lemma.common.logging import setup_logging
+    from lemma.validator.judge_profile_attest import serve_judge_profile_attest_forever
+
+    settings = LemmaSettings()
+    setup_logging(settings.log_level)
+    serve_judge_profile_attest_forever(host, port, settings)
+
+
 def _echo_validator_dry_wallet_section(settings: LemmaSettings) -> None:
     """Explain which wallet names the validator process will load (incl. BT_WALLET_* fallback)."""
     cold_res, hot_res = settings.validator_wallet_names()

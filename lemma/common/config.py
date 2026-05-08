@@ -745,7 +745,43 @@ class LemmaSettings(BaseSettings):
             "LEMMA_JUDGE_PROFILE_ATTEST_ENABLED",
             "lemma_judge_profile_attest_enabled",
         ),
-        description="Reserved: cross-validator judge profile attestation (not yet wired).",
+        description=(
+            "Optional HTTP peer quorum: each URL must return this validator's judge_profile_sha256. "
+            "See LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS, LEMMA_JUDGE_PROFILE_ATTEST_SKIP, "
+            "`lemma validator judge-attest-serve`, docs/incentive_migration.md."
+        ),
+    )
+    lemma_judge_profile_attest_peer_urls: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS",
+            "lemma_judge_profile_attest_peer_urls",
+        ),
+        description=(
+            "Comma-separated GET URLs probed when LEMMA_JUDGE_PROFILE_ATTEST_ENABLED=1 (plaintext hex or JSON "
+            "with judge_profile_sha256)."
+        ),
+    )
+    lemma_judge_profile_attest_allow_skip: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "LEMMA_JUDGE_PROFILE_ATTEST_SKIP",
+            "lemma_judge_profile_attest_allow_skip",
+        ),
+        description=(
+            "When attest is enabled, skip peer HTTP (solo / dev). Logs as WARN at validator startup — "
+            "not for production multi-validator alignment."
+        ),
+    )
+    lemma_judge_profile_attest_http_timeout_s: float = Field(
+        default=15.0,
+        ge=1.0,
+        le=300.0,
+        validation_alias=AliasChoices(
+            "LEMMA_JUDGE_PROFILE_ATTEST_HTTP_TIMEOUT_S",
+            "lemma_judge_profile_attest_http_timeout_s",
+        ),
+        description="Per-URL HTTP timeout when LEMMA_JUDGE_PROFILE_ATTEST_ENABLED=1.",
     )
 
     # Miner — resource limits and validator gate

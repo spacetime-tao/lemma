@@ -1,6 +1,6 @@
 # Incentive layer hard-migration
 
-This document tracks **post-audit** mechanism changes in Lemma: proof-centric scoring, deduplication, EMA reputation, expanded templates, and reserved protocol hooks.
+This document tracks **post-audit** mechanism changes in Lemma: proof-centric scoring, deduplication, EMA reputation, expanded templates, and optional protocol hooks (env-gated).
 
 **Checklist (done vs open):** [incentive-roadmap.md](incentive-roadmap.md).
 
@@ -21,16 +21,7 @@ This document tracks **post-audit** mechanism changes in Lemma: proof-centric sc
 | Frozen miniF2F catalog | `LEMMA_PROBLEM_SOURCE=frozen` requires **`LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`** (fail-closed otherwise). |
 | Miner verify attest | **`LEMMA_MINER_VERIFY_ATTEST_ENABLED=1`** — miners must run **`LEMMA_MINER_LOCAL_VERIFY=1`**, local Lean PASS, then Sr25519-sign `protocol_attest.miner_verify_attest_message(synapse)` into **`miner_verify_attest_signature_hex`**. Validators verify against metagraph hotkeys; **`LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION`** (default **1.0** = always full Docker verify) selects a deterministic subset for full Lean (lower values reduce validator CPU — trust tradeoff). |
 | Commit–reveal | **`LEMMA_COMMIT_REVEAL_ENABLED=1`** — validator sends two forwards per sub-round: **`commit_reveal_phase=commit`** (miners return **`proof_commitment_hex`**, SHA256 of canonical preimage — see `lemma/protocol_commit_reveal.py`) then **`commit_reveal_phase=reveal`** (full proof + **`commit_reveal_nonce_hex`**). Responses without a matching commit are dropped. Doubles axon round-trip latency vs single-phase. |
-
-## Reserved flags (not implemented)
-
-These fail validator startup if set to `1`:
-
-- `LEMMA_JUDGE_PROFILE_ATTEST_ENABLED` — cross-validator agreement on judge profile hash (on-chain or quorum).
-
-**Implemented:** `LEMMA_MINER_VERIFY_ATTEST_ENABLED` (`lemma/protocol_attest.py`); `LEMMA_COMMIT_REVEAL_ENABLED` (`lemma/protocol_commit_reveal.py`).
-
-**Next:** judge-profile quorum / chain hooks as designed ([incentive-roadmap.md](incentive-roadmap.md)).
+| Judge profile peer attest | **`LEMMA_JUDGE_PROFILE_ATTEST_ENABLED=1`** — after pins match, HTTP GET each URL in **`LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS`** (comma-separated); response must be **plain 64-char hex** or JSON **`{"judge_profile_sha256":"..."}`** equal to this validator’s **`judge_profile_sha256`**. **`LEMMA_JUDGE_PROFILE_ATTEST_SKIP=1`** skips peer probes (solo / dev; logs WARN). Run **`lemma validator judge-attest-serve`** on peers to expose `GET /lemma/judge_profile_sha256`. Implementation: `lemma/validator/judge_profile_attest.py`. |
 
 ## Generated registry
 
@@ -44,3 +35,4 @@ Adding templates changes `generated_registry_sha256`. Operators must run `lemma 
 - Problem mix: `lemma/problems/generated.py`, `lemma/common/problem_seed.py` (`mix_sub_problem_seed`)
 - Miner attest: `lemma/protocol_attest.py`, `lemma/miner/forward.py`, `lemma/validator/epoch.py`
 - Commit–reveal: `lemma/protocol_commit_reveal.py`, `lemma/miner/forward.py`, `lemma/validator/epoch.py`
+- Judge profile attest: `lemma/validator/judge_profile_attest.py`, `lemma/validator/service.py`, `lemma/cli/validator_check.py`

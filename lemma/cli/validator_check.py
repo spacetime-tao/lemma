@@ -16,6 +16,7 @@ from lemma.common.config import LemmaSettings, validator_judge_stack_strict_issu
 from lemma.common.subtensor import get_subtensor
 from lemma.judge.profile import judge_profile_sha256
 from lemma.problems.generated import generated_registry_sha256
+from lemma.validator.judge_profile_attest import judge_profile_peer_check_errors
 
 
 def _print_ready_footer(*, outcome: Literal["ok", "warn"]) -> None:
@@ -135,12 +136,6 @@ def run_validator_check(settings: LemmaSettings) -> int:
                 "ANTHROPIC_API_KEY missing — validator will use FakeJudge (not for production scoring).",
             )
 
-    if settings.lemma_judge_profile_attest_enabled:
-        fatal.append(
-            "Reserved protocol flag LEMMA_JUDGE_PROFILE_ATTEST_ENABLED is enabled but not implemented yet — "
-            "see docs/incentive_migration.md",
-        )
-
     click.echo(
         stylize(
             f"INFO scoring  LEMMA_SCORE_PROOF_WEIGHT={settings.lemma_score_proof_weight}  "
@@ -150,8 +145,10 @@ def run_validator_check(settings: LemmaSettings) -> int:
             f"LEMMA_PROOF_INTRINSIC_STRIP_COMMENTS={int(settings.lemma_proof_intrinsic_strip_comments)}  "
             f"LEMMA_EPOCH_PROBLEM_COUNT={settings.lemma_epoch_problem_count}  "
             f"LEMMA_MINER_VERIFY_ATTEST_ENABLED={int(settings.lemma_miner_verify_attest_enabled)}  "
-            f"LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION={settings.lemma_miner_verify_attest_spot_verify_fraction}  "
+            "LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION="
+            f"{settings.lemma_miner_verify_attest_spot_verify_fraction}  "
             f"LEMMA_COMMIT_REVEAL_ENABLED={int(settings.lemma_commit_reveal_enabled)}  "
+            f"LEMMA_JUDGE_PROFILE_ATTEST_ENABLED={int(settings.lemma_judge_profile_attest_enabled)}  "
             "(docs/incentive_migration.md)",
             dim=True,
         ),
@@ -235,6 +232,34 @@ def run_validator_check(settings: LemmaSettings) -> int:
                     bold=True,
                 ),
                 err=True,
+            )
+
+    # --- Judge profile peer attest (optional) ---
+    if settings.lemma_judge_profile_attest_enabled:
+        if settings.lemma_judge_profile_attest_allow_skip:
+            click.echo(
+                stylize(
+                    "WARN judge attest  LEMMA_JUDGE_PROFILE_ATTEST_SKIP=1 — peer URLs not checked",
+                    fg="yellow",
+                ),
+            )
+        attest_errs = judge_profile_peer_check_errors(settings)
+        fatal.extend(attest_errs)
+        if attest_errs:
+            click.echo(
+                stylize(
+                    "FAIL judge attest  peer URLs did not match local judge_profile_sha256 — see above",
+                    fg="red",
+                    bold=True,
+                ),
+                err=True,
+            )
+        elif not settings.lemma_judge_profile_attest_allow_skip:
+            click.echo(
+                stylize(
+                    "OK judge attest  peer URLs agree with local judge_profile_sha256",
+                    fg="green",
+                ),
             )
 
     # --- Lean image / verify path ---

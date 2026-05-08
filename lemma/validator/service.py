@@ -16,6 +16,7 @@ from lemma.judge.profile import judge_profile_sha256
 from lemma.problems.factory import get_problem_source
 from lemma.problems.generated import generated_registry_sha256
 from lemma.validator import epoch as ep
+from lemma.validator.judge_profile_attest import judge_profile_peer_check_errors
 from lemma.validator.protocol_migration import validate_protocol_feature_flags
 
 
@@ -76,6 +77,13 @@ class ValidatorService:
                     "Use the same lemma commit as the subnet, then `lemma configure subnet-pins` "
                     "(or update the registry pin from `lemma meta --raw`)."
                 )
+        if s.lemma_judge_profile_attest_enabled and s.lemma_judge_profile_attest_allow_skip:
+            logger.warning(
+                "LEMMA_JUDGE_PROFILE_ATTEST_SKIP=1 — peer judge profile HTTP checks skipped (solo / dev only)",
+            )
+        attest_errs = await asyncio.to_thread(judge_profile_peer_check_errors, s)
+        if attest_errs:
+            raise SystemExit(attest_errs[0])
         subtensor = get_subtensor(s)
         source = get_problem_source(s)
         logger.info("problem_source={}", s.problem_source)
