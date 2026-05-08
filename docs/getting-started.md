@@ -56,7 +56,7 @@ Registration and stake: [Bittensor CLI](https://docs.learnbittensor.org/).
 
 ## Configure (`lemma setup`)
 
-Prompts for chain (**test** sets `NETUID=467` automatically; **finney** writes a placeholder `NETUID` until Lemma is on mainnet), wallet names, API keys, axon port, judge and Lean image settings. Seeds from `.env.example` if `.env` is missing.
+Prompts for chain (Bittensor **testnet** only: `NETUID=467`); wallet names, API keys, axon port, judge and Lean image settings. **Finney (mainnet) is TBD** in the wizard — do not use fake `NETUID` values (e.g. sn0 is the root on Finney). Seeds from `.env.example` if `.env` is missing.
 
 ```bash
 ./scripts/lemma-run lemma setup

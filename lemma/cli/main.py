@@ -1331,7 +1331,7 @@ def configure_grp() -> None:
     help="Default: ./.env",
 )
 def configure_chain(env_path: Path | None) -> None:
-    """Set chain network (sets NETUID automatically), subtensor endpoint, and wallet names."""
+    """Set Bittensor testnet chain (NETUID 467), subtensor endpoint, and wallet names."""
     from lemma.cli.env_wizard import collect_chain_updates
     from lemma.common.env_file import merge_dotenv
 

@@ -27,15 +27,11 @@ _GEMINI_PRESET_ROWS: tuple[tuple[str, str, str], ...] = (
     ("3", "gemini-flash-lite-latest", "Flash-Lite — cheaper / faster when quality tradeoffs are OK."),
 )
 
-# Official entrypoints (Bittensor docs — mainnet vs testnet).
-CHAIN_ENDPOINT_FINNEY = "wss://entrypoint-finney.opentensor.ai:443"
+# Bittensor testnet RPC — docs/getting-started.md
 CHAIN_ENDPOINT_TEST = "wss://test.finney.opentensor.ai:443"
-DEFAULT_SUBTENSOR_CHAIN_ENDPOINT = CHAIN_ENDPOINT_FINNEY
 
-# Lemma subnet — docs/getting-started.md
+# Lemma subnet on testnet
 LEMMA_TESTNET_NETUID = 467
-# Finney mainnet: subnet netuid TBD until Lemma is registered there (operators overwrite `.env`).
-LEMMA_FINNEY_NETUID_PLACEHOLDER = 0
 
 
 def _require_secret(prompt: str) -> str:
@@ -43,43 +39,6 @@ def _require_secret(prompt: str) -> str:
     if not key:
         raise click.UsageError("Value is required.")
     return key
-
-
-def _prompt_chain_network() -> str:
-    """Return ``test`` or ``finney``. Accept ``1``/``2`` or name; Enter = test."""
-    click.echo(
-        stylize("Pick a chain — type ", dim=True)
-        + stylize("1", fg="yellow")
-        + stylize(" or ", dim=True)
-        + stylize("2", fg="yellow")
-        + stylize(", or the name. Press Enter for default ", dim=True)
-        + stylize("1 = test", fg="cyan")
-        + stylize(".\n", dim=True),
-        nl=False,
-    )
-    click.echo(
-        stylize("  1  ", fg="green", bold=True)
-        + stylize("test", fg="cyan")
-        + stylize("   — Bittensor testnet; NETUID ", dim=True)
-        + stylize(str(LEMMA_TESTNET_NETUID), fg="yellow")
-        + stylize(" (Lemma).\n", dim=True),
-        nl=False,
-    )
-    click.echo(
-        stylize("  2  ", fg="green", bold=True)
-        + stylize("finney", fg="cyan")
-        + stylize(
-            " — mainnet; NETUID is a placeholder until Lemma registers on Finney (see message below).\n",
-            dim=True,
-        ),
-        nl=False,
-    )
-    raw = click.prompt(stylize("Network", fg="green"), default="1", show_default=False).strip().lower()
-    if raw in ("", "1", "test"):
-        return "test"
-    if raw in ("2", "finney"):
-        return "finney"
-    raise click.UsageError("Network must be 1 / test or 2 / finney.")
 
 
 def collect_chain_updates() -> dict[str, str]:
@@ -90,28 +49,29 @@ def collect_chain_updates() -> dict[str, str]:
         + stylize(" coldkeys / hotkeys.\n", dim=True),
         nl=False,
     )
-    preset_l = _prompt_chain_network()
-    if preset_l == "test":
-        network, endpoint = "test", CHAIN_ENDPOINT_TEST
-        netuid = LEMMA_TESTNET_NETUID
-        click.echo(
-            stylize(
-                f"→ Will set NETUID={netuid} (Lemma on Bittensor testnet).\n",
-                dim=True,
-            ),
-            nl=False,
+    click.echo(
+        stylize(
+            "This wizard targets Bittensor testnet only: NETUID ",
+            dim=True,
         )
-    else:
-        network, endpoint = "finney", CHAIN_ENDPOINT_FINNEY
-        netuid = LEMMA_FINNEY_NETUID_PLACEHOLDER
-        click.echo(
-            stylize(
-                f"→ NETUID={netuid} is a placeholder: Lemma is not yet live on Finney mainnet. "
-                "Update NETUID in `.env` when the subnet registers on mainnet (see docs/getting-started.md).\n",
-                dim=True,
-            ),
-            nl=False,
-        )
+        + stylize(str(LEMMA_TESTNET_NETUID), fg="yellow")
+        + stylize(" (Lemma). ", dim=True)
+        + stylize("Finney (mainnet) is TBD", fg="yellow")
+        + stylize(
+            " — do not use arbitrary NETUID placeholders (e.g. sn0 is the root network on Finney).\n",
+            dim=True,
+        ),
+        nl=False,
+    )
+    network, endpoint = "test", CHAIN_ENDPOINT_TEST
+    netuid = LEMMA_TESTNET_NETUID
+    click.echo(
+        stylize(
+            f"→ SUBTENSOR_NETWORK={network}  NETUID={netuid}  endpoint below.\n",
+            dim=True,
+        ),
+        nl=False,
+    )
 
     click.echo(
         stylize(f"→ {network}", fg="cyan")
