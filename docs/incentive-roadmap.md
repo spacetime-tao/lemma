@@ -46,7 +46,7 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 ### Trust & sybil
 
 - [ ] **Sybil economics** — Coldkey dedup is not a sybil resistance primitive; evaluate UID-pressure / tie-break policies (e.g. winners-take-most on ties), stake, or other mechanisms documented in `knowledge/sybil.realities.yaml`.
-- [ ] **Judge / infra trust** — Strengthen beyond URL + profile hash (attestations, quorum, or miner-verify path once implemented).
+- [ ] **Judge / infra trust** — HTTP peer quorum for **`judge_profile_sha256`** ships (`LEMMA_JUDGE_PROFILE_ATTEST_*`). Still open: stronger attestations (e.g. on-chain), operational hardening beyond URL probes.
 
 ### Compute placement
 

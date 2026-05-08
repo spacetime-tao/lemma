@@ -97,6 +97,24 @@ For a cheap local loop without any inference HTTP, you can set **`LEMMA_FAKE_JUD
 
 [governance.md](governance.md).
 
+## Judge profile peer attest (optional)
+
+Some subnets require validators to **agree with peers on the same judge stack**, not only match **`JUDGE_PROFILE_SHA256_EXPECTED`** locally. When **`LEMMA_JUDGE_PROFILE_ATTEST_ENABLED=1`**, startup (and **`lemma validator-check`**) HTTP GETs each URL in **`LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS`** and checks the body matches this process’s **`judge_profile_sha256`** (same fingerprint as **`lemma meta`** / **`lemma configure subnet-pins`**).
+
+| Env | Role |
+| --- | --- |
+| **`LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS`** | Comma-separated GET URLs. Response: plain **64-char hex** on the first line, or JSON **`{"judge_profile_sha256":"..."}`**. |
+| **`LEMMA_JUDGE_PROFILE_ATTEST_SKIP=1`** | Skip peer HTTP (solo / dev). Logs a **WARN** at validator startup — not for production alignment across validators. |
+| **`LEMMA_JUDGE_PROFILE_ATTEST_HTTP_TIMEOUT_S`** | Timeout per URL (default **15**). |
+
+**Expose your hash** for other operators to list in their peer URLs:
+
+```bash
+lemma validator judge-attest-serve --host 0.0.0.0 --port 8799
+```
+
+Serves **`GET /lemma/judge_profile_sha256`** (`text/plain` hash) and **`GET /health`**. See [.env.example](../.env.example) and [incentive_migration.md](incentive_migration.md).
+
 ## Compose
 
 ```bash
