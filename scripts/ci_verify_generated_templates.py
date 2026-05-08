@@ -175,9 +175,14 @@ def main() -> int:
                     f"TEMPLATE BUILD FAILURE (multiplex, {len(problems)} theorems) exit={code}\n{out[-20000:]}",
                     file=sys.stderr,
                 )
-                return 1
-            print(f"OK: {len(problems)} generated templates lake build in one workspace ({image})")
-            return 0
+                print(
+                    "Falling back to per-template checks to isolate the failing builder(s)...",
+                    file=sys.stderr,
+                )
+                # Continue into per-template mode for actionable failure output.
+            else:
+                print(f"OK: {len(problems)} generated templates lake build in one workspace ({image})")
+                return 0
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
