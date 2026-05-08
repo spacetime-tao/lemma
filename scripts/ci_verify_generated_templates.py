@@ -22,6 +22,7 @@ network).
 
 from __future__ import annotations
 
+import itertools
 import os
 import shutil
 import sys
@@ -114,9 +115,20 @@ def _bisect_multiplex_failures(problems: list[Problem], image: str, *, initial_l
     ``O(log n)`` multiplex builds, each in its own temp dir that is deleted immediately.
     """
     messages: list[str] = []
+    bisect_step = itertools.count(1)
+
+    def _bisect_log(phase: str, batch: list[Problem]) -> None:
+        builders = [p.extra.get("builder_index") for p in batch]
+        print(
+            f"template bisect [{next(bisect_step)}] {phase}: "
+            f"n_theorems={len(batch)} builders={builders}",
+            file=sys.stderr,
+            flush=True,
+        )
 
     def isolate(batch: list[Problem]) -> None:
         if len(batch) == 1:
+            _bisect_log("single-theorem workspace (lake build)", batch)
             tmp = Path(tempfile.mkdtemp(prefix="lemma-tpl-bisect-"))
             try:
                 _materialize_multiplex(tmp, batch)
@@ -140,6 +152,7 @@ def _bisect_multiplex_failures(problems: list[Problem], image: str, *, initial_l
 
         mid = len(batch) // 2
         left, right = batch[:mid], batch[mid:]
+        _bisect_log("left half (lake build)", left)
         tmp_l = Path(tempfile.mkdtemp(prefix="lemma-tpl-bisect-"))
         try:
             _materialize_multiplex(tmp_l, left)
@@ -151,6 +164,7 @@ def _bisect_multiplex_failures(problems: list[Problem], image: str, *, initial_l
             isolate(left)
             return
 
+        _bisect_log("right half (lake build)", right)
         tmp_r = Path(tempfile.mkdtemp(prefix="lemma-tpl-bisect-"))
         try:
             _materialize_multiplex(tmp_r, right)
@@ -242,8 +256,11 @@ def main() -> int:
                     file=sys.stderr,
                 )
                 print(
-                    "Bisecting multiplex subsets (disk-friendly) to isolate failing builder(s)...",
+                    "Bisecting multiplex subsets (disk-friendly) to isolate failing builder(s)... "
+                    "Each step runs a full lake build and may take several minutes; progress lines "
+                    "follow.",
                     file=sys.stderr,
+                    flush=True,
                 )
                 for msg in _bisect_multiplex_failures(problems, image, initial_log_tail=out):
                     print(msg, "\n---\n", file=sys.stderr)
