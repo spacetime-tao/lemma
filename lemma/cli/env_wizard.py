@@ -135,13 +135,12 @@ def collect_lean_image_updates() -> dict[str, str]:
 
 _JUDGE_BACKENDS_ORDERED: tuple[str, ...] = ("chutes", "anthropic", "openai", "custom_openai")
 _PROVER_BACKENDS_ORDERED: tuple[str, ...] = ("chutes", "gemini", "anthropic", "openai", "custom_openai")
-# One-line hint per slug (prover menu — all options described equally).
 _PROVER_BACKEND_HINTS: dict[str, str] = {
-    "chutes": "Preset endpoint; next prompt sets PROVER_MODEL (default offered — override with any Chutes id).",
-    "gemini": "Preset endpoint; next step is a preset tier menu or a custom Gemini model id.",
-    "anthropic": "Preset Anthropic API; next prompt sets PROVER_MODEL (default Claude id — edit if you want).",
-    "openai": "Preset api.openai.com; next prompt requires PROVER_MODEL (you type it — no default).",
-    "custom_openai": "Paste OpenAI-compat base URL + model id (only backend that asks for URL).",
+    "chutes": "Host fixed; model id (default or type your own).",
+    "gemini": "Host fixed; menu of presets or custom Gemini id.",
+    "anthropic": "Host fixed; model id (default or type your own).",
+    "openai": "api.openai.com; must type model id.",
+    "custom_openai": "You enter base URL + model id.",
 }
 
 
@@ -176,15 +175,10 @@ def _prompt_backend_menu(
     default_num = ordered.index(default_slug) + 1
     click.echo(preamble, nl=False)
     click.echo(
-        stylize("Pick a backend — type a ", dim=True)
-        + stylize("number", fg="yellow")
-        + stylize(" (1–", dim=True)
-        + stylize(str(len(ordered)), fg="yellow")
-        + stylize(") or the ", dim=True)
-        + stylize("name", fg="yellow")
-        + stylize(" (e.g. chutes). Press Enter for default ", dim=True)
-        + stylize(f"{default_num} = {default_slug}", fg="cyan")
-        + stylize(".\n", dim=True),
+        stylize(
+            f"Enter 1–{len(ordered)} or the slug; Enter alone → {default_num} ({default_slug}).\n",
+            dim=True,
+        ),
         nl=False,
     )
     for i, name in enumerate(ordered, start=1):
@@ -214,10 +208,7 @@ def _backend_choice(role_label: str) -> str:
 
 
 def _prover_backend_choice() -> str:
-    preamble = stylize(
-        "Prover LLM — writes Submission.lean when you mine. Each backend below is a different provider:\n",
-        dim=True,
-    )
+    preamble = stylize("Prover inference (writes Submission.lean):\n", dim=True)
     return _prompt_backend_menu(
         ordered=_PROVER_BACKENDS_ORDERED,
         default_slug="chutes",
