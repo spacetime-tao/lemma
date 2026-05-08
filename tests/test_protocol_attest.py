@@ -1,5 +1,7 @@
 """Miner verify attestation helpers."""
 
+import tempfile
+
 import bittensor as bt
 from lemma.protocol import LemmaChallenge
 from lemma.protocol_attest import (
@@ -29,30 +31,34 @@ def test_miner_verify_attest_message_stable() -> None:
 
 
 def test_sign_verify_roundtrip() -> None:
-    w = bt.Wallet(name="default")
-    s = LemmaChallenge(
-        theorem_id="gen/1",
-        theorem_statement="theorem t : True := by sorry",
-        imports=["Mathlib"],
-        lean_toolchain="lt",
-        mathlib_rev="mr",
-        deadline_unix=1,
-        metronome_id="m99",
-        deadline_block=None,
-        proof_script="theorem x : True := rfl\n",
-    )
-    msg = miner_verify_attest_message(s)
-    hx = sign_miner_verify_attest(w, msg)
-    assert verify_miner_verify_attest_signature(
-        hotkey_ss58=w.hotkey.ss58_address,
-        message=msg,
-        signature_hex=hx,
-    )
-    assert not verify_miner_verify_attest_signature(
-        hotkey_ss58=w.hotkey.ss58_address,
-        message=b"tampered",
-        signature_hex=hx,
-    )
+    # CI has no ~/.bittensor/wallets/default — generate ephemeral keys under a temp dir.
+    with tempfile.TemporaryDirectory() as td:
+        w = bt.Wallet(path=td, name="pytest_attest")
+        w.create_new_coldkey(use_password=False, overwrite=True, suppress=True)
+        w.create_new_hotkey(use_password=False, overwrite=True, suppress=True)
+        s = LemmaChallenge(
+            theorem_id="gen/1",
+            theorem_statement="theorem t : True := by sorry",
+            imports=["Mathlib"],
+            lean_toolchain="lt",
+            mathlib_rev="mr",
+            deadline_unix=1,
+            metronome_id="m99",
+            deadline_block=None,
+            proof_script="theorem x : True := rfl\n",
+        )
+        msg = miner_verify_attest_message(s)
+        hx = sign_miner_verify_attest(w, msg)
+        assert verify_miner_verify_attest_signature(
+            hotkey_ss58=w.hotkey.ss58_address,
+            message=msg,
+            signature_hex=hx,
+        )
+        assert not verify_miner_verify_attest_signature(
+            hotkey_ss58=w.hotkey.ss58_address,
+            message=b"tampered",
+            signature_hex=hx,
+        )
 
 
 def test_spot_verify_deterministic() -> None:
