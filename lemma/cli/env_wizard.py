@@ -136,11 +136,26 @@ def collect_lean_image_updates() -> dict[str, str]:
 _JUDGE_BACKENDS_ORDERED: tuple[str, ...] = ("chutes", "anthropic", "openai", "custom_openai")
 _PROVER_BACKENDS_ORDERED: tuple[str, ...] = ("chutes", "gemini", "anthropic", "openai", "custom_openai")
 _PROVER_BACKEND_HINTS: dict[str, str] = {
-    "chutes": "Model id (Enter = default).",
-    "gemini": "Tier menu or custom Gemini id.",
-    "anthropic": "Claude model id (Enter = default).",
-    "openai": "Model id (required).",
-    "custom_openai": "Base URL + model id.",
+    "chutes": (
+        "Chutes marketplace — URL is preset (llm.chutes.ai). Next prompts: Chutes API key, "
+        "then model id (Enter keeps the suggested default or type another Chutes model id)."
+    ),
+    "gemini": (
+        "Gemini via Google AI Studio — URL is preset (Google’s OpenAI-compat base). Next: "
+        "Gemini API key, then a short menu (Flash / Pro / Lite tiers) or any custom Gemini model id."
+    ),
+    "anthropic": (
+        "Anthropic Claude — native Anthropic HTTP API (not OpenAI-format). Next: Anthropic API key, "
+        "then one model field (Enter keeps the suggested default Claude id)."
+    ),
+    "openai": (
+        "OpenAI hosted Chat Completions — URL is preset (api.openai.com). Next: OpenAI API key, "
+        "then you must type a model id (no default)."
+    ),
+    "custom_openai": (
+        "Any other OpenAI-compatible host (self-hosted, gateway, …). Next: API key, paste the base URL "
+        "yourself, then model id."
+    ),
 }
 
 
@@ -220,12 +235,17 @@ def _backend_choice(role_label: str) -> str:
 
 def _prover_backend_choice() -> str:
     preamble = (
-        stylize("Mining prover — where should inference run (writes Submission.lean)?\n", dim=True)
-        + stylize(
-            "You enter the provider API key first. 1–4 use preset vendor URLs; 5 asks for your base URL. "
-            "What differs next:\n",
+        stylize(
+            "Mining prover — choose which vendor runs the LLM that writes Submission.lean.\n",
             dim=True,
         )
+        + stylize(
+            "Pick the provider here first; the wizard then asks for API keys and model settings. "
+            "Rows 1–4 use each vendor’s built-in URL; row 5 is when you paste your own "
+            "OpenAI-compatible base URL.\n",
+            dim=True,
+        )
+        + stylize("What each choice leads to:\n", dim=True)
     )
     return _prompt_backend_menu(
         ordered=_PROVER_BACKENDS_ORDERED,
