@@ -181,7 +181,7 @@ Roughly: (challenges answered) × ($/challenge). Measure from logs.
 - No central proof repository.
 - Validator responses are in-memory for the round unless exported.
 - Chain stores weights, not full proofs.
-- `LEMMA_TRAINING_EXPORT_JSONL`: optional local JSONL ([`training_export.py`](../lemma/validator/training_export.py)).
+- `LEMMA_TRAINING_EXPORT_JSONL`: optional local JSONL ([`training_export.py`](../lemma/validator/training_export.py)); **`LEMMA_TRAINING_EXPORT_PROFILE`** controls proof/rubric/weights ([training_export.md](training_export.md)).
 
 ## Lean verification failures
 

@@ -185,6 +185,7 @@ async def run_epoch(
     aggregate: dict[int, list[ScoredEntry]] = defaultdict(list)
     training_rows: list[dict[str, Any]] = []
     export_path = settings.training_export_jsonl
+    export_profile = settings.lemma_training_export_profile
 
     total_verified = 0
     total_scored = 0
@@ -451,6 +452,7 @@ async def run_epoch(
                                 uid=uid_i,
                                 resp=resp_i,
                                 rubric=rubric,
+                                profile=export_profile,
                             ),
                         )
                 ent = entry_from_scores(
@@ -516,7 +518,12 @@ async def run_epoch(
     )
 
     if export_path and training_rows:
-        append_epoch_jsonl(export_path, training_rows, weights_by_uid)
+        append_epoch_jsonl(
+            export_path,
+            training_rows,
+            weights_by_uid,
+            include_pareto_weights=(export_profile == "full"),
+        )
         logger.debug(
             "training_export appended {} rows to {}",
             len(training_rows),

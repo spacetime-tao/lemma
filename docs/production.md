@@ -28,7 +28,7 @@ Prerequisites: [getting-started.md](getting-started.md).
 
 ## Training export
 
-`LEMMA_TRAINING_EXPORT_JSONL` appends one JSON object per successfully judged miner per epoch. Lemma does not upload; use cron/systemd and [`scripts/training_export_upload_example.sh`](../scripts/training_export_upload_example.sh) for storage.
+`LEMMA_TRAINING_EXPORT_JSONL` appends one JSON object per successfully judged miner per epoch. Optional **`LEMMA_TRAINING_EXPORT_PROFILE`** (`full` vs `reasoning_only`) controls whether proof, judge rubric, and Pareto weights are included — see [training_export.md](training_export.md). Lemma does not upload; use cron/systemd and [`scripts/training_export_upload_example.sh`](../scripts/training_export_upload_example.sh) for storage.
 
 ## Observability
 

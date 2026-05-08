@@ -30,7 +30,7 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 
 - [x] **Proof intrinsic (partial)** — Lean `--` / `/- … -/` stripped before the heuristic (`LEMMA_PROOF_INTRINSIC_STRIP_COMMENTS`, default on). Default **`LEMMA_SCORE_PROOF_WEIGHT=0.35`** favors judge composite over the heuristic. **Still open:** elaborator-backed metrics or further weight tuning.
 - [x] **Credibility multiplier** — Per-UID verify-pass EMA persisted in reputation JSON; score uses `(credibility ** LEMMA_REPUTATION_CREDIBILITY_EXPONENT)` after EMA smoothing (`LEMMA_REPUTATION_VERIFY_CREDIBILITY_ALPHA`, default 0.08; set to **0** to freeze credibility updates).
-- [ ] **Training export** — Revisit what validators emit once intrinsic/scoring stabilize so exports don’t teach deterministic gaming targets.
+- [x] **Training export** — Documented gaming/leakage ([training_export.md](training_export.md)); **`LEMMA_TRAINING_EXPORT_PROFILE=reasoning_only`** omits proof, judge rubric, and Pareto weights (`lemma/validator/training_export.py`).
 
 ### Problem supply & predictability
 

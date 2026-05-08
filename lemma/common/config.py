@@ -605,6 +605,18 @@ class LemmaSettings(BaseSettings):
         validation_alias=AliasChoices("LEMMA_TRAINING_EXPORT_JSONL", "training_export_jsonl"),
         description="Append one JSON object per scored miner per epoch (PRM dataset export).",
     )
+    lemma_training_export_profile: Literal["full", "reasoning_only"] = Field(
+        default="full",
+        validation_alias=AliasChoices(
+            "LEMMA_TRAINING_EXPORT_PROFILE",
+            "lemma_training_export_profile",
+        ),
+        description=(
+            "`full`: schema v1 includes proof_script, rubric, pareto_weight. "
+            "`reasoning_only`: schema v2 omits proof, judge labels, and weights — less useful for gaming "
+            "(see docs/training_export.md)."
+        ),
+    )
 
     # Scoring / incentive hard-migration (validators)
     lemma_score_proof_weight: float = Field(
