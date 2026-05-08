@@ -1,7 +1,10 @@
 """Deterministic theorem generation from an integer seed (no frozen JSON catalog).
 
-Each validator epoch passes ``seed = current_block``; everyone expands the same seed into
-the same ``Problem`` using ``random.Random(seed)`` + fixed builder ordering.
+Each validator epoch passes a **chain-aligned** integer seed; everyone expands the same seed into
+the same ``Problem``. Template selection uses ``random.Random`` fed from a **SHA256 mix** of that seed
+(by default), so adjacent seeds map to less correlated template picks than plain ``Random(seed)``.
+Problem ids stay ``gen/<seed>`` where ``seed`` is the chain seed (not the mixed value).
+Disable mixing only for rollback: ``LEMMA_GENERATED_LEGACY_PLAIN_RNG=1``.
 
 Statements are generated from **templates** so ``lake build`` stays tractable; difficulty
 varies by template (easy rfl/norm_num vs heavier tactics).
@@ -55,7 +58,15 @@ TOPICS: tuple[str, ...] = (
 
 Split = str  # "easy" | "medium" | "hard"
 
+RNG_MIX_TAG = "lemma_generated_rng_v1"
+
 BuilderFn = Callable[[random.Random, str, int, str], Problem]
+
+
+def expand_seed_for_problem_rng(seed: int) -> int:
+    """Deterministic 64-bit stir for ``random.Random`` — same inputs ⇒ same expansion everywhere."""
+    digest = hashlib.sha256(f"{RNG_MIX_TAG}|{seed}".encode()).digest()
+    return int.from_bytes(digest[:8], "big")
 
 
 def _theorem_name(seed: int, builder_index: int) -> str:
@@ -563,12 +574,18 @@ def generated_registry_sha256() -> str:
 class GeneratedProblemSource(ProblemSource):
     """Expand ``seed`` into one theorem via deterministic RNG + template registry."""
 
+    def __init__(self, *, legacy_plain_rng: bool = False) -> None:
+        """If ``legacy_plain_rng``, use ``random.Random(seed)`` (pre-v1 behavior); else SHA256-mixed seed."""
+
+        self._legacy_plain_rng = legacy_plain_rng
+
     def all_problems(self) -> list[Problem]:
         """No finite enumeration (countably infinite id space)."""
         return []
 
     def sample(self, seed: int, split: str | None = None) -> Problem:
-        rng = random.Random(seed)
+        rng_seed = int(seed) if self._legacy_plain_rng else expand_seed_for_problem_rng(int(seed))
+        rng = random.Random(rng_seed)
         indices = [i for i, b in enumerate(_BUILDERS) if split is None or b[0] == split]
         if not indices:
             indices = list(range(len(_BUILDERS)))

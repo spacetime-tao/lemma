@@ -1,6 +1,14 @@
-# Catalog sources (`frozen` mode)
+# Catalog sources
 
-**Production-style deployments:** use **`LEMMA_PROBLEM_SOURCE=generated`** (default). The frozen catalog is a **public eval set** — enable only on purpose.
+## Generated templates (default)
+
+**`LEMMA_PROBLEM_SOURCE=generated`** expands a **chain-aligned integer seed** into one theorem per round (`gen/<seed>` ids). Validators agree because they share head + seed mode + registry pin.
+
+Template selection uses a **deterministic SHA256 mix** of that seed before `random.Random` (see [`generated.py`](../lemma/problems/generated.py)). That decorrelates **adjacent** chain seeds (same window still shares one `problem_seed` in quantize mode). It does **not** remove the public, deterministic map from seed → problem: anyone can still precompute. To match an **older** Lemma release’s expansion exactly, set **`LEMMA_GENERATED_LEGACY_PLAIN_RNG=1`** (rollback only).
+
+## Frozen catalog (`frozen` mode)
+
+**Production-style deployments:** use **`LEMMA_PROBLEM_SOURCE=generated`**. The frozen catalog is a **public eval set** — enable only on purpose.
 
 To use frozen JSON, set **`LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`** in `.env` together with **`LEMMA_PROBLEM_SOURCE=frozen`**. Without this flag, `get_problem_source` and `lemma validator-check` reject frozen mode.
 

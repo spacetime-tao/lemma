@@ -26,11 +26,13 @@ def get_problem_source(settings: LemmaSettings) -> ProblemSource:
         return MiniF2FSource(settings.minif2f_catalog_path)
     if mode != "generated":
         raise ValueError(f"Unknown LEMMA_PROBLEM_SOURCE={settings.problem_source!r}")
-    return GeneratedProblemSource()
+    return GeneratedProblemSource(legacy_plain_rng=settings.lemma_generated_legacy_plain_rng)
 
 
 def resolve_problem(settings: LemmaSettings, problem_id: str) -> Problem:
     """Resolve ``gen/<int>`` via generation; otherwise load frozen catalog."""
     if problem_id.startswith("gen/"):
-        return GeneratedProblemSource().get(problem_id)
+        return GeneratedProblemSource(
+            legacy_plain_rng=settings.lemma_generated_legacy_plain_rng,
+        ).get(problem_id)
     return MiniF2FSource(settings.minif2f_catalog_path).get(problem_id)

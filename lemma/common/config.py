@@ -113,6 +113,17 @@ class LemmaSettings(BaseSettings):
             "the live generated-registry hash (`lemma meta`)."
         ),
     )
+    lemma_generated_legacy_plain_rng: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "LEMMA_GENERATED_LEGACY_PLAIN_RNG",
+            "lemma_generated_legacy_plain_rng",
+        ),
+        description=(
+            "If true, template RNG uses random.Random(chain_seed) (legacy). Default false: SHA256-mix chain seed "
+            "before RNG for less correlated template picks across adjacent seeds (see lemma/problems/generated.py)."
+        ),
+    )
     subtensor_network: str = Field(
         default="finney",
         validation_alias=AliasChoices("SUBTENSOR_NETWORK", "subtensor_network"),

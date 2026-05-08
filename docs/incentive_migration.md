@@ -23,6 +23,7 @@ This document tracks **post-audit** mechanism changes in Lemma: proof-centric sc
 | Commit–reveal | **`LEMMA_COMMIT_REVEAL_ENABLED=1`** — validator sends two forwards per sub-round: **`commit_reveal_phase=commit`** (miners return **`proof_commitment_hex`**, SHA256 of canonical preimage — see `lemma/protocol_commit_reveal.py`) then **`commit_reveal_phase=reveal`** (full proof + **`commit_reveal_nonce_hex`**). Responses without a matching commit are dropped. Doubles axon round-trip latency vs single-phase. |
 | Judge profile peer attest | **`LEMMA_JUDGE_PROFILE_ATTEST_ENABLED=1`** — after pins match, HTTP GET each URL in **`LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS`** (comma-separated); response must be **plain 64-char hex** or JSON **`{"judge_profile_sha256":"..."}`** equal to this validator’s **`judge_profile_sha256`**. **`LEMMA_JUDGE_PROFILE_ATTEST_SKIP=1`** skips peer probes (solo / dev; logs WARN). Run **`lemma validator judge-attest-serve`** on peers to expose `GET /lemma/judge_profile_sha256`. Implementation: `lemma/validator/judge_profile_attest.py`. |
 | Training export profiles | **`LEMMA_TRAINING_EXPORT_JSONL`** optional JSONL; **`LEMMA_TRAINING_EXPORT_PROFILE`** = **`full`** (proof + rubric + `pareto_weight`) or **`reasoning_only`** (schema v2 — trace fields without proof, judge labels, or weights). See [training_export.md](training_export.md). |
+| Generated template RNG | Chain seed is **SHA256-mixed** before template selection (`lemma_generated_rng_v1`) so adjacent seeds pick less correlated templates; **`LEMMA_GENERATED_LEGACY_PLAIN_RNG=1`** restores legacy `Random(seed)`. Problem ids remain **`gen/<chain_seed>`**. |
 
 ## Generated registry
 
@@ -33,7 +34,7 @@ Adding templates changes `generated_registry_sha256`. Operators must run `lemma 
 - Scoring: `lemma/scoring/rewards.py`, `lemma/scoring/proof_intrinsic.py`, `lemma/validator/epoch.py`
 - Dedup: `lemma/scoring/dedup.py`
 - Reputation: `lemma/scoring/reputation.py`
-- Problem mix: `lemma/problems/generated.py`, `lemma/common/problem_seed.py` (`mix_sub_problem_seed`)
+- Problem mix: `lemma/problems/generated.py` (`expand_seed_for_problem_rng`), `lemma/common/problem_seed.py` (`mix_sub_problem_seed`)
 - Miner attest: `lemma/protocol_attest.py`, `lemma/miner/forward.py`, `lemma/validator/epoch.py`
 - Commit–reveal: `lemma/protocol_commit_reveal.py`, `lemma/miner/forward.py`, `lemma/validator/epoch.py`
 - Judge profile attest: `lemma/validator/judge_profile_attest.py`, `lemma/validator/service.py`, `lemma/cli/validator_check.py`
