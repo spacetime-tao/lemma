@@ -136,11 +136,11 @@ def collect_lean_image_updates() -> dict[str, str]:
 _JUDGE_BACKENDS_ORDERED: tuple[str, ...] = ("chutes", "anthropic", "openai", "custom_openai")
 _PROVER_BACKENDS_ORDERED: tuple[str, ...] = ("chutes", "gemini", "anthropic", "openai", "custom_openai")
 _PROVER_BACKEND_HINTS: dict[str, str] = {
-    "chutes": "After API key: one prompt for model id (Enter accepts default).",
-    "gemini": "After API key: menu for Flash/Pro/Lite or custom Gemini id.",
-    "anthropic": "After API key: one prompt for Claude model id (Enter accepts default).",
-    "openai": "After API key: one prompt — type model id (no default).",
-    "custom_openai": "After API key: paste base URL + model id.",
+    "chutes": "Model id (Enter = default).",
+    "gemini": "Tier menu or custom Gemini id.",
+    "anthropic": "Claude model id (Enter = default).",
+    "openai": "Model id (required).",
+    "custom_openai": "Base URL + model id.",
 }
 
 
@@ -211,7 +211,8 @@ def _prover_backend_choice() -> str:
     preamble = (
         stylize("Mining prover — where should inference run (writes Submission.lean)?\n", dim=True)
         + stylize(
-            "1–4: vendor URL is built in. 5: you paste an OpenAI-compatible base URL.\n",
+            "You enter the provider API key first. 1–4 use preset vendor URLs; 5 asks for your base URL. "
+            "What differs next:\n",
             dim=True,
         )
     )
