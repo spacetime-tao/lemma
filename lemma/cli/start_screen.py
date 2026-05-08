@@ -251,7 +251,7 @@ def dispatch_menu_command(
             nl=False,
         )
         subs = (
-            ("chain", "NETUID, subtensor endpoint, wallet names"),
+            ("chain", "chain + NETUID (auto), wallets"),
             ("axon", "AXON_PORT (miners)"),
             ("lean-image", "Write fixed LEAN_SANDBOX_IMAGE; build with scripts/prebuild_lean_image.sh first"),
             ("judge", "Validator judge LLM (Chutes / Anthropic / custom)"),

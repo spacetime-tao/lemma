@@ -32,12 +32,54 @@ CHAIN_ENDPOINT_FINNEY = "wss://entrypoint-finney.opentensor.ai:443"
 CHAIN_ENDPOINT_TEST = "wss://test.finney.opentensor.ai:443"
 DEFAULT_SUBTENSOR_CHAIN_ENDPOINT = CHAIN_ENDPOINT_FINNEY
 
+# Lemma subnet — docs/getting-started.md
+LEMMA_TESTNET_NETUID = 467
+# Finney mainnet: subnet netuid TBD until Lemma is registered there (operators overwrite `.env`).
+LEMMA_FINNEY_NETUID_PLACEHOLDER = 0
+
 
 def _require_secret(prompt: str) -> str:
     key = click.prompt(prompt, hide_input=True).strip()
     if not key:
         raise click.UsageError("Value is required.")
     return key
+
+
+def _prompt_chain_network() -> str:
+    """Return ``test`` or ``finney``. Accept ``1``/``2`` or name; Enter = test."""
+    click.echo(
+        stylize("Pick a chain — type ", dim=True)
+        + stylize("1", fg="yellow")
+        + stylize(" or ", dim=True)
+        + stylize("2", fg="yellow")
+        + stylize(", or the name. Press Enter for default ", dim=True)
+        + stylize("1 = test", fg="cyan")
+        + stylize(".\n", dim=True),
+        nl=False,
+    )
+    click.echo(
+        stylize("  1  ", fg="green", bold=True)
+        + stylize("test", fg="cyan")
+        + stylize("   — Bittensor testnet; NETUID ", dim=True)
+        + stylize(str(LEMMA_TESTNET_NETUID), fg="yellow")
+        + stylize(" (Lemma).\n", dim=True),
+        nl=False,
+    )
+    click.echo(
+        stylize("  2  ", fg="green", bold=True)
+        + stylize("finney", fg="cyan")
+        + stylize(
+            " — mainnet; NETUID is a placeholder until Lemma registers on Finney (see message below).\n",
+            dim=True,
+        ),
+        nl=False,
+    )
+    raw = click.prompt(stylize("Network", fg="green"), default="1", show_default=False).strip().lower()
+    if raw in ("", "1", "test"):
+        return "test"
+    if raw in ("2", "finney"):
+        return "finney"
+    raise click.UsageError("Network must be 1 / test or 2 / finney.")
 
 
 def collect_chain_updates() -> dict[str, str]:
@@ -48,30 +90,28 @@ def collect_chain_updates() -> dict[str, str]:
         + stylize(" coldkeys / hotkeys.\n", dim=True),
         nl=False,
     )
-    netuid = click.prompt(stylize("NETUID", fg="green"), type=int)
-
-    preset = click.prompt(
-        stylize("Network", fg="green"),
-        type=click.Choice(["finney", "test", "custom"], case_sensitive=False),
-        default="finney",
-    )
-    preset_l = preset.strip().lower()
-    if preset_l == "finney":
-        network, endpoint = "finney", CHAIN_ENDPOINT_FINNEY
-    elif preset_l == "test":
+    preset_l = _prompt_chain_network()
+    if preset_l == "test":
         network, endpoint = "test", CHAIN_ENDPOINT_TEST
+        netuid = LEMMA_TESTNET_NETUID
+        click.echo(
+            stylize(
+                f"→ Will set NETUID={netuid} (Lemma on Bittensor testnet).\n",
+                dim=True,
+            ),
+            nl=False,
+        )
     else:
-        click.echo(stylize("Custom RPC — paste values from your operator.\n", dim=True))
-        network = click.prompt(
-            stylize("SUBTENSOR_NETWORK", fg="green"),
-            default="finney",
-            show_default=True,
-        ).strip()
-        endpoint = click.prompt(
-            stylize("SUBTENSOR_CHAIN_ENDPOINT", fg="green"),
-            default=DEFAULT_SUBTENSOR_CHAIN_ENDPOINT,
-            show_default=True,
-        ).strip()
+        network, endpoint = "finney", CHAIN_ENDPOINT_FINNEY
+        netuid = LEMMA_FINNEY_NETUID_PLACEHOLDER
+        click.echo(
+            stylize(
+                f"→ NETUID={netuid} is a placeholder: Lemma is not yet live on Finney mainnet. "
+                "Update NETUID in `.env` when the subnet registers on mainnet (see docs/getting-started.md).\n",
+                dim=True,
+            ),
+            nl=False,
+        )
 
     click.echo(
         stylize(f"→ {network}", fg="cyan")
