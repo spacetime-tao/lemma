@@ -6,7 +6,7 @@ A **theorem** is the precise claim to establish; a **proof** is the formal, mach
 
 **Status:** The codebase is still largely **proof-of-concept**, but you can **register and run on** **Subnet 467 — Lemma** on **Bittensor testnet** (`--network test`, `NETUID=467` after `lemma configure chain`). **Finney** is Bittensor **mainnet** (a different network). Full copy-paste flow: [getting-started](docs/getting-started.md). Economics, security, and long-term direction: [vision](docs/vision.md).
 
-**First-time path:** [docs/getting-started.md](docs/getting-started.md) — install, keys, `lemma setup`, miner, validator (copy-paste blocks).
+**First-time path:** [docs/getting-started.md](docs/getting-started.md) — install, keys, `lemma setup`, miner, validator (copy-paste blocks). Friendly operator UX now lives in [lemma-cli](https://github.com/spacetime-tao/lemma-cli).
 
 ## Quick start
 
@@ -17,12 +17,11 @@ cd lemma
 uv sync --extra dev
 source .venv/bin/activate
 lemma --help
-lemma start
 ```
 
-`lemma` alone prints **command help** (like `btcli`). Use **`lemma start`** for the numbered guided menu (`setup`, `doctor`, `docs`, …). Create wallets with the **`btcli`** command from official **[bittensor-cli](https://pypi.org/project/bittensor-cli/)** (installed via **`bittensor[cli]`** when you `uv sync`—see **getting-started** for PyPI package names vs the `btcli` executable).
+`lemma` alone prints **command help** (like `btcli`). Use the separate **[lemma-cli](https://github.com/spacetime-tao/lemma-cli)** repo for the friendly operator screen (`setup`, `doctor`, `docs`, …). Create wallets with the **`btcli`** command from official **[bittensor-cli](https://pypi.org/project/bittensor-cli/)** (installed via **`bittensor[cli]`** when you `uv sync`—see **getting-started** for PyPI package names vs the `btcli` executable).
 
-**Validator entrypoint:** use **`lemma validator`** (or Docker `ENTRYPOINT ["lemma"]` / `CMD ["validator"]`). Do **not** run `python validator.py` at the repo root — that file is a **stub** that exits with instructions; the old “burn 100% to UID 0” demo script lives under **`examples/legacy_subnet_burn_validator.py`** only.
+**Validator entrypoint:** use **`lemma validator start`** (or Docker `ENTRYPOINT ["lemma"]` / `CMD ["validator", "start"]`). Do **not** run `python validator.py` at the repo root — that file is a **stub** that exits with instructions; the old “burn 100% to UID 0” demo script lives under **`examples/legacy_subnet_burn_validator.py`** only.
 
 ## Docs
 

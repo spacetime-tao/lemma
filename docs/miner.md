@@ -2,7 +2,7 @@
 
 Walkthrough: [getting-started.md](getting-started.md) — **`btcli`** (Bittensor CLI), `lemma setup`, `lemma-run`. Prefer prompts over hand-editing `.env` (`lemma configure chain`, `configure prover`, `configure axon`).
 
-**Short checklist:** `lemma setup` → coldkey funded → `btcli subnet register` on the same network/netuid as `.env` → `lemma miner dry-run` → **`lemma rehearsal`** (see prover + Lean + judge on the live theorem) → fix axon IP/port if needed → `lemma miner start`. Run `lemma` for colored command help plus the same path in one glance; `lemma start` opens the guided menu (**miner-dry** then **miner**).
+**Short checklist:** `lemma setup` → coldkey funded → `btcli subnet register` on the same network/netuid as `.env` → `lemma miner dry-run` → **`lemma rehearsal`** (see prover + Lean + judge on the live theorem) → fix axon IP/port if needed → `lemma miner start`. Run `lemma` for core command help; run `lemma-cli` for the friendly operator screen (**miner-dry** then core miner commands).
 
 ### Prover LLM (`lemma configure prover`)
 
@@ -14,7 +14,7 @@ Inference: Chutes is the usual default when prompted.
 
 ```bash
 ./scripts/lemma-run lemma miner --dry-run
-./scripts/lemma-run lemma miner
+./scripts/lemma-run lemma miner start
 ```
 
 While the axon is up, each validator forward **starts the prover immediately** — there is no intentional delay for “new theorem” windows; you compete as soon as traffic hits your axon. By contrast, `lemma try-prover` is a manual one-off (same API billing pattern, but you pressed Enter).

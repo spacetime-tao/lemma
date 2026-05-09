@@ -2,7 +2,7 @@
 
 Walkthrough: [getting-started.md](getting-started.md) — `lemma setup` (validator or both) sets judge and `LEAN_SANDBOX_IMAGE` via prompts.
 
-**Short checklist:** `bash scripts/prebuild_lean_image.sh` → **`lemma rehearsal`** (prover + Lean + judge preview) → `lemma validator-check` until READY → `lemma validator start` (or **validator-check** then **validator** from `lemma start`). Same keys/chain setup as a miner if you run both roles.
+**Short checklist:** `bash scripts/prebuild_lean_image.sh` → **`lemma rehearsal`** (prover + Lean + judge preview) → `lemma validator-check` until READY → `lemma validator start` (or **validator-check** from `lemma-cli`). Same keys/chain setup as a miner if you run both roles.
 
 Validators **always** wait for subnet epoch boundaries before each round — no timer-only mode; every operator shares the same on-chain cadence.
 
@@ -24,7 +24,7 @@ Judge: Chutes when prompted is the documented default; Anthropic and custom Open
 
 ## System requirements (Docker)
 
-- **Docker Engine / Docker Desktop** must be installed and **running** whenever **`LEMMA_USE_DOCKER=1`** (default for `lemma validator`, `lemma verify`, and **`lemma try-prover --verify`**). Lemma talks to the Docker API to **create** a one-shot container per verification job (unless you use a long-lived **`LEMMA_LEAN_DOCKER_WORKER`**); when the job finishes, that container exits.
+- **Docker Engine / Docker Desktop** must be installed and **running** whenever **`LEMMA_USE_DOCKER=1`** (default for `lemma validator start`, `lemma verify`, and **`lemma try-prover --verify`**). Lemma talks to the Docker API to **create** a one-shot container per verification job (unless you use a long-lived **`LEMMA_LEAN_DOCKER_WORKER`**); when the job finishes, that container exits.
 
 ### Fast Docker verify (sub‑10s warm, still Docker)
 
@@ -87,8 +87,8 @@ Steady-state cost is **incremental `lake build Submission`**, not “Mathlib fro
 
 ```bash
 bash scripts/prebuild_lean_image.sh
-./scripts/lemma-run lemma validator --dry-run
-./scripts/lemma-run lemma validator
+./scripts/lemma-run lemma validator dry-run
+./scripts/lemma-run lemma validator start
 ```
 
 For a cheap local loop without any inference HTTP, use **`lemma validator dry-run`**, which defaults to FakeJudge in the rubric step. Prefer **`lemma judge --trace …`** to test only the judge stack, or set **`LEMMA_DRY_RUN_REAL_JUDGE=1`** during dry-run when you want to bill the live judge.

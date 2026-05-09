@@ -52,9 +52,11 @@ These should be either hardened or removed from the default mental model.
 
 This is the `lemma-cli` repo track.
 
+Status: `spacetime-tao/lemma-cli` exists as a thin public wrapper. The first core trim moved the guided `start` surface out of the subnet repo and removed the large menu modules from core while leaving small compatibility hints.
+
 Move first:
 
-1. Guided menu and start screen.
+1. Guided menu and start screen. **Done as a core trim; rebuild richer UX in `lemma-cli` only.**
 2. Environment wizard.
 3. Docs opener/glossary.
 4. Shell activation helpers.
@@ -85,7 +87,7 @@ Once `lemma-cli` exists and can call core functions:
 2. Patch generated problem count docs and registry hash contents.
 3. Patch response integrity/deadline fail-closed behavior with tests.
 4. Patch live validator FakeJudge fail-closed behavior.
-5. Scaffold `lemma-cli` as a separate repo and move only non-consensus UI code first.
+5. Scaffold `lemma-cli` as a separate repo and move only non-consensus UI code first. **Started.**
 6. Remove migrated CLI code from core after `lemma-cli` can install and run against it.
 
 ## Non-Goals For Now

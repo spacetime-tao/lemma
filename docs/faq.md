@@ -40,7 +40,7 @@ The miner’s LLM uses the **fixed in-repo** `PROVER_SYSTEM` in [`lemma/miner/pr
 
 **`--verify`** (after the LLM returns) runs **`lake build`** **on your machine** to check that `Submission.lean` compiles — the same *kind* of kernel check validators use, but **only locally**:
 
-- **`lemma validator`:** **`lemma validator` refuses to start** if **`LEMMA_USE_DOCKER=false`** — validators must use Docker. **`lemma verify`** / miners may still use **`LEMMA_USE_DOCKER=false`** where policy allows (local tooling only).
+- **`lemma validator start`:** **`lemma validator start` refuses to run** if **`LEMMA_USE_DOCKER=false`** — validators must use Docker. **`lemma verify`** / miners may still use **`LEMMA_USE_DOCKER=false`** where policy allows (local tooling only).
 - **`try-prover --verify`:** Defaults to the **same Docker sandbox** as validators when **`LEMMA_USE_DOCKER=true`**. Host `lake` is opt-in: **`--host-lean`** or **`LEMMA_TRY_PROVER_HOST_VERIFY=1`**, and only if **`LEMMA_ALLOW_HOST_LEAN=1`** in **`.env`**.
 - **`lemma verify --host-lean`:** Host `lake` only with **`LEMMA_ALLOW_HOST_LEAN=1`**. Otherwise use Docker (default). Still **local**, not on-chain scoring.
 
