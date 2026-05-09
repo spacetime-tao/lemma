@@ -238,7 +238,8 @@ class LemmaSettings(BaseSettings):
         description=(
             "``chutes`` = subnet judge via OpenAI-compatible HTTP to Chutes "
             "(same stack as ``lemma-cli configure judge`` "
-            f"→ Chutes). Legacy alias: ``openai``. Anthropic: ``anthropic``. Validators must use ``chutes`` with "
+            f"→ Chutes). Legacy alias: ``openai``. Anthropic is local judge tooling only. "
+            "Validators must use ``chutes`` with "
             f"OPENAI_MODEL={CANONICAL_JUDGE_OPENAI_MODEL!r} and OPENAI_BASE_URL={CANONICAL_JUDGE_OPENAI_BASE_URL!r}."
         ),
     )
@@ -287,7 +288,7 @@ class LemmaSettings(BaseSettings):
         ge=0.0,
         le=2.0,
         validation_alias=AliasChoices("JUDGE_TEMPERATURE", "judge_temperature"),
-        description="Sampling temperature for Anthropic and OpenAI judges (symmetric defaults).",
+        description="Sampling temperature for OpenAI-compatible judges and local Anthropic judge tooling.",
     )
     judge_max_tokens: int = Field(
         default=256,
@@ -531,7 +532,7 @@ class LemmaSettings(BaseSettings):
         ),
         description=(
             "Max concurrent judge LLM HTTP calls per epoch (after Lean passes). "
-            "Caps bursts against Chutes/Anthropic to reduce 429 rate limits when many miners verify."
+            "Caps bursts against Chutes to reduce 429 rate limits when many miners verify."
         ),
     )
     lean_verify_workspace_cache_dir: Path | None = Field(

@@ -5,7 +5,7 @@
 | [`LemmaChallenge`](../lemma/protocol.py) | Synapse: validator sends theorem; miner returns reasoning + `proof_script`. |
 | [`lemma/problems/`](../lemma/problems/) | `ProblemSource`. Generated templates ([generated-problems.md](generated-problems.md)); optional frozen JSON ([catalog-sources.md](catalog-sources.md)). |
 | [`lemma/lean/`](../lemma/lean/) | Workspace materialization; `LeanSandbox` runs `lake build` + axiom driver. |
-| [`lemma/judge/`](../lemma/judge/) | Anthropic / OpenAI-compatible / `FakeJudge`. |
+| [`lemma/judge/`](../lemma/judge/) | OpenAI-compatible validator judge; Anthropic and `FakeJudge` remain local/dry-run helpers. |
 | [`lemma/scoring/`](../lemma/scoring/) | Token counts + Pareto → weights. |
 | [`lemma/miner/`](../lemma/miner/) | Axon + `LLMProver`. |
 | [`lemma/validator/`](../lemma/validator/) | Dendrite broadcast → verify → judge → `set_weights`. |

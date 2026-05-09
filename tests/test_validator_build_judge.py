@@ -36,3 +36,11 @@ def test_live_validator_rejects_forced_fake_judge(monkeypatch: pytest.MonkeyPatc
 
     with pytest.raises(RuntimeError, match="dry-run"):
         _build_judge(_settings_without_keys(), dry_run=False)
+
+
+def test_validator_judge_builder_rejects_anthropic_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("LEMMA_FAKE_JUDGE", raising=False)
+    s = LemmaSettings(judge_provider="anthropic", anthropic_api_key="test")
+
+    with pytest.raises(RuntimeError, match="JUDGE_PROVIDER=chutes"):
+        _build_judge(s, dry_run=False)
