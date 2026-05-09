@@ -105,6 +105,38 @@ Use `uv run python -m tools.proof_metrics_analyze <train.jsonl>` to compare
 exported proof metrics against proof text length, current `proof_intrinsic_score`,
 and judge composite before considering any scoring change.
 
+## Initial Calibration
+
+On 2026-05-09, a controlled Docker calibration ran five proofs of the same small
+theorem, `two_plus_two_eq_four : (2 : Nat) + 2 = 4`, with
+`LEMMA_LEAN_PROOF_METRICS=1`. The run used real Lean verification, then analyzed
+the exported rows with `tools.proof_metrics_analyze`.
+
+| Proof shape | Proof chars | Lean metric bytes | Lean metric lines | Current `proof_intrinsic_score` | Note |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `rfl` | 115 | 538 | 9 | 0.3159 | Small baseline. |
+| `norm_num` | 120 | 2129 | 32 | 0.3182 | Larger printed proof term than `rfl`. |
+| Structured `have` proof | 214 | 2526 | 40 | 0.4256 | Metric rises with real proof structure. |
+| Comment padding + `norm_num` | 4190 | 2129 | 32 | 0.5217 | Lean metric matches `norm_num`; text heuristic still rises because stripped comment lines leave line-count bulk. |
+| String padding + `norm_num` | 2150 | 4160 | 34 | 0.4760 | Lean metric also rises; the probe is not padding-proof. |
+
+Analyzer summary:
+
+```text
+rows_total=5
+rows_with_proof_metrics=5
+metric_bytes: n=5 min=538 median=2129.0 mean=2296.4 max=4160
+proof_len_chars: n=5 min=115 median=214.0 mean=1357.8 max=4190
+corr(metric_bytes, proof_len_chars)=0.3358
+corr(metric_bytes, proof_intrinsic)=0.6028
+```
+
+Interpretation: the Lean probe is useful as a research signal because it ignores
+pure comment padding in this sample. It is not sufficient as a scoring signal:
+valid but useless term-level padding, such as an unused large string, can still
+inflate it. Keep it compare-only until a better Lean/elaborator-backed metric is
+defined and tested against more padding attempts.
+
 Signals to avoid as scoring inputs:
 
 - Wall-clock build time, because it depends on hardware, cache warmth, and Docker
