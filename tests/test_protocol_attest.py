@@ -54,6 +54,11 @@ def test_sign_verify_roundtrip() -> None:
             message=msg,
             signature_hex=hx,
         )
+        assert verify_miner_verify_attest_signature(
+            hotkey_ss58=w.hotkey.ss58_address,
+            message=msg,
+            signature_hex="0x" + hx,
+        )
         assert not verify_miner_verify_attest_signature(
             hotkey_ss58=w.hotkey.ss58_address,
             message=b"tampered",

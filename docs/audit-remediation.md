@@ -217,8 +217,8 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 
 ### 13.3 Protocol & glue
 
-- **`protocol_attest`**: redundant length checks post-`fromhex` (dead second check per audit).
-- **`protocol_commit_reveal`**: duplicate strip/length pattern; `verify_reveal` `0x` tolerance possibly unreachable from strict regex path; `sort_keys` on list; single-caller `looks_like_commitment_hex` abstraction.
+- **`protocol_attest`**: redundant length check after fixed-length signature decode removed.
+- **`protocol_commit_reveal`**: duplicate strip/length pattern consolidated into shared hex helpers; commit and reveal paths accept optional `0x` consistently.
 - **`epoch._verify_one`**: seven defaulted kwargs for K>1 path (default K=1); **`asyncio.gather` without `return_exceptions`** → one UID exception can drop whole batch.
 - **`validator/protocol_migration.py`** no-op removed; validator startup now checks live settings directly.
 - **`validator/query.py`** thin wrapper removed; epoch calls `bt.Dendrite` directly.

@@ -48,8 +48,6 @@ def verify_miner_verify_attest_signature(*, hotkey_ss58: str, message: bytes, si
         sig = bytes.fromhex(raw)
     except ValueError:
         return False
-    if len(sig) != 64:
-        return False
     kp = bt.Keypair(ss58_address=hotkey_ss58)
     return bool(kp.verify(message, sig))
 

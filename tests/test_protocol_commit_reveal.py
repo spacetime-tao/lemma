@@ -4,6 +4,7 @@ from lemma.protocol_commit_reveal import (
     commit_preimage_v1,
     commitment_hex_from_preimage,
     looks_like_commitment_hex,
+    normalize_commitment_hex,
     reasoning_blob_for_commit,
     verify_reveal_against_commitment,
 )
@@ -53,6 +54,7 @@ def test_commitment_hex_accepts_optional_0x_prefix() -> None:
     ch = commitment_hex_from_preimage(pre)
 
     assert looks_like_commitment_hex("0x" + ch)
+    assert normalize_commitment_hex("0X" + ch.upper()) == ch
     assert verify_reveal_against_commitment(
         expected_commitment_hex="0x" + ch,
         theorem_id="gen/1",
