@@ -11,7 +11,6 @@ from lemma.cli.uv_bootstrap import maybe_reexec_under_uv
 maybe_reexec_under_uv()
 
 import asyncio
-import json
 import os
 import sys
 from pathlib import Path
@@ -33,9 +32,9 @@ def main(ctx: click.Context) -> None:
 
     \b
     Common commands:
-      lemma start      Guided picks (setup, doctor, miner, validator, …)
       lemma rehearsal  Live theorem → prover → Lean → judge (scoring preview)
       lemma doctor     Config + keys + chain sanity
+      lemma-cli        Friendly operator setup/help wrapper
       lemma --help     Full command list
     """
     if ctx.invoked_subcommand is None:
@@ -43,10 +42,10 @@ def main(ctx: click.Context) -> None:
             stylize("Lemma ", fg="cyan", bold=True)
             + stylize(__version__, dim=True)
             + stylize("  —  ", dim=True)
-            + stylize("lemma start", fg="green")
-            + stylize(" guided menu · ", dim=True)
             + stylize("lemma doctor", fg="green")
             + stylize(" checks · ", dim=True)
+            + stylize("lemma-cli", fg="green")
+            + stylize(" friendly setup · ", dim=True)
             + stylize("lemma COMMAND --help", fg="green")
             + stylize(" for one command\n", dim=True),
             nl=False,
@@ -87,23 +86,11 @@ def main(ctx: click.Context) -> None:
 
 
 @main.command("start")
-@click.option(
-    "--quick-select",
-    "quick_select",
-    type=int,
-    default=None,
-    hidden=True,
-    metavar="N",
-)
-@click.pass_context
-def start_cmd(ctx: click.Context, quick_select: int | None) -> None:
-    """Guided onboarding menu (numbered picks: setup, doctor, miner, …)."""
-    from lemma.cli.start_screen import run_quick_menu_step, show_start_here
-
-    if quick_select is not None:
-        run_quick_menu_step(ctx, group=main, step=quick_select)
-        return
-    show_start_here(ctx, group=main)
+def start_cmd() -> None:
+    """Point guided onboarding users to lemma-cli."""
+    click.echo(stylize("Guided setup moved to lemma-cli.", fg="cyan", bold=True))
+    click.echo("Run `lemma-cli` or `lemma-cli start` for the friendly operator screen.")
+    click.echo("Core commands still live here: `lemma miner start`, `lemma validator start`, `lemma verify`.")
 
 
 @main.command("env")
@@ -139,17 +126,6 @@ def env_cmd(fish: bool) -> None:
             dim=True,
         )
     )
-
-
-def _rewrite_lemma_argv_numeric_menu() -> None:
-    """Turn ``lemma 7`` / ``lemma 7 --verify`` into ``lemma start --quick-select 7`` (+ extras in env)."""
-    av = sys.argv
-    if len(av) < 2:
-        return
-    if not av[1].isdigit():
-        return
-    os.environ["_LEMMA_QUICK_MENU_EXTRAS_JSON"] = json.dumps(av[2:])
-    av[:] = [av[0], "start", "--quick-select", av[1]]
 
 
 def _doctor_api_lines(s: LemmaSettings) -> tuple[list[str], bool]:
@@ -356,10 +332,10 @@ def doctor_cmd() -> None:
             "\n5  Next commands\n"
             "     lemma env              — print `source …/activate`\n"
             "     lemma meta             — judge + template hashes\n"
-            "     lemma validator-check  — before `lemma validator`\n"
+            "     lemma validator-check  — before `lemma validator start`\n"
             "     lemma rehearsal        — prover + Lean + judge on the live theorem (preview before miner/validator)\n"
             "     lemma try-prover       — prover only  ·  lemma judge --trace FILE — judge on files\n"
-            "     lemma start            — guided menu  ·  lemma configure --help  ·  lemma docs --pick\n",
+            "     lemma-cli              — friendly operator screen  ·  lemma configure --help\n",
             dim=True,
         ),
         nl=False,
@@ -1251,7 +1227,7 @@ def miner_group(
     dry_run: bool,
     max_forwards_per_day: int | None,
 ) -> None:
-    """Interactive menu when run bare; use subcommands or flags from scripts."""
+    """Use explicit subcommands from scripts."""
     if ctx.invoked_subcommand is not None:
         return
     if dry_run:
@@ -1260,9 +1236,9 @@ def miner_group(
     if max_forwards_per_day is not None:
         _miner_run_axon(max_forwards_per_day)
         return
-    from lemma.cli.miner_menu import show_miner_menu
-
-    show_miner_menu(ctx)
+    click.echo(ctx.get_help(), color=colors_enabled())
+    click.echo("Use `lemma miner start` or `lemma miner dry-run`.")
+    click.echo("For the friendly operator screen, use `lemma-cli`.")
 
 
 @miner_group.command(
@@ -1476,7 +1452,7 @@ def configure_subnet_pins(env_path: Path | None, yes: bool) -> None:
     """Write JUDGE_PROFILE_SHA256_EXPECTED (+ registry pin if generated) from **current** `lemma meta`.
 
     Align OPENAI_MODEL, OPENAI_BASE_URL, temps, etc. to subnet policy first — then this snapshots pins so
-    `lemma validator` / `lemma validator-check` can confirm you match published subnet meta.
+    `lemma validator start` / `lemma validator-check` can confirm you match published subnet meta.
     """
     from lemma.cli.env_wizard import collect_subnet_pin_updates
     from lemma.common.env_file import merge_dotenv
@@ -1568,15 +1544,15 @@ def _validator_run_blocking(*, dry_run: bool) -> None:
 )
 @click.pass_context
 def validator_group(ctx: click.Context, legacy_dry: bool) -> None:
-    """Interactive menu when run bare."""
+    """Use explicit subcommands from scripts."""
     if ctx.invoked_subcommand is not None:
         return
     if legacy_dry:
         _validator_run_blocking(dry_run=True)
         return
-    from lemma.cli.validator_menu import show_validator_menu
-
-    show_validator_menu(ctx)
+    click.echo(ctx.get_help(), color=colors_enabled())
+    click.echo("Use `lemma validator start`, `lemma validator dry-run`, or `lemma validator-check`.")
+    click.echo("For the friendly operator screen, use `lemma-cli`.")
 
 
 @validator_group.command("start", help="Run scoring rounds until Ctrl+C.")
@@ -1629,7 +1605,7 @@ def _echo_validator_dry_wallet_section(settings: LemmaSettings) -> None:
     cold_res, hot_res = settings.validator_wallet_names()
     oc = (settings.validator_wallet_cold or "").strip()
     oh = (settings.validator_wallet_hot or "").strip()
-    click.echo(stylize("Signing keys (for `lemma validator`)", fg="cyan", bold=True))
+    click.echo(stylize("Signing keys (for `lemma validator start`)", fg="cyan", bold=True))
     click.echo("")
     click.echo(f"  cold  {cold_res!r}")
     click.echo(f"  hot   {hot_res!r}")
@@ -1795,15 +1771,15 @@ def validator_dry_cmd() -> None:
     )
     click.echo(
         "  "
-        + stylize("lemma validator", fg="green")
-        + stylize("           Interactive menu", dim=True),
+        + stylize("lemma-cli", fg="green")
+        + stylize("                  Friendly operator screen", dim=True),
     )
     click.echo("")
 
 
 @main.command(
     "validator-check",
-    help="Pre-flight: chain, wallet UID, judge pins, Lean image (before `lemma validator`).",
+    help="Pre-flight: chain, wallet UID, judge pins, Lean image (before `lemma validator start`).",
 )
 def validator_check_cmd() -> None:
     """RPC + registration + pins + Docker — see NOT READY / READY at end."""
@@ -2133,6 +2109,3 @@ def local_loop_cmd() -> None:
         ep.run_epoch(settings.model_copy(update={"lean_use_docker": False}), src, dry_run=True),
     )
     click.echo(weights)
-
-
-_rewrite_lemma_argv_numeric_menu()

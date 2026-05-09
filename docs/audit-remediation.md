@@ -201,16 +201,18 @@ CLI alone cited as **43 %** of `lemma/` and **83 %** of combined runtime core si
 ### 13.2 CLI / click surface (§15–16)
 
 - **34 click leaves** — 22 top-level + configure / validator / miner / problems groups; **5+ dry-run variants** (`miner --dry-run`, `miner dry-run`, `miner-dry`, validator equivalents, `local-loop`); **5 rehearsal-style** commands (`try-prover`, `rehearsal`, `verify`, `judge`, `local-loop`).
-- **Argv hack:** `_rewrite_lemma_argv_numeric_menu` + `_LEMMA_QUICK_MENU_EXTRAS_JSON` mutates `sys.argv` on import (`main.py`).
+- **Argv hack:** `_rewrite_lemma_argv_numeric_menu` + `_LEMMA_QUICK_MENU_EXTRAS_JSON` mutated `sys.argv` on import (`main.py`); removed in the first CLI extraction trim.
 - **`uv_bootstrap.py`** + tests vs documenting `uv run`.
-- **`interactive_venv_shell.py`** (~176 LoC) vs one-line `source .venv`.
+- **`interactive_venv_shell.py`** (~176 LoC) vs one-line `source .venv`; removed in the first CLI extraction trim.
 - **`_looks_like_shell_step`** frozenset — partial shell interception.
-- **`leaderboard_cmd`** wraps `btcli`; **`miner_menu` / `validator_menu`** duplicate subcommands.
+- **`leaderboard_cmd`** wraps `btcli`; **`miner_menu` / `validator_menu`** duplicated subcommands and were removed in the first CLI extraction trim.
 - **`docs/` opener** + `_DOCS_BY_SLUG` hardcoded tuple.
 - **`configure` ×8** near-identical subcommands → `env_wizard.py` (~656 LoC).
 - **`try_prover.py`** (~677 LoC) vs epoch.
-- **`start_screen.py`** (~569 LoC) single mega-menu.
-- **`glossary.py`** duplicates help + `start_screen` + docs.
+- **`start_screen.py`** (~569 LoC) single mega-menu; removed in the first CLI extraction trim.
+- **`glossary.py`** duplicates help + docs.
+
+Extraction note: `lemma-cli` now owns the friendly `start` surface; the core repo keeps only a small compatibility hint and explicit miner/validator subcommands.
 
 ### 13.3 Protocol & glue
 
