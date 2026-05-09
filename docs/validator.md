@@ -20,7 +20,7 @@ Judge: Chutes when prompted is the documented default; Anthropic and custom Open
 | Rehearse the **full validator** without `set_weights` | `lemma validator dry-run` — rubric step uses **FakeJudge** by default; set **`LEMMA_DRY_RUN_REAL_JUDGE=1`** to bill the real judge during dry-run |
 | Only print validator-related env | `lemma validator-dry` (not a scoring run) |
 
-`LEMMA_FAKE_JUDGE=1` forces FakeJudge everywhere (including live `lemma validator start` where the subnet expects a real Chutes judge — use only for local experiments).
+`LEMMA_FAKE_JUDGE=1` is accepted only for validator dry-runs; live `lemma validator start` refuses FakeJudge because the subnet expects a real Chutes judge.
 
 ## System requirements (Docker)
 
@@ -91,7 +91,7 @@ bash scripts/prebuild_lean_image.sh
 ./scripts/lemma-run lemma validator
 ```
 
-For a cheap local loop without any inference HTTP, you can set **`LEMMA_FAKE_JUDGE=1`** — not for production validators on the real subnet. Prefer **`lemma judge --trace …`** to test only the judge stack, or **`lemma validator dry-run`** with the default FakeJudge in the rubric step.
+For a cheap local loop without any inference HTTP, use **`lemma validator dry-run`**, which defaults to FakeJudge in the rubric step. Prefer **`lemma judge --trace …`** to test only the judge stack, or set **`LEMMA_DRY_RUN_REAL_JUDGE=1`** during dry-run when you want to bill the live judge.
 
 ## Fingerprints
 

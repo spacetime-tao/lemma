@@ -52,17 +52,33 @@ def test_body_hash_includes_proof_and_reasoning() -> None:
     assert a.body_hash != b.body_hash
 
 
-def test_synapse_miner_response_integrity_ok_permissive_when_no_header_hash() -> None:
+def test_synapse_miner_response_integrity_ok_rejects_missing_header_hash() -> None:
     s = LemmaChallenge(
         theorem_id="x",
         theorem_statement="t",
         lean_toolchain="l",
         mathlib_rev="m",
         deadline_unix=1,
+        deadline_block=10,
         metronome_id="mid",
         proof_script="p",
     )
-    assert synapse_miner_response_integrity_ok(s) is True
+    assert synapse_miner_response_integrity_ok(s) is False
+
+
+def test_synapse_miner_response_integrity_ok_matches_header_hash() -> None:
+    s = LemmaChallenge(
+        theorem_id="x",
+        theorem_statement="t",
+        lean_toolchain="l",
+        mathlib_rev="m",
+        deadline_unix=1,
+        deadline_block=10,
+        metronome_id="mid",
+        proof_script="p",
+    )
+    s2 = s.model_copy(update={"computed_body_hash": s.body_hash})
+    assert synapse_miner_response_integrity_ok(s2) is True
 
 
 def test_synapse_miner_response_integrity_ok_mismatch() -> None:
@@ -72,8 +88,24 @@ def test_synapse_miner_response_integrity_ok_mismatch() -> None:
         lean_toolchain="l",
         mathlib_rev="m",
         deadline_unix=1,
+        deadline_block=10,
         metronome_id="mid",
         proof_script="p",
     )
     s2 = s.model_copy(update={"computed_body_hash": "0" * 64})
+    assert synapse_miner_response_integrity_ok(s2) is False
+
+
+def test_synapse_miner_response_integrity_ok_rejects_missing_deadline_block() -> None:
+    s = LemmaChallenge(
+        theorem_id="x",
+        theorem_statement="t",
+        lean_toolchain="l",
+        mathlib_rev="m",
+        deadline_unix=1,
+        deadline_block=None,
+        metronome_id="mid",
+        proof_script="p",
+    )
+    s2 = s.model_copy(update={"computed_body_hash": s.body_hash})
     assert synapse_miner_response_integrity_ok(s2) is False

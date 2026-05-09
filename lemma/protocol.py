@@ -131,11 +131,8 @@ class LemmaChallenge(bt.Synapse):
 def synapse_miner_response_integrity_ok(s: LemmaChallenge) -> bool:
     """Return True if recomputed :meth:`~bittensor.core.synapse.Synapse.body_hash` matches axon ``computed_body_hash``.
 
-    When ``computed_body_hash`` is missing (older stacks / headers not merged), returns True so epochs keep working;
-    when it is present and differs, the synapse body was altered after the miner built the response or the client is
-    out of sync — drop the response.
+    Missing ``computed_body_hash`` or ``deadline_block`` is a production integrity failure: both fields are part of
+    the validator response contract, and accepting ``None`` makes stripping attacks look like normal responses.
     """
     expected = (s.computed_body_hash or "").strip()
-    if not expected:
-        return True
-    return s.body_hash == expected
+    return bool(expected) and s.deadline_block is not None and s.body_hash == expected

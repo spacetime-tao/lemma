@@ -65,6 +65,8 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 | **I3** | Single `block_after_query` for batch — timing games | R3 §6 | P2 | Per-response block or documented acceptance | `epoch.py` |
 | **I4** | Synapse transport deprecated in KB vs Epistula | R3 §5.15, §11 | P4 | Track `knowledge/` transport migration; out of scope for “quick fix” | `protocol.py`, `knowledge/` |
 
+**2026-05 progress:** I1/I2 patched in `synapse_miner_response_integrity_ok`: validator responses now fail closed when `computed_body_hash` is missing, mismatched, or when `deadline_block` is missing from the miner response.
+
 ---
 
 ## 4. Scoring objective — “measures the wrong thing”
@@ -132,6 +134,8 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 | **G3** | Sanitizer only escapes ``` ; many other injection channels | R3 §10.2–10.3 | P2 | Expand sanitizer + model-side prompts; injection tests |
 | **G4** | **FakeJudge** length curve; missing API key falls back with log only | R3 §10.4 | P1 | Fail closed in production profile; align `LEMMA_FAKE_JUDGE` parsing | `judge/fake.py`, `epoch.py`, `config.py` |
 
+**2026-05 progress:** G4 patched in validator judge construction: live validator epochs now raise when judge API keys are missing or `LEMMA_FAKE_JUDGE` is forced; dry-run still uses FakeJudge by default.
+
 ---
 
 ## 10. Problem supply — templates, seed, frozen
@@ -143,6 +147,8 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 | **R3** | `RNG_MIX_TAG` not in registry pin | R3 §9.3 | P1 | Version tag in registry |
 | **R4** | Frozen miniF2F route / gate consistency | R3 §9.2 | P1 | Ensure `resolve_problem` respects gates uniformly | `problems/factory.py` |
 | **R5** | Hardcoded toolchain / mathlib / sandbox `:latest` etc. | R3 §13 | P3 | Digest-pinned images in prod docs; fewer `:latest` |
+
+**2026-05 progress:** R2/R3 patched in `generated_registry_canonical_dict`: the generated-registry fingerprint now includes `RNG_MIX_TAG`, builder count/split metadata, and a source hash for each builder function. `docs/generated-problems.md` now reflects the live 28-builder mix.
 
 ---
 

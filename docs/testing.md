@@ -10,7 +10,7 @@ uv run pytest tests/ -q
 uv run ruff check lemma tests
 ```
 
-No API keys needed: `FakeJudge` when keys absent; Docker Lean tests skipped unless enabled.
+No API keys needed for validator dry-runs: they use `FakeJudge` by default; Docker Lean tests are skipped unless enabled.
 
 ## Opt-in Lean tests
 

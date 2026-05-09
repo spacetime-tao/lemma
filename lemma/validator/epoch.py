@@ -55,14 +55,17 @@ if TYPE_CHECKING:
 def _build_judge(settings: LemmaSettings, dry_run: bool) -> Judge:
     """Return the judge implementation for this epoch.
 
-    ``LEMMA_FAKE_JUDGE=1`` always yields ``FakeJudge``.
+    ``LEMMA_FAKE_JUDGE=1`` is dry-run only.
 
     Validator **dry-run** epochs default to ``FakeJudge`` so rehearsal loops stay cheap and deterministic.
     Set ``LEMMA_DRY_RUN_REAL_JUDGE=1`` to use the configured live judge (same HTTP stack as production) while
     still skipping ``set_weights``.
     """
-    if os.environ.get("LEMMA_FAKE_JUDGE") == "1":
+    fake_judge_requested = os.environ.get("LEMMA_FAKE_JUDGE", "").strip().lower() in ("1", "true", "yes")
+    if fake_judge_requested and dry_run:
         return FakeJudge()
+    if fake_judge_requested:
+        raise RuntimeError("LEMMA_FAKE_JUDGE is only allowed for validator dry-run; unset it for live validation")
     use_stub_in_dry = dry_run and os.environ.get("LEMMA_DRY_RUN_REAL_JUDGE", "").strip() != "1"
     if use_stub_in_dry:
         logger.info("dry-run epoch: using FakeJudge (set LEMMA_DRY_RUN_REAL_JUDGE=1 for live judge HTTP)")
@@ -75,8 +78,7 @@ def _build_judge(settings: LemmaSettings, dry_run: bool) -> Judge:
     if prov in ("openai", "chutes"):
         key = settings.judge_openai_api_key_resolved()
         if not key:
-            logger.warning("JUDGE_OPENAI_API_KEY / OPENAI_API_KEY missing; using FakeJudge")
-            return FakeJudge()
+            raise RuntimeError("JUDGE_OPENAI_API_KEY / OPENAI_API_KEY missing; cannot score live validator epoch")
         return OpenAIJudge(
             key,
             settings.openai_model,
@@ -88,8 +90,7 @@ def _build_judge(settings: LemmaSettings, dry_run: bool) -> Judge:
         )
     key = settings.anthropic_api_key
     if not key:
-        logger.warning("ANTHROPIC_API_KEY missing; using FakeJudge")
-        return FakeJudge()
+        raise RuntimeError("ANTHROPIC_API_KEY missing; cannot score live validator epoch")
     return AnthropicJudge(
         key,
         settings.anthropic_model,
@@ -274,7 +275,7 @@ async def run_epoch(
                     continue
                 if not synapse_miner_response_integrity_ok(resp):
                     logger.warning(
-                        "uid={} dropping response: synapse body_hash does not match computed_body_hash "
+                        "uid={} dropping response: missing/mismatched computed_body_hash or deadline_block "
                         "(tampered payload or miner/validator version skew)",
                         uid,
                     )
