@@ -223,7 +223,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **`validator/protocol_migration.py`** no-op removed; validator startup now checks live settings directly.
 - **`validator/query.py`** thin wrapper removed; epoch calls `bt.Dendrite` directly.
 - **`reputation.apply_ema_to_entries`**: third return element discarded; removed from API.
-- **`scoring/dedup.py`**: parallel `dedup_identical` / `dedup_coldkeys` → generic helper candidate.
+- **`scoring/dedup.py`**: parallel `dedup_identical` / `dedup_coldkeys` now share one internal best-by-key helper.
 - **`scoring/__init__.py`**: re-exports unused by validator imports.
 - **Style proliferation:** mixed dataclass / pydantic / hand JSON (`ScoredEntry`, `RubricScore`, …).
 - **`ScoredEntry.composite` vs `reasoning_score`**: duplicate identity — consolidate naming.
