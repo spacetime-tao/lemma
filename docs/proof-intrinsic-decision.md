@@ -80,8 +80,9 @@ by real export data and adversarial fixtures.
 
 Minimum gate for the next scoring decision:
 
-1. Collect a real validator `full` export with `LEMMA_LEAN_PROOF_METRICS=1`.
-   Use only rows where the proof-metric probe exits successfully.
+1. Collect a real validator `full` export with `LEMMA_LEAN_PROOF_METRICS=1`
+   ([training_export.md](training_export.md)). Use only rows where the
+   proof-metric probe exits successfully.
 2. Run `tools.proof_metrics_analyze` and keep the report with the decision
    notes. Failed probe rows are a reliability signal, not scoring evidence.
 3. Compare the candidate metric against honest short proofs, honest longer
