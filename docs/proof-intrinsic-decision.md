@@ -135,6 +135,9 @@ When `LEMMA_TRAINING_EXPORT_JSONL` is set, the `full` export profile includes
 `proof_metrics` for successfully judged rows. `reasoning_only` intentionally
 omits it because the field is proof-derived research data.
 
+The operator checklist for collecting real proof-metrics rows lives in
+[training_export.md](training_export.md). Keep those exports private.
+
 Use `uv run python -m tools.proof_metrics_analyze <train.jsonl>` to compare
 exported proof metrics against proof text length, current `proof_intrinsic_score`,
 and judge composite before considering any scoring change. The analyzer counts

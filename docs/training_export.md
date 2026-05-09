@@ -35,6 +35,21 @@ timeouts, registry/profile hashes). `LEMMA_LEAN_PROOF_METRICS=1` adds one
 compare-only Lean probe after a proof already passes verification; it does **not**
 change rewards or weights.
 
+Operator checklist:
+
+1. Pick a private path for `LEMMA_TRAINING_EXPORT_JSONL`; do not commit or publish
+   the export.
+2. Run with `LEMMA_TRAINING_EXPORT_PROFILE=full` and
+   `LEMMA_LEAN_PROOF_METRICS=1` long enough to collect varied successful proofs.
+3. Keep a copy of the exact `.env` / validator settings used for the run,
+   especially the Lean image, problem registry/profile pins, judge profile, and
+   timeout settings.
+4. Run the analyzer below and save its text output beside the export.
+5. Treat `gate_verdict=research_only` as a hard stop for live rewards.
+   `manual_review_required` still means review, not approval.
+6. Make any future scoring-default change in a separate commit with docs,
+   migration notes, and the scoring/profile pin updated.
+
 After collecting rows, run:
 
 ```bash
