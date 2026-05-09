@@ -146,6 +146,8 @@ def run_validator_check(settings: LemmaSettings) -> int:
             f"LEMMA_MINER_VERIFY_ATTEST_ENABLED={int(settings.lemma_miner_verify_attest_enabled)}  "
             "LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION="
             f"{settings.lemma_miner_verify_attest_spot_verify_fraction}  "
+            "LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_SALT_SET="
+            f"{int(bool((settings.lemma_miner_verify_attest_spot_verify_salt or '').strip()))}  "
             f"LEMMA_COMMIT_REVEAL_ENABLED={int(settings.lemma_commit_reveal_enabled)}  "
             f"LEMMA_JUDGE_PROFILE_ATTEST_ENABLED={int(settings.lemma_judge_profile_attest_enabled)}  "
             "(docs/incentive_migration.md)",

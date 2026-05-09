@@ -39,6 +39,7 @@ def test_judge_profile_includes_validator_scoring_policy() -> None:
         lemma_commit_reveal_enabled=True,
         lemma_miner_verify_attest_enabled=True,
         lemma_miner_verify_attest_spot_verify_fraction=0.25,
+        lemma_miner_verify_attest_spot_verify_salt="secret",
     )
     d = judge_profile_dict(s)
 
@@ -51,11 +52,21 @@ def test_judge_profile_includes_validator_scoring_policy() -> None:
     assert d["scoring_policy"]["lemma_epoch_problem_count"] == 3
     assert d["protocol_policy"]["lemma_commit_reveal_enabled"] is True
     assert d["protocol_policy"]["lemma_miner_verify_attest_spot_verify_fraction"] == 0.25
+    salt_hash = d["protocol_policy"]["lemma_miner_verify_attest_spot_verify_salt_sha256"]
+    assert isinstance(salt_hash, str)
+    assert len(salt_hash) == 64
+    assert "secret" not in salt_hash
 
 
 def test_judge_profile_hash_changes_when_scoring_policy_changes() -> None:
     a = LemmaSettings(lemma_score_proof_weight=0.35)
     b = LemmaSettings(lemma_score_proof_weight=0.5)
+    assert judge_profile_sha256(a) != judge_profile_sha256(b)
+
+
+def test_judge_profile_hash_changes_when_attest_spot_salt_changes() -> None:
+    a = LemmaSettings(lemma_miner_verify_attest_spot_verify_salt="a")
+    b = LemmaSettings(lemma_miner_verify_attest_spot_verify_salt="b")
     assert judge_profile_sha256(a) != judge_profile_sha256(b)
 
 

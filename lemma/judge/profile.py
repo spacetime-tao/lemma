@@ -91,6 +91,11 @@ def judge_profile_dict(settings: LemmaSettings) -> dict[str, object]:
             "lemma_miner_verify_attest_spot_verify_fraction": float(
                 settings.lemma_miner_verify_attest_spot_verify_fraction,
             ),
+            "lemma_miner_verify_attest_spot_verify_salt_sha256": hashlib.sha256(
+                str(settings.lemma_miner_verify_attest_spot_verify_salt or "").encode("utf-8"),
+            ).hexdigest()
+            if str(settings.lemma_miner_verify_attest_spot_verify_salt or "")
+            else "",
         },
     }
     if stored in ("openai", "chutes"):
