@@ -329,18 +329,6 @@ class LemmaSettings(BaseSettings):
             "(`lemma meta`)."
         ),
     )
-    allow_noncanonical_judge_model: bool = Field(
-        default=False,
-        validation_alias=AliasChoices(
-            "LEMMA_ALLOW_NONCANONICAL_JUDGE_MODEL",
-            "allow_noncanonical_judge_model",
-        ),
-        description=(
-            "Ignored by ``lemma validator`` (validators always use the Chutes DeepSeek judge). "
-            "Reserved for future non-validator tooling."
-        ),
-    )
-
     prover_provider: str = Field(
         default="anthropic",
         validation_alias=AliasChoices("PROVER_PROVIDER", "prover_provider"),

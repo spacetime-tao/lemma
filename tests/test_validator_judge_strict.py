@@ -53,14 +53,6 @@ def test_strict_rejects_fake_judge(monkeypatch: pytest.MonkeyPatch) -> None:
         assert_validator_judge_stack_strict(s)
 
 
-def test_allow_noncanonical_does_not_bypass(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("LEMMA_FAKE_JUDGE", raising=False)
-    s = LemmaSettings(openai_model="other/model", allow_noncanonical_judge_model=True)
-    assert validator_judge_stack_strict_issue(s) is not None
-    with pytest.raises(SystemExit):
-        assert_validator_judge_stack_strict(s)
-
-
 def test_strict_ok_legacy_openai_label(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("LEMMA_FAKE_JUDGE", raising=False)
     s = LemmaSettings(
@@ -81,4 +73,3 @@ def test_chutes_url_case_insensitive() -> None:
 def test_normalized_base_matches_profile_logic() -> None:
     s = LemmaSettings(openai_base_url=" https://llm.chutes.ai/v1/ ")
     assert normalized_judge_openai_base_url(s) == CANONICAL_JUDGE_OPENAI_BASE_URL.strip().rstrip("/")
-
