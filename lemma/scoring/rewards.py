@@ -29,6 +29,5 @@ def entry_from_scores(
         uid=uid,
         reasoning_score=combined,
         tokens=toks,
-        composite=combined,
         submission_fp=fp,
     )

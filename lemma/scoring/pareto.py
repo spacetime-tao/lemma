@@ -11,7 +11,6 @@ class ScoredEntry:
     uid: int
     reasoning_score: float
     tokens: int
-    composite: float
     #: Fingerprint of (theorem, proof, trace) for identical-output dedup (optional).
     submission_fp: str = ""
 
@@ -46,7 +45,7 @@ def pareto_weights(entries: list[ScoredEntry]) -> dict[int, float]:
     """
     Map miner UID -> normalized weight.
 
-    Layer ``k`` receives discount ``0.5 ** k`` applied to ``composite``.
+    Layer ``k`` receives discount ``0.5 ** k`` applied to ``reasoning_score``.
     """
     if not entries:
         return {}
@@ -55,7 +54,7 @@ def pareto_weights(entries: list[ScoredEntry]) -> dict[int, float]:
     for k, layer in enumerate(layers):
         discount = 0.5**k
         for e in layer:
-            raw[e.uid] = max(e.composite, 1e-9) * discount
+            raw[e.uid] = max(e.reasoning_score, 1e-9) * discount
     total = sum(raw.values())
     if total <= 0:
         return {uid: 1.0 / len(raw) for uid in raw}

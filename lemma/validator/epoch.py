@@ -134,13 +134,11 @@ def _merge_multi_round_entries(uid_groups: dict[int, list[ScoredEntry]]) -> list
             continue
         rs = sum(e.reasoning_score for e in es) / len(es)
         ts = int(round(sum(e.tokens for e in es) / len(es)))
-        cs = sum(e.composite for e in es) / len(es)
         merged.append(
             ScoredEntry(
                 uid=uid,
                 reasoning_score=rs,
                 tokens=ts,
-                composite=cs,
                 submission_fp="",
             ),
         )

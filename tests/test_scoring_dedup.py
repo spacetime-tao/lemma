@@ -10,16 +10,16 @@ def test_submission_fingerprint_stable() -> None:
 
 
 def test_dedup_identical_keeps_best_score() -> None:
-    e1 = ScoredEntry(uid=1, reasoning_score=0.5, tokens=10, composite=0.5, submission_fp="x")
-    e2 = ScoredEntry(uid=2, reasoning_score=0.9, tokens=10, composite=0.9, submission_fp="x")
+    e1 = ScoredEntry(uid=1, reasoning_score=0.5, tokens=10, submission_fp="x")
+    e2 = ScoredEntry(uid=2, reasoning_score=0.9, tokens=10, submission_fp="x")
     kept, dropped = dedup_identical_submissions([e1, e2], lambda e: e.submission_fp)
     assert dropped == 1
     assert len(kept) == 1 and kept[0].uid == 2
 
 
 def test_dedup_coldkey_keeps_best() -> None:
-    e1 = ScoredEntry(uid=1, reasoning_score=0.4, tokens=5, composite=0.4, submission_fp="a")
-    e2 = ScoredEntry(uid=2, reasoning_score=0.8, tokens=5, composite=0.8, submission_fp="b")
+    e1 = ScoredEntry(uid=1, reasoning_score=0.4, tokens=5, submission_fp="a")
+    e2 = ScoredEntry(uid=2, reasoning_score=0.8, tokens=5, submission_fp="b")
     kept, dropped = dedup_coldkeys([e1, e2], lambda _u: "same_ck")
     assert dropped == 1
     assert len(kept) == 1 and kept[0].uid == 2
