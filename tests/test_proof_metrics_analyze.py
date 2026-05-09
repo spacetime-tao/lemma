@@ -127,23 +127,25 @@ def test_main_uses_env_path(tmp_path, monkeypatch, capsys) -> None:
 def test_validation_fixture_separates_padding_from_failed_probes() -> None:
     report = load_report(FIXTURE)
 
-    assert report.total_rows == 5
+    assert report.total_rows == 7
     assert report.invalid_json_lines == 0
-    assert len(report.metric_rows) == 5
+    assert len(report.metric_rows) == 7
 
-    rendered = render_report(report, outlier_limit=4)
-    assert "rows_with_successful_proof_metrics=4" in rendered
+    rendered = render_report(report, outlier_limit=6)
+    assert "rows_with_successful_proof_metrics=6" in rendered
     assert "rows_with_failed_proof_metrics=1" in rendered
     assert "theorem=comment-padding" in rendered
     assert "theorem=string-padding" in rendered
+    assert "theorem=unused-have-padding" in rendered
+    assert "theorem=long-name-padding" in rendered
     assert "theorem=failed-probe-padding" not in rendered
     assert "theorem=honest-short" not in rendered
     assert "theorem=honest-structured" not in rendered
 
-    outlier_ids = [r.theorem_id for r in padding_outliers(report.metric_rows, limit=4)]
+    outlier_ids = [r.theorem_id for r in padding_outliers(report.metric_rows, limit=6)]
     assert outlier_ids == ["comment-padding"]
     assert "failed-probe-padding" not in outlier_ids
 
-    risk_ids = [r.theorem_id for r in low_judge_high_metric_candidates(report.metric_rows, limit=4)]
-    assert risk_ids == ["string-padding", "comment-padding"]
+    risk_ids = [r.theorem_id for r in low_judge_high_metric_candidates(report.metric_rows, limit=6)]
+    assert risk_ids == ["unused-have-padding", "long-name-padding", "string-padding", "comment-padding"]
     assert "failed-probe-padding" not in risk_ids
