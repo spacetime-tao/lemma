@@ -45,6 +45,7 @@ def test_judge_profile_includes_validator_scoring_policy() -> None:
 
     assert d["profile_schema"] == "lemma_validator_profile_v3"
     assert d["problem_policy"]["problem_seed_quantize_blocks"] == 55
+    assert d["verification_policy"]["lean_sandbox_image"] == "lemma/lean-sandbox:latest"
     assert d["verification_policy"]["lean_verify_timeout_s"] == 123
     assert d["verification_policy"]["timeout_split_hard_mult"] == 1.3
     assert d["scoring_policy"]["lemma_score_proof_weight"] == 0.4
@@ -81,6 +82,12 @@ def test_judge_profile_hash_changes_when_scoring_policy_changes() -> None:
 def test_judge_profile_hash_changes_when_attest_spot_salt_changes() -> None:
     a = LemmaSettings(lemma_miner_verify_attest_spot_verify_salt="a")
     b = LemmaSettings(lemma_miner_verify_attest_spot_verify_salt="b")
+    assert judge_profile_sha256(a) != judge_profile_sha256(b)
+
+
+def test_judge_profile_hash_changes_when_sandbox_image_changes() -> None:
+    a = LemmaSettings(lean_sandbox_image="lemma/lean-sandbox:latest")
+    b = LemmaSettings(lean_sandbox_image="registry.example/lemma/lean-sandbox@sha256:abc")
     assert judge_profile_sha256(a) != judge_profile_sha256(b)
 
 

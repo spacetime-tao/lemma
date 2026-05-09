@@ -154,9 +154,9 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 | **R2** | `generated_registry_sha256` may not hash builder **bodies** — skew risk | R3 §9.3 | P0/P1 | Include body hash or codegen fingerprint |
 | **R3** | `RNG_MIX_TAG` not in registry pin | R3 §9.3 | P1 | Version tag in registry |
 | **R4** | Frozen miniF2F route / gate consistency | R3 §9.2 | P1 | **Done:** `resolve_problem` now gates direct frozen catalog ids behind `LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`, matching `get_problem_source` / validator-check policy. | `problems/factory.py`, `tests/test_problem_factory.py` |
-| **R5** | Hardcoded toolchain / mathlib / sandbox `:latest` etc. | R3 §13 | P3 | Digest-pinned images in prod docs; fewer `:latest` |
+| **R5** | Hardcoded toolchain / mathlib / sandbox `:latest` etc. | R3 §13 | P3 | **Done:** local `:latest` documented as dev-only; production pin policy added for immutable sandbox refs. | `docs/toolchain-image-policy.md`, `.env.example`, `docs/production.md` |
 
-**2026-05 progress:** R2/R3/R4 patched. The generated-registry fingerprint now includes `RNG_MIX_TAG`, builder count/split metadata, and a source hash for each builder function. Direct frozen catalog ids now require `LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`, matching `get_problem_source` and validator-check policy. `docs/generated-problems.md` reflects the live 28-builder mix.
+**2026-05 progress:** R2/R3/R4/R5 patched. The generated-registry fingerprint now includes `RNG_MIX_TAG`, builder count/split metadata, and a source hash for each builder function. Direct frozen catalog ids now require `LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`, matching `get_problem_source` and validator-check policy. Sandbox image policy now treats `lemma/lean-sandbox:latest` as a local dev tag and production `LEAN_SANDBOX_IMAGE` as an immutable operator-published ref. `docs/generated-problems.md` reflects the live 28-builder mix.
 
 ---
 

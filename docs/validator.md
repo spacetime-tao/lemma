@@ -1,6 +1,6 @@
 # Validator
 
-Walkthrough: [getting-started.md](getting-started.md) — `lemma-cli setup` (validator or both) sets judge and `LEAN_SANDBOX_IMAGE` via prompts.
+Walkthrough: [getting-started.md](getting-started.md) — `lemma-cli setup` (validator or both) sets judge and `LEAN_SANDBOX_IMAGE` via prompts. Production validators should use the subnet-published immutable sandbox ref ([toolchain-image-policy.md](toolchain-image-policy.md)).
 
 **Short checklist:** `bash scripts/prebuild_lean_image.sh` → **`lemma-cli rehearsal`** (prover + Lean + judge preview) → `uv run lemma validator-check` until READY → `uv run lemma validator start` (or **validator-check** from `lemma-cli`). Same keys/chain setup as a miner if you run both roles.
 
@@ -31,7 +31,7 @@ Judge: Chutes is the live validator path. Anthropic is only for local/experiment
 Per-job `docker run` adds **hundreds of ms to seconds** of overhead (worse on Docker Desktop). To stay on Docker **and** hit low latency, run a **long-lived worker** container that bind-mounts your workspace cache directory, then set **`LEMMA_LEAN_DOCKER_WORKER`** to that container’s name. Lemma will run **`docker exec`** into it instead of starting a new container each time.
 
 1. Choose a cache directory (same idea as **`LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR`**, e.g. `/var/lib/lemma-lean-cache` on a validator).
-2. Start the worker once (match **`LEAN_SANDBOX_IMAGE`** / CPU / memory to production):
+2. Start the worker once (match **`LEAN_SANDBOX_IMAGE`** / CPU / memory to production; replace the local `latest` tag below with the published immutable ref):
 
 ```bash
 docker run -d --name lemma-lean-worker --restart unless-stopped \

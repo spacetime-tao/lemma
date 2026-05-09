@@ -36,6 +36,7 @@ lemma --help
 | Models / APIs | [models.md](docs/models.md) |
 | Production / ops | [production.md](docs/production.md) |
 | Governance / pins | [governance.md](docs/governance.md) |
+| Toolchain / image pinning | [toolchain-image-policy.md](docs/toolchain-image-policy.md) |
 | Tests | [testing.md](docs/testing.md) |
 | Comparator hook | [comparator.md](docs/comparator.md) |
 | Generated problems | [generated-problems.md](docs/generated-problems.md) |

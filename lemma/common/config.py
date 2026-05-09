@@ -189,6 +189,10 @@ class LemmaSettings(BaseSettings):
     lean_sandbox_image: str = Field(
         default="lemma/lean-sandbox:latest",
         validation_alias=AliasChoices("LEAN_SANDBOX_IMAGE", "lean_sandbox_image"),
+        description=(
+            "Docker image/ref used for Lean verification. The local default is mutable; production templates "
+            "should set the subnet-published immutable tag or digest."
+        ),
     )
     lean_verify_timeout_s: int = Field(
         default=300,
