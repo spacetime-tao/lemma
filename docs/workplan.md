@@ -40,7 +40,7 @@ These stay in the core repo, but should be handled as product decisions, not tin
 
 1. Replace or reduce `proof_intrinsic_score`; length is a weak proxy for mathematical value. **Default weight lowered to `0.10`; comment-only / blank-line padding normalized; compare-only Lean probe added; decision note and go/no-go gate:** [proof-intrinsic-decision.md](proof-intrinsic-decision.md). Next behavior change must choose to replace, keep low, or remove/reduce the heuristic from real export data plus padding fixtures, in a separate scoring commit.
 2. Decide whether judged informal reasoning is part of the permanent incentive mechanism or a bootstrap aid. **Current stance documented:** [judge-incentive-decision.md](judge-incentive-decision.md) treats the judge as a bootstrap signal unless governance explicitly chooses it as a permanent product objective.
-3. Keep Lean pass/fail as the objective floor.
+3. Keep Lean pass/fail as the objective floor. **Done:** [objective-decision.md](objective-decision.md) pins the current one-sentence objective as Lean-valid theorem proving, with judged reasoning documented as a bootstrap ranking layer.
 4. Avoid adding more scoring layers until the primary objective is one sentence.
 
 ### 4. Experimental Protocol Hooks
