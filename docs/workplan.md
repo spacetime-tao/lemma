@@ -52,7 +52,7 @@ These should be either hardened or removed from the default mental model.
 
 This is the `lemma-cli` repo track.
 
-Status: `spacetime-tao/lemma-cli` exists as a thin public wrapper. The first core trim moved the guided `start` surface out of the subnet repo. Later trims moved the `.env` setup/configure wizard and docs/glossary helpers to `lemma-cli`, leaving redirect shims in core.
+Status: `spacetime-tao/lemma-cli` exists as a thin public wrapper. The first core trim moved the guided `start` surface out of the subnet repo. Later trims moved the `.env` setup/configure wizard, docs/glossary helpers, and local try-prover/rehearsal previews to `lemma-cli`, leaving redirect shims in core.
 
 Move first:
 
@@ -60,7 +60,8 @@ Move first:
 2. Environment wizard. **Moved to `lemma-cli`; core has redirects only.**
 3. Docs opener/glossary. **Moved to `lemma-cli`; core has redirects only.**
 4. Shell activation helpers. **Removed from core; docs use `.venv` activation, `uv run`, or `scripts/lemma-run`.**
-5. Human-friendly doctor/validator-check wrappers, once the core repo exposes stable machine-readable checks.
+5. Local try-prover/rehearsal wrappers. **Moved to `lemma-cli`; core has redirects only.**
+6. Human-friendly doctor/validator-check wrappers, once the core repo exposes stable machine-readable checks.
 
 Keep temporarily in core:
 

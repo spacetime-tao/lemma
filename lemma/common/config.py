@@ -223,7 +223,7 @@ class LemmaSettings(BaseSettings):
         default=False,
         validation_alias=AliasChoices("LEMMA_ALLOW_HOST_LEAN", "allow_host_lean"),
         description=(
-            "If true, allow `lemma verify --host-lean`, `lemma try-prover --host-lean`, and "
+            "If true, allow `lemma verify --host-lean`, `lemma-cli try-prover --host-lean`, and "
             "`LEMMA_TRY_PROVER_HOST_VERIFY` for local debugging. Production validators should leave this false."
         ),
     )

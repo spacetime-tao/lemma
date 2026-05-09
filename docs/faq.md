@@ -32,19 +32,19 @@ The miner’s LLM uses the **fixed in-repo** `PROVER_SYSTEM` in [`lemma/miner/pr
 
 **Informal vs Lean:** One completion fills both **`reasoning_steps`** and **`proof_script`**. **Detailed formal proofs:** The built-in prompt asks for expanded `by` blocks where appropriate. Operators can optionally set **`LEMMA_PROVER_MIN_PROOF_SCRIPT_CHARS`** (full `Submission.lean` length; default **off**) to reject overly short scripts — tune so trivial `rfl` goals still pass when unset or low.
 
-## `lemma try-prover --verify` vs real validator scoring
+## `lemma-cli try-prover --verify` vs real validator scoring
 
-**`lemma try-prover`** is a **local** dry run: it calls **your** prover API and prints output. It does **not** talk to validators or write scores on-chain.
+**`lemma-cli try-prover`** is a **local** dry run: it calls **your** prover API and prints output. It does **not** talk to validators or write scores on-chain.
 
-**`lemma rehearsal`** chains the same prover + Lean path (defaults match **`lemma try-prover --verify`**) and then calls **your judge** on the informal trace + `Submission.lean` — still local, still no axon / no `set_weights`, but closer to how a scored forward feels.
+**`lemma-cli rehearsal`** chains the same prover + Lean path (defaults match **`lemma-cli try-prover --verify`**) and then calls **your judge** on the informal trace + `Submission.lean` — still local, still no axon / no `set_weights`, but closer to how a scored forward feels.
 
 **`--verify`** (after the LLM returns) runs **`lake build`** **on your machine** to check that `Submission.lean` compiles — the same *kind* of kernel check validators use, but **only locally**:
 
 - **`lemma validator start`:** **`lemma validator start` refuses to run** if **`LEMMA_USE_DOCKER=false`** — validators must use Docker. **`lemma verify`** / miners may still use **`LEMMA_USE_DOCKER=false`** where policy allows (local tooling only).
-- **`try-prover --verify`:** Defaults to the **same Docker sandbox** as validators when **`LEMMA_USE_DOCKER=true`**. Host `lake` is opt-in: **`--host-lean`** or **`LEMMA_TRY_PROVER_HOST_VERIFY=1`**, and only if **`LEMMA_ALLOW_HOST_LEAN=1`** in **`.env`**.
+- **`lemma-cli try-prover --verify`:** Defaults to the **same Docker sandbox** as validators when **`LEMMA_USE_DOCKER=true`**. Host `lake` is opt-in: **`--host-lean`** or **`LEMMA_TRY_PROVER_HOST_VERIFY=1`**, and only if **`LEMMA_ALLOW_HOST_LEAN=1`** in **`.env`**.
 - **`lemma verify --host-lean`:** Host `lake` only with **`LEMMA_ALLOW_HOST_LEAN=1`**. Otherwise use Docker (default). Still **local**, not on-chain scoring.
 
-To see what validators would sample, use **`lemma status`** / **`lemma problems`**; actual rewards come only when a validator **forwards** to your axon and runs the full round (Lean + judge), not from `try-prover` or `rehearsal`.
+To see what validators would sample, use **`lemma status`** / **`lemma problems`**; actual rewards come only when a validator **forwards** to your axon and runs the full round (Lean + judge), not from `lemma-cli try-prover` or `lemma-cli rehearsal`.
 
 ## Validator pipeline (each round)
 
@@ -64,7 +64,7 @@ For Lemma’s **prover** (miner), use the OpenAI-compatible path: `PROVER_PROVID
 
 ## Prover retries (`LEMMA_PROVER_LLM_RETRY_ATTEMPTS`)
 
-Default is **4** tries per prover call (exponential backoff on 429 / timeouts / 5xx). Change it for **all** runs via `.env` or `lemma-cli configure prover-retries`. For a **single** `lemma try-prover` run, use `--retry-attempts N` (1–32). Higher values use more wall-clock; stay within the validator **forward HTTP wait** for mining.
+Default is **4** tries per prover call (exponential backoff on 429 / timeouts / 5xx). Change it for **all** runs via `.env` or `lemma-cli configure prover-retries`. For a **single** `lemma-cli try-prover` run, use `--retry-attempts N` (1–32). Higher values use more wall-clock; stay within the validator **forward HTTP wait** for mining.
 
 ## How much space does the prover get? What does it see?
 
@@ -194,7 +194,7 @@ Roughly: (challenges answered) × ($/challenge). Measure from logs.
 | `docker_error` | Sandbox error |
 | `comparator_rejected` | Comparator hook failed |
 
-**`try-prover` says FAIL but the proof is just `rfl` on arithmetic literals:** The LLM answer may still be **mathematically fine**. Logs like `no previous manifest`, `creating one from scratch`, `mathlib: running post-update hooks`, then `error: build failed` usually mean **Lake is building Mathlib** (slow), **post-update hooks** failed, **network blocked** (Docker `network_mode=none`), or **timeout** — not that `rfl` is wrong. Fix the **environment** (prebuilt `LEAN_SANDBOX_IMAGE`, `LEAN_SANDBOX_NETWORK=bridge`, higher `LEAN_VERIFY_TIMEOUT_S`) and retry.
+**`lemma-cli try-prover` says FAIL but the proof is just `rfl` on arithmetic literals:** The LLM answer may still be **mathematically fine**. Logs like `no previous manifest`, `creating one from scratch`, `mathlib: running post-update hooks`, then `error: build failed` usually mean **Lake is building Mathlib** (slow), **post-update hooks** failed, **network blocked** (Docker `network_mode=none`), or **timeout** — not that `rfl` is wrong. Fix the **environment** (prebuilt `LEAN_SANDBOX_IMAGE`, `LEAN_SANDBOX_NETWORK=bridge`, higher `LEAN_VERIFY_TIMEOUT_S`) and retry.
 
 ## Checking a proof yourself (manual / online)
 
@@ -206,7 +206,7 @@ Roughly: (challenges answered) × ($/challenge). Measure from logs.
 
 That site runs Lean **in the browser**; it is **not** the same as Lemma’s Docker/host sandbox. **`import Mathlib` often fails there** (missing Mathlib on the search path, unknown imports, or confusing errors once imports break). That usually reflects **the playground environment**, not whether your proof would pass Lemma’s **Lake + pinned Mathlib** build.
 
-Use it only for **informal** experimentation. For **subnet parity**, use **`lemma verify`** or **`lemma try-prover --verify`**.
+Use it only for **informal** experimentation. For **subnet parity**, use **`lemma verify`** or **`lemma-cli try-prover --verify`**.
 
 ### Older community web editor (Lean 3)
 

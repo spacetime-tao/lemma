@@ -2,7 +2,7 @@
 
 Walkthrough: [getting-started.md](getting-started.md) — **`btcli`** (Bittensor CLI), `lemma-cli setup`, `lemma-run`. Prefer prompts over hand-editing `.env` (`lemma-cli configure chain`, `configure prover`, `configure axon`).
 
-**Short checklist:** `lemma-cli setup` → coldkey funded → `btcli subnet register` on the same network/netuid as `.env` → `lemma miner dry-run` → **`lemma rehearsal`** (see prover + Lean + judge on the live theorem) → fix axon IP/port if needed → `lemma miner start`. Run `lemma` for core command help; run `lemma-cli` for the friendly operator screen.
+**Short checklist:** `lemma-cli setup` → coldkey funded → `btcli subnet register` on the same network/netuid as `.env` → `lemma miner dry-run` → **`lemma-cli rehearsal`** (see prover + Lean + judge on the live theorem) → fix axon IP/port if needed → `lemma miner start`. Run `lemma` for core command help; run `lemma-cli` for the friendly operator screen.
 
 ### Prover LLM (`lemma-cli configure prover`)
 
@@ -17,7 +17,7 @@ Inference: Chutes is the usual default when prompted.
 ./scripts/lemma-run lemma miner start
 ```
 
-While the axon is up, each validator forward **starts the prover immediately** — there is no intentional delay for “new theorem” windows; you compete as soon as traffic hits your axon. By contrast, `lemma try-prover` is a manual one-off (same API billing pattern, but you pressed Enter).
+While the axon is up, each validator forward **starts the prover immediately** — there is no intentional delay for “new theorem” windows; you compete as soon as traffic hits your axon. By contrast, `lemma-cli try-prover` is a manual one-off (same API billing pattern, but you pressed Enter).
 
 Daily forward cap: `MINER_MAX_FORWARDS_PER_DAY` or `lemma miner start --max-forwards-per-day N`.
 
@@ -25,7 +25,7 @@ Daily forward cap: `MINER_MAX_FORWARDS_PER_DAY` or `lemma miner start --max-forw
 
 Validators decide whether your proof typechecks; the miner process does not receive scores back on the axon path.
 
-- `lemma try-prover` runs the **prover once** on whatever theorem `lemma status` would sample right now, then prints informal reasoning and `proof_script` (uses your prover API). Add `--verify` to run the Lean check after (default: Docker, same as validators).
+- `lemma-cli try-prover` runs the **prover once** on whatever theorem `lemma status` would sample right now, then prints informal reasoning and `proof_script` (uses your prover API). Add `--verify` to run the Lean check after (default: Docker, same as validators).
 
 - When a validator forward starts, logs include **`my_uid`** and **`my_incentive`** from the **chain metagraph** (same kind of aggregate view as `btcli subnet show --netuid 467 --network test`) — a snapshot of subnet incentive for your hotkey, not a grade on this theorem.
 - At **INFO** you get **`miner answered`** when the reply is ready; **`local_lean=`** is `PASS` / `FAIL` / … only if **`LEMMA_MINER_LOCAL_VERIFY=1`**. That flag is **optional**: validators always run Lean on your submission — enable local verify only if you want early PASS/FAIL on your machine (costs Docker CPU per forward while debugging). **`miner_forward_summary`** (default on) adds session rollups.

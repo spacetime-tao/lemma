@@ -36,6 +36,6 @@ CI uses tag `lemma-lean-sandbox:ci`; locally `latest` is fine.
 
 ## LLM keys
 
-Only for `lemma judge`, **`lemma rehearsal`**, or live runs without `LEMMA_FAKE_JUDGE`.
+Only for `lemma judge`, **`lemma-cli rehearsal`**, or live runs without `LEMMA_FAKE_JUDGE`.
 
-`lemma rehearsal` runs **prover + Lean (default) + judge** on the current subnet theorem (chain RPC required). `lemma judge` scores a **file** of informal reasoning: `lemma judge --trace path/to/trace.txt` (optional `--theorem` / `--proof` files). See `lemma judge --help`. Validator **`dry-run`** uses **FakeJudge** in the rubric step by default; **`LEMMA_DRY_RUN_REAL_JUDGE=1`** turns on live judge there while still skipping `set_weights`.
+`lemma-cli rehearsal` runs **prover + Lean (default) + judge** on the current subnet theorem (chain RPC required). `lemma judge` scores a **file** of informal reasoning: `lemma judge --trace path/to/trace.txt` (optional `--theorem` / `--proof` files). See `lemma judge --help`. Validator **`dry-run`** uses **FakeJudge** in the rubric step by default; **`LEMMA_DRY_RUN_REAL_JUDGE=1`** turns on live judge there while still skipping `set_weights`.

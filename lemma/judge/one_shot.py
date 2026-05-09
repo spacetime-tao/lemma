@@ -1,4 +1,4 @@
-"""Single-call judge construction for operator CLIs (``lemma judge``, ``lemma rehearsal``)."""
+"""Single-call judge construction for operator CLIs (``lemma judge``, ``lemma-cli rehearsal``)."""
 
 from __future__ import annotations
 

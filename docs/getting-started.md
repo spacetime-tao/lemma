@@ -9,9 +9,9 @@ End-to-end: **uv** + repo → **keys** → **`lemma-cli setup`** → **miner or 
 
 ## Paths at a glance
 
-**Miner (most common first path):** `uv sync` → keys (`btcli`) → `lemma-cli setup` → fund wallet → `btcli subnet register --netuid 467 --network test …` → `lemma miner dry-run` → **`lemma rehearsal`** (optional: live theorem → prover → Lean → judge preview) → open `AXON_PORT` → `lemma miner start`. Details: [miner.md](miner.md).
+**Miner (most common first path):** `uv sync` → keys (`btcli`) → `lemma-cli setup` → fund wallet → `btcli subnet register --netuid 467 --network test …` → `lemma miner dry-run` → **`lemma-cli rehearsal`** (optional: live theorem → prover → Lean → judge preview) → open `AXON_PORT` → `lemma miner start`. Details: [miner.md](miner.md).
 
-**Validator:** same env/keys/setup as above, then **`bash scripts/prebuild_lean_image.sh`** (first build is large) → **`lemma rehearsal`** (recommended preview) → `lemma validator-check` → `lemma validator start`. Prefer explicit `lemma validator start` / `lemma validator dry-run` over ad-hoc Python entrypoints. Details: [validator.md](validator.md).
+**Validator:** same env/keys/setup as above, then **`bash scripts/prebuild_lean_image.sh`** (first build is large) → **`lemma-cli rehearsal`** (recommended preview) → `lemma validator-check` → `lemma validator start`. Prefer explicit `lemma validator start` / `lemma validator dry-run` over ad-hoc Python entrypoints. Details: [validator.md](validator.md).
 
 ## Install uv
 
