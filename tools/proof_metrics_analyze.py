@@ -12,6 +12,10 @@ from typing import Any
 
 from lemma.scoring.proof_intrinsic import proof_intrinsic_score
 
+MIN_DECISION_SUCCESSFUL_ROWS = 50
+MIN_DECISION_THEOREMS = 5
+MIN_DECISION_UIDS = 5
+
 
 @dataclass(frozen=True)
 class MetricRow:
@@ -60,6 +64,8 @@ def render_report(report: MetricsReport, *, outlier_limit: int = 8) -> str:
     ok_rows = [r for r in rows if r.probe_exit_code == 0]
     failed_rows = len(rows) - len(ok_rows)
     verdict, reasons = metric_gate(rows)
+    data_blockers, data_warnings = decision_data_findings(ok_rows, failed_rows=failed_rows)
+    judged_rows = [r for r in ok_rows if r.judge_composite is not None]
     lines = [
         "Proof metrics export analysis",
         f"rows_total={report.total_rows}",
@@ -67,6 +73,13 @@ def render_report(report: MetricsReport, *, outlier_limit: int = 8) -> str:
         f"rows_with_successful_proof_metrics={len(ok_rows)}",
         f"rows_with_failed_proof_metrics={failed_rows}",
         f"invalid_json_lines={report.invalid_json_lines}",
+        "decision_data="
+        f"successful_rows={len(ok_rows)} "
+        f"unique_theorems={_unique_theorem_count(ok_rows)} "
+        f"unique_uids={_unique_uid_count(ok_rows)} "
+        f"judged_rows={len(judged_rows)}",
+        "decision_data_blockers=" + (",".join(data_blockers) if data_blockers else "none"),
+        "decision_data_warnings=" + (",".join(data_warnings) if data_warnings else "none"),
         f"gate_verdict={verdict}",
         "gate_reasons=" + (",".join(reasons) if reasons else "none"),
     ]
@@ -164,6 +177,26 @@ def low_judge_high_metric_candidates(rows: list[MetricRow], *, limit: int, max_j
     ]
 
 
+def decision_data_findings(ok_rows: list[MetricRow], *, failed_rows: int) -> tuple[list[str], list[str]]:
+    blockers: list[str] = []
+    warnings: list[str] = []
+    if len(ok_rows) < MIN_DECISION_SUCCESSFUL_ROWS:
+        blockers.append(f"fewer_than_{MIN_DECISION_SUCCESSFUL_ROWS}_successful_rows")
+    if _unique_theorem_count(ok_rows) < MIN_DECISION_THEOREMS:
+        blockers.append(f"fewer_than_{MIN_DECISION_THEOREMS}_theorems")
+    if _unique_uid_count(ok_rows) < MIN_DECISION_UIDS:
+        blockers.append(f"fewer_than_{MIN_DECISION_UIDS}_uids")
+
+    judged = sum(1 for r in ok_rows if r.judge_composite is not None)
+    if ok_rows and judged == 0:
+        blockers.append("no_judge_composite_rows")
+    elif judged < len(ok_rows):
+        warnings.append("partial_judge_composite_rows")
+    if failed_rows:
+        warnings.append("failed_proof_metric_probes")
+    return blockers, warnings
+
+
 def metric_gate(rows: list[MetricRow]) -> tuple[str, list[str]]:
     ok_rows = [r for r in rows if r.probe_exit_code == 0]
     if not rows:
@@ -181,6 +214,14 @@ def metric_gate(rows: list[MetricRow]) -> tuple[str, list[str]]:
     if reasons:
         return "research_only", reasons
     return "manual_review_required", []
+
+
+def _unique_theorem_count(rows: list[MetricRow]) -> int:
+    return len({r.theorem_id for r in rows if r.theorem_id})
+
+
+def _unique_uid_count(rows: list[MetricRow]) -> int:
+    return len({r.uid for r in rows if r.uid is not None})
 
 
 def main(argv: list[str] | None = None) -> int:

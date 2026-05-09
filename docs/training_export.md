@@ -58,6 +58,8 @@ uv run python -m tools.proof_metrics_analyze /var/lib/lemma/proof-metrics.jsonl
 
 Keep the analyzer report with any scoring decision notes. Look first at:
 
+- `decision_data_blockers` and `decision_data_warnings`; blockers mean the
+  export is not varied enough for a scoring decision yet,
 - `rows_with_successful_proof_metrics` vs failed probe rows,
 - correlations between metric bytes / delimiter-count shape data, proof text
   length, current `proof_intrinsic_score`, and judge composite,
@@ -76,7 +78,9 @@ uv run python -m tools.proof_metrics_analyze /var/lib/lemma/train.jsonl
 If the path is omitted, the tool reads `LEMMA_TRAINING_EXPORT_JSONL`. The
 analyzer reports failed proof-metric probes separately and excludes them from
 correlations/outlier lists, so calibration is based only on successful Lean
-probe rows.
+probe rows. It also reports minimum data-readiness blockers using conservative
+defaults: at least 50 successful proof-metric rows, 5 theorem ids, 5 UIDs, and
+judge composite labels.
 
 The repo also keeps a synthetic analyzer fixture at
 `tests/fixtures/proof_metrics_validation.jsonl`. It is useful for checking the
