@@ -105,6 +105,21 @@ Use `uv run python -m tools.proof_metrics_analyze <train.jsonl>` to compare
 exported proof metrics against proof text length, current `proof_intrinsic_score`,
 and judge composite before considering any scoring change.
 
+## Credibility Boundary
+
+Verify credibility is intentionally not a padding detector. It answers a narrower
+question: does this UID keep submitting proofs that pass validator Lean
+verification?
+
+That means a Lean-valid but padded proof can still improve credibility. Do not
+fix that by adding text-shape penalties to the credibility EMA. Padding belongs
+in the proof-side scoring decision above, where any replacement signal can be
+measured, profiled, and pinned before it affects rewards.
+
+The compare-only proof metrics export is the current place to study that
+orthogonal signal. If those metrics become reliable enough to score, wire them
+through the proof-side gate, not through reputation credibility.
+
 ## Initial Calibration
 
 On 2026-05-09, a controlled Docker calibration ran five proofs of the same small
