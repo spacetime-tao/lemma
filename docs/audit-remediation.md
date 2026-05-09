@@ -266,6 +266,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **`_stats` / `_commit_reveal_cache`** globals in forward handler — done: miner summary stats and commit-reveal
   cache state are now scoped to the `make_forward` handler instance; the cache remains TTL/max-entry bounded and
   validator-keyed.
+- Miner default priority stub removed; the no-op default now lives directly at the service callsite.
 - Stub proof for `two_plus_two` in production path per audit — removed; missing prover keys now always return
   the unsolved challenge as a fail-closed stub.
 - **`synapse_payload_error` triple invocation** in commit-reveal mode clarified: incoming challenge checks now skip response-only validation; outgoing commit/reveal responses still run response validation.
