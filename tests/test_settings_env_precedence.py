@@ -36,6 +36,21 @@ def test_dotenv_sets_lean_use_docker(monkeypatch: pytest.MonkeyPatch, tmp_path) 
     assert s.lean_use_docker is False
 
 
+def test_public_ip_discovery_is_opt_in_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("AXON_DISCOVER_EXTERNAL_IP", raising=False)
+    s = LemmaSettings(_env_file=None)
+    assert s.axon_discover_external_ip is False
+
+
+def test_documented_public_ip_discovery_env_enables_lookup(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    monkeypatch.delenv("LEMMA_PREFER_PROCESS_ENV", raising=False)
+    env_file = tmp_path / ".env"
+    env_file.write_text("AXON_DISCOVER_EXTERNAL_IP=true\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    s = LemmaSettings(_env_file=str(env_file))
+    assert s.axon_discover_external_ip is True
+
+
 def test_explicit_init_kwarg_beats_all(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     monkeypatch.delenv("LEMMA_PREFER_PROCESS_ENV", raising=False)
     env_file = tmp_path / ".env"
