@@ -44,7 +44,6 @@ from lemma.scoring.dedup import dedup_coldkeys, dedup_identical_submissions
 from lemma.scoring.pareto import ScoredEntry, pareto_weights
 from lemma.scoring.reputation import apply_ema_to_entries, load_reputation, save_reputation
 from lemma.scoring.rewards import entry_from_scores
-from lemma.validator import query as q
 from lemma.validator.training_export import append_epoch_jsonl, training_record
 from lemma.validator.weights_policy import build_full_weights
 
@@ -267,11 +266,11 @@ async def run_epoch(
             commits_by_uid: dict[int, str] = {}
             if settings.lemma_commit_reveal_enabled:
                 syn_commit = LemmaChallenge(**base_syn, commit_reveal_phase="commit")
-                responses_commit = await q.query_miners(
-                    dendrite,
+                responses_commit = await dendrite(
                     axons,
                     syn_commit,
                     timeout=forward_wait_s,
+                    run_async=True,
                 )
                 for uid_c, resp_c in zip(uids, responses_commit, strict=True):
                     if not isinstance(resp_c, LemmaChallenge) or not resp_c.is_success:
@@ -280,10 +279,10 @@ async def run_epoch(
                     if looks_like_commitment_hex(hx):
                         commits_by_uid[uid_c] = hx.lower().removeprefix("0x")
                 synapse = LemmaChallenge(**base_syn, commit_reveal_phase="reveal")
-                responses = await q.query_miners(dendrite, axons, synapse, timeout=forward_wait_s)
+                responses = await dendrite(axons, synapse, timeout=forward_wait_s, run_async=True)
             else:
                 synapse = LemmaChallenge(**base_syn, commit_reveal_phase="off")
-                responses = await q.query_miners(dendrite, axons, synapse, timeout=forward_wait_s)
+                responses = await dendrite(axons, synapse, timeout=forward_wait_s, run_async=True)
             block_after_query = int(subtensor.get_current_block())
 
             candidates: list[tuple[int, LemmaChallenge]] = []
