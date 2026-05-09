@@ -44,7 +44,7 @@ uv run python -m tools.proof_metrics_analyze /var/lib/lemma/proof-metrics.jsonl
 Keep the analyzer report with any scoring decision notes. Look first at:
 
 - `rows_with_successful_proof_metrics` vs failed probe rows,
-- correlations between metric bytes, delimiter-count shape data, proof text
+- correlations between metric bytes / delimiter-count shape data, proof text
   length, current `proof_intrinsic_score`, and judge composite,
 - padding-looking outliers and the conservative `gate_verdict`.
 

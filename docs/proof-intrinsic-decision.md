@@ -230,6 +230,8 @@ metric_max_depth: n=7 min=4 median=8.0 mean=7.4 max=8
 proof_len_chars: n=7 min=115 median=225.0 mean=1464.0 max=7391
 corr(metric_bytes, proof_len_chars)=0.1322
 corr(metric_bytes, proof_intrinsic)=0.6740
+corr(metric_delimiters, proof_len_chars)=0.1659
+corr(metric_delimiters, proof_intrinsic)=0.3917
 ```
 
 Interpretation: delimiter count looks more useful than raw bytes for this small
