@@ -42,6 +42,62 @@ The local/CI gate is [`scripts/ci_verify_generated_templates.py`](../scripts/ci_
 
 Do not add low-value templates merely to increase the builder count. A small set of honest, varied templates is better than a large set of brittle near-duplicates.
 
+## Release and rotation checklist
+
+Use this when changing generated builders, split mix, catalog policy, or problem
+cadence. The point is to make supply changes explicit, not to pretend a new hash
+is a new security model.
+
+1. Run the cheap registry/template gate:
+
+   ```bash
+   uv run python scripts/ci_verify_generated_templates.py
+   ```
+
+2. If the sandbox image for the release is available, run the Lean template gate:
+
+   ```bash
+   RUN_DOCKER_LEAN_TEMPLATES=1 \
+     LEAN_SANDBOX_IMAGE=<immutable-image-ref> \
+     uv run python scripts/ci_verify_generated_templates.py
+   ```
+
+3. Record the old and new `generated_registry_sha256` from `uv run lemma meta`.
+4. Summarize the old and new builder counts by split.
+5. Check whether any new builder family is a near-duplicate of an existing one.
+6. Confirm verification costs fit the published timeout policy.
+7. Announce the Git tag, immutable sandbox image ref, registry hash, and cutover
+   block/window together.
+8. Keep the previous release runnable long enough for rollback.
+
+Decision record shape:
+
+```text
+Generated supply release:
+
+Old registry sha:
+New registry sha:
+Git tag:
+Sandbox image:
+Cutover block/window:
+
+Builder mix:
+- easy:
+- medium:
+- hard:
+
+Evidence:
+- Cheap template gate:
+- Docker Lean template gate:
+- Verify-cost notes:
+- Duplicate/near-duplicate review:
+
+Rollback:
+- Previous git tag:
+- Previous sandbox image:
+- Previous registry sha:
+```
+
 ## Frozen and curated lanes
 
 `LEMMA_PROBLEM_SOURCE=frozen` is gated as a public eval catalog, not a hidden production source. Turning it on should be an operator decision with a release note, not a fallback path.

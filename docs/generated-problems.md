@@ -46,4 +46,4 @@ Each epoch is independent: pass Lean → judge → Pareto weights for that round
 | Lean fails | No weight |
 | Lean OK + judged | Enters Pareto pool |
 
-Registry changes: [governance.md](governance.md). Predictability policy: [problem-supply-policy.md](problem-supply-policy.md). Frozen mode: [catalog-sources.md](catalog-sources.md).
+Registry changes: [governance.md](governance.md). Predictability and release checklist: [problem-supply-policy.md](problem-supply-policy.md). Frozen mode: [catalog-sources.md](catalog-sources.md).

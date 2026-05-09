@@ -11,6 +11,7 @@ uv run lemma meta
 ```
 
 Publish `generated_registry_sha256`; validators may set `LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED`. Difficulty mix: [generated-problems.md](generated-problems.md). Builder promotion checklist: [problem-supply-policy.md](problem-supply-policy.md).
+Use the release and rotation checklist in [problem-supply-policy.md](problem-supply-policy.md#release-and-rotation-checklist) before changing the live generated registry or cadence.
 
 ## Frozen catalog (`LEMMA_PROBLEM_SOURCE=frozen`)
 

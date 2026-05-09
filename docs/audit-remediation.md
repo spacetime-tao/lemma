@@ -150,7 +150,7 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 
 | ID | Issue | Source § | Priority | Remediation direction |
 |----|--------|----------|----------|------------------------|
-| **R1** | Small generated template set is enumerable; SHA256 mix is **public** — offline cache still works | R3 §9, §9.1 | P2 | **Needs-design/partial:** public deterministic supply boundary documented; current registry expanded from 28 to 40 builders; mitigation is builder breadth, release rotation, and future curated lanes, not seed secrecy. | `docs/problem-supply-policy.md`, `docs/generated-problems.md` |
+| **R1** | Small generated template set is enumerable; SHA256 mix is **public** — offline cache still works | R3 §9, §9.1 | P2 | **Needs-design/partial:** public deterministic supply boundary documented; current registry expanded from 28 to 40 builders; mitigation is builder breadth, explicit release rotation, and future curated lanes, not seed secrecy. | `docs/problem-supply-policy.md`, `docs/generated-problems.md` |
 | **R2** | `generated_registry_sha256` may not hash builder **bodies** — skew risk | R3 §9.3 | P0/P1 | **Done:** registry fingerprint includes builder source hashes. | `lemma/problems/generated.py`, `tests/test_registry_fingerprint.py` |
 | **R3** | `RNG_MIX_TAG` not in registry pin | R3 §9.3 | P1 | **Done:** registry fingerprint includes `RNG_MIX_TAG`. | `lemma/problems/generated.py`, `tests/test_registry_fingerprint.py` |
 | **R4** | Frozen miniF2F route / gate consistency | R3 §9.2 | P1 | **Done:** `resolve_problem` now gates direct frozen catalog ids behind `LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`, matching `get_problem_source` / validator-check policy. | `problems/factory.py`, `tests/test_problem_factory.py` |
