@@ -6,6 +6,7 @@ import asyncio
 import os
 import time
 from collections import defaultdict
+from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any
 
 import bittensor as bt
@@ -162,6 +163,28 @@ def _update_verify_credibility(
         old_c = credibility_by_uid.get(uid, 1.0)
         new_c = ca * outcome + (1.0 - ca) * old_c
         credibility_by_uid[uid] = max(0.0, min(1.0, new_c))
+
+
+VerifyItem = tuple[int, LemmaChallenge, VerifyResult]
+
+
+async def _run_verify_batch(
+    candidates: list[tuple[int, LemmaChallenge]],
+    verify_one: Callable[[int, LemmaChallenge], Awaitable[VerifyItem | None]],
+) -> list[VerifyItem]:
+    """Run verifier tasks while isolating unexpected per-miner failures."""
+    results = await asyncio.gather(
+        *(verify_one(uid, resp) for uid, resp in candidates),
+        return_exceptions=True,
+    )
+    verified: list[VerifyItem] = []
+    for (uid, _resp), result in zip(candidates, results, strict=True):
+        if isinstance(result, Exception):
+            logger.warning("uid={} verify task failed: {}", uid, result)
+            continue
+        if result is not None:
+            verified.append(result)
+    return verified
 
 
 async def run_epoch(
@@ -434,8 +457,7 @@ async def run_epoch(
                     return None
                 return (uid, resp, vr)
 
-            verified_results = await asyncio.gather(*[_verify_one(u, r) for u, r in candidates])
-            verified = [x for x in verified_results if x is not None]
+            verified = await _run_verify_batch(candidates, _verify_one)
             total_verified += len(verified)
 
             vca = float(settings.lemma_reputation_verify_credibility_alpha)

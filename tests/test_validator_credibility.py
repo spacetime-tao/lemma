@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from lemma.lean.sandbox import VerifyResult
 from lemma.protocol import LemmaChallenge
-from lemma.validator.epoch import _update_verify_credibility
+from lemma.validator.epoch import _run_verify_batch, _update_verify_credibility
 
 
 def _resp() -> LemmaChallenge:
@@ -55,3 +55,22 @@ def test_validator_lean_failure_lowers_credibility() -> None:
     _update_verify_credibility(cred, [(1, resp)], [], alpha=0.5)
 
     assert cred[1] == 0.5
+
+
+async def test_verify_batch_keeps_other_results_when_one_task_raises() -> None:
+    good = _resp()
+    bad = _resp()
+
+    async def verify_one(
+        uid: int,
+        resp: LemmaChallenge,
+    ) -> tuple[int, LemmaChallenge, VerifyResult] | None:
+        if uid == 1:
+            raise RuntimeError("boom")
+        return uid, resp, VerifyResult(passed=True, reason="ok")
+
+    verified = await _run_verify_batch([(1, bad), (2, good)], verify_one)
+
+    assert len(verified) == 1
+    assert verified[0][0] == 2
+    assert verified[0][1] is good
