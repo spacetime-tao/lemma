@@ -8,7 +8,7 @@ This document tracks **post-audit** mechanism changes in Lemma: proof-centric sc
 
 | Mechanism | Env / behavior |
 |-----------|----------------|
-| Proof + judge blend | `LEMMA_SCORE_PROOF_WEIGHT` (default **0.10** intrinsic / **0.90** judge composite); tune per subnet policy. See [proof-intrinsic-decision.md](proof-intrinsic-decision.md) before changing defaults. |
+| Proof + judge blend | `LEMMA_SCORE_PROOF_WEIGHT` (default **0.10** intrinsic / **0.90** judge composite); tune per subnet policy. See [proof-intrinsic-decision.md](proof-intrinsic-decision.md) and [judge-incentive-decision.md](judge-incentive-decision.md) before changing defaults. |
 | Identical submission dedup | `LEMMA_SCORING_DEDUP_IDENTICAL=1` — same `(theorem, proof, trace)` keeps best score. |
 | Coldkey dedup | `LEMMA_SCORING_COLDKEY_DEDUP=1` — one hotkey per coldkey (metagraph). |
 | EMA reputation | `LEMMA_REPUTATION_EMA_ALPHA` (default **0.08**); state file `LEMMA_REPUTATION_STATE_PATH` or `~/.lemma/validator_reputation.json`. |
@@ -39,6 +39,7 @@ Adding templates changes `generated_registry_sha256`. Operators must run `lemma-
 
 - Scoring: `lemma/scoring/rewards.py`, `lemma/scoring/proof_intrinsic.py`, `lemma/validator/epoch.py`
 - Proof intrinsic decision: [proof-intrinsic-decision.md](proof-intrinsic-decision.md)
+- Judge incentive decision: [judge-incentive-decision.md](judge-incentive-decision.md)
 - Credibility exponent decision: [credibility-exponent-decision.md](credibility-exponent-decision.md)
 - Dedup: `lemma/scoring/dedup.py`
 - Reputation: `lemma/scoring/reputation.py`

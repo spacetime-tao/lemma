@@ -44,7 +44,7 @@ Lean-backed or elaborator-backed signal, not from more text-shape guesses.
 
 The judge should also be treated as a bootstrap signal unless the project makes
 an explicit product decision that informal reasoning quality is permanently part
-of the incentive mechanism.
+of the incentive mechanism. See [judge-incentive-decision.md](judge-incentive-decision.md).
 
 ## Acceptable Next Code Changes
 
