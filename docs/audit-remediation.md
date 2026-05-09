@@ -228,7 +228,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **Style proliferation:** mixed dataclass / pydantic / hand JSON (`ScoredEntry`, `RubricScore`, …).
 - **`ScoredEntry.composite` vs `reasoning_score`**: duplicate identity removed; `ScoredEntry` keeps `reasoning_score` only.
 - **`tokens.py` / tiktoken:** replaced with deterministic `len(text)` trace-length proxy; dependency removed.
-- **Dead merge path:** `mix_sub_problem_seed` multi-round when K=1 default.
+- **`mix_sub_problem_seed` multi-round path:** kept intentionally for optional `LEMMA_EPOCH_PROBLEM_COUNT` > 1; config is bounded, profile-pinned, documented, and covered by a deterministic seed test.
 
 ### 13.4 Lean sandbox
 
