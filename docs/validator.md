@@ -50,6 +50,8 @@ The bundled runtime Docker image is intentionally CLI-light: it talks to the hos
 
 **Profiling:** Set **`LEMMA_LEAN_VERIFY_TIMING=1`** for INFO logs with **`docker_exec`** vs **`docker_one_shot`** wall time.
 
+**Compare-only proof metrics:** Set **`LEMMA_LEAN_PROOF_METRICS=1`** to attach experimental `proof_metrics` to `VerifyResult`. This runs one extra Lean `#print` probe after a passing verification and records byte/line counts only. It does **not** affect validator rewards or weights.
+
 **Warm workspace:** When **`LEAN_SANDBOX_NETWORK=bridge`**, Lemma used to run **`lake exe cache get`** on every verify even if Mathlib was already checked out — slow and redundant. It now **skips** that step when **`.lake/packages/mathlib`** exists (override with **`LEMMA_LEAN_ALWAYS_CACHE_GET=1`** or **`LEMMA_LEAN_SKIP_CACHE_GET_WHEN_WARM=0`**). Optional **`LEMMA_LEAN_WORKSPACE_CACHE_INCLUDE_SUBMISSION_HASH=1`** names cache subdirs from proof text so distinct submissions never share one slot (see `lemma/lean/workspace.py`).
 
 **Docker Desktop (macOS):** Bind-mounted caches pay a large FS tax; **`scripts/start_lean_docker_worker.sh`** uses **`:delegated`** on Darwin. For local iteration, host `lake` ( **`LEMMA_ALLOW_HOST_LEAN=1`** + **`lemma-cli try-prover --host-lean`**) can be faster than Docker on a laptop; production validators should run on **Linux + local SSD** — not Docker Desktop on a Mac — for representative latency.

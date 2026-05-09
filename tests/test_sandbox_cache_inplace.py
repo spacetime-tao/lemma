@@ -47,3 +47,26 @@ end Submission
     assert len(seen) == 1
     assert seen[0] == slot.resolve()
     assert (slot / ".lake" / "marker").read_text() == "warm"
+
+
+def test_proof_metrics_probe_materialized_in_warm_slot(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    p = _minimal_problem()
+    sub = """import Mathlib
+namespace Submission
+theorem t_test : True := by trivial
+end Submission
+"""
+    cache = tmp_path / "ws_cache"
+    key = workspace_verify_cache_key(p, sub, include_submission_fingerprint=False)
+    slot = cache / key
+    slot.mkdir(parents=True)
+    (slot / ".lake").mkdir()
+
+    def fake_host(self: LeanSandbox, work: Path) -> VerifyResult:  # noqa: ARG001
+        assert (work / "ProofMetrics.lean").exists()
+        return VerifyResult(passed=True, reason="ok")
+
+    monkeypatch.setattr(LeanSandbox, "_verify_host", fake_host)
+    sb = LeanSandbox(use_docker=False, timeout_s=30, workspace_cache_dir=cache, proof_metrics_enabled=True)
+    vr = sb.verify(p, sub)
+    assert vr.passed

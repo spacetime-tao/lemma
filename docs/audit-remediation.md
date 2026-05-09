@@ -81,11 +81,11 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 
 ## 5. `proof_intrinsic` — residual gaming
 
-**Decision note:** [proof-intrinsic-decision.md](proof-intrinsic-decision.md) records the current stance: keep the heuristic only as a low-weight bootstrap signal, do not raise its default weight, and do not add more regex padding detectors as the main fix. Default `LEMMA_SCORE_PROOF_WEIGHT` is now `0.10`.
+**Decision note:** [proof-intrinsic-decision.md](proof-intrinsic-decision.md) records the current stance: keep the heuristic only as a low-weight bootstrap signal, do not raise its default weight, and do not add more regex padding detectors as the main fix. Default `LEMMA_SCORE_PROOF_WEIGHT` is now `0.10`; `LEMMA_LEAN_PROOF_METRICS=1` enables a compare-only Lean probe in `VerifyResult`.
 
 | ID | Issue | Source § | Priority | Remediation direction | Key refs |
 |----|--------|----------|----------|------------------------|----------|
-| **P1** | Comment stripping defeats **one** padding class; **string literals**, trivial `have … by trivial`, long names still inflate | R3 §2.1 | P2 | Default weight lowered; next real fix is Lean/elaborator-backed metrics, not more text-shape patches | `lemma/scoring/proof_intrinsic.py`, `config.py`, `docs/proof-intrinsic-decision.md` |
+| **P1** | Comment stripping defeats **one** padding class; **string literals**, trivial `have … by trivial`, long names still inflate | R3 §2.1 | P2 | Default weight lowered; compare-only Lean probe added; next real fix requires validation before scoring use | `lemma/scoring/proof_intrinsic.py`, `config.py`, `docs/proof-intrinsic-decision.md` |
 | **P2** | Default credibility exponent `1.0` vs KB mention of `2.5` | R3 §7 | P3 | Align default or document divergence | `config.py`, `scoring/reputation.py` |
 | **P3** | Credibility rises on Lean pass; padding that passes Lean **does not** get penalized by cred | R3 §7 | P2 | Accept or add orthogonal signal |
 | **P4** | Spot-verify skip returns pass → cred EMA increases without verify | R3 §3.2, §7 | P1 | Do not treat attest-only path as verify success for cred; split signals | `epoch.py`, `protocol_attest.py` |

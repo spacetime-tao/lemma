@@ -26,6 +26,7 @@ def lean_sandbox_from_settings(settings: LemmaSettings, verify_timeout_s: int) -
         workspace_cache_dir=settings.lean_verify_workspace_cache_dir,
         docker_worker=settings.lemma_lean_docker_worker,
         workspace_cache_include_submission_hash=settings.lemma_lean_workspace_cache_include_submission_hash,
+        proof_metrics_enabled=settings.lemma_lean_proof_metrics_enabled,
     )
 
 
