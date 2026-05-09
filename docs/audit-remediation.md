@@ -200,7 +200,7 @@ CLI alone cited as **43 %** of `lemma/` and **83 %** of combined runtime core si
 
 ### 13.2 CLI / click surface (§15–16)
 
-- **34 click leaves** — 22 top-level + configure / validator / miner / problems groups; **5+ dry-run variants** (`miner --dry-run`, `miner dry-run`, `miner-dry`, validator equivalents, `local-loop`); **5 rehearsal-style** commands (`try-prover`, `rehearsal`, `verify`, `judge`, `local-loop`).
+- **Dry-run surface** — duplicate aliases (`miner --dry-run`, `miner-dry`, `validator --dry-run`, `validator-dry`) removed; canonical commands are `lemma miner dry-run`, `lemma validator dry-run`, and `lemma validator config`.
 - **Argv hack:** `_rewrite_lemma_argv_numeric_menu` + `_LEMMA_QUICK_MENU_EXTRAS_JSON` mutated `sys.argv` on import (`main.py`); removed in the first CLI extraction trim.
 - **`uv_bootstrap.py`** + tests vs documenting `uv run`.
 - **`interactive_venv_shell.py`** (~176 LoC) vs one-line `source .venv`; removed in the first CLI extraction trim.
