@@ -28,7 +28,7 @@ def main(ctx: click.Context) -> None:
 
     \b
     Common commands:
-      lemma rehearsal  Live theorem → prover → Lean → judge (scoring preview)
+      lemma-cli rehearsal  Live theorem → prover → Lean → judge (scoring preview)
       lemma doctor     Config + keys + chain sanity
       lemma-cli        Friendly operator setup/help wrapper
       lemma --help     Full command list
@@ -74,7 +74,7 @@ def main(ctx: click.Context) -> None:
             "  "
             + stylize("Preview", fg="yellow", bold=True)
             + stylize("  ", dim=True)
-            + stylize("lemma rehearsal", fg="green")
+            + stylize("lemma-cli rehearsal", fg="green")
             + stylize(" — prover + Lean + judge on the live theorem (costs APIs)", dim=True),
         )
         click.echo(stylize("  Docs: docs/getting-started.md · docs/miner.md · docs/validator.md\n", dim=True))
@@ -293,8 +293,8 @@ def doctor_cmd() -> None:
             "\n5  Next commands\n"
             "     lemma meta             — judge + template hashes\n"
             "     lemma validator-check  — before `lemma validator start`\n"
-            "     lemma rehearsal        — prover + Lean + judge on the live theorem (preview before miner/validator)\n"
-            "     lemma try-prover       — prover only  ·  lemma judge --trace FILE — judge on files\n"
+            "     lemma-cli rehearsal    — prover + Lean + judge preview\n"
+            "     lemma-cli try-prover       — prover only  ·  lemma judge --trace FILE — judge on files\n"
             "     lemma-cli              — friendly operator screen  ·  lemma-cli configure --help\n",
             dim=True,
         ),
@@ -581,206 +581,26 @@ def meta_cmd(raw: bool) -> None:
     )
 
 
-@main.command("try-prover")
-@click.option(
-    "--verify/--no-verify",
-    "do_verify",
-    default=False,
-    help=(
-        "After the LLM answers, run `lake build` (checks Submission.lean). "
-        "Uses the same Docker sandbox as validators when `LEMMA_USE_DOCKER` is true (default); "
-        "use `--host-lean` for host `lake`, or set `LEMMA_TRY_PROVER_HOST_VERIFY=1`. "
-        "Does not send answers to validators. Without --verify you only see model output."
-    ),
+@main.command(
+    "try-prover",
+    context_settings={"ignore_unknown_options": True, "allow_extra_args": True},
+    add_help_option=False,
 )
-@click.option(
-    "--block",
-    type=int,
-    default=None,
-    help="Pretend chain head is this block when resolving the problem seed.",
-)
-@click.option(
-    "--yes",
-    "-y",
-    "assume_yes",
-    is_flag=True,
-    default=False,
-    help="Skip the confirmation prompt (for scripts; still bills your prover API).",
-)
-@click.option(
-    "--retry-attempts",
-    "retry_attempts",
-    type=click.IntRange(1, 32),
-    default=None,
-    help="Override LEMMA_PROVER_LLM_RETRY_ATTEMPTS for this run only (default: from .env).",
-)
-@click.option(
-    "--host-lean",
-    "host_lean",
-    is_flag=True,
-    default=False,
-    help=(
-        "Only with --verify: force host `lake` instead of the Docker sandbox (faster on a warm Mathlib checkout). "
-        "Mutually exclusive with --docker-verify."
-    ),
-)
-@click.option(
-    "--docker-verify",
-    "docker_verify",
-    is_flag=True,
-    default=False,
-    help=(
-        "Only with --verify: force the Docker Lean sandbox (default when `LEMMA_USE_DOCKER` is true). "
-        "Mutually exclusive with --host-lean."
-    ),
-)
-def try_prover_cmd(
-    do_verify: bool,
-    block: int | None,
-    assume_yes: bool,
-    retry_attempts: int | None,
-    host_lean: bool,
-    docker_verify: bool,
-) -> None:
-    """Manual one-shot prover on the live theorem (lighter than ``lemma rehearsal``).
-
-    Add ``--verify`` for local Lean only. For **prover + Lean + judge rubric** in one command (validators
-    and miners previewing the scored path), use ``lemma rehearsal``.
-    """
-    from lemma.cli.try_prover import assert_try_prover_host_lean_allowed, run_try_prover
-
-    if not assume_yes:
-        if not sys.stdin.isatty():
-            raise click.ClickException(
-                "Non-interactive terminal: `lemma try-prover` bills your prover API. "
-                "Run again with --yes to confirm, or use a TTY.",
-            )
-        click.echo(
-            stylize(
-                "try-prover calls your prover API (Chutes, Anthropic, …) and may incur cost.",
-                fg="yellow",
-                bold=True,
-            ),
-        )
-        if not click.confirm("Continue?", default=False):
-            raise click.Abort()
-
-    if host_lean and docker_verify:
-        raise click.ClickException("Use only one of --host-lean and --docker-verify.")
-    settings = LemmaSettings()
-    assert_try_prover_host_lean_allowed(settings, verify=do_verify, host_lean=host_lean)
-    lean_use_docker: bool | None
-    if host_lean:
-        lean_use_docker = False
-    elif docker_verify:
-        lean_use_docker = True
-    else:
-        lean_use_docker = None
-    run_try_prover(
-        settings,
-        verify=do_verify,
-        block=block,
-        prover_llm_retry_attempts=retry_attempts,
-        lean_use_docker=lean_use_docker,
-    )
+@click.argument("args", nargs=-1, type=click.UNPROCESSED)
+def try_prover_cmd(args: tuple[str, ...]) -> None:
+    """Point local prover previews to lemma-cli."""
+    _echo_moved_to_lemma_cli(("try-prover", *args), heading="try-prover moved to lemma-cli.")
 
 
-@main.command("rehearsal")
-@click.option(
-    "--verify/--no-verify",
-    "do_verify",
-    default=True,
-    help=(
-        "After the prover answers, run `lake build` on Submission.lean (default: on; same Docker/host rules "
-        "as `lemma try-prover --verify`). Use `--no-verify` to skip Lean and only run prover + judge."
-    ),
+@main.command(
+    "rehearsal",
+    context_settings={"ignore_unknown_options": True, "allow_extra_args": True},
+    add_help_option=False,
 )
-@click.option(
-    "--block",
-    type=int,
-    default=None,
-    help="Pretend chain head is this block when resolving the problem seed.",
-)
-@click.option(
-    "--yes",
-    "-y",
-    "assume_yes",
-    is_flag=True,
-    default=False,
-    help="Skip the confirmation prompt (for scripts; still bills prover + judge APIs).",
-)
-@click.option(
-    "--retry-attempts",
-    "retry_attempts",
-    type=click.IntRange(1, 32),
-    default=None,
-    help="Override LEMMA_PROVER_LLM_RETRY_ATTEMPTS for this run only (default: from .env).",
-)
-@click.option(
-    "--host-lean",
-    "host_lean",
-    is_flag=True,
-    default=False,
-    help="Only with --verify: force host `lake` instead of Docker (requires LEMMA_ALLOW_HOST_LEAN=1).",
-)
-@click.option(
-    "--docker-verify",
-    "docker_verify",
-    is_flag=True,
-    default=False,
-    help="Only with --verify: force the Docker Lean sandbox.",
-)
-def rehearsal_cmd(
-    do_verify: bool,
-    block: int | None,
-    assume_yes: bool,
-    retry_attempts: int | None,
-    host_lean: bool,
-    docker_verify: bool,
-) -> None:
-    """One-shot scoring preview: live theorem → your prover → Lean (default) → your judge rubric.
-
-    Same stacks miners and validators use for a forward + rubric, without an axon or ``set_weights``.
-    Requires chain RPC (like ``lemma status``). For Lean verify, Docker is the default subnet path; see
-    ``bash scripts/prebuild_lean_image.sh`` and docs/getting-started.md.
-    """
-    from lemma.cli.try_prover import assert_try_prover_host_lean_allowed, run_rehearsal
-
-    if not assume_yes:
-        if not sys.stdin.isatty():
-            raise click.ClickException(
-                "Non-interactive terminal: `lemma rehearsal` bills prover + judge APIs. "
-                "Run again with --yes to confirm, or use a TTY.",
-            )
-        click.echo(
-            stylize(
-                "rehearsal runs your prover, optionally Lean verify, then your judge — same cost shape as "
-                "one scored forward (without chain writes).",
-                fg="yellow",
-                bold=True,
-            ),
-        )
-        if not click.confirm("Continue?", default=False):
-            raise click.Abort()
-
-    if host_lean and docker_verify:
-        raise click.ClickException("Use only one of --host-lean and --docker-verify.")
-    settings = LemmaSettings()
-    assert_try_prover_host_lean_allowed(settings, verify=do_verify, host_lean=host_lean)
-    lean_use_docker: bool | None
-    if host_lean:
-        lean_use_docker = False
-    elif docker_verify:
-        lean_use_docker = True
-    else:
-        lean_use_docker = None
-    run_rehearsal(
-        settings,
-        verify=do_verify,
-        block=block,
-        prover_llm_retry_attempts=retry_attempts,
-        lean_use_docker=lean_use_docker,
-    )
+@click.argument("args", nargs=-1, type=click.UNPROCESSED)
+def rehearsal_cmd(args: tuple[str, ...]) -> None:
+    """Point local scoring previews to lemma-cli."""
+    _echo_moved_to_lemma_cli(("rehearsal", *args), heading="rehearsal moved to lemma-cli.")
 
 
 @main.command("status")
@@ -889,11 +709,11 @@ def status_cmd() -> None:
         + stylize("full Challenge.lean (current theorem)", dim=True),
     )
     click.echo(
-        f"  {stylize('lemma try-prover', fg='green')}  "
+        f"  {stylize('lemma-cli try-prover', fg='green')}  "
         + stylize("(bills prover API)", fg="yellow", bold=True),
     )
     click.echo(
-        f"  {stylize('lemma try-prover --verify', fg='green')}  "
+        f"  {stylize('lemma-cli try-prover --verify', fg='green')}  "
         + stylize(
             "+ local Lean compile only (not validator scoring); add --host-lean to use host lake vs Docker",
             dim=True,
@@ -1220,7 +1040,7 @@ def _validator_run_blocking(*, dry_run: bool) -> None:
     invoke_without_command=True,
     help=(
         "Validator — query miners, Lean verify, LLM judge, optional set_weights. "
-        "Local scoring preview (no metagraph): lemma rehearsal. "
+        "Local scoring preview (no metagraph): lemma-cli rehearsal. "
         "Judge-only on files: lemma judge --trace FILE. "
         "Typical path: bash scripts/prebuild_lean_image.sh → lemma validator-check → lemma validator start."
     ),
@@ -1334,7 +1154,7 @@ def validator_config_cmd() -> None:
     click.echo("")
     click.echo(
         stylize(
-            "  • `lemma rehearsal` — live theorem → prover → Lean (optional) → judge rubric (preview stacks).\n",
+            "  • `lemma-cli rehearsal` — live theorem → prover → Lean (optional) → judge rubric (preview stacks).\n",
             dim=True,
         )
     )
@@ -1485,11 +1305,14 @@ def validator_check_cmd() -> None:
 )
 def verify_cmd(problem_id: str, submission_path: Path, host_lean: bool) -> None:
     """Verify a Submission.lean file against a catalog problem."""
-    from lemma.cli.try_prover import assert_host_lean_cli_allowed
     from lemma.lean.verify_runner import run_lean_verify
 
     settings = LemmaSettings()
-    assert_host_lean_cli_allowed(settings, host_lean)
+    if host_lean and not settings.allow_host_lean:
+        raise click.ClickException(
+            "Host Lean is disabled. Use Docker (default) to match validators. "
+            "Set LEMMA_ALLOW_HOST_LEAN=1 in `.env` for local debugging, then use --host-lean."
+        )
     src = submission_path.read_text(encoding="utf-8")
     p = resolve_problem(settings, problem_id)
     use_docker = not host_lean and settings.lean_use_docker
@@ -1520,10 +1343,10 @@ def lean_worker_cmd(host: str, port: int) -> None:
     "judge",
     context_settings={"max_content_width": 100},
     epilog=(
-        "Mental model: like `lemma try-prover` for miners (one-shot LLM check), but for the **validator judge** "
+        "Mental model: like `lemma-cli try-prover` for miners (one-shot LLM check), but for the **validator judge** "
         "only — no chain sampling step, no Lean verify.\n"
         "\n"
-        "For **prover + Lean + judge** on the live subnet theorem in one command, prefer `lemma rehearsal`.\n"
+        "For **prover + Lean + judge** on the live subnet theorem in one command, prefer `lemma-cli rehearsal`.\n"
         "For a full scoring rehearsal without writing weights, use `lemma validator dry-run` (Lean + pipeline; "
         "judge defaults to FakeJudge — set LEMMA_DRY_RUN_REAL_JUDGE=1 to use your real judge there).\n"
         "\n"
@@ -1568,7 +1391,7 @@ def judge_cmd(
 ) -> None:
     """One-shot judge rubric on local files (validator judge only — no Lean / metagraph / set_weights).
 
-    For an end-to-end preview (prover → Lean → judge) on the live theorem, use ``lemma rehearsal``.
+    For an end-to-end preview (prover → Lean → judge) on the live theorem, use ``lemma-cli rehearsal``.
     For the full scoring loop without on-chain weights, use ``lemma validator dry-run``.
     Pass ``--trace PATH`` to a UTF-8 file; it is not a flag-only switch.
     """

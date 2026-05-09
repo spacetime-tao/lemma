@@ -208,7 +208,7 @@ CLI alone cited as **43 %** of `lemma/` and **83 %** of combined runtime core si
 - **`leaderboard_cmd`** wrapped metagraph display already available through `btcli subnet show`; removed from core. **`miner_menu` / `validator_menu`** duplicated subcommands and were removed in the first CLI extraction trim.
 - **`docs/` opener** + `_DOCS_BY_SLUG` hardcoded tuple moved to `lemma-cli`; core keeps a redirect only.
 - **`configure` ×8** near-identical subcommands moved to `lemma-cli`; core keeps redirect shims only.
-- **`try_prover.py`** (~677 LoC) vs epoch.
+- **`try_prover.py`** (~677 LoC) local operator preview moved to `lemma-cli`; core keeps redirects only.
 - **`start_screen.py`** (~569 LoC) single mega-menu; removed in the first CLI extraction trim.
 - **`glossary.py`** moved to `lemma-cli`; core keeps a redirect only.
 

@@ -45,6 +45,6 @@ Use a **reasoning-capable** model that writes valid `Submission.lean`. Recommend
 
 Set `PROVER_PROVIDER=openai`, **`PROVER_OPENAI_BASE_URL`** (or rely on judge `OPENAI_BASE_URL` if unset), **`PROVER_OPENAI_API_KEY`** (or legacy `OPENAI_API_KEY` fallback), and **`PROVER_MODEL`** (miner-only id; falls back to `OPENAI_MODEL` if unset). Optional `model_card` for training exports.
 
-The live miner (`lemma miner start`) starts solving **as soon as** a validator forwards a challenge — no deliberate wait for block ticks. `lemma try-prover` is separate (manual smoke test).
+The live miner (`lemma miner start`) starts solving **as soon as** a validator forwards a challenge — no deliberate wait for block ticks. `lemma-cli try-prover` is separate (manual smoke test).
 
 Custom **`PROVER_OPENAI_BASE_URL`** / keys for the **prover** are normal (any OpenAI-compatible host you operate). The **subnet judge** for validators stays on the pinned Chutes stack above—self-hosted judge endpoints are not the default production path.
