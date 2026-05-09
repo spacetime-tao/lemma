@@ -153,10 +153,10 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 | **R1** | 28 templates enumerable; SHA256 mix is **public** — offline cache still works | R3 §9, §9.1 | P2 | Accept or enlarge / rotate builders with governance |
 | **R2** | `generated_registry_sha256` may not hash builder **bodies** — skew risk | R3 §9.3 | P0/P1 | Include body hash or codegen fingerprint |
 | **R3** | `RNG_MIX_TAG` not in registry pin | R3 §9.3 | P1 | Version tag in registry |
-| **R4** | Frozen miniF2F route / gate consistency | R3 §9.2 | P1 | Ensure `resolve_problem` respects gates uniformly | `problems/factory.py` |
+| **R4** | Frozen miniF2F route / gate consistency | R3 §9.2 | P1 | **Done:** `resolve_problem` now gates direct frozen catalog ids behind `LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`, matching `get_problem_source` / validator-check policy. | `problems/factory.py`, `tests/test_problem_factory.py` |
 | **R5** | Hardcoded toolchain / mathlib / sandbox `:latest` etc. | R3 §13 | P3 | Digest-pinned images in prod docs; fewer `:latest` |
 
-**2026-05 progress:** R2/R3 patched in `generated_registry_canonical_dict`: the generated-registry fingerprint now includes `RNG_MIX_TAG`, builder count/split metadata, and a source hash for each builder function. `docs/generated-problems.md` now reflects the live 28-builder mix.
+**2026-05 progress:** R2/R3/R4 patched. The generated-registry fingerprint now includes `RNG_MIX_TAG`, builder count/split metadata, and a source hash for each builder function. Direct frozen catalog ids now require `LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`, matching `get_problem_source` and validator-check policy. `docs/generated-problems.md` reflects the live 28-builder mix.
 
 ---
 
