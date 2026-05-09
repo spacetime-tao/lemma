@@ -32,7 +32,7 @@ These stay in `spacetime-tao/lemma` because they affect scoring agreement.
 6. Make FakeJudge impossible in live validator mode unless an explicit local-only flag is active. **Done.**
 7. Document production Lean/toolchain image pinning so local `latest` stays a dev-only convenience. **Done:** [toolchain-image-policy.md](toolchain-image-policy.md).
 8. Document the public deterministic problem-supply boundary and builder promotion checklist. **Done:** [problem-supply-policy.md](problem-supply-policy.md).
-9. Expand the generated template registry with a small non-arithmetic batch. **Done:** 36 builders total; list, set, order, logic, and finite-set templates added.
+9. Expand the generated template registry with a small non-arithmetic batch. **Done:** 40 builders total; list, set, order, logic, and finite-set templates added.
 
 ### 3. Scoring Simplification
 
