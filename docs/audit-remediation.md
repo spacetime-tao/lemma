@@ -235,7 +235,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **`scoring/__init__.py`**: unused convenience re-exports removed; callers import concrete scoring modules directly.
 - **Style proliferation:** mixed dataclass / pydantic / hand JSON (`ScoredEntry`, `RubricScore`, …).
 - **`ScoredEntry.composite` vs `reasoning_score`**: duplicate identity removed; `ScoredEntry` keeps `reasoning_score` only.
-- **`tokens.py` / tiktoken:** replaced with deterministic `len(text)` trace-length proxy; dependency removed.
+- **`tokens.py` / tiktoken:** removed; rewards use deterministic `len(trace)` directly for the Pareto trace-length axis.
 - **`mix_sub_problem_seed` multi-round path:** kept intentionally for optional `LEMMA_EPOCH_PROBLEM_COUNT` > 1; config is bounded, profile-pinned, documented, and covered by a deterministic seed test.
 
 ### 13.4 Lean sandbox

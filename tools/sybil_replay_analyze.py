@@ -12,7 +12,6 @@ from typing import Any
 from lemma.scoring.dedup import dedup_coldkeys, dedup_identical_submissions, submission_fingerprint
 from lemma.scoring.pareto import ScoredEntry, pareto_weights
 from lemma.scoring.proof_intrinsic import proof_intrinsic_score
-from lemma.scoring.tokens import count_tokens
 
 DEFAULT_PROOF_WEIGHT = 0.10
 
@@ -255,7 +254,7 @@ def _replay_row(obj: Any, *, proof_weight: float) -> ReplayRow | None:
         theorem_id=theorem_id,
         uid=uid,
         coldkey=_optional_str(obj.get("coldkey") or obj.get("coldkey_ss58")),
-        entry=ScoredEntry(uid=uid, reasoning_score=score, tokens=count_tokens(trace), submission_fp=fp),
+        entry=ScoredEntry(uid=uid, reasoning_score=score, tokens=len(trace or ""), submission_fp=fp),
     )
 
 
