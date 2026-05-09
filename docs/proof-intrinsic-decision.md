@@ -96,6 +96,12 @@ The gate fails if the candidate mostly tracks raw proof text length, rewards
 obvious Lean-valid padding, has frequent probe failures, or adds enough runtime
 cost to make validator operation worse.
 
+The synthetic fixture at `tests/fixtures/proof_metrics_validation.jsonl` exists
+only to keep the analyzer honest around this gate: successful padding-like rows
+should be visible as outliers, while failed probe rows should be counted but not
+used as calibration evidence. It is not a substitute for real validator export
+data.
+
 Any accepted scoring change must update tests, operator docs, migration notes,
 and the validator scoring/profile pin. It must not be hidden inside cleanup.
 

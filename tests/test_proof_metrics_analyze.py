@@ -1,8 +1,11 @@
 """Offline proof-metrics export analyzer."""
 
 import json
+from pathlib import Path
 
 from tools.proof_metrics_analyze import load_report, main, padding_outliers, render_report
+
+FIXTURE = Path(__file__).parent / "fixtures" / "proof_metrics_validation.jsonl"
 
 
 def test_load_report_summarizes_metric_rows(tmp_path) -> None:
@@ -112,3 +115,23 @@ def test_main_uses_env_path(tmp_path, monkeypatch, capsys) -> None:
 
     assert main(["--outliers", "0"]) == 0
     assert "rows_with_proof_metrics=1" in capsys.readouterr().out
+
+
+def test_validation_fixture_separates_padding_from_failed_probes() -> None:
+    report = load_report(FIXTURE)
+
+    assert report.total_rows == 5
+    assert report.invalid_json_lines == 0
+    assert len(report.metric_rows) == 5
+
+    rendered = render_report(report, outlier_limit=4)
+    assert "rows_with_successful_proof_metrics=4" in rendered
+    assert "rows_with_failed_proof_metrics=1" in rendered
+    assert "theorem=comment-padding" in rendered
+    assert "theorem=failed-probe-padding" not in rendered
+    assert "theorem=honest-short" not in rendered
+    assert "theorem=honest-structured" not in rendered
+
+    outlier_ids = [r.theorem_id for r in padding_outliers(report.metric_rows, limit=4)]
+    assert outlier_ids == ["comment-padding"]
+    assert "failed-probe-padding" not in outlier_ids
