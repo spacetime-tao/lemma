@@ -67,6 +67,12 @@ def test_load_report_summarizes_metric_rows(tmp_path) -> None:
     assert "rows_with_proof_metrics=3" in rendered
     assert "rows_with_successful_proof_metrics=2" in rendered
     assert "rows_with_failed_proof_metrics=1" in rendered
+    assert "decision_data=successful_rows=2 unique_theorems=2 unique_uids=2 judged_rows=2" in rendered
+    assert (
+        "decision_data_blockers="
+        "fewer_than_50_successful_rows,fewer_than_5_theorems,fewer_than_5_uids"
+    ) in rendered
+    assert "decision_data_warnings=failed_proof_metric_probes" in rendered
     assert "gate_verdict=research_only" in rendered
     assert "failed_proof_metric_probes" in rendered
     assert "padding_outliers" in rendered
@@ -104,6 +110,12 @@ def test_render_report_handles_only_failed_probe_rows(tmp_path) -> None:
     assert "rows_with_proof_metrics=1" in rendered
     assert "rows_with_successful_proof_metrics=0" in rendered
     assert "rows_with_failed_proof_metrics=1" in rendered
+    assert "decision_data=successful_rows=0 unique_theorems=0 unique_uids=0 judged_rows=0" in rendered
+    assert (
+        "decision_data_blockers="
+        "fewer_than_50_successful_rows,fewer_than_5_theorems,fewer_than_5_uids"
+    ) in rendered
+    assert "decision_data_warnings=failed_proof_metric_probes" in rendered
     assert "gate_verdict=insufficient_data" in rendered
     assert "gate_reasons=no_successful_proof_metrics" in rendered
     assert "No successful proof_metrics found." in rendered
@@ -133,6 +145,8 @@ def test_main_uses_env_path(tmp_path, monkeypatch, capsys) -> None:
     assert main(["--outliers", "0"]) == 0
     rendered = capsys.readouterr().out
     assert "rows_with_proof_metrics=1" in rendered
+    assert "decision_data=successful_rows=1 unique_theorems=1 unique_uids=1 judged_rows=0" in rendered
+    assert "no_judge_composite_rows" in rendered
     assert "gate_verdict=manual_review_required" in rendered
     assert "gate_reasons=none" in rendered
 
@@ -147,6 +161,9 @@ def test_validation_fixture_separates_padding_from_failed_probes() -> None:
     rendered = render_report(report, outlier_limit=6)
     assert "rows_with_successful_proof_metrics=6" in rendered
     assert "rows_with_failed_proof_metrics=1" in rendered
+    assert "decision_data=successful_rows=6 unique_theorems=6 unique_uids=6 judged_rows=6" in rendered
+    assert "decision_data_blockers=fewer_than_50_successful_rows" in rendered
+    assert "decision_data_warnings=failed_proof_metric_probes" in rendered
     assert "gate_verdict=research_only" in rendered
     assert "gate_reasons=failed_proof_metric_probes,padding_outliers,low_judge_high_metric_candidates" in rendered
     assert "metric_delimiters: n=6" in rendered

@@ -148,7 +148,10 @@ strings, unused trivial `have` blocks, or long names stays visible when the Lean
 probe rises with the padding. Its `gate_verdict` is intentionally conservative:
 `research_only` means do not wire the metric into rewards, `insufficient_data`
 means collect a usable export first, and `manual_review_required` still does not
-mean automatic approval.
+mean automatic approval. Its `decision_data_blockers` line is separate from the
+metric verdict: blockers mean the export is too small or missing judge labels to
+support a scoring decision, even if the metric gate itself has no obvious
+padding finding.
 
 ## Credibility Boundary
 
