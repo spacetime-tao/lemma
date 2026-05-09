@@ -270,7 +270,7 @@ class LemmaSettings(BaseSettings):
         ),
     )
     openai_base_url: str = Field(
-        default="https://llm.chutes.ai/v1",
+        default=CANONICAL_JUDGE_OPENAI_BASE_URL,
         validation_alias="OPENAI_BASE_URL",
         description=(
             f"Judge API base. Validators must use {CANONICAL_JUDGE_OPENAI_BASE_URL!r}; miners may point "
