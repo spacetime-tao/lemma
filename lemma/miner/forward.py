@@ -27,9 +27,6 @@ from lemma.protocol_commit_reveal import (
     reasoning_blob_for_commit,
 )
 
-_stats_lock = threading.Lock()
-_stats: dict[str, float | int] = {"forwards": 0, "local_ok": 0, "local_fail": 0, "solve_s_total": 0.0}
-
 _cr_lock = threading.Lock()
 _COMMIT_REVEAL_CACHE_TTL_S = 900.0
 _COMMIT_REVEAL_CACHE_MAX_ENTRIES = 512
@@ -111,6 +108,8 @@ def make_forward(
     wallet: object | None = None,
 ):
     sem = asyncio.Semaphore(max(1, settings.miner_max_concurrent_forwards))
+    stats_lock = threading.Lock()
+    stats: dict[str, float | int] = {"forwards": 0, "local_ok": 0, "local_fail": 0, "solve_s_total": 0.0}
 
     async def forward(synapse: LemmaChallenge) -> LemmaChallenge:
         err = synapse_payload_error(synapse, settings, response=False)
@@ -278,8 +277,8 @@ def make_forward(
                     if vr.passed:
                         local_tag = "local_lean=PASS"
                         local_lean_status = "PASS"
-                        with _stats_lock:
-                            _stats["local_ok"] = int(_stats["local_ok"]) + 1
+                        with stats_lock:
+                            stats["local_ok"] = int(stats["local_ok"]) + 1
                         logger.info(
                             "miner local verify OK theorem_id={} build_s={:.2f}",
                             synapse.theorem_id,
@@ -288,8 +287,8 @@ def make_forward(
                     else:
                         local_tag = "local_lean=FAIL"
                         local_lean_status = "FAIL"
-                        with _stats_lock:
-                            _stats["local_fail"] = int(_stats["local_fail"]) + 1
+                        with stats_lock:
+                            stats["local_fail"] = int(stats["local_fail"]) + 1
                         logger.warning(
                             "miner local verify FAIL theorem_id={} reason={} build_s={:.2f}",
                             synapse.theorem_id,
@@ -318,13 +317,13 @@ def make_forward(
                 )
 
         if settings.miner_forward_summary:
-            with _stats_lock:
-                _stats["forwards"] = int(_stats["forwards"]) + 1
-                _stats["solve_s_total"] = float(_stats["solve_s_total"]) + solve_s
-                nf = int(_stats["forwards"])
-                tot = float(_stats["solve_s_total"])
-                lok = int(_stats["local_ok"])
-                lfail = int(_stats["local_fail"])
+            with stats_lock:
+                stats["forwards"] = int(stats["forwards"]) + 1
+                stats["solve_s_total"] = float(stats["solve_s_total"]) + solve_s
+                nf = int(stats["forwards"])
+                tot = float(stats["solve_s_total"])
+                lok = int(stats["local_ok"])
+                lfail = int(stats["local_fail"])
             avg = tot / nf if nf else 0.0
             tf = f" template={template_fn}" if template_fn else ""
             lt = f" {local_tag}" if local_tag else ""

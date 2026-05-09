@@ -252,7 +252,8 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **`daily_budget`** JSON persistence when enabled.
 - **`public_ip.py`** third-party calls.
 - **`model_card_text`** — validator does not score it.
-- **`_stats` / `_commit_reveal_cache`** globals in forward handler; commit-reveal cache is now TTL/max-entry bounded and validator-keyed, but the globals remain a cleanup candidate.
+- **`_stats` / `_commit_reveal_cache`** globals in forward handler; commit-reveal cache is now TTL/max-entry
+  bounded and validator-keyed; miner summary stats are now scoped to the `make_forward` handler instance.
 - Stub proof for `two_plus_two` in production path per audit.
 - **`synapse_payload_error` triple invocation** in commit-reveal mode clarified: incoming challenge checks now skip response-only validation; outgoing commit/reveal responses still run response validation.
 
