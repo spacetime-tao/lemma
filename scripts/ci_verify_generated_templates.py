@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
-"""Compile-check every generated template: ``lake build`` with Submission stub (``sorry``).
+"""Gate every generated template, then optionally compile-check with ``lake build``.
 
 Why this exists (mainnet mindset): Python tests don't catch a bad Mathlib line in a template.
 Wrong syntax ⇒ miners and validators disagree or builds fail in production.
+
+Without Docker, this script still checks that every builder is reachable and has the metadata
+needed by operators and registry pins. With ``RUN_DOCKER_LEAN_TEMPLATES=1``, it also builds the
+generated Challenge / Solution / Submission workspace in Lean.
 
 This does **not** prove each theorem is solvable without ``sorry``—only that the workspace **parses
 and typechecks** far enough for Lake to build libraries.
@@ -15,9 +19,8 @@ Run after building the sandbox image, e.g.::
 Requires Docker; enable network so ``lake exe cache get`` can run when needed.
 
 **Implementation:** all templates are merged into **one** Lake workspace (one Challenge / Solution /
-Submission with every theorem). A single ``lake build`` checks every builder shape. Running 22
-separate workspaces used to repeat Mathlib fetch/build and often failed CI (timeout, disk, flaky
-network).
+Submission with every theorem). A single ``lake build`` checks every builder shape. Running separate
+workspaces used to repeat Mathlib fetch/build and often failed CI (timeout, disk, flaky network).
 """
 
 from __future__ import annotations
@@ -30,6 +33,8 @@ import tempfile
 from pathlib import Path
 
 from lemma.problems.base import Problem
+
+_VALID_SPLITS = {"easy", "medium", "hard"}
 
 
 def _find_seed_per_builder() -> dict[int, int]:
@@ -50,6 +55,63 @@ def _find_seed_per_builder() -> dict[int, int]:
     if len(found) < need:
         raise RuntimeError(f"could not cover all builders: got {len(found)}/{need}")
     return found
+
+
+def _sample_all_builders() -> list[tuple[int, int, Problem]]:
+    """Return ``(builder_index, seed, problem)`` for one deterministic sample of every builder."""
+    from lemma.problems.generated import GeneratedProblemSource
+
+    seed_map = _find_seed_per_builder()
+    src = GeneratedProblemSource()
+    samples = [(bi, seed_map[bi], src.sample(seed_map[bi])) for bi in sorted(seed_map)]
+    _validate_template_samples(samples)
+    return samples
+
+
+def _validate_template_samples(samples: list[tuple[int, int, Problem]]) -> None:
+    """Cheap gate for builder wiring before the expensive Lean check."""
+    errors: list[str] = []
+    theorem_names: set[str] = set()
+    for builder_index, seed, p in samples:
+        errors.extend(_template_sample_errors(builder_index, seed, p))
+        if p.theorem_name in theorem_names:
+            errors.append(f"duplicate theorem_name={p.theorem_name!r}")
+        theorem_names.add(p.theorem_name)
+    if errors:
+        raise RuntimeError("generated template metadata gate failed:\n- " + "\n- ".join(errors))
+
+
+def _template_sample_errors(builder_index: int, seed: int, p: Problem) -> list[str]:
+    errors: list[str] = []
+    prefix = f"builder_index={builder_index} seed={seed} id={p.id}"
+    if p.id != f"gen/{seed}":
+        errors.append(f"{prefix}: expected id gen/{seed}")
+    if p.extra.get("builder_index") != builder_index:
+        errors.append(f"{prefix}: missing/mismatched extra.builder_index")
+    template_fn = p.extra.get("template_fn")
+    if not isinstance(template_fn, str) or not template_fn.startswith("_b_"):
+        errors.append(f"{prefix}: missing extra.template_fn")
+    if p.split not in _VALID_SPLITS:
+        errors.append(f"{prefix}: invalid split {p.split!r}")
+    if not p.theorem_name.strip():
+        errors.append(f"{prefix}: empty theorem_name")
+    if not p.type_expr.strip():
+        errors.append(f"{prefix}: empty type_expr")
+    if not p.lean_toolchain.strip():
+        errors.append(f"{prefix}: empty lean_toolchain")
+    if not p.mathlib_rev.strip():
+        errors.append(f"{prefix}: empty mathlib_rev")
+    challenge = p.extra.get("challenge_full")
+    if not isinstance(challenge, str) or not challenge.strip():
+        errors.append(f"{prefix}: missing challenge_full")
+    else:
+        if f"theorem {p.theorem_name}" not in challenge:
+            errors.append(f"{prefix}: challenge_full does not declare theorem_name")
+        if "sorry" not in challenge:
+            errors.append(f"{prefix}: challenge_full must be a sorry stub")
+    if f"exact Submission.{p.theorem_name}" not in p.solution_source():
+        errors.append(f"{prefix}: solution bridge does not reference Submission.{p.theorem_name}")
+    return errors
 
 
 def _materialize_multiplex(dest: Path, problems: list[Problem]) -> None:
@@ -233,17 +295,15 @@ def _lake_build_only(work: Path, image: str) -> tuple[int, str]:
 
 
 def main() -> int:
+    samples = _sample_all_builders()
+    problems = [p for _, _, p in samples]
+    print(f"OK: generated template metadata gate covered {len(problems)} builders", flush=True)
+
     if os.environ.get("RUN_DOCKER_LEAN_TEMPLATES", "").strip() not in ("1", "true", "yes"):
         print("SKIP: set RUN_DOCKER_LEAN_TEMPLATES=1 to run template compile checks", file=sys.stderr)
         return 0
 
     image = os.environ.get("LEAN_SANDBOX_IMAGE", "lemma/lean-sandbox:latest")
-
-    from lemma.problems.generated import GeneratedProblemSource
-
-    seed_map = _find_seed_per_builder()
-    src = GeneratedProblemSource()
-    problems = [src.sample(seed_map[bi]) for bi in sorted(seed_map.keys())]
 
     if os.environ.get("CI_TEMPLATE_MULTIPLEX", "1").strip() not in ("0", "false", "no"):
         tmp = Path(tempfile.mkdtemp(prefix="lemma-tpl-ci-"))
@@ -278,9 +338,7 @@ def main() -> int:
     from lemma.lean.workspace import materialize_workspace
 
     failures: list[str] = []
-    for bi in sorted(seed_map.keys()):
-        seed = seed_map[bi]
-        p = src.sample(seed)
+    for bi, seed, p in samples:
         stub = p.submission_stub()
         tmp = Path(tempfile.mkdtemp(prefix="lemma-tpl-ci-"))
         try:
@@ -300,7 +358,7 @@ def main() -> int:
             print(f, "\n---\n", file=sys.stderr)
         return 1
 
-    print(f"OK: {len(seed_map)} generated templates lake build successfully ({image})")
+    print(f"OK: {len(samples)} generated templates lake build successfully ({image})")
     return 0
 
 
