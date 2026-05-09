@@ -73,7 +73,7 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 
 | ID | Issue | Source § | Priority | Remediation direction |
 |----|--------|----------|----------|------------------------|
-| **O1** | Rank mixes kernel-verifiable proof with **LLM judge** on miner prose; lowering proof weight to default `w=0.10` reduces text-heuristic padding risk but leaves judge dominance explicit | R3 §2, §11 | P4 / product | Explicit product decision: cap judge, judge-free mode, red/blue, or container-only scoring |
+| **O1** | Rank mixes kernel-verifiable proof with **LLM judge** on miner prose; lowering proof weight to default `w=0.10` reduces text-heuristic padding risk but leaves judge dominance explicit | R3 §2, §11 | P4 / product | **Decision boundary documented:** judge is bootstrap by default unless governance chooses permanent explanation-quality incentives; next scoring change must choose permanent judge, capped/bootstrap judge, or judge-free mode ([judge-incentive-decision.md](judge-incentive-decision.md)). |
 | **O2** | `primary_design_axis` / one-sentence rule in KB violated by current honest description | R3 §2.3 | P4 | Rewrite mechanism doc or change mechanism to match KB |
 | **O3** | Pareto + coldkey dedup + identical dedup still allow sybil farming per R3 math | R3 §2.2, §8, §12 | P2/P4 | Economic modeling; not fixable by parser alone |
 
