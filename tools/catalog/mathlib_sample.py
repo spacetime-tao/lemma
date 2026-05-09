@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from lemma.catalog.minif2f_parse import THEOREM_LINE
+from tools.catalog.minif2f_parse import THEOREM_LINE
 
 
 def collect_mathlib_theorems(

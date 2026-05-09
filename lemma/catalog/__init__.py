@@ -1,1 +1,4 @@
-"""Utilities for building merged Lean problem catalogs from upstream repos."""
+"""Runtime catalog constants.
+
+Catalog builders live in ``tools.catalog``.
+"""

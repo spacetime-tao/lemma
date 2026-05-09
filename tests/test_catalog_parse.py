@@ -3,9 +3,9 @@
 import json
 from pathlib import Path
 
-from lemma.catalog.minif2f_parse import collect_minif2f_layout
-from lemma.catalog.putnam import parse_putnam_file
 from lemma.problems.minif2f import MiniF2FSource
+from tools.catalog.minif2f_parse import collect_minif2f_layout
+from tools.catalog.putnam import parse_putnam_file
 
 
 def test_collect_minif2f_single_file_layout(tmp_path: Path) -> None:
