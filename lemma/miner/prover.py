@@ -143,70 +143,9 @@ class LLMProver:
     async def solve(self, synapse: LemmaChallenge) -> tuple[str, str, list[ReasoningStep] | None]:
         _raise_if_prover_model_is_studio_client_id(self._settings.prover_model)
         user = f"Imports hint: {synapse.imports}\n\nTheorem block:\n{synapse.theorem_statement}\n"
-        attempts = int(self._settings.prover_llm_retry_attempts)
-        prov = (self._settings.prover_provider or "anthropic").lower()
-        if prov == "openai":
-            key = self._settings.prover_openai_api_key_resolved()
-            if not key:
-                return _stub(synapse)
-            model = self._settings.prover_model or self._settings.openai_model
-            t_out = _httpx_timeout(self._settings)
-            sys_prompt = PROVER_SYSTEM
-            base_url = self._settings.prover_openai_base_url_resolved()
-
-            async def _openai_call() -> str:
-                async with httpx.AsyncClient(timeout=t_out) as http:
-                    okw: dict[str, object] = {"api_key": key, "http_client": http}
-                    if base_url:
-                        okw["base_url"] = base_url
-                    client = AsyncOpenAI(**okw)
-                    resp = await client.chat.completions.create(
-                        model=model,
-                        temperature=float(self._settings.prover_temperature),
-                        max_tokens=self._settings.prover_max_tokens,
-                        messages=[
-                            {"role": "system", "content": sys_prompt},
-                            {"role": "user", "content": user},
-                        ],
-                    )
-                return resp.choices[0].message.content or ""
-
-            text = await async_llm_retry(
-                _openai_call,
-                max_attempts=attempts,
-                transient_exceptions=TRANSIENT_OPENAI_COMPAT,
-            )
-        else:
-            key = self._settings.anthropic_api_key
-            if not key:
-                return _stub(synapse)
-            model = self._settings.prover_model or self._settings.anthropic_model
-            t_out = _httpx_timeout(self._settings)
-            sys_prompt = PROVER_SYSTEM
-
-            async def _anthropic_call() -> str:
-                AsyncAnthropic = anthropic_async_client_cls()
-                client = AsyncAnthropic(api_key=key, timeout=t_out)
-                # Many Claude models cap output at 8192; avoid provider errors if PROVER_MAX_TOKENS is higher.
-                max_out = min(int(self._settings.prover_max_tokens), 8192)
-                msg = await client.messages.create(
-                    model=model,
-                    max_tokens=max_out,
-                    temperature=float(self._settings.prover_temperature),
-                    system=sys_prompt,
-                    messages=[{"role": "user", "content": user}],
-                )
-                out = ""
-                for block in msg.content:
-                    if hasattr(block, "text"):
-                        out += block.text
-                return out
-
-            text = await async_llm_retry(
-                _anthropic_call,
-                max_attempts=attempts,
-                transient_exceptions=anthropic_transient_exceptions(),
-            )
+        text = await self._complete(user)
+        if text is None:
+            return _stub(synapse)
         if self._settings.miner_log_forwards:
             tail = text if len(text) <= 16_000 else text[:8000] + "\n... [truncated] ...\n" + text[-8000:]
             logger.debug("prover raw model output:\n{}", tail)
@@ -219,6 +158,74 @@ class LLMProver:
             )
             return ("parse_error", "-- prover JSON parse error\n", None)
         return _normalize_prover_payload(data, self._settings)
+
+    async def _complete(self, user: str) -> str | None:
+        prov = (self._settings.prover_provider or "anthropic").lower()
+        if prov == "openai":
+            return await self._complete_openai(user)
+        return await self._complete_anthropic(user)
+
+    async def _complete_openai(self, user: str) -> str | None:
+        key = self._settings.prover_openai_api_key_resolved()
+        if not key:
+            return None
+        model = self._settings.prover_model or self._settings.openai_model
+        t_out = _httpx_timeout(self._settings)
+        base_url = self._settings.prover_openai_base_url_resolved()
+
+        async def _openai_call() -> str:
+            async with httpx.AsyncClient(timeout=t_out) as http:
+                okw: dict[str, object] = {"api_key": key, "http_client": http}
+                if base_url:
+                    okw["base_url"] = base_url
+                client = AsyncOpenAI(**okw)
+                resp = await client.chat.completions.create(
+                    model=model,
+                    temperature=float(self._settings.prover_temperature),
+                    max_tokens=self._settings.prover_max_tokens,
+                    messages=[
+                        {"role": "system", "content": PROVER_SYSTEM},
+                        {"role": "user", "content": user},
+                    ],
+                )
+            return resp.choices[0].message.content or ""
+
+        return await async_llm_retry(
+            _openai_call,
+            max_attempts=int(self._settings.prover_llm_retry_attempts),
+            transient_exceptions=TRANSIENT_OPENAI_COMPAT,
+        )
+
+    async def _complete_anthropic(self, user: str) -> str | None:
+        key = self._settings.anthropic_api_key
+        if not key:
+            return None
+        model = self._settings.prover_model or self._settings.anthropic_model
+        t_out = _httpx_timeout(self._settings)
+
+        async def _anthropic_call() -> str:
+            AsyncAnthropic = anthropic_async_client_cls()
+            client = AsyncAnthropic(api_key=key, timeout=t_out)
+            # Many Claude models cap output at 8192; avoid provider errors if PROVER_MAX_TOKENS is higher.
+            max_out = min(int(self._settings.prover_max_tokens), 8192)
+            msg = await client.messages.create(
+                model=model,
+                max_tokens=max_out,
+                temperature=float(self._settings.prover_temperature),
+                system=PROVER_SYSTEM,
+                messages=[{"role": "user", "content": user}],
+            )
+            out = ""
+            for block in msg.content:
+                if hasattr(block, "text"):
+                    out += block.text
+            return out
+
+        return await async_llm_retry(
+            _anthropic_call,
+            max_attempts=int(self._settings.prover_llm_retry_attempts),
+            transient_exceptions=anthropic_transient_exceptions(),
+        )
 
 
 def _extract_json_obj(text: str) -> dict:
