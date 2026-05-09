@@ -24,10 +24,28 @@ def test_miner_verify_attest_message_stable() -> None:
         deadline_block=None,
         proof_script="namespace Submission\n",
     )
-    a = miner_verify_attest_message(s)
-    b = miner_verify_attest_message(s)
+    a = miner_verify_attest_message(s, validator_hotkey="validator-a")
+    b = miner_verify_attest_message(s, validator_hotkey="validator-a")
     assert a == b
     assert len(a) > 32
+
+
+def test_miner_verify_attest_message_binds_validator_hotkey() -> None:
+    s = LemmaChallenge(
+        theorem_id="gen/1",
+        theorem_statement="theorem t : True := by sorry",
+        imports=["Mathlib"],
+        lean_toolchain="lt",
+        mathlib_rev="mr",
+        deadline_unix=1,
+        metronome_id="m99",
+        deadline_block=None,
+        proof_script="namespace Submission\n",
+    )
+    assert miner_verify_attest_message(s, validator_hotkey="validator-a") != miner_verify_attest_message(
+        s,
+        validator_hotkey="validator-b",
+    )
 
 
 def test_sign_verify_roundtrip() -> None:
@@ -47,7 +65,7 @@ def test_sign_verify_roundtrip() -> None:
             deadline_block=None,
             proof_script="theorem x : True := rfl\n",
         )
-        msg = miner_verify_attest_message(s)
+        msg = miner_verify_attest_message(s, validator_hotkey="validator-a")
         hx = sign_miner_verify_attest(w, msg)
         assert verify_miner_verify_attest_signature(
             hotkey_ss58=w.hotkey.ss58_address,
@@ -62,6 +80,12 @@ def test_sign_verify_roundtrip() -> None:
         assert not verify_miner_verify_attest_signature(
             hotkey_ss58=w.hotkey.ss58_address,
             message=b"tampered",
+            signature_hex=hx,
+        )
+        replay_msg = miner_verify_attest_message(s, validator_hotkey="validator-b")
+        assert not verify_miner_verify_attest_signature(
+            hotkey_ss58=w.hotkey.ss58_address,
+            message=replay_msg,
             signature_hex=hx,
         )
 

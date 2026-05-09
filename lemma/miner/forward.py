@@ -395,6 +395,9 @@ def make_forward(
             if wallet is None or not hasattr(wallet, "hotkey"):
                 logger.error("miner attest enabled but wallet not bound on axon forward")
                 return reject_synopsis(synapse, 500, "miner misconfigured: wallet required for attest")
+            validator_hotkey = str(getattr(getattr(synapse, "dendrite", None), "hotkey", "") or "").strip()
+            if not validator_hotkey:
+                return reject_synopsis(synapse, 400, "miner attest requires validator dendrite hotkey")
             if local_lean_status != "PASS":
                 return reject_synopsis(
                     synapse,
@@ -404,7 +407,7 @@ def make_forward(
                         "(set LEMMA_MINER_LOCAL_VERIFY=1)"
                     ),
                 )
-            msg = miner_verify_attest_message(synapse)
+            msg = miner_verify_attest_message(synapse, validator_hotkey=validator_hotkey)
             synapse.miner_verify_attest_signature_hex = sign_miner_verify_attest(wallet, msg)
 
         err = synapse_payload_error(synapse, settings)

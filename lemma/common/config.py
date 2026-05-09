@@ -774,7 +774,7 @@ class LemmaSettings(BaseSettings):
         ),
         description=(
             "Validators require Sr25519 attest signatures on miner responses; miners must run "
-            "`LEMMA_MINER_LOCAL_VERIFY=1` and sign after local PASS. See docs/incentive_migration.md."
+            "`LEMMA_MINER_LOCAL_VERIFY=1` and sign after local PASS. See docs/miner-verify-attest.md."
         ),
     )
     lemma_miner_verify_attest_spot_verify_fraction: float = Field(

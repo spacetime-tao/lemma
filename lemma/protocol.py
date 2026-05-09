@@ -103,8 +103,9 @@ class LemmaChallenge(bt.Synapse):
     miner_verify_attest_signature_hex: str | None = Field(
         default=None,
         description=(
-            "Optional Sr25519 signature (hex, 128 chars) over ``protocol_attest.miner_verify_attest_message`` "
-            "when ``LEMMA_MINER_VERIFY_ATTEST_ENABLED=1``. Not part of ``body_hash``."
+            "Optional miner-hotkey Sr25519 signature (hex, 128 chars) over "
+            "``protocol_attest.miner_verify_attest_message`` when ``LEMMA_MINER_VERIFY_ATTEST_ENABLED=1``. "
+            "The signed preimage includes the validator hotkey. Not part of ``body_hash``."
         ),
     )
     commit_reveal_phase: str = Field(
