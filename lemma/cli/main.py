@@ -510,7 +510,7 @@ def _miner_emit_dry_run_summary() -> None:
         )
         + stylize("lemma miner start", fg="green")
         + stylize(" — bind port and wait for validators · ", dim=True)
-        + stylize("lemma miner observability", fg="green")
+        + stylize("lemma-cli miner-observability", fg="green")
         + stylize(" — what you can see in this terminal · ", dim=True)
         + stylize("lemma-cli", fg="green")
         + stylize(" — friendly operator screen.\n", dim=True),
