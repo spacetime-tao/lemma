@@ -70,6 +70,7 @@ Track in issues or refactors as capacity allows: consolidate CLI dry-run paths, 
 
 ## References
 
+- Full external-audit remediation checklist (prioritized): [audit-remediation.md](audit-remediation.md)
 - Implementation map: [incentive_migration.md](incentive_migration.md)
 - Reserved flags module: `lemma/validator/protocol_migration.py`
 - Scoring entrypoint: `lemma/scoring/rewards.py`, `lemma/scoring/proof_intrinsic.py`
