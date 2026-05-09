@@ -477,7 +477,7 @@ async def run_epoch(
                 _jsem: asyncio.Semaphore = judge_sem,
                 _theorem_id: str = problem.id,
             ) -> tuple[ScoredEntry | None, str]:
-                uid_i, resp_i, _vr = item
+                uid_i, resp_i, vr_i = item
                 trace_text = effective_reasoning_text(resp_i)
                 try:
                     async with _jsem:
@@ -502,6 +502,7 @@ async def run_epoch(
                                 resp=resp_i,
                                 rubric=rubric,
                                 profile=export_profile,
+                                proof_metrics=vr_i.proof_metrics,
                             ),
                         )
                 ent = entry_from_scores(

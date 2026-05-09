@@ -30,7 +30,7 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 
 - [x] **Proof intrinsic (partial)** — Lean `--` / `/- … -/` stripped before the heuristic (`LEMMA_PROOF_INTRINSIC_STRIP_COMMENTS`, default on). Default **`LEMMA_SCORE_PROOF_WEIGHT=0.10`** keeps the text heuristic low-weight. Decision note: [proof-intrinsic-decision.md](proof-intrinsic-decision.md). Compare-only Lean probe: `LEMMA_LEAN_PROOF_METRICS=1` adds `proof_metrics` to `VerifyResult`. **Still open:** validate a Lean/elaborator-backed replacement before any scoring change; do not add more regex padding checks.
 - [x] **Credibility multiplier** — Per-UID verify-pass EMA persisted in reputation JSON; score uses `(credibility ** LEMMA_REPUTATION_CREDIBILITY_EXPONENT)` after EMA smoothing (`LEMMA_REPUTATION_VERIFY_CREDIBILITY_ALPHA`, default 0.08; set to **0** to freeze credibility updates).
-- [x] **Training export** — Documented gaming/leakage ([training_export.md](training_export.md)); **`LEMMA_TRAINING_EXPORT_PROFILE=reasoning_only`** omits proof, judge rubric, and Pareto weights (`lemma/validator/training_export.py`).
+- [x] **Training export** — Documented gaming/leakage ([training_export.md](training_export.md)); **`LEMMA_TRAINING_EXPORT_PROFILE=reasoning_only`** omits proof, proof metrics, judge rubric, and Pareto weights (`lemma/validator/training_export.py`).
 
 ### Problem supply & predictability
 

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from lemma.judge.base import RubricScore
+from lemma.lean.proof_metrics import LeanProofMetrics
 from lemma.protocol import LemmaChallenge
 from lemma.reasoning.format import effective_reasoning_text
 
@@ -21,14 +22,15 @@ def training_record(
     resp: LemmaChallenge,
     rubric: RubricScore,
     profile: TrainingExportProfile = "full",
+    proof_metrics: LeanProofMetrics | None = None,
 ) -> dict[str, Any]:
     """One JSON-serializable row for dataset export.
 
-    ``full`` (schema_version 1): proof, rubric, and later ``pareto_weight`` — highest fidelity for offline
-    analysis; also the strongest labels for reverse-engineering the judge.
+    ``full`` (schema_version 1): proof, rubric, optional proof metrics, and later ``pareto_weight`` —
+    highest fidelity for offline analysis; also the strongest labels for reverse-engineering the judge.
 
     ``reasoning_only`` (schema_version 2): reasoning trace + identifiers only — omits proof text, judge
-    rubric, and incentive weights when appended (see ``append_epoch_jsonl``).
+    rubric, proof metrics, and incentive weights when appended (see ``append_epoch_jsonl``).
     """
     steps = resp.reasoning_steps
     common = {
@@ -45,12 +47,15 @@ def training_record(
             "export_profile": "reasoning_only",
             **common,
         }
-    return {
+    row = {
         "schema_version": 1,
         **common,
         "proof_script": resp.proof_script or "",
         "rubric": rubric.model_dump(),
     }
+    if proof_metrics is not None:
+        row["proof_metrics"] = proof_metrics.model_dump()
+    return row
 
 
 def append_epoch_jsonl(
