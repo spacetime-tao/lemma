@@ -4,11 +4,8 @@ from __future__ import annotations
 
 from lemma.common.config import LemmaSettings
 from lemma.miner.forward import (
-    _commit_reveal_cache,
+    CommitRevealCache,
     _commit_reveal_cache_key,
-    _cr_lock,
-    _pop_commit_reveal_cache,
-    _store_commit_reveal_cache,
     make_forward,
 )
 from lemma.protocol import LemmaChallenge, ReasoningStep
@@ -50,11 +47,6 @@ def _synapse(phase: str, validator_hotkey: str) -> LemmaChallenge:
     return synapse
 
 
-def _clear_cache() -> None:
-    with _cr_lock:
-        _commit_reveal_cache.clear()
-
-
 def test_commit_reveal_cache_key_includes_validator_hotkey() -> None:
     a = _synapse("commit", "validator-a")
     b = _synapse("commit", "validator-b")
@@ -63,17 +55,16 @@ def test_commit_reveal_cache_key_includes_validator_hotkey() -> None:
 
 
 def test_commit_reveal_cache_entry_expires() -> None:
-    _clear_cache()
+    cache = CommitRevealCache(ttl_s=1.0)
     key = ("validator-a", "gen/1", "m1")
 
-    with _cr_lock:
-        _store_commit_reveal_cache(key, ("n", "proof", "trace", None), now=100.0, ttl_s=1.0)
-        assert _pop_commit_reveal_cache(key, now=102.0) is None
+    cache.store(key, ("n", "proof", "trace", None), now=100.0)
+    assert cache.pop(key, now=102.0) is None
 
 
 async def test_miner_commit_reveal_cache_is_validator_bound() -> None:
-    _clear_cache()
-    forward = make_forward(_settings(), _Prover())
+    cache = CommitRevealCache()
+    forward = make_forward(_settings(), _Prover(), commit_reveal_cache=cache)
 
     commit = await forward(_synapse("commit", "validator-a"))
     assert commit.proof_commitment_hex
@@ -87,3 +78,15 @@ async def test_miner_commit_reveal_cache_is_validator_bound() -> None:
     assert reveal.axon.status_code is None
     assert reveal.proof_script
     assert reveal.commit_reveal_nonce_hex
+
+
+async def test_miner_commit_reveal_cache_is_forward_instance_scoped() -> None:
+    commit_forward = make_forward(_settings(), _Prover(), commit_reveal_cache=CommitRevealCache())
+    reveal_forward = make_forward(_settings(), _Prover(), commit_reveal_cache=CommitRevealCache())
+
+    commit = await commit_forward(_synapse("commit", "validator-a"))
+    assert commit.proof_commitment_hex
+
+    reveal = await reveal_forward(_synapse("reveal", "validator-a"))
+    assert reveal.axon.status_code == 400
+    assert "no cached commit" in (reveal.axon.status_message or "")
