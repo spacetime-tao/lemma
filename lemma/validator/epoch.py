@@ -94,16 +94,21 @@ def _build_judge(settings: LemmaSettings, dry_run: bool) -> Judge:
 
 
 def _coldkey_for_uid(metagraph: object, uid: int) -> str:
+    return _coldkey_for_uid_or_none(metagraph, uid) or f"uid:{uid}"
+
+
+def _coldkey_for_uid_or_none(metagraph: object, uid: int) -> str | None:
     cks = getattr(metagraph, "coldkeys", None)
     if cks is None:
-        return f"uid:{uid}"
+        return None
     try:
         v = cks[uid]
         if hasattr(v, "item"):
-            return str(v.item())
-        return str(v)
+            v = v.item()
+        s = str(v).strip()
+        return s or None
     except Exception:
-        return f"uid:{uid}"
+        return None
 
 
 def _hotkey_ss58_for_uid(metagraph: object, uid: int) -> str | None:
@@ -537,6 +542,7 @@ async def run_epoch(
                                 rubric=rubric,
                                 profile=export_profile,
                                 proof_metrics=vr_i.proof_metrics,
+                                coldkey=_coldkey_for_uid_or_none(metagraph, uid_i),
                             ),
                         )
                 ent = entry_from_scores(
