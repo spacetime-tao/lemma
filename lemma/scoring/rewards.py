@@ -17,14 +17,13 @@ def entry_from_scores(
     theorem_statement: str,
     proof_script: str,
     proof_weight: float,
-    token_model: str = "gpt-4",
     proof_intrinsic_strip_comments: bool = True,
 ) -> ScoredEntry:
     """Blend intrinsic proof heuristic with judge rubric (``proof_weight`` in ``[0,1]``)."""
     w = max(0.0, min(1.0, float(proof_weight)))
     p_inst = proof_intrinsic_score(proof_script, strip_comments=proof_intrinsic_strip_comments)
     combined = w * p_inst + (1.0 - w) * float(rubric.composite)
-    toks = count_tokens(trace, model=token_model)
+    toks = count_tokens(trace)
     fp = submission_fingerprint(theorem_statement, proof_script, trace)
     return ScoredEntry(
         uid=uid,

@@ -226,7 +226,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **`scoring/__init__.py`**: re-exports unused by validator imports.
 - **Style proliferation:** mixed dataclass / pydantic / hand JSON (`ScoredEntry`, `RubricScore`, …).
 - **`ScoredEntry.composite` vs `reasoning_score`**: duplicate identity — consolidate naming.
-- **`tokens.py` / tiktoken:** monotone proxy — `len(text)` candidate per audit.
+- **`tokens.py` / tiktoken:** replaced with deterministic `len(text)` trace-length proxy; dependency removed.
 - **Dead merge path:** `mix_sub_problem_seed` multi-round when K=1 default.
 
 ### 13.4 Lean sandbox
@@ -283,7 +283,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **`scripts/load_minif2f.py`** removed; `scripts/build_lemma_catalog.py` is the single catalog rebuild path.
 - **`scripts/lemma-run`** removed; docs use standard `uv run` commands instead of a repo wrapper.
 - **`docs/comparator.md`** clarified as experimental/default-off; no bundled production comparator or profile pin.
-- **`pyproject.toml` extras** — anthropic/tiktoken/cli optional split candidate.
+- **`pyproject.toml` extras** — `tiktoken` removed; remaining anthropic/cli split candidates need a broader provider/CLI decision.
 - **`Dockerfile`** full `docker.io` engine vs CLI-only — image size.
 
 ---

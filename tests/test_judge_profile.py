@@ -43,7 +43,7 @@ def test_judge_profile_includes_validator_scoring_policy() -> None:
     )
     d = judge_profile_dict(s)
 
-    assert d["profile_schema"] == "lemma_validator_profile_v2"
+    assert d["profile_schema"] == "lemma_validator_profile_v3"
     assert d["problem_policy"]["problem_seed_quantize_blocks"] == 55
     assert d["verification_policy"]["lean_verify_timeout_s"] == 123
     assert d["verification_policy"]["timeout_split_hard_mult"] == 1.3

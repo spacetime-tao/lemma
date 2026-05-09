@@ -490,7 +490,6 @@ async def run_epoch(
                     theorem_statement=resp_i.theorem_statement,
                     proof_script=resp_i.proof_script or "",
                     proof_weight=settings.lemma_score_proof_weight,
-                    token_model=settings.lemma_pareto_token_model,
                     proof_intrinsic_strip_comments=settings.lemma_proof_intrinsic_strip_comments,
                 )
                 return ent, "ok"

@@ -745,14 +745,6 @@ class LemmaSettings(BaseSettings):
         ),
         description="Number of distinct theorems sampled per validator epoch (sequential miner queries).",
     )
-    lemma_pareto_token_model: str = Field(
-        default="gpt-4",
-        validation_alias=AliasChoices(
-            "LEMMA_PARETO_TOKEN_MODEL",
-            "lemma_pareto_token_model",
-        ),
-        description="tiktoken model name for Pareto trace-length axis (approximate).",
-    )
     lemma_commit_reveal_enabled: bool = Field(
         default=False,
         validation_alias=AliasChoices(

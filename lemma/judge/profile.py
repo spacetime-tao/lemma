@@ -50,7 +50,7 @@ def judge_profile_dict(settings: LemmaSettings) -> dict[str, object]:
     """Stable dict for hashing (no API keys). Active provider only for model fields."""
     stored = judge_provider_for_profile_hash(settings)
     out: dict[str, object] = {
-        "profile_schema": "lemma_validator_profile_v2",
+        "profile_schema": "lemma_validator_profile_v3",
         "rubric_sha256": rubric_sha256(),
         "judge_provider": stored,
         "judge_temperature": float(settings.judge_temperature),
@@ -76,7 +76,6 @@ def judge_profile_dict(settings: LemmaSettings) -> dict[str, object]:
         "scoring_policy": {
             "lemma_score_proof_weight": float(settings.lemma_score_proof_weight),
             "lemma_proof_intrinsic_strip_comments": bool(settings.lemma_proof_intrinsic_strip_comments),
-            "lemma_pareto_token_model": settings.lemma_pareto_token_model,
             "lemma_scoring_dedup_identical": bool(settings.lemma_scoring_dedup_identical),
             "lemma_scoring_coldkey_dedup": bool(settings.lemma_scoring_coldkey_dedup),
             "lemma_reputation_ema_alpha": float(settings.lemma_reputation_ema_alpha),
