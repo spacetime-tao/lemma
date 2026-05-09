@@ -28,7 +28,7 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 
 ### Scoring & objective
 
-- [x] **Proof intrinsic (partial)** — Lean `--` / `/- … -/` stripped before the heuristic (`LEMMA_PROOF_INTRINSIC_STRIP_COMMENTS`, default on). Default **`LEMMA_SCORE_PROOF_WEIGHT=0.35`** favors judge composite over the heuristic. **Still open:** elaborator-backed metrics or further weight tuning.
+- [x] **Proof intrinsic (partial)** — Lean `--` / `/- … -/` stripped before the heuristic (`LEMMA_PROOF_INTRINSIC_STRIP_COMMENTS`, default on). Default **`LEMMA_SCORE_PROOF_WEIGHT=0.35`** favors judge composite over the heuristic. Decision note: [proof-intrinsic-decision.md](proof-intrinsic-decision.md). **Still open:** lower the default weight or replace with a Lean/elaborator-backed metric; do not add more regex padding checks.
 - [x] **Credibility multiplier** — Per-UID verify-pass EMA persisted in reputation JSON; score uses `(credibility ** LEMMA_REPUTATION_CREDIBILITY_EXPONENT)` after EMA smoothing (`LEMMA_REPUTATION_VERIFY_CREDIBILITY_ALPHA`, default 0.08; set to **0** to freeze credibility updates).
 - [x] **Training export** — Documented gaming/leakage ([training_export.md](training_export.md)); **`LEMMA_TRAINING_EXPORT_PROFILE=reasoning_only`** omits proof, judge rubric, and Pareto weights (`lemma/validator/training_export.py`).
 
@@ -73,5 +73,6 @@ Track in issues or refactors as capacity allows: consolidate CLI dry-run paths, 
 - Non-overlapping cleanup and repo-split plan: [workplan.md](workplan.md)
 - Full external-audit remediation checklist (prioritized): [audit-remediation.md](audit-remediation.md)
 - Implementation map: [incentive_migration.md](incentive_migration.md)
+- Proof intrinsic scoring decision: [proof-intrinsic-decision.md](proof-intrinsic-decision.md)
 - Scoring entrypoint: `lemma/scoring/rewards.py`, `lemma/scoring/proof_intrinsic.py`
 - Epoch loop: `lemma/validator/epoch.py`

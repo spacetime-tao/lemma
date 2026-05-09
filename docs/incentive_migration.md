@@ -8,12 +8,12 @@ This document tracks **post-audit** mechanism changes in Lemma: proof-centric sc
 
 | Mechanism | Env / behavior |
 |-----------|----------------|
-| Proof + judge blend | `LEMMA_SCORE_PROOF_WEIGHT` (default **0.35** intrinsic / **0.65** judge composite); tune per subnet policy. |
+| Proof + judge blend | `LEMMA_SCORE_PROOF_WEIGHT` (default **0.35** intrinsic / **0.65** judge composite); tune per subnet policy. See [proof-intrinsic-decision.md](proof-intrinsic-decision.md) before changing defaults. |
 | Identical submission dedup | `LEMMA_SCORING_DEDUP_IDENTICAL=1` — same `(theorem, proof, trace)` keeps best score. |
 | Coldkey dedup | `LEMMA_SCORING_COLDKEY_DEDUP=1` — one hotkey per coldkey (metagraph). |
 | EMA reputation | `LEMMA_REPUTATION_EMA_ALPHA` (default **0.08**); state file `LEMMA_REPUTATION_STATE_PATH` or `~/.lemma/validator_reputation.json`. |
 | Verify credibility | `LEMMA_REPUTATION_VERIFY_CREDIBILITY_ALPHA` (default **0.08**) — EMA toward 1.0 on Lean verify pass, 0.0 on fail; persisted with reputation JSON. Applied as `(credibility ** LEMMA_REPUTATION_CREDIBILITY_EXPONENT)` after EMA smoothing (exponent **0** disables the multiplier). |
-| Proof intrinsic | `LEMMA_SCORE_PROOF_WEIGHT` blend; `LEMMA_PROOF_INTRINSIC_STRIP_COMMENTS` (default **on**) strips Lean `--` / `/- … -/` before the length/`by`-count heuristic. |
+| Proof intrinsic | `LEMMA_SCORE_PROOF_WEIGHT` blend; `LEMMA_PROOF_INTRINSIC_STRIP_COMMENTS` (default **on**) strips Lean `--` / `/- … -/` before the length/`by`-count heuristic. Current stance: low-weight bootstrap signal only; do not extend with more regex padding checks. |
 | Multi-theorem epochs | `LEMMA_EPOCH_PROBLEM_COUNT` (default **1**) — sequential challenges per epoch. |
 | Judge hardening | Fenced miner blocks + strict single-object JSON rubric parse (anchored rubric spans + skip-invalid candidates when multiple `{...}` fragments appear). |
 | Empty-epoch uniform | Validator UID excluded from uniform weights when possible. |
@@ -37,6 +37,7 @@ Adding templates changes `generated_registry_sha256`. Operators must run `lemma-
 ## References
 
 - Scoring: `lemma/scoring/rewards.py`, `lemma/scoring/proof_intrinsic.py`, `lemma/validator/epoch.py`
+- Proof intrinsic decision: [proof-intrinsic-decision.md](proof-intrinsic-decision.md)
 - Dedup: `lemma/scoring/dedup.py`
 - Reputation: `lemma/scoring/reputation.py`
 - Problem mix: `lemma/problems/generated.py` (`expand_seed_for_problem_rng`), `lemma/common/problem_seed.py` (`mix_sub_problem_seed`)

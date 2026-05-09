@@ -40,6 +40,7 @@ lemma --help
 | Comparator hook | [comparator.md](docs/comparator.md) |
 | Generated problems | [generated-problems.md](docs/generated-problems.md) |
 | Catalog sources | [catalog-sources.md](docs/catalog-sources.md) |
+| Proof intrinsic scoring | [proof-intrinsic-decision.md](docs/proof-intrinsic-decision.md) |
 | System requirements | [system-requirements.md](docs/system-requirements.md) |
 
 ## References
