@@ -456,7 +456,7 @@ def docs_cmd(open_slug: str | None, pick: bool) -> None:
     help="Compact key=value lines (original layout; best for scripts and copy-paste diffs).",
 )
 def meta_cmd(raw: bool) -> None:
-    """Canonical fingerprints: generated templates + judge rubric + your judge env (validator parity)."""
+    """Canonical fingerprints: generated templates + validator scoring profile."""
     import json
 
     from lemma.judge.fingerprint import rubric_sha256
@@ -497,7 +497,7 @@ def meta_cmd(raw: bool) -> None:
     click.echo(
         stylize(
             "Why this exists: validators must agree on (1) which generated templates exist and "
-            "(2) how the judge scores answers — otherwise weights are meaningless. "
+            "(2) how answers are scored and accepted — otherwise weights are meaningless. "
             "Subnet operators publish these hashes so everyone runs the same stack.\n",
             dim=True,
         ),
@@ -550,10 +550,9 @@ def meta_cmd(raw: bool) -> None:
         stylize("  • ", dim=True)
         + stylize("judge_profile", fg="green")
         + stylize(
-            " — fingerprint of your active judge configuration (no API keys): provider, model id, "
-            "temperature, max_tokens, rubric ref, and for OpenAI-compatible judges the normalized "
-            "OPENAI_BASE_URL. Two validators only match if all of those fields match — not just the model. "
-            "The base URL is part of the hash (same logical endpoint must string-match after trimming).\n",
+            " — fingerprint of your active validator scoring profile (no API keys): judge stack, rubric, "
+            "problem cadence, verification timeouts, scoring blend, dedup, reputation, and protocol hooks "
+            "that affect accepted responses. Two validators only match if all pinned fields match.\n",
             dim=True,
         ),
         nl=False,
@@ -561,7 +560,8 @@ def meta_cmd(raw: bool) -> None:
     click.echo(
         stylize(
             "Why yours may differ from someone else’s: different OPENAI_MODEL, JUDGE_TEMPERATURE, "
-            "OPENAI_BASE_URL text, or repo version (rubric). That’s expected until you align env + git "
+            "OPENAI_BASE_URL text, scoring settings, problem cadence, verifier policy, or repo version. "
+            "That’s expected until you align env + git "
             "with the subnet policy.\n",
             dim=True,
         ),

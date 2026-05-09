@@ -30,9 +30,9 @@ Use `id` as `OPENAI_MODEL`.
 
 **Required** for `lemma validator`: `JUDGE_PROVIDER=chutes`, `OPENAI_MODEL=deepseek-ai/DeepSeek-V3.2-TEE`, and `OPENAI_BASE_URL=https://llm.chutes.ai/v1` — no self-hosted or alternate judge stack for scoring (`openai` remains a legacy alias for the same HTTP client path). Set **`JUDGE_OPENAI_API_KEY`** to your Chutes inference token (or legacy **`OPENAI_API_KEY`** if you keep a single judge key there). Miners use `PROVER_*` and may call any prover model the operator runs.
 
-One pinned stack per subnet: `uv run lemma meta` → `judge_profile_sha256` → optional `JUDGE_PROFILE_SHA256_EXPECTED`.
+One pinned validator scoring profile per subnet: `uv run lemma meta` → `judge_profile_sha256` → optional `JUDGE_PROFILE_SHA256_EXPECTED`. This includes the judge stack and the deterministic scoring/cadence/verification knobs that affect weights.
 
-Judge emits short JSON. After changing endpoints or models, rerun `uv run lemma meta` and redistribute hashes.
+Judge emits short JSON. After changing endpoints, models, scoring knobs, problem cadence, or verifier policy, rerun `uv run lemma meta` and redistribute hashes.
 
 ## Miners (prover)
 

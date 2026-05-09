@@ -10,7 +10,7 @@ Prerequisites: [getting-started.md](getting-started.md).
 
 ## Judge
 
-- `uv run lemma meta`; distribute `judge_rubric_sha256` and `judge_profile_sha256`.
+- `uv run lemma meta`; distribute `judge_rubric_sha256` and `judge_profile_sha256` (judge stack plus deterministic scoring/cadence/verification policy).
 - `JUDGE_PROFILE_SHA256_EXPECTED` to fail on misconfiguration.
 - Validators: Chutes `OPENAI_BASE_URL` + `OPENAI_MODEL=deepseek-ai/DeepSeek-V3.2-TEE` (enforced; no vLLM for the judge). Miners: prover can use a different host via `PROVER_OPENAI_BASE_URL` / `PROVER_MODEL` as needed; from containers use a host-reachable URL (`host.docker.internal` on macOS/Windows, bridge gateway on Linux).
 
