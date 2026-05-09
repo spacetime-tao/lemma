@@ -246,7 +246,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 
 ### 13.5 Miner
 
-- **`PROVER_SYSTEM`** (~130 lines) — reference-spec liability (`prover.py`).
+- **`PROVER_SYSTEM`** slimmed from a long reference-spec prompt to a focused JSON / reasoning / Lean contract.
 - Duplicated OpenAI vs Anthropic branches in prover — shared solve/log/parse flow extracted; provider-specific
   HTTP calls remain separate.
 - Four orthogonal observability toggles → log shape explosion — documented uppercase env names remain;
