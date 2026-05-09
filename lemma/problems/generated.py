@@ -177,6 +177,22 @@ def _b_list_len_easy(rng: random.Random, topic: str, seed: int, name: str) -> Pr
     )
 
 
+def _b_list_reverse_len_easy(rng: random.Random, topic: str, seed: int, name: str) -> Problem:
+    a = rng.randint(1, 40)
+    b = rng.randint(1, 40)
+    c = rng.randint(1, 40)
+    body = f"""theorem {name} : ([{a}, {b}, {c}] : List Nat).reverse.length = 3 := by
+  sorry"""
+    return _mk_problem(
+        seed=seed,
+        topic=topic,
+        split="easy",
+        theorem_name=name,
+        type_expr=f"([{a}, {b}, {c}] : List Nat).reverse.length = 3",
+        challenge_body=body,
+    )
+
+
 def _b_real_add_norm_easy(rng: random.Random, topic: str, seed: int, name: str) -> Problem:
     a = rng.randint(1, 20)
     b = rng.randint(1, 20)
@@ -202,6 +218,19 @@ def _b_forall_le_refl_medium(rng: random.Random, topic: str, seed: int, name: st
         split="medium",
         theorem_name=name,
         type_expr="∀ n : Nat, n ≤ n",
+        challenge_body=body,
+    )
+
+
+def _b_list_reverse_length_medium(rng: random.Random, topic: str, seed: int, name: str) -> Problem:
+    body = f"""theorem {name} (xs : List Nat) : xs.reverse.length = xs.length := by
+  sorry"""
+    return _mk_problem(
+        seed=seed,
+        topic=topic,
+        split="medium",
+        theorem_name=name,
+        type_expr="∀ xs : List Nat, xs.reverse.length = xs.length",
         challenge_body=body,
     )
 
@@ -293,6 +322,19 @@ def _b_dvd_trans_medium(rng: random.Random, topic: str, seed: int, name: str) ->
         split="medium",
         theorem_name=name,
         type_expr="∀ a b c : Nat, a ∣ b → b ∣ c → a ∣ c",
+        challenge_body=body,
+    )
+
+
+def _b_set_inter_subset_medium(rng: random.Random, topic: str, seed: int, name: str) -> Problem:
+    body = f"""theorem {name} (A B : Set Nat) : A ∩ B ⊆ A := by
+  sorry"""
+    return _mk_problem(
+        seed=seed,
+        topic=topic,
+        split="medium",
+        theorem_name=name,
+        type_expr="∀ A B : Set Nat, A ∩ B ⊆ A",
         challenge_body=body,
     )
 
@@ -408,6 +450,20 @@ def _b_finset_union_card_hard(rng: random.Random, topic: str, seed: int, name: s
     )
 
 
+def _b_set_inter_union_distrib_hard(rng: random.Random, topic: str, seed: int, name: str) -> Problem:
+    body = f"""theorem {name} (A B C : Set Nat) :
+    A ∩ (B ∪ C) = (A ∩ B) ∪ (A ∩ C) := by
+  sorry"""
+    return _mk_problem(
+        seed=seed,
+        topic=topic,
+        split="hard",
+        theorem_name=name,
+        type_expr="∀ A B C : Set Nat, A ∩ (B ∪ C) = (A ∩ B) ∪ (A ∩ C)",
+        challenge_body=body,
+    )
+
+
 def _b_mul_add_distrib_nat_medium(rng: random.Random, topic: str, seed: int, name: str) -> Problem:
     a, b, c = rng.randint(1, 30), rng.randint(1, 30), rng.randint(1, 30)
     body = f"""theorem {name} : ({a} + {b}) * {c} = {a} * {c} + {b} * {c} := by
@@ -519,15 +575,18 @@ _RAW_BUILDERS: tuple[tuple[Split, BuilderFn], ...] = (
     ("easy", _b_nat_le_norm_easy),
     ("easy", _b_bool_and_easy),
     ("easy", _b_list_len_easy),
+    ("easy", _b_list_reverse_len_easy),
     ("easy", _b_real_add_norm_easy),
     ("easy", _b_finset_card_easy),
     ("medium", _b_forall_le_refl_medium),
+    ("medium", _b_list_reverse_length_medium),
     ("medium", _b_add_comm_nat_medium),
     ("medium", _b_mul_assoc_nat_medium),
     ("medium", _b_sq_expand_real_medium),
     ("medium", _b_implication_true_medium),
     ("medium", _b_odd_square_odd_medium),
     ("medium", _b_dvd_trans_medium),
+    ("medium", _b_set_inter_subset_medium),
     ("medium", _b_sum_range_medium),
     ("medium", _b_det_unit_medium),
     ("medium", _b_metric_triangle_medium),
@@ -536,6 +595,7 @@ _RAW_BUILDERS: tuple[tuple[Split, BuilderFn], ...] = (
     ("hard", _b_inf_many_primes_hard),
     ("hard", _b_sqrt2_irrational_hard),
     ("hard", _b_finset_union_card_hard),
+    ("hard", _b_set_inter_union_distrib_hard),
     ("medium", _b_mul_add_distrib_nat_medium),
     ("medium", _b_sq_nonneg_real_medium),
     ("medium", _b_abs_triangle_int_medium),
