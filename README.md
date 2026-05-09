@@ -38,7 +38,6 @@ lemma --help
 | Governance / pins | [governance.md](docs/governance.md) |
 | Toolchain / image pinning | [toolchain-image-policy.md](docs/toolchain-image-policy.md) |
 | Tests | [testing.md](docs/testing.md) |
-| Comparator hook | [comparator.md](docs/comparator.md) |
 | Generated problems | [generated-problems.md](docs/generated-problems.md) |
 | Problem supply policy | [problem-supply-policy.md](docs/problem-supply-policy.md) |
 | Catalog sources | [catalog-sources.md](docs/catalog-sources.md) |

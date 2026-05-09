@@ -24,7 +24,6 @@ from lemma.lean.cheats import (
     lean_driver_failed,
     scan_submission_for_cheats,
 )
-from lemma.lean.comparator_hook import hook_failure_reason, run_comparator_hook
 from lemma.lean.proof_metrics import (
     LeanProofMetrics,
     collect_host_proof_metrics,
@@ -159,7 +158,6 @@ VerifyReason = Literal[
     "oom",
     "docker_error",
     "remote_error",
-    "comparator_rejected",
     "attest_trusted",
 ]
 
@@ -416,14 +414,6 @@ class LeanSandbox:
                 stdout_tail=out[-4000:],
                 build_seconds=elapsed,
             )
-        hook = run_comparator_hook(work, timeout_s=float(self.timeout_s))
-        if hook is not None and hook_failure_reason(hook):
-            return VerifyResult(
-                passed=False,
-                reason="comparator_rejected",
-                stderr_tail=hook.stderr_tail[-8000:],
-                build_seconds=elapsed,
-            )
         proof_metrics = None
         if self.proof_metrics_enabled:
             proof_metrics = collect_host_proof_metrics(
@@ -544,14 +534,6 @@ class LeanSandbox:
                 passed=False,
                 reason="axiom_violation",
                 stdout_tail=text[-4000:] + extra,
-                build_seconds=elapsed,
-            )
-        hook = run_comparator_hook(work, timeout_s=float(self.timeout_s))
-        if hook is not None and hook_failure_reason(hook):
-            return VerifyResult(
-                passed=False,
-                reason="comparator_rejected",
-                stderr_tail=hook.stderr_tail[-8000:],
                 build_seconds=elapsed,
             )
         proof_metrics = parse_proof_metrics_line(text) if self.proof_metrics_enabled else None

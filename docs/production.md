@@ -38,10 +38,6 @@ No bundled dashboard. Typical: logs or JSONL to storage + BI ([faq.md](faq.md)).
 
 Document `EMPTY_EPOCH_WEIGHTS_POLICY`, `SET_WEIGHTS_*`, block-derived forward wait / LLM timeouts, registration rules. Watch `lemma_epoch_summary` and `judge_errors`.
 
-## Comparator
-
-Leave the experimental comparator hook off unless the operator publishes an exact shared process-env policy ([comparator.md](comparator.md)).
-
 ## Remote Lean verify worker (`lemma lean-worker`)
 
 When `LEMMA_LEAN_VERIFY_REMOTE_URL` points at an HTTP worker:
