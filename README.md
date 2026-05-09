@@ -1,6 +1,6 @@
 # Lemma
 
-> **Lemma: Verified reasoning for mathematics on [Bittensor](https://docs.learnbittensor.org/).** Miners use LLMs to solve theorems by writing proofs, and offering an informal, step-by-step explanation. Validators grade the proof (it either passes or it fails) and they grade the quality of the informal reasoning response.
+> **Lemma: verified theorem proving for mathematics on [Bittensor](https://docs.learnbittensor.org/).** Miners submit Lean proof scripts for published theorem statements. Validators first check the proof mechanically; the current default also judges the informal reasoning trace of Lean-valid submissions as a bootstrap ranking signal.
 
 A **theorem** is the precise claim to establish; a **proof** is the formal, machine-checkable argument that shows it. **Lean** is a proof assistant (and language): it checks those proofs mechanically, line by line. Validators run that check in **Docker** (lean-sandbox image).
 
@@ -42,7 +42,9 @@ lemma --help
 | Generated problems | [generated-problems.md](docs/generated-problems.md) |
 | Problem supply policy | [problem-supply-policy.md](docs/problem-supply-policy.md) |
 | Catalog sources | [catalog-sources.md](docs/catalog-sources.md) |
+| Objective decision | [objective-decision.md](docs/objective-decision.md) |
 | Proof intrinsic scoring | [proof-intrinsic-decision.md](docs/proof-intrinsic-decision.md) |
+| Judge incentive role | [judge-incentive-decision.md](docs/judge-incentive-decision.md) |
 | Credibility exponent policy | [credibility-exponent-decision.md](docs/credibility-exponent-decision.md) |
 | Commit-reveal threat model | [commit-reveal.md](docs/commit-reveal.md) |
 | Miner verify attest threat model | [miner-verify-attest.md](docs/miner-verify-attest.md) |

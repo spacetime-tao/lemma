@@ -74,7 +74,7 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 | ID | Issue | Source § | Priority | Remediation direction |
 |----|--------|----------|----------|------------------------|
 | **O1** | Rank mixes kernel-verifiable proof with **LLM judge** on miner prose; lowering proof weight to default `w=0.10` reduces text-heuristic padding risk but leaves judge dominance explicit | R3 §2, §11 | P4 / product | **Decision boundary documented:** judge is bootstrap by default unless governance chooses permanent explanation-quality incentives; next scoring change must choose permanent judge, capped/bootstrap judge, or judge-free mode ([judge-incentive-decision.md](judge-incentive-decision.md)). |
-| **O2** | `primary_design_axis` / one-sentence rule in KB violated by current honest description | R3 §2.3 | P4 | Rewrite mechanism doc or change mechanism to match KB |
+| **O2** | `primary_design_axis` / one-sentence rule in KB violated by current honest description | R3 §2.3 | P4 | **Done/bounded:** current objective pinned as Lean-valid theorem proving; judged reasoning documented as a bootstrap ranking layer, not the default identity of the subnet ([objective-decision.md](objective-decision.md)). |
 | **O3** | Pareto + coldkey dedup + identical dedup still allow sybil farming per R3 math | R3 §2.2, §8, §12 | P2/P4 | Economic modeling; not fixable by parser alone |
 
 ---
@@ -297,7 +297,7 @@ Abbreviated; see `knowledge/` for full YAML. Status reflects **Round 3 narrative
 
 | Invariant | KB pointer | Round 3 cited status |
 |-----------|------------|----------------------|
-| One-sentence primary design axis | `subnet.invariants.yaml` | Still violated |
+| One-sentence primary design axis | `subnet.invariants.yaml` | Current objective pinned in `docs/objective-decision.md`; judge layer bounded separately |
 | Validator-only development | `subnet.invariants.yaml#architecture.validator_only_development` | Still violated (reference miner + PROVER_SYSTEM) |
 | Single-file validator pattern | `validator.contract.yaml` | Still violated by package layout; root `validator.py` stub removed |
 | Push compute to miners | `subnet.invariants.yaml#compute_distribution` | Still violated |

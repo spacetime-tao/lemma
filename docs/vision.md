@@ -1,6 +1,10 @@
 # Vision & roadmap
 
-Lemma is a **Bittensor subnet** where participants answer formal math challenges in **Lean 4**: they submit a **proof script** (and, on the default path, a **reasoning trace**). Validators **verify proofs** in **Docker** (lean-sandbox image). An **LLM judge** scores how well the trace explains the work when a trace is part of the submission. **Weights on chain** follow from that pipeline.
+Lemma is a **Bittensor subnet** where participants answer formal math challenges in **Lean 4**: they submit a **proof script** (and, on the default path, a **reasoning trace**). Validators **verify proofs** in **Docker** (lean-sandbox image). An **LLM judge** currently scores how well the trace explains the work after Lean passes. **Weights on chain** follow from that pipeline.
+
+**One-sentence objective:** Lemma measures miners' ability to produce Lean-valid mathematical proofs for published theorem statements.
+
+The informal-reasoning judge is a current bootstrap ranking signal for submissions that already pass Lean, not the default long-term identity of the subnet. See [objective-decision.md](objective-decision.md) and [judge-incentive-decision.md](judge-incentive-decision.md).
 
 **Important distinction:** what the subnet *must* check mechanically is the **proof script against the locked `theorem`**. *How* that script was produced—autonomous model, human mathematician, or a mixed team—is largely **out of band** for Lean. Today’s reference miner is LLM-driven. A planned **bounty / long-horizon lane** (opt-in, higher stakes, offline-friendly) is **not** required at launch—it fits **after** the base economy is healthy (see **Economics v0 → v1** below).
 
@@ -96,6 +100,7 @@ After real traffic: consider **partial-progress** or **lemma-submission** tracks
 | --- | --- |
 | [Architecture](architecture.md) | Components and data flow today. |
 | [Governance](governance.md) | Pins, meta, policy. |
+| [Objective decision](objective-decision.md) | One-sentence objective and scoring boundary. |
 | [Problem supply policy](problem-supply-policy.md) | Public generated supply boundary and builder promotion checklist. |
 | [Getting started](getting-started.md) | Install and first commands. |
 | [Miner](miner.md) / [Validator](validator.md) | Operator detail. |

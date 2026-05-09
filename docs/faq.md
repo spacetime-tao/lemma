@@ -18,7 +18,7 @@ No subnet is perfectly ungameable; the goal is to make the easiest strategy also
 - **Judge-style over-optimization:** miners may tune wording for rubric points. Mitigation: Pareto combines rubric with brevity and operators can evolve rubric/profile hashes.
 - **Config drift across validators:** mismatched judge/model/config breaks fairness. Mitigation: publish one canonical stack and enforce `JUDGE_PROFILE_SHA256_EXPECTED`.
 
-One-line mental model: public deterministic rules are okay; you still need correct Lean proofs and strong judged reasoning under the same pinned validator policy.
+One-line mental model: Lemma measures Lean-valid theorem proving; today, passing submissions are also ranked by judged reasoning quality under the same pinned validator policy.
 
 For post-audit scoring changes (proof/judge blend, dedup, EMA, multi-theorem epochs, reserved protocol flags), see [incentive_migration.md](incentive_migration.md). For a **living checklist** of shipped items and known gaps, see [incentive-roadmap.md](incentive-roadmap.md). **Sybil / coldkey dedup** is *not* identity verification — see [sybil_economics.md](sybil_economics.md). **Dendrite/Axon + synapse body-hash** — see [transport.md](transport.md).
 
