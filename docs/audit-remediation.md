@@ -202,7 +202,7 @@ CLI alone cited as **43 %** of `lemma/` and **83 %** of combined runtime core si
 
 - **Dry-run surface** — duplicate aliases (`miner --dry-run`, `miner-dry`, `validator --dry-run`, `validator-dry`) removed; canonical commands are `lemma miner dry-run`, `lemma validator dry-run`, and `lemma validator config`.
 - **Argv hack:** `_rewrite_lemma_argv_numeric_menu` + `_LEMMA_QUICK_MENU_EXTRAS_JSON` mutated `sys.argv` on import (`main.py`); removed in the first CLI extraction trim.
-- **`uv_bootstrap.py`** + tests vs documenting `uv run`.
+- **`uv_bootstrap.py`** + tests vs documenting `uv run`; removed from core.
 - **`interactive_venv_shell.py`** (~176 LoC) vs one-line `source .venv`; removed in the first CLI extraction trim.
 - **`_looks_like_shell_step`** frozenset — partial shell interception.
 - **`leaderboard_cmd`** wraps `btcli`; **`miner_menu` / `validator_menu`** duplicated subcommands and were removed in the first CLI extraction trim.
@@ -268,7 +268,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 ### 13.7 Tests (coverage imbalance)
 
 - ~**20 %** mechanism math tests vs **~40 %** protocol vs **~42 %** glue vs **~7 %** pure CLI — author breakdown; periodically recompute.
-- Tests called out as low value: `uv_bootstrap`, `try_prover` flag tables, `problem_views` title case, `protocol_migration` no-op test, **`test_protocol.py` codifying body-hash fail-open**, thin `prompt_sanitize` coverage.
+- Tests called out as low value: `uv_bootstrap` (removed), `try_prover` flag tables, `problem_views` title case, `protocol_migration` no-op test, **`test_protocol.py` codifying body-hash fail-open**, thin `prompt_sanitize` coverage.
 - **Missing:** `tests/test_rewards.py` for **`entry_from_scores`** / rewards assembly (audit claim).
 
 ### 13.8 Catalog (`lemma/catalog/`)
