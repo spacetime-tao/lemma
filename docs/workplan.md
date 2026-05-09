@@ -81,7 +81,7 @@ Once `lemma-cli` exists and can call core functions:
 3. Move catalog-building helpers out of runtime package if only scripts/tests use them. **Done: builder/parser helpers moved to `tools/catalog`; runtime keeps `lemma/catalog/constants.py`.**
 4. Remove root stubs and unused assets once docs no longer point at them. **Root cleanup done: removed `validator.py`, `voibes.jpeg`, obsolete `env.example`, superseded `scripts/load_minif2f.py`, and the old `scripts/lemma-run` wrapper. Comparator docs now match default-off behavior; `tiktoken` was removed, `anthropic` and `btcli` are optional, and the runtime Docker image no longer installs the full Docker engine. Larger misc items remain.**
 5. Keep tests focused on proof acceptance, scoring, protocol integrity, and deterministic problem selection. **Ongoing.**
-6. Simplify small glue APIs when an audit item has a single unused path. **Started: removed the unused third return from `apply_ema_to_entries`; consolidated dedup best-by-key logic.**
+6. Simplify small glue APIs when an audit item has a single unused path. **Started: removed the unused third return from `apply_ema_to_entries`; consolidated dedup best-by-key logic; removed unused scoring package re-exports.**
 
 ## First PR Sequence
 
