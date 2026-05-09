@@ -60,17 +60,19 @@ def attest_spot_should_full_verify(
     theorem_id: str,
     metronome_id: str,
     spot_verify_fraction: float,
+    spot_verify_salt: str = "",
 ) -> bool:
     """Deterministic per (uid, theorem, round): whether this response runs full Lean verify.
 
     ``spot_verify_fraction`` in ``[0, 1]``: fraction of tuples selected for full verify.
     ``1.0`` = always verify; ``0.0`` = never verify (trust attest only — dangerous).
+    ``spot_verify_salt`` makes the selected subset less predictable before the salt is known.
     """
     fv = max(0.0, min(1.0, float(spot_verify_fraction)))
     if fv >= 1.0:
         return True
     if fv <= 0.0:
         return False
-    h = hashlib.sha256(f"{uid}\n{theorem_id}\n{metronome_id}".encode()).digest()
+    h = hashlib.sha256(f"{spot_verify_salt}\n{uid}\n{theorem_id}\n{metronome_id}".encode()).digest()
     x = int.from_bytes(h[:8], "big") / float(2**64)
     return x < fv

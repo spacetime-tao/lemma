@@ -67,6 +67,25 @@ def test_spot_verify_deterministic() -> None:
     assert a == b
 
 
+def test_spot_verify_salt_changes_some_selection() -> None:
+    plain = [
+        attest_spot_should_full_verify(uid=i, theorem_id="t", metronome_id="m", spot_verify_fraction=0.5)
+        for i in range(64)
+    ]
+    salted = [
+        attest_spot_should_full_verify(
+            uid=i,
+            theorem_id="t",
+            metronome_id="m",
+            spot_verify_fraction=0.5,
+            spot_verify_salt="validator-secret",
+        )
+        for i in range(64)
+    ]
+
+    assert plain != salted
+
+
 def test_spot_verify_fraction_one_always_full() -> None:
     assert (
         attest_spot_should_full_verify(uid=1, theorem_id="a", metronome_id="b", spot_verify_fraction=1.0)

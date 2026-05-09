@@ -787,6 +787,17 @@ class LemmaSettings(BaseSettings):
             "(rest trusted via attest only). 1.0 = always verify (default); 0.15 ≈ 15% heavy verify."
         ),
     )
+    lemma_miner_verify_attest_spot_verify_salt: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_SALT",
+            "lemma_miner_verify_attest_spot_verify_salt",
+        ),
+        description=(
+            "Optional validator/operator salt mixed into attest spot-verify selection. Keep non-empty salts "
+            "out of public docs; lemma meta exposes only a SHA256 fingerprint."
+        ),
+    )
     lemma_judge_profile_attest_enabled: bool = Field(
         default=False,
         validation_alias=AliasChoices(

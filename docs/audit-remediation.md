@@ -100,7 +100,7 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 | **A4** | On spot skip, theorem/proof mismatch not caught by verify | R3 §3.3 | P1 | Always validate theorem id vs response before scoring; cheap checks |
 | **A5** | “TEE” naming vs actual user-space Docker attest | R3 §3.4 | P3 | Docs + naming; no fake hardware claims |
 
-**2026-05 progress:** P4/A3 credibility impact patched: attest-trusted spot skips remain scoreable, but no longer improve verify credibility. Credibility only increases from validator Lean verification; full-verify failures still lower it.
+**2026-05 progress:** P4/A3 credibility impact patched: attest-trusted spot skips remain scoreable, but no longer improve verify credibility. Credibility only increases from validator Lean verification; full-verify failures still lower it. Spot selection now accepts `LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_SALT`; `judge_profile_sha256` pins its SHA-256 without exposing the salt.
 
 ---
 

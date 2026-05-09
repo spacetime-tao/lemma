@@ -398,6 +398,7 @@ async def run_epoch(
                 if settings.lemma_miner_verify_attest_enabled
                 else 1.0
             )
+            spot_salt = str(settings.lemma_miner_verify_attest_spot_verify_salt or "")
 
             async def _verify_one(
                 uid: int,
@@ -407,6 +408,7 @@ async def run_epoch(
                 _vto: int = verify_timeout_s,
                 _prob: Problem = problem,
                 _spot_frac: float = spot_frac,
+                _spot_salt: str = spot_salt,
             ) -> tuple[int, LemmaChallenge, VerifyResult] | None:
                 if settings.lemma_miner_verify_attest_enabled:
                     if not attest_spot_should_full_verify(
@@ -414,6 +416,7 @@ async def run_epoch(
                         theorem_id=_prob.id,
                         metronome_id=str(resp.metronome_id or ""),
                         spot_verify_fraction=_spot_frac,
+                        spot_verify_salt=_spot_salt,
                     ):
                         return (
                             uid,
