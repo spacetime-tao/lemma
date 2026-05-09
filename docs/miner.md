@@ -1,8 +1,8 @@
 # Miner
 
-Walkthrough: [getting-started.md](getting-started.md) — **`btcli`** (Bittensor CLI), `lemma-cli setup`, `lemma-run`. Prefer prompts over hand-editing `.env` (`lemma-cli configure chain`, `configure prover`, `configure axon`).
+Walkthrough: [getting-started.md](getting-started.md) — **`uv run btcli`** (Bittensor CLI), `lemma-cli setup`, then `uv run lemma …` from the repo root. Prefer prompts over hand-editing `.env` (`lemma-cli configure chain`, `configure prover`, `configure axon`).
 
-**Short checklist:** `lemma-cli setup` → coldkey funded → `btcli subnet register` on the same network/netuid as `.env` → `lemma miner dry-run` → **`lemma-cli rehearsal`** (see prover + Lean + judge on the live theorem) → fix axon IP/port if needed → `lemma miner start`. Run `lemma` for core command help; run `lemma-cli` for the friendly operator screen.
+**Short checklist:** `lemma-cli setup` → coldkey funded → `uv run btcli subnet register` on the same network/netuid as `.env` → `uv run lemma miner dry-run` → **`lemma-cli rehearsal`** (see prover + Lean + judge on the live theorem) → fix axon IP/port if needed → `uv run lemma miner start`. Run `uv run lemma` for core command help; run `lemma-cli` for the friendly operator screen.
 
 ### Prover LLM (`lemma-cli configure prover`)
 
@@ -13,21 +13,21 @@ Inference: Chutes is the usual default when prompted.
 ## Run
 
 ```bash
-./scripts/lemma-run lemma miner dry-run
-./scripts/lemma-run lemma miner start
+uv run lemma miner dry-run
+uv run lemma miner start
 ```
 
 While the axon is up, each validator forward **starts the prover immediately** — there is no intentional delay for “new theorem” windows; you compete as soon as traffic hits your axon. By contrast, `lemma-cli try-prover` is a manual one-off (same API billing pattern, but you pressed Enter).
 
-Daily forward cap: `MINER_MAX_FORWARDS_PER_DAY` or `lemma miner start --max-forwards-per-day N`.
+Daily forward cap: `MINER_MAX_FORWARDS_PER_DAY` or `uv run lemma miner start --max-forwards-per-day N`.
 
 ## Seeing replies, correctness, and Lean status
 
 Validators decide whether your proof typechecks; the miner process does not receive scores back on the axon path.
 
-- `lemma-cli try-prover` runs the **prover once** on whatever theorem `lemma status` would sample right now, then prints informal reasoning and `proof_script` (uses your prover API). Add `--verify` to run the Lean check after (default: Docker, same as validators).
+- `lemma-cli try-prover` runs the **prover once** on whatever theorem `uv run lemma status` would sample right now, then prints informal reasoning and `proof_script` (uses your prover API). Add `--verify` to run the Lean check after (default: Docker, same as validators).
 
-- When a validator forward starts, logs include **`my_uid`** and **`my_incentive`** from the **chain metagraph** (same kind of aggregate view as `btcli subnet show --netuid 467 --network test`) — a snapshot of subnet incentive for your hotkey, not a grade on this theorem.
+- When a validator forward starts, logs include **`my_uid`** and **`my_incentive`** from the **chain metagraph** (same kind of aggregate view as `uv run btcli subnet show --netuid 467 --network test`) — a snapshot of subnet incentive for your hotkey, not a grade on this theorem.
 - At **INFO** you get **`miner answered`** when the reply is ready; **`local_lean=`** is `PASS` / `FAIL` / … only if **`LEMMA_MINER_LOCAL_VERIFY=1`**. That flag is **optional**: validators always run Lean on your submission — enable local verify only if you want early PASS/FAIL on your machine (costs Docker CPU per forward while debugging). **`miner_forward_summary`** (default on) adds session rollups.
 
 - Set `LEMMA_MINER_FORWARD_TIMELINE=1` for **three INFO lines per forward**: **`miner timeline 1 RECEIVE`** (theorem, `deadline_block` vs current head, HTTP/wall time budgets, short statement preview), **`miner timeline 2 SOLVED`** (prover wall time, sizes), **`miner timeline 3 OUTCOME`** (`local_lean` if `LEMMA_MINER_LOCAL_VERIFY=1`, else a hint). Then **`miner answered`** as today. **Validator judge + final weights are not returned on the axon** — only optional **local Lean** mirrors validator proof-checking on your machine.
