@@ -9,7 +9,7 @@ This document tracks **post-audit** mechanism changes in Lemma: proof-centric sc
 | Mechanism | Env / behavior |
 |-----------|----------------|
 | Proof + judge blend | `LEMMA_SCORE_PROOF_WEIGHT` (default **0.10** intrinsic / **0.90** judge composite); tune per subnet policy. See [proof-intrinsic-decision.md](proof-intrinsic-decision.md) and [judge-incentive-decision.md](judge-incentive-decision.md) before changing defaults. |
-| Identical submission dedup | `LEMMA_SCORING_DEDUP_IDENTICAL=1` — same `(theorem, proof, trace)` keeps best score. |
+| Identical submission dedup | `LEMMA_SCORING_DEDUP_IDENTICAL=1` — same normalized `(theorem, proof, trace)` keeps best score; proof comments are stripped and whitespace is collapsed before fingerprinting. |
 | Coldkey dedup | `LEMMA_SCORING_COLDKEY_DEDUP=1` — one hotkey per coldkey (metagraph). |
 | EMA reputation | `LEMMA_REPUTATION_EMA_ALPHA` (default **0.08**); state file `LEMMA_REPUTATION_STATE_PATH` or `~/.lemma/validator_reputation.json`. |
 | Verify credibility | `LEMMA_REPUTATION_VERIFY_CREDIBILITY_ALPHA` (default **0.08**) — EMA toward 1.0 on Lean verify pass, 0.0 on fail; persisted with reputation JSON. Applied as `(credibility ** LEMMA_REPUTATION_CREDIBILITY_EXPONENT)` after EMA smoothing. The default exponent is **1.0**; exponent **0** disables the multiplier. See [credibility-exponent-decision.md](credibility-exponent-decision.md). |

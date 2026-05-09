@@ -3,16 +3,27 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from collections.abc import Callable
 
 from lemma.scoring.pareto import ScoredEntry
+from lemma.scoring.proof_intrinsic import strip_lean_comments_for_intrinsic
+
+
+def _collapse_ws(text: str) -> str:
+    return re.sub(r"\s+", " ", (text or "").strip())
 
 
 def submission_fingerprint(theorem_statement: str, proof_script: str, trace_text: str) -> str:
-    """Stable hash of miner-visible submission payload (per theorem)."""
+    """Stable hash of normalized miner-visible submission payload (per theorem)."""
+    parts = (
+        _collapse_ws(theorem_statement),
+        _collapse_ws(strip_lean_comments_for_intrinsic(proof_script)),
+        _collapse_ws(trace_text),
+    )
     h = hashlib.sha256()
-    for part in (theorem_statement, proof_script, trace_text):
-        h.update((part or "").encode("utf-8"))
+    for part in parts:
+        h.update(part.encode("utf-8"))
         h.update(b"\x1e")
     return h.hexdigest()
 
