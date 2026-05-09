@@ -356,73 +356,15 @@ def doctor_cmd() -> None:
     finish_cli_output()
 
 
-_DOCS_BY_SLUG: tuple[tuple[str, str], ...] = (
-    ("getting-started", "docs/getting-started.md"),
-    ("faq", "docs/faq.md"),
-    ("miner", "docs/miner.md"),
-    ("validator", "docs/validator.md"),
-    ("models", "docs/models.md"),
-    ("testing", "docs/testing.md"),
+@main.command(
+    "docs",
+    context_settings={"ignore_unknown_options": True, "allow_extra_args": True},
+    add_help_option=False,
 )
-_DOC_REL_BY_SLUG: dict[str, str] = dict(_DOCS_BY_SLUG)
-
-
-@main.command("docs")
-@click.option(
-    "--open",
-    "open_slug",
-    type=click.Choice([s for s, _ in _DOCS_BY_SLUG], case_sensitive=False),
-    default=None,
-    metavar="DOC",
-    help=(
-        "Open one doc in your default app (macOS open / Linux xdg-open / Windows). "
-        "Example: lemma docs --open faq"
-    ),
-)
-@click.option(
-    "--pick",
-    is_flag=True,
-    help="Choose which doc to open (interactive menu).",
-)
-def docs_cmd(open_slug: str | None, pick: bool) -> None:
-    """Print paths to main documentation files in this repository."""
-    if pick and open_slug is not None:
-        raise click.UsageError("Use either --pick or --open DOC, not both.")
-    repo = Path(__file__).resolve().parents[2]
-    click.echo(
-        stylize("Docs", fg="cyan", bold=True)
-        + stylize(
-            " (repo paths; `lemma docs --open getting-started` or `lemma docs --pick`)\n",
-            dim=True,
-        ),
-        nl=False,
-    )
-    for slug, rel in _DOCS_BY_SLUG:
-        path = repo / rel
-        exists = path.is_file()
-        label = f"  [{slug}]  {path}" if exists else f"  [{slug}]  {rel} (not found)"
-        click.echo(stylize(label, fg="green") if exists else stylize(label, fg="yellow"))
-
-    chosen_slug = open_slug
-    if pick:
-        click.echo("")
-        for i, (slug, _) in enumerate(_DOCS_BY_SLUG, start=1):
-            click.echo(f"  {i}. {stylize(f'lemma docs --open {slug}', fg='green')}")
-        n = click.prompt("Open which doc", type=click.IntRange(1, len(_DOCS_BY_SLUG)))
-        chosen_slug = _DOCS_BY_SLUG[n - 1][0]
-
-    if chosen_slug is None:
-        return
-
-    rel = _DOC_REL_BY_SLUG[chosen_slug]
-    path = repo / rel
-    from lemma.cli.open_help import open_paths_in_os
-
-    opened = open_paths_in_os([path])
-    if opened:
-        click.echo(f"Opened: {opened}")
-    else:
-        click.echo(f"File not found: {path}", err=True)
+@click.argument("args", nargs=-1, type=click.UNPROCESSED)
+def docs_cmd(args: tuple[str, ...]) -> None:
+    """Point documentation helpers to lemma-cli."""
+    _echo_moved_to_lemma_cli(("docs", *args), heading="Docs helper moved to lemma-cli.")
 
 
 @main.command("meta")
@@ -937,7 +879,7 @@ def status_cmd() -> None:
     click.echo(
         stylize(
             "  → Same theorem as other validators: shared chain head + NETUID + seed mode "
-            "(see `lemma glossary`).",
+            "(see `lemma-cli glossary`).",
             dim=True,
         ),
     )
@@ -1289,9 +1231,13 @@ MOVED_CONFIGURE_COMMANDS = (
 )
 
 
-def _echo_moved_to_lemma_cli(parts: tuple[str, ...]) -> None:
+def _echo_moved_to_lemma_cli(
+    parts: tuple[str, ...],
+    *,
+    heading: str = "Interactive setup moved to lemma-cli.",
+) -> None:
     command = " ".join(("lemma-cli", *parts))
-    click.echo(stylize("Interactive setup moved to lemma-cli.", fg="cyan", bold=True))
+    click.echo(stylize(heading, fg="cyan", bold=True))
     click.echo(f"Run `{command}`.")
     click.echo("Core commands still live here: `lemma miner start`, `lemma validator start`, `lemma verify`.")
 
@@ -1325,10 +1271,8 @@ for _configure_command in MOVED_CONFIGURE_COMMANDS:
 
 @main.command("glossary")
 def glossary_cmd() -> None:
-    """Short definitions for seeds, `lemma problems`, try-prover, dry-runs."""
-    from lemma.cli.glossary import print_glossary
-
-    print_glossary()
+    """Point short operator definitions to lemma-cli."""
+    _echo_moved_to_lemma_cli(("glossary",), heading="Glossary moved to lemma-cli.")
 
 
 def _validator_run_blocking(*, dry_run: bool) -> None:
