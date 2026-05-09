@@ -14,7 +14,7 @@ def test_generated_template_gate_covers_every_builder() -> None:
     builder_indices = [builder_index for builder_index, _, _ in samples]
     theorem_names = [p.theorem_name for _, _, p in samples]
 
-    assert builder_indices == list(range(32))
+    assert builder_indices == list(range(36))
     assert len(set(theorem_names)) == len(theorem_names)
     assert all(p.extra.get("template_fn", "").startswith("_b_") for _, _, p in samples)
 
