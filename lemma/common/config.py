@@ -835,12 +835,12 @@ class LemmaSettings(BaseSettings):
     )
     miner_log_forwards: bool = Field(
         default=False,
-        validation_alias=AliasChoices("LEMMA_MINER_LOG_FORWARDS", "miner_log_forwards"),
+        validation_alias="LEMMA_MINER_LOG_FORWARDS",
         description="Log reasoning trace and proof_script for each forward (excerpts at INFO).",
     )
     miner_forward_summary: bool = Field(
         default=True,
-        validation_alias=AliasChoices("LEMMA_MINER_FORWARD_SUMMARY", "miner_forward_summary"),
+        validation_alias="LEMMA_MINER_FORWARD_SUMMARY",
         description=(
             "One INFO line per forward: theorem id, split, sizes, timing; optional session totals. "
             "Disable for quieter logs."
@@ -848,7 +848,7 @@ class LemmaSettings(BaseSettings):
     )
     miner_forward_timeline: bool = Field(
         default=False,
-        validation_alias=AliasChoices("LEMMA_MINER_FORWARD_TIMELINE", "miner_forward_timeline"),
+        validation_alias="LEMMA_MINER_FORWARD_TIMELINE",
         description=(
             "Per forward, log three INFO lines: (1) RECEIVE with deadline vs chain head, (2) SOLVED after prover, "
             "(3) OUTCOME with local_lean or hint to enable LEMMA_MINER_LOCAL_VERIFY. "

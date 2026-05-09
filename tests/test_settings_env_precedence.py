@@ -139,3 +139,23 @@ def test_documented_timeout_and_prover_policy_env_names_work(
     assert s.prover_min_reasoning_steps == 4
     assert s.prover_min_reasoning_total_chars == 1200
     assert s.prover_min_proof_script_chars == 500
+
+
+def test_documented_miner_observability_env_names_work(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    monkeypatch.delenv("LEMMA_PREFER_PROCESS_ENV", raising=False)
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "\n".join(
+            [
+                "LEMMA_MINER_FORWARD_SUMMARY=false",
+                "LEMMA_MINER_FORWARD_TIMELINE=true",
+                "LEMMA_MINER_LOG_FORWARDS=true",
+            ],
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    s = LemmaSettings(_env_file=str(env_file))
+    assert s.miner_forward_summary is False
+    assert s.miner_forward_timeline is True
+    assert s.miner_log_forwards is True
