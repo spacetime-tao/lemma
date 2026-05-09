@@ -241,7 +241,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **`_publish_workspace_cache`** atomic rename story without cross-process guarantee per audit narrative.
 - **HTTP worker** subsystem optional (~250 LoC) — topology docs “advanced.”
 - Duplicate `r.returncode` branches in `_verify_host` removed; local double cheat scan removed (remote pre-scan retained before POST).
-- **`_docker_verify_inner_script`** bash string concatenation / quoting hazard.
+- Docker verify script now writes a workspace script and invokes Docker with argv/workdir instead of a quoted `bash -lc` command string.
 - **`comparator_hook`**: wired but default-off / no production comparator.
 
 ### 13.5 Miner

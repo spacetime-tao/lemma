@@ -34,6 +34,8 @@ from lemma.lean.proof_metrics import (
 from lemma.lean.workspace import materialize_workspace, workspace_verify_cache_key
 from lemma.problems.base import Problem
 
+_DOCKER_VERIFY_SCRIPT = ".lemma_verify.sh"
+
 
 @lru_cache(maxsize=512)
 def _template_slot_lock(cache_key: str) -> threading.RLock:
@@ -92,12 +94,6 @@ def _lean_num_threads_value() -> str:
     return str(min(64, max(1, os.cpu_count() or 8)))
 
 
-def _lean_env_exports_bash() -> str:
-    """Shell preamble so ``lake`` / ``lean`` inside Docker see ``LEAN_NUM_THREADS``."""
-    n = _lean_num_threads_value()
-    return f"export LEAN_NUM_THREADS={shlex.quote(n)}; "
-
-
 def _merge_lean_process_env(base: dict[str, str]) -> dict[str, str]:
     """Ensure subprocess lake/lean runs with an explicit ``LEAN_NUM_THREADS`` when unset."""
     out = dict(base)
@@ -111,13 +107,6 @@ def _lake_build_argv() -> list[str]:
     if _env_truthy("LEMMA_LEAN_VERIFY_FULL_BUILD"):
         return ["lake", "build"]
     return ["lake", "build", "Submission"]
-
-
-def _lake_build_shell_fragment() -> str:
-    """Shell snippet for Docker ``bash -lc`` (same semantics as :func:`_lake_build_argv`)."""
-    if _env_truthy("LEMMA_LEAN_VERIFY_FULL_BUILD"):
-        return "lake build"
-    return "lake build Submission"
 
 
 def _docker_network_allows_remote_cache(network_mode: str) -> bool:
@@ -463,26 +452,29 @@ class LeanSandbox:
         mp = os.environ.get("LEMMA_LEAN_DOCKER_WORKER_MOUNT", "/lemma-workspace").strip()
         return Path(mp if mp else "/lemma-workspace")
 
-    def _docker_verify_inner_script(self, work: Path) -> str:
-        """Bash script run inside the sandbox (cwd = workspace): stub ``.lake``, build, axiom check."""
-        lake_cache_prefix = ""
+    def _docker_verify_script_source(self, work: Path) -> str:
+        """Script run inside the sandbox (cwd = workspace): stub ``.lake``, build, axiom check."""
+        lines = [
+            f"export LEAN_NUM_THREADS={shlex.quote(_lean_num_threads_value())}",
+            "set -euo pipefail",
+            "if [ -d /opt/lemma-stub ] && [ ! -d .lake ]; then",
+            "  cp -a /opt/lemma-stub/.lake . 2>/dev/null || true",
+            "fi",
+        ]
         if _docker_network_allows_remote_cache(self.network_mode):
             if lake_exe_cache_get_needed(work):
-                lake_cache_prefix = "lake exe cache get && "
+                lines.append("lake exe cache get")
             else:
                 logger.debug("docker verify: skipping lake exe cache get (warm packages/mathlib)")
-        build_frag = _lake_build_shell_fragment()
-        env_preamble = _lean_env_exports_bash()
-        metrics_frag = ""
+        lines.append(shlex.join(_lake_build_argv()))
+        lines.append("lake env lean AxiomCheck.lean")
         if self.proof_metrics_enabled:
-            metrics_frag = f"; {docker_proof_metrics_shell_fragment()}"
-        return (
-            f"{env_preamble}"
-            "set -euo pipefail; "
-            "if [ -d /opt/lemma-stub ] && [ ! -d .lake ]; then "
-            "cp -a /opt/lemma-stub/.lake . 2>/dev/null || true; fi; "
-            f"{lake_cache_prefix}{build_frag} && lake env lean AxiomCheck.lean{metrics_frag}"
-        )
+            lines.append(docker_proof_metrics_shell_fragment())
+        return "\n".join(lines) + "\n"
+
+    def _write_docker_verify_script(self, work: Path) -> str:
+        (work / _DOCKER_VERIFY_SCRIPT).write_text(self._docker_verify_script_source(work), encoding="utf-8")
+        return _DOCKER_VERIFY_SCRIPT
 
     def _verify_docker_parse_logs(
         self,
@@ -575,16 +567,15 @@ class LeanSandbox:
         self,
         worker: str,
         container_workdir: str,
-        inner: str,
+        script_name: str,
         work: Path,
         log_tail: int,
     ) -> VerifyResult:
         """Run the same inner script via ``docker exec`` into a long-lived worker (avoids per-job ``docker run``)."""
-        full = f"cd {shlex.quote(container_workdir)} && {inner}"
         t0 = time.monotonic()
         try:
             r = subprocess.run(
-                ["docker", "exec", worker, "bash", "-lc", full],
+                ["docker", "exec", "--workdir", container_workdir, worker, "bash", script_name],
                 capture_output=True,
                 text=True,
                 timeout=float(self.timeout_s),
@@ -622,7 +613,7 @@ class LeanSandbox:
 
         self._maybe_host_lake_cache_before_docker(work)
 
-        inner = self._docker_verify_inner_script(work)
+        script_name = self._write_docker_verify_script(work)
         log_tail = 16_000
 
         # Optional: long-lived worker + `docker exec` — avoids container create/start/remove overhead
@@ -648,7 +639,7 @@ class LeanSandbox:
                     )
                 else:
                     logger.debug("lean docker verify via exec worker={} container_workdir={}", worker, cdir)
-                    return self._verify_docker_cli_exec(worker, cdir, inner, work, log_tail)
+                    return self._verify_docker_cli_exec(worker, cdir, script_name, work, log_tail)
 
         client = docker.from_env()
         nano_cpus = int(self.cpu * 1e9)
@@ -658,7 +649,7 @@ class LeanSandbox:
         try:
             container = client.containers.create(
                 image=self.image,
-                command=["bash", "-lc", inner],
+                command=["bash", script_name],
                 volumes={str(work.resolve()): {"bind": "/work", "mode": "rw"}},
                 working_dir="/work",
                 network_mode=self.network_mode,
