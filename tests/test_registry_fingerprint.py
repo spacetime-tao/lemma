@@ -14,7 +14,7 @@ def test_generated_registry_fingerprint_covers_source_and_rng_tag() -> None:
     builders = registry["builders"]
 
     assert registry["rng_mix_tag"] == RNG_MIX_TAG
-    assert registry["builder_count"] == 32
-    assert registry["split_counts"] == {"easy": 8, "medium": 18, "hard": 6}
-    assert len(builders) == 32
+    assert registry["builder_count"] == 36
+    assert registry["split_counts"] == {"easy": 9, "medium": 20, "hard": 7}
+    assert len(builders) == 36
     assert all(len(builder["source_sha256"]) == 64 for builder in builders)

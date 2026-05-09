@@ -6,7 +6,7 @@ When `LEMMA_PROBLEM_SOURCE=generated`, each round maps `chain_head → problem_s
 
 There is **no single fixed “number of theorems in the world”** here. What exists today is:
 
-- **32 template builders** (8 easy, 18 medium, 6 hard) in `_RAW_BUILDERS`: each is a function that emits a `Problem` for a given RNG seeded from the block.
+- **36 template builders** (9 easy, 20 medium, 7 hard) in `_RAW_BUILDERS`: each is a function that emits a `Problem` for a given RNG seeded from the block.
 - **One sampled challenge per `(seed, registry version)`**: `random.Random(seed)` picks among those builders, and many builders inject **fresh random numerals** (e.g. concrete `Nat` sums), so **infinitely many distinct statements** can appear over time even though the *family* of shapes is finite.
 - **30 topic labels** (`TOPICS`) for logging / exports—algebra, analysis, combinatorics, logic, etc.—not separate proof rules.
 
@@ -14,7 +14,7 @@ So: **finite template repertoire, infinite instance stream** as the chain advanc
 
 ### Plain English
 
-What **32 builders** means is **not** “there are only 32 problems total.” It means **32 recipes**. Each recipe says how to cook one *kind* of challenge—e.g. ask for a proof about two random natural numbers, list structure, set algebra, or a certain logical shape. Every time the subnet advances and hands out a **new seed**, the code runs the RNG again: it may pick **another recipe**, or the **same recipe with new random constants**. So **one family** can produce **endlessly many slightly different statements**: same pattern, different numbers or details.
+What **36 builders** means is **not** “there are only 36 problems total.” It means **36 recipes**. Each recipe says how to cook one *kind* of challenge—e.g. ask for a proof about two random natural numbers, list structure, set algebra, finite sets, or a certain logical shape. Every time the subnet advances and hands out a **new seed**, the code runs the RNG again: it may pick **another recipe**, or the **same recipe with new random constants**. So **one family** can produce **endlessly many slightly different statements**: same pattern, different numbers or details.
 
 You should **not** picture a short list to memorize. You picture **many instances** flowing from **a small cookbook**. The **topic** labels (algebra, analysis, …) are mainly for logging—they are not separate rule sets in Lean.
 
@@ -24,7 +24,7 @@ You should **not** picture a short list to memorize. You picture **many instance
 
 ## Template mix
 
-- 32 builders: 8 easy, 18 medium, 6 hard (`_RAW_BUILDERS`).
+- 36 builders: 9 easy, 20 medium, 7 hard (`_RAW_BUILDERS`).
 - Uniform random per seed → roughly 25% / 56% / 19% easy / medium / hard.
 - `TOPICS`: labels for logging; shape comes from the template.
 

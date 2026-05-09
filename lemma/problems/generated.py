@@ -550,6 +550,59 @@ def _b_pow_two_mul_self_nat_hard(rng: random.Random, topic: str, seed: int, name
     )
 
 
+def _b_finset_insert_card_easy(rng: random.Random, topic: str, seed: int, name: str) -> Problem:
+    n = rng.randint(1, 40)
+    body = f"""theorem {name} : (insert {n} (∅ : Finset Nat)).card = 1 := by
+  sorry"""
+    return _mk_problem(
+        seed=seed,
+        topic=topic,
+        split="easy",
+        theorem_name=name,
+        type_expr=f"(insert {n} (∅ : Finset Nat)).card = 1",
+        challenge_body=body,
+    )
+
+
+def _b_logic_and_comm_medium(rng: random.Random, topic: str, seed: int, name: str) -> Problem:
+    body = f"""theorem {name} : ∀ P Q : Prop, P ∧ Q ↔ Q ∧ P := by
+  sorry"""
+    return _mk_problem(
+        seed=seed,
+        topic=topic,
+        split="medium",
+        theorem_name=name,
+        type_expr="∀ P Q : Prop, P ∧ Q ↔ Q ∧ P",
+        challenge_body=body,
+    )
+
+
+def _b_min_le_left_nat_medium(rng: random.Random, topic: str, seed: int, name: str) -> Problem:
+    body = f"""theorem {name} : ∀ a b : Nat, min a b ≤ a := by
+  sorry"""
+    return _mk_problem(
+        seed=seed,
+        topic=topic,
+        split="medium",
+        theorem_name=name,
+        type_expr="∀ a b : Nat, min a b ≤ a",
+        challenge_body=body,
+    )
+
+
+def _b_finset_subset_card_le_hard(rng: random.Random, topic: str, seed: int, name: str) -> Problem:
+    body = f"""theorem {name} : ∀ A B : Finset Nat, A ⊆ B → A.card ≤ B.card := by
+  sorry"""
+    return _mk_problem(
+        seed=seed,
+        topic=topic,
+        split="hard",
+        theorem_name=name,
+        type_expr="∀ A B : Finset Nat, A ⊆ B → A.card ≤ B.card",
+        challenge_body=body,
+    )
+
+
 def _bind_builder(builder_index: int, fn: BuilderFn) -> Callable[[random.Random, str, int], Problem]:
     """Capture builder index so theorem names stay unique per (seed, template)."""
 
@@ -602,6 +655,10 @@ _RAW_BUILDERS: tuple[tuple[Split, BuilderFn], ...] = (
     ("medium", _b_finset_filter_card_le_medium),
     ("medium", _b_sum_range_succ_nat_medium),
     ("hard", _b_pow_two_mul_self_nat_hard),
+    ("easy", _b_finset_insert_card_easy),
+    ("medium", _b_logic_and_comm_medium),
+    ("medium", _b_min_le_left_nat_medium),
+    ("hard", _b_finset_subset_card_le_hard),
 )
 
 # Consensus-critical: append-only ordering; indices appear in ``_theorem_name``.
