@@ -29,6 +29,7 @@ RUN_DOCKER_LEAN=1 uv run pytest tests/test_docker_golden.py -v
 ```
 
 CI uses tag `lemma-lean-sandbox:ci`; locally `latest` is fine.
+Production should use a subnet-published immutable tag or digest, not the mutable local `latest` tag ([toolchain-image-policy.md](toolchain-image-policy.md)).
 
 ## Generated template gate (CI `docker-lean-sandbox` job)
 

@@ -26,6 +26,7 @@ This document tracks **post-audit** mechanism changes in Lemma: proof-centric sc
 | Generated template RNG | Chain seed is **SHA256-mixed** before template selection (`lemma_generated_rng_v1`) so adjacent seeds pick less correlated templates; **`LEMMA_GENERATED_LEGACY_PLAIN_RNG=1`** restores legacy `Random(seed)`. Problem ids remain **`gen/<chain_seed>`**. |
 | Problem seed RPC slack | **`LEMMA_PROBLEM_SEED_CHAIN_HEAD_SLACK_BLOCKS`** pulls chain head back before `resolve_problem_seed` and forward HTTP deadline math — reduces ±1 RPC skew at quantize edges (`lemma/common/problem_seed.py`). |
 | Lean workspace cache key | Default **template-only** slot under **`LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR`**; optional **`LEMMA_LEAN_WORKSPACE_CACHE_INCLUDE_SUBMISSION_HASH=1`** appends proof-body fingerprint (`workspace_verify_cache_key` in `lemma/lean/workspace.py`). |
+| Toolchain / image pins | Local `lemma/lean-sandbox:latest` is a dev build tag; production operators publish an immutable sandbox ref and set **`LEAN_SANDBOX_IMAGE`** consistently. See [toolchain-image-policy.md](toolchain-image-policy.md). |
 | Sybil / identity (documentation) | Coldkey dedup and identical-submission dedup are **not** sybil-proof — see [sybil_economics.md](sybil_economics.md) and [`knowledge/sybil.realities.yaml`](../knowledge/sybil.realities.yaml). |
 | Validator Lean load (documentation) | **`LEMMA_LEAN_VERIFY_MAX_CONCURRENT`**, **`LEMMA_JUDGE_MAX_CONCURRENT`**, optional **`LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION`** when attest on — see [validator_lean_load.md](validator_lean_load.md). |
 | Transport (documentation) | Dendrite/Axon + **`LemmaChallenge`** body-hash integrity vs **`computed_body_hash`** — see [transport.md](transport.md); [`knowledge/subnet.invariants.yaml`](../knowledge/subnet.invariants.yaml) deprecates Axon-first **new** designs in favor of HTTP + Epistula. |
@@ -43,6 +44,7 @@ Adding templates changes `generated_registry_sha256`. Operators must run `lemma-
 - Reputation: `lemma/scoring/reputation.py`
 - Problem mix: `lemma/problems/generated.py` (`expand_seed_for_problem_rng`), `lemma/common/problem_seed.py` (`mix_sub_problem_seed`)
 - Lean cache: `lemma/lean/workspace.py` (`workspace_verify_cache_key`), `lemma/lean/sandbox.py`
+- Toolchain and image pins: [toolchain-image-policy.md](toolchain-image-policy.md)
 - Sybil / economics (operators): [sybil_economics.md](sybil_economics.md), `knowledge/sybil.realities.yaml`
 - Validator throughput: [validator_lean_load.md](validator_lean_load.md)
 - Transport / integrity: [transport.md](transport.md), `lemma/protocol.py`

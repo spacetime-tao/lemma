@@ -52,7 +52,7 @@ The **subnet operator** publishes one configuration for the subnet: timeouts, se
 
 ### Parity checklist
 
-1. Pin one Git tag / image digest.
+1. Pin one Git tag and one immutable sandbox image ref ([toolchain-image-policy.md](toolchain-image-policy.md)).
 2. Publish a shared env template.
 3. Pin `uv run lemma meta`: `JUDGE_PROFILE_SHA256_EXPECTED`, optional `LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED` (generated mode).
 4. Announce upgrades with changelog and cutover.
