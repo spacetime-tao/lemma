@@ -76,8 +76,8 @@ These are starting points, not approved designs.
 ## Prototype Boundary
 
 Do not wire a new proof-side metric into live scoring until it passes the gate
-above. The first prototype should be outside the default validator scoring path
-and should write measurements for comparison only.
+above. The first prototype is outside the default validator scoring path and
+writes measurements for comparison only.
 
 Good prototype shape:
 
@@ -87,6 +87,12 @@ Good prototype shape:
   real submissions before any default changes.
 - Keep `entry_from_scores` behavior pinned by tests while the replacement is
   evaluated.
+
+Current prototype: set `LEMMA_LEAN_PROOF_METRICS=1` to attach compare-only
+`proof_metrics` to `VerifyResult`. The probe asks Lean to `#print` the verified
+`Submission.<theorem>` declaration with `pp.all` enabled, then records only the
+printed byte count, line count, and probe exit code. Rewards and weights ignore
+this field.
 
 Signals to avoid as scoring inputs:
 

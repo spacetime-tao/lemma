@@ -565,6 +565,16 @@ class LemmaSettings(BaseSettings):
             "share a directory; more disk vs template-only keys). Default false."
         ),
     )
+    lemma_lean_proof_metrics_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "LEMMA_LEAN_PROOF_METRICS",
+            "lemma_lean_proof_metrics_enabled",
+        ),
+        description=(
+            "Opt-in compare-only Lean proof metrics in VerifyResult. Does not affect rewards or weights."
+        ),
+    )
     lemma_lean_docker_worker: str | None = Field(
         default=None,
         validation_alias=AliasChoices(

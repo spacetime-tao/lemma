@@ -6,6 +6,7 @@ import hashlib
 import shutil
 from pathlib import Path
 
+from lemma.lean.proof_metrics import write_proof_metrics_probe
 from lemma.problems.base import Problem
 
 
@@ -50,6 +51,7 @@ def materialize_workspace(
     submission_lean: str,
     *,
     preserve_lake: bool = False,
+    include_proof_metrics_probe: bool = False,
 ) -> None:
     """
     Write Challenge, Solution, Submission, lakefile, toolchain, and axiom check driver.
@@ -71,6 +73,8 @@ def materialize_workspace(
 #print axioms Submission.{thm}
 """
         (dest / "AxiomCheck.lean").write_text(axiom_check, encoding="utf-8")
+        if include_proof_metrics_probe:
+            write_proof_metrics_probe(dest, thm)
         return
 
     if dest.exists():
@@ -94,6 +98,8 @@ def materialize_workspace(
 #print axioms Submission.{thm}
 """
     (dest / "AxiomCheck.lean").write_text(axiom_check, encoding="utf-8")
+    if include_proof_metrics_probe:
+        write_proof_metrics_probe(dest, thm)
 
 
 def _lakefile_toml(problem: Problem) -> str:

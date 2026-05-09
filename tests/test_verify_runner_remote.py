@@ -96,3 +96,24 @@ def test_remote_verify_skipped_when_url_unset(tiny_problem: Problem, monkeypatch
     )
     vr = run_lean_verify(s, verify_timeout_s=300, problem=tiny_problem, proof_script="theorem p : True := rfl")
     assert vr.passed is True
+
+
+def test_local_verify_passes_proof_metrics_flag(tiny_problem: Problem, monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_verify(self: object, problem: Problem, submission_src: str):  # noqa: ARG001
+        from lemma.lean.sandbox import LeanSandbox, VerifyResult
+
+        assert isinstance(self, LeanSandbox)
+        assert self.proof_metrics_enabled is True
+        return VerifyResult(passed=True, reason="ok", build_seconds=0.1)
+
+    monkeypatch.setattr("lemma.lean.verify_runner.LeanSandbox.verify", fake_verify)
+
+    s = LemmaSettings().model_copy(
+        update={
+            "lean_verify_remote_url": None,
+            "lean_use_docker": False,
+            "lemma_lean_proof_metrics_enabled": True,
+        },
+    )
+    vr = run_lean_verify(s, verify_timeout_s=300, problem=tiny_problem, proof_script="theorem p : True := rfl")
+    assert vr.passed is True

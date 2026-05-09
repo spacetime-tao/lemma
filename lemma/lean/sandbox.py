@@ -25,6 +25,12 @@ from lemma.lean.cheats import (
     scan_submission_for_cheats,
 )
 from lemma.lean.comparator_hook import hook_failure_reason, run_comparator_hook
+from lemma.lean.proof_metrics import (
+    LeanProofMetrics,
+    collect_host_proof_metrics,
+    docker_proof_metrics_shell_fragment,
+    parse_proof_metrics_line,
+)
 from lemma.lean.workspace import materialize_workspace, workspace_verify_cache_key
 from lemma.problems.base import Problem
 
@@ -175,6 +181,7 @@ class VerifyResult(BaseModel):
     stderr_tail: str = ""
     stdout_tail: str = ""
     build_seconds: float = 0.0
+    proof_metrics: LeanProofMetrics | None = None
 
 
 class LeanSandbox:
@@ -191,6 +198,7 @@ class LeanSandbox:
         workspace_cache_dir: Path | None = None,
         docker_worker: str | None = None,
         workspace_cache_include_submission_hash: bool = False,
+        proof_metrics_enabled: bool = False,
     ) -> None:
         self.image = image
         self.cpu = cpu
@@ -201,6 +209,7 @@ class LeanSandbox:
         self.use_docker = bool(use_docker)
         self.workspace_cache_dir = workspace_cache_dir
         self.workspace_cache_include_submission_hash = bool(workspace_cache_include_submission_hash)
+        self.proof_metrics_enabled = bool(proof_metrics_enabled)
         # Prefer explicit constructor / LemmaSettings (`.env`); ``os.environ`` alone is not populated from
         # pydantic's dotenv load unless the process exported the variable.
         _dw = docker_worker if docker_worker is not None else os.environ.get("LEMMA_LEAN_DOCKER_WORKER")
@@ -244,7 +253,13 @@ class LeanSandbox:
             if inplace:
                 assert cache_key is not None and slot is not None
                 with _template_slot_lock(cache_key):
-                    materialize_workspace(work, problem, submission_src, preserve_lake=True)
+                    materialize_workspace(
+                        work,
+                        problem,
+                        submission_src,
+                        preserve_lake=True,
+                        include_proof_metrics_probe=self.proof_metrics_enabled,
+                    )
                     if self.use_docker:
                         vr = self._verify_docker(work)
                     else:
@@ -252,7 +267,13 @@ class LeanSandbox:
                     # Slot already owns `.lake`; no publish (would re-enter the same lock).
                     return vr
 
-            materialize_workspace(work, problem, submission_src, preserve_lake=False)
+            materialize_workspace(
+                work,
+                problem,
+                submission_src,
+                preserve_lake=False,
+                include_proof_metrics_probe=self.proof_metrics_enabled,
+            )
 
             if self.use_docker:
                 vr = self._verify_docker(work)
@@ -421,7 +442,20 @@ class LeanSandbox:
                 stderr_tail=hook.stderr_tail[-8000:],
                 build_seconds=elapsed,
             )
-        return VerifyResult(passed=True, reason="ok", stdout_tail=out[-2000:], build_seconds=elapsed)
+        proof_metrics = None
+        if self.proof_metrics_enabled:
+            proof_metrics = collect_host_proof_metrics(
+                work,
+                timeout_s=min(float(self.timeout_s), 120.0),
+                env=env,
+            )
+        return VerifyResult(
+            passed=True,
+            reason="ok",
+            stdout_tail=out[-2000:],
+            build_seconds=elapsed,
+            proof_metrics=proof_metrics,
+        )
 
     def _docker_worker_host_root(self) -> Path | None:
         """Host directory that is bind-mounted at ``LEMMA_LEAN_DOCKER_WORKER_MOUNT`` in the worker container."""
@@ -446,12 +480,15 @@ class LeanSandbox:
                 logger.debug("docker verify: skipping lake exe cache get (warm packages/mathlib)")
         build_frag = _lake_build_shell_fragment()
         env_preamble = _lean_env_exports_bash()
+        metrics_frag = ""
+        if self.proof_metrics_enabled:
+            metrics_frag = f"; {docker_proof_metrics_shell_fragment()}"
         return (
             f"{env_preamble}"
             "set -euo pipefail; "
             "if [ -d /opt/lemma-stub ] && [ ! -d .lake ]; then "
             "cp -a /opt/lemma-stub/.lake . 2>/dev/null || true; fi; "
-            f"{lake_cache_prefix}{build_frag} && lake env lean AxiomCheck.lean"
+            f"{lake_cache_prefix}{build_frag} && lake env lean AxiomCheck.lean{metrics_frag}"
         )
 
     def _verify_docker_parse_logs(
@@ -532,7 +569,14 @@ class LeanSandbox:
                 stderr_tail=hook.stderr_tail[-8000:],
                 build_seconds=elapsed,
             )
-        return VerifyResult(passed=True, reason="ok", stdout_tail=text[-2000:], build_seconds=elapsed)
+        proof_metrics = parse_proof_metrics_line(text) if self.proof_metrics_enabled else None
+        return VerifyResult(
+            passed=True,
+            reason="ok",
+            stdout_tail=text[-2000:],
+            build_seconds=elapsed,
+            proof_metrics=proof_metrics,
+        )
 
     def _verify_docker_cli_exec(
         self,
