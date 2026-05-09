@@ -235,7 +235,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 ### 13.4 Lean sandbox
 
 - Three execution paths (one-shot Docker, exec worker, host `lake`).
-- Three Lake warm / cache-get strategies + env gates.
+- Host-before-Docker Lake prefetch removed; cache-get remains only in the active host verify or networked Docker workspace.
 - **`_clone_dot_lake`** removed; first passing verify publishes the whole workspace by same-directory rename.
 - **`_template_slot_lock`** LRU in-process only.
 - **`_publish_workspace_cache`** simplified to one locked same-directory rename into an empty cache slot.

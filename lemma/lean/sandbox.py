@@ -279,24 +279,6 @@ class LeanSandbox:
         except (subprocess.TimeoutExpired, OSError):
             pass
 
-    def _maybe_host_lake_cache_before_docker(self, work: Path) -> None:
-        """Run ``lake exe cache get`` on the **host** so the bind-mounted workspace is warm.
-
-        Useful when Docker uses ``network_mode=none`` (no Azure/Mathlib cache inside the container)
-        but the operator has ``lake`` on PATH with Internet — artifacts land in ``work/.lake`` before
-        ``docker run``. Toolchains should match the sandbox image to avoid Lake re-downloading.
-
-        Opt-in: ``LEMMA_HOST_LAKE_CACHE_BEFORE_DOCKER=1``.
-        """
-        if not _env_truthy("LEMMA_HOST_LAKE_CACHE_BEFORE_DOCKER"):
-            return
-        if not shutil.which("lake"):
-            logger.debug("LEMMA_HOST_LAKE_CACHE_BEFORE_DOCKER set but `lake` not on PATH; skipping prefetch")
-            return
-        t0 = time.perf_counter()
-        self._maybe_lake_cache_get(work, os.environ.copy())
-        logger.debug("lean host lake cache prefetch before docker: {:.2f}s", time.perf_counter() - t0)
-
     def _verify_host(self, work: Path) -> VerifyResult:
         t0 = time.monotonic()
         env = _merge_lean_process_env(os.environ.copy())
@@ -543,8 +525,6 @@ class LeanSandbox:
             return VerifyResult(passed=False, reason="docker_error", stderr_tail="docker SDK missing")
 
         import docker
-
-        self._maybe_host_lake_cache_before_docker(work)
 
         script_name = self._write_docker_verify_script(work)
         log_tail = 16_000
