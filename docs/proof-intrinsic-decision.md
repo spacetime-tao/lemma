@@ -103,7 +103,9 @@ omits it because the field is proof-derived research data.
 
 Use `uv run python -m tools.proof_metrics_analyze <train.jsonl>` to compare
 exported proof metrics against proof text length, current `proof_intrinsic_score`,
-and judge composite before considering any scoring change.
+and judge composite before considering any scoring change. The analyzer counts
+failed proof-metric probes separately and excludes them from correlations and
+padding-outlier lists; failed probe output is not proof-term evidence.
 
 ## Credibility Boundary
 

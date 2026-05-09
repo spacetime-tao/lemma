@@ -22,7 +22,10 @@ Analyze a local `full` export with proof metrics:
 uv run python -m tools.proof_metrics_analyze /var/lib/lemma/train.jsonl
 ```
 
-If the path is omitted, the tool reads `LEMMA_TRAINING_EXPORT_JSONL`.
+If the path is omitted, the tool reads `LEMMA_TRAINING_EXPORT_JSONL`. The
+analyzer reports failed proof-metric probes separately and excludes them from
+correlations/outlier lists, so calibration is based only on successful Lean
+probe rows.
 
 ## Gaming and leakage (why `reasoning_only` exists)
 
