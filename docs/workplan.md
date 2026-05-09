@@ -52,12 +52,12 @@ These should be either hardened or removed from the default mental model.
 
 This is the `lemma-cli` repo track.
 
-Status: `spacetime-tao/lemma-cli` exists as a thin public wrapper. The first core trim moved the guided `start` surface out of the subnet repo and removed the large menu modules from core while leaving small compatibility hints.
+Status: `spacetime-tao/lemma-cli` exists as a thin public wrapper. The first core trim moved the guided `start` surface out of the subnet repo. The next trim moved the `.env` setup/configure wizard to `lemma-cli`, leaving redirect shims in core.
 
 Move first:
 
 1. Guided menu and start screen. **Done as a core trim; rebuild richer UX in `lemma-cli` only.**
-2. Environment wizard.
+2. Environment wizard. **Moved to `lemma-cli`; core has redirects only.**
 3. Docs opener/glossary.
 4. Shell activation helpers.
 5. Human-friendly doctor/validator-check wrappers, once the core repo exposes stable machine-readable checks.

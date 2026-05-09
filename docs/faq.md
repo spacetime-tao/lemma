@@ -58,13 +58,13 @@ Miners use a separate prover API to generate proofs.
 
 Yes. In [Google AI Studio](https://aistudio.google.com) you can create an API key tied to a normal Google account (subject to Google’s terms and quotas). Gemini exposes an **OpenAI-compatible** HTTP API; see Google’s [OpenAI compatibility](https://ai.google.dev/gemini-api/docs/openai) doc.
 
-For Lemma’s **prover** (miner), use the OpenAI-compatible path: `PROVER_PROVIDER=openai`, set `PROVER_OPENAI_BASE_URL` to Gemini’s OpenAI base URL (see that doc — typically `https://generativelanguage.googleapis.com/v1beta/openai/`), put your Gemini key in **`PROVER_OPENAI_API_KEY`**, and set `PROVER_MODEL` to a Gemini model id (e.g. `gemini-flash-latest` or `gemini-3.1-pro-preview`). Easiest: run **`lemma configure prover`** and choose **`gemini`** — pick vendor first, then API key, then a **tier menu** (Flash / Pro / Lite) or a **custom** Gemini id; the wizard fills in the URL and `PROVER_*`. For other stacks use **Chutes**, **Anthropic**, **OpenAI**, or **custom** (paste base URL) in the same menu. You can still merge keys into `.env` by hand. Validators use a **separate** judge stack: **`JUDGE_OPENAI_API_KEY`** (Chutes inference token) plus `OPENAI_BASE_URL` / `OPENAI_MODEL` — do not reuse the Gemini key for Chutes.
+For Lemma’s **prover** (miner), use the OpenAI-compatible path: `PROVER_PROVIDER=openai`, set `PROVER_OPENAI_BASE_URL` to Gemini’s OpenAI base URL (see that doc — typically `https://generativelanguage.googleapis.com/v1beta/openai/`), put your Gemini key in **`PROVER_OPENAI_API_KEY`**, and set `PROVER_MODEL` to a Gemini model id (e.g. `gemini-flash-latest` or `gemini-3.1-pro-preview`). Easiest: run **`lemma-cli configure prover`** and choose **`gemini`** — pick vendor first, then API key, then a **tier menu** (Flash / Pro / Lite) or a **custom** Gemini id; the wizard fills in the URL and `PROVER_*`. For other stacks use **Chutes**, **Anthropic**, **OpenAI**, or **custom** (paste base URL) in the same menu. You can still merge keys into `.env` by hand. Validators use a **separate** judge stack: **`JUDGE_OPENAI_API_KEY`** (Chutes inference token) plus `OPENAI_BASE_URL` / `OPENAI_MODEL` — do not reuse the Gemini key for Chutes.
 
 **If you see HTTP 404** mentioning `gen-lang-client-…` or `models/... is not found`, you accidentally used a **Google AI Studio internal id** (or a UI-only string) as `PROVER_MODEL`. Replace it with a **public model name** from the [models](https://ai.google.dev/gemini-api/docs/models) list (e.g. `gemini-2.0-flash`), not a `gen-lang-client-*` value.
 
 ## Prover retries (`LEMMA_PROVER_LLM_RETRY_ATTEMPTS`)
 
-Default is **4** tries per prover call (exponential backoff on 429 / timeouts / 5xx). Change it for **all** runs via `.env` or `lemma configure prover-retries`. For a **single** `lemma try-prover` run, use `--retry-attempts N` (1–32). Higher values use more wall-clock; stay within the validator **forward HTTP wait** for mining.
+Default is **4** tries per prover call (exponential backoff on 429 / timeouts / 5xx). Change it for **all** runs via `.env` or `lemma-cli configure prover-retries`. For a **single** `lemma try-prover` run, use `--retry-attempts N` (1–32). Higher values use more wall-clock; stay within the validator **forward HTTP wait** for mining.
 
 ## How much space does the prover get? What does it see?
 
@@ -132,9 +132,9 @@ Two different clocks:
 
 So: Lean can usually check a correct, modest submission quickly; the risky cases are enormous scripts, pathological elaboration, or cold-cache sandbox cost — not “kernel verification is inherently slow for topology.”
 
-## Why doesn’t my judge model match what `lemma setup` wrote?
+## Why doesn’t my judge model match what `lemma-cli setup` wrote?
 
-Lemma’s settings intentionally load **`.env` after process environment**, so values written by `lemma configure` / `merge_dotenv` override stray `export OPENAI_MODEL=...` in your shell. To restore standard pydantic behavior (environment beats `.env`), set `LEMMA_PREFER_PROCESS_ENV=1` (for CI or containers that inject secrets via env only).
+Lemma’s settings intentionally load **`.env` after process environment**, so values written by `lemma-cli configure` / `merge_dotenv` override stray `export OPENAI_MODEL=...` in your shell. To restore standard pydantic behavior (environment beats `.env`), set `LEMMA_PREFER_PROCESS_ENV=1` (for CI or containers that inject secrets via env only).
 
 ## Which math areas tend to strain a tight miner deadline?
 

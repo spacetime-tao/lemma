@@ -56,7 +56,7 @@ def main(ctx: click.Context) -> None:
             "  "
             + stylize("Miner", fg="yellow", bold=True)
             + stylize("       ", dim=True)
-            + stylize("lemma setup", fg="green")
+            + stylize("lemma-cli setup", fg="green")
             + stylize(" → ", dim=True)
             + stylize("btcli subnet register …", fg="green")
             + stylize(" → ", dim=True)
@@ -309,7 +309,7 @@ def doctor_cmd() -> None:
         if not (s.judge_profile_expected_sha256 or "").strip():
             click.echo(
                 stylize(
-                    "   Tip   Validators: set JUDGE_PROFILE_SHA256_EXPECTED (`lemma configure subnet-pins`; "
+                    "   Tip   Validators: set JUDGE_PROFILE_SHA256_EXPECTED (`lemma-cli configure subnet-pins`; "
                     "copy from `lemma meta --raw`).",
                     dim=True,
                 ),
@@ -335,7 +335,7 @@ def doctor_cmd() -> None:
             "     lemma validator-check  — before `lemma validator start`\n"
             "     lemma rehearsal        — prover + Lean + judge on the live theorem (preview before miner/validator)\n"
             "     lemma try-prover       — prover only  ·  lemma judge --trace FILE — judge on files\n"
-            "     lemma-cli              — friendly operator screen  ·  lemma configure --help\n",
+            "     lemma-cli              — friendly operator screen  ·  lemma-cli configure --help\n",
             dim=True,
         ),
         nl=False,
@@ -453,7 +453,7 @@ def meta_cmd(raw: bool) -> None:
                 "Does not edit `.env`. To merge pins: ",
                 dim=True,
             )
-            + stylize("lemma configure subnet-pins\n", fg="green", bold=True)
+            + stylize("lemma-cli configure subnet-pins\n", fg="green", bold=True)
             + stylize("(publish hashes so every validator matches judge + templates)\n", dim=True),
             nl=False,
         )
@@ -488,7 +488,7 @@ def meta_cmd(raw: bool) -> None:
         + stylize(" the current `judge_profile_sha256` and (if needed) generated-registry pin into ", dim=True)
         + stylize("`.env`", fg="yellow")
         + stylize(", run:\n", dim=True)
-        + stylize("  lemma configure subnet-pins\n", fg="green", bold=True)
+        + stylize("  lemma-cli configure subnet-pins\n", fg="green", bold=True)
         + stylize(
             "\n  That snapshots **today’s** `lemma meta` for your active env (match OPENAI_MODEL, Chutes URL, "
             "JUDGE_PROVIDER, etc. to the subnet first — then re-run if you change them).\n"
@@ -570,7 +570,7 @@ def meta_cmd(raw: bool) -> None:
             "  3. Run ",
             dim=True,
         )
-        + stylize("lemma configure subnet-pins", fg="green", bold=True)
+        + stylize("lemma-cli configure subnet-pins", fg="green", bold=True)
         + stylize(
             " to write ",
             dim=True,
@@ -619,7 +619,7 @@ def meta_cmd(raw: bool) -> None:
             "  → write this value into `.env`: ",
             dim=True,
         )
-        + stylize("lemma configure subnet-pins", fg="green")
+        + stylize("lemma-cli configure subnet-pins", fg="green")
         + stylize("   (or paste into ", dim=True)
         + stylize("JUDGE_PROFILE_SHA256_EXPECTED", fg="yellow")
         + stylize(" yourself)\n", dim=True),
@@ -671,7 +671,7 @@ def meta_cmd(raw: bool) -> None:
 
     click.echo(
         stylize("\nTip: ", dim=True)
-        + stylize("lemma configure subnet-pins", fg="green", bold=True)
+        + stylize("lemma-cli configure subnet-pins", fg="green", bold=True)
         + stylize(" merges pins into `.env`; ", dim=True)
         + stylize("lemma meta --raw", fg="green")
         + stylize(" is compact copy/paste + one-line JSON.\n", dim=True),
@@ -1203,7 +1203,7 @@ def _miner_run_axon(max_forwards_per_day: int | None) -> None:
     invoke_without_command=True,
     help=(
         "Miner axon — receive validator forwards and run the prover LLM. "
-        "Typical path: lemma setup → btcli subnet register → lemma miner dry-run → lemma miner start."
+        "Typical path: lemma-cli setup → btcli subnet register → lemma miner dry-run → lemma miner start."
     ),
 )
 @click.option(
@@ -1273,238 +1273,54 @@ def miner_dry_cmd() -> None:
     _miner_emit_dry_run_summary()
 
 
-@main.command("setup")
-@click.option(
-    "--role",
-    type=click.Choice(["miner", "validator", "both"]),
-    default=None,
-    help="If omitted, you will be prompted.",
+MOVED_SETUP_CONTEXT = {
+    "ignore_unknown_options": True,
+    "allow_extra_args": True,
+}
+MOVED_CONFIGURE_COMMANDS = (
+    "chain",
+    "axon",
+    "lean-image",
+    "judge",
+    "prover",
+    "prover-model",
+    "prover-retries",
+    "subnet-pins",
 )
-@click.option(
-    "--env-file",
-    "env_path",
-    type=click.Path(dir_okay=False, path_type=Path),
-    default=None,
-    help="Default: ./.env",
-)
-def setup_cmd(role: str | None, env_path: Path | None) -> None:
-    """Interactive first-time configuration (chain, keys, axon / judge / Lean image). No manual .env editing."""
-    from lemma.cli.env_wizard import run_setup
-
-    path = env_path or Path.cwd() / ".env"
-    chosen = role or click.prompt(
-        "Role — miner (prover + axon), validator (judge + Lean image), or both",
-        type=click.Choice(["miner", "validator", "both"]),
-    )
-    run_setup(path, chosen)
 
 
-@main.group("configure")
-def configure_grp() -> None:
-    """Interactive prompts merged into `.env` (run from repo root)."""
+def _echo_moved_to_lemma_cli(parts: tuple[str, ...]) -> None:
+    command = " ".join(("lemma-cli", *parts))
+    click.echo(stylize("Interactive setup moved to lemma-cli.", fg="cyan", bold=True))
+    click.echo(f"Run `{command}`.")
+    click.echo("Core commands still live here: `lemma miner start`, `lemma validator start`, `lemma verify`.")
 
 
-@configure_grp.command("chain")
-@click.option(
-    "--env-file",
-    "env_path",
-    type=click.Path(dir_okay=False, path_type=Path),
-    default=None,
-    help="Default: ./.env",
-)
-def configure_chain(env_path: Path | None) -> None:
-    """Set Bittensor testnet chain (NETUID 467), subtensor endpoint, and wallet names."""
-    from lemma.cli.env_wizard import collect_chain_updates
-    from lemma.common.env_file import merge_dotenv
-
-    path = env_path or Path.cwd() / ".env"
-    click.echo(f"Merging into {path}")
-    merge_dotenv(path, collect_chain_updates())
+@main.command("setup", context_settings=MOVED_SETUP_CONTEXT, add_help_option=False)
+@click.argument("args", nargs=-1, type=click.UNPROCESSED)
+def setup_cmd(args: tuple[str, ...]) -> None:
+    """Point first-time configuration users to lemma-cli."""
+    _echo_moved_to_lemma_cli(("setup", *args))
 
 
-@configure_grp.command("axon")
-@click.option(
-    "--env-file",
-    "env_path",
-    type=click.Path(dir_okay=False, path_type=Path),
-    default=None,
-    help="Default: ./.env",
-)
-def configure_axon(env_path: Path | None) -> None:
-    """Set AXON_PORT for miners."""
-    from lemma.cli.env_wizard import collect_axon_updates
-    from lemma.common.env_file import merge_dotenv
-
-    path = env_path or Path.cwd() / ".env"
-    click.echo(f"Merging into {path}")
-    merge_dotenv(path, collect_axon_updates())
+@main.group("configure", invoke_without_command=True)
+@click.pass_context
+def configure_grp(ctx: click.Context) -> None:
+    """Point interactive `.env` prompts to lemma-cli."""
+    if ctx.invoked_subcommand is None:
+        _echo_moved_to_lemma_cli(("configure",))
+        click.echo("Topics: " + ", ".join(MOVED_CONFIGURE_COMMANDS))
 
 
-@configure_grp.command("lean-image")
-@click.option(
-    "--env-file",
-    "env_path",
-    type=click.Path(dir_okay=False, path_type=Path),
-    default=None,
-    help="Default: ./.env",
-)
-def configure_lean_image(env_path: Path | None) -> None:
-    """Write the subnet Lean sandbox image name (fixed tag; build with scripts/prebuild_lean_image.sh)."""
-    from lemma.cli.env_wizard import collect_lean_image_updates
-    from lemma.common.env_file import merge_dotenv
-
-    path = env_path or Path.cwd() / ".env"
-    click.echo(f"Merging into {path}")
-    merge_dotenv(path, collect_lean_image_updates())
+def _register_moved_configure(command: str) -> None:
+    @configure_grp.command(command, context_settings=MOVED_SETUP_CONTEXT, add_help_option=False)
+    @click.argument("args", nargs=-1, type=click.UNPROCESSED)
+    def moved_configure(args: tuple[str, ...], command: str = command) -> None:
+        _echo_moved_to_lemma_cli(("configure", command, *args))
 
 
-@configure_grp.command("judge")
-@click.option(
-    "--env-file",
-    "env_path",
-    type=click.Path(dir_okay=False, path_type=Path),
-    default=None,
-    help="Default: ./.env",
-)
-def configure_judge(env_path: Path | None) -> None:
-    """Set validator judge (Chutes recommended, or Anthropic / custom OpenAI-compatible)."""
-    from lemma.cli.env_wizard import collect_judge_updates
-    from lemma.common.env_file import merge_dotenv
-
-    path = env_path or Path.cwd() / ".env"
-    click.echo(f"Merging into {path}")
-    merge_dotenv(path, collect_judge_updates())
-    click.echo("Done. Run `lemma meta` after changing models or URLs.")
-
-
-@configure_grp.command("prover")
-@click.option(
-    "--env-file",
-    "env_path",
-    type=click.Path(dir_okay=False, path_type=Path),
-    default=None,
-    help="Default: ./.env",
-)
-def configure_prover(env_path: Path | None) -> None:
-    """Set miner prover LLM (Chutes, Gemini preset, Anthropic, or custom OpenAI-compatible)."""
-    from lemma.cli.env_wizard import collect_prover_updates
-    from lemma.common.env_file import merge_dotenv
-
-    path = env_path or Path.cwd() / ".env"
-    click.echo(f"Merging into {path}")
-    merge_dotenv(path, collect_prover_updates())
-    click.echo("Done. Run `lemma miner --dry-run` to confirm axon settings.")
-
-
-@configure_grp.command("prover-model")
-@click.option(
-    "--env-file",
-    "env_path",
-    type=click.Path(dir_okay=False, path_type=Path),
-    default=None,
-    help="Default: ./.env",
-)
-def configure_prover_model(env_path: Path | None) -> None:
-    """Set PROVER_MODEL only (miner id; does not change judge OPENAI_MODEL / ANTHROPIC_MODEL)."""
-    from lemma.cli.env_wizard import collect_prover_model_updates
-    from lemma.common.env_file import merge_dotenv
-
-    path = env_path or Path.cwd() / ".env"
-    click.echo(f"Merging into {path}")
-    merge_dotenv(path, collect_prover_model_updates())
-    click.echo("Done. Run `lemma doctor` or `lemma try-prover` to confirm.")
-
-
-@configure_grp.command("prover-retries")
-@click.option(
-    "--env-file",
-    "env_path",
-    type=click.Path(dir_okay=False, path_type=Path),
-    default=None,
-    help="Default: ./.env",
-)
-def configure_prover_retries(env_path: Path | None) -> None:
-    """Set LEMMA_PROVER_LLM_RETRY_ATTEMPTS (prover 429 / timeout retries per forward)."""
-    from lemma.cli.env_wizard import collect_prover_retries_updates
-    from lemma.common.env_file import merge_dotenv
-
-    path = env_path or Path.cwd() / ".env"
-    click.echo(f"Merging into {path}")
-    merge_dotenv(path, collect_prover_retries_updates())
-    click.echo("Done. Miner and `lemma try-prover` pick this up on next run.")
-
-
-@configure_grp.command("subnet-pins")
-@click.option(
-    "--env-file",
-    "env_path",
-    type=click.Path(dir_okay=False, path_type=Path),
-    default=None,
-    help="Default: ./.env",
-)
-@click.option(
-    "--yes",
-    "-y",
-    is_flag=True,
-    help="Skip confirmation (for scripts).",
-)
-def configure_subnet_pins(env_path: Path | None, yes: bool) -> None:
-    """Write JUDGE_PROFILE_SHA256_EXPECTED (+ registry pin if generated) from **current** `lemma meta`.
-
-    Align OPENAI_MODEL, OPENAI_BASE_URL, temps, etc. to subnet policy first — then this snapshots pins so
-    `lemma validator start` / `lemma validator-check` can confirm you match published subnet meta.
-    """
-    from lemma.cli.env_wizard import collect_subnet_pin_updates
-    from lemma.common.env_file import merge_dotenv
-
-    settings = LemmaSettings()
-    path = env_path or Path.cwd() / ".env"
-    updates = collect_subnet_pin_updates(settings)
-    click.echo("")
-    click.echo(stylize("Configure — subnet pins", fg="cyan", bold=True))
-    click.echo(
-        stylize(
-            "Merge checksums into `.env` so `lemma meta` and `lemma validator-check` agree "
-            "(same numbers you see under `lemma meta`).",
-            dim=True,
-        )
-    )
-    click.echo("")
-    click.echo(stylize("Will write", fg="cyan", bold=True))
-    for k, v in updates.items():
-        click.echo(stylize(f"  {k}=", fg="yellow", bold=True) + stylize(v, fg="green"))
-    click.echo("")
-    if not yes:
-        click.confirm(
-            stylize("Merge these lines into ", dim=True) + stylize(str(path), fg="cyan") + "?",
-            abort=True,
-        )
-    click.echo(stylize(f"Merging into {path}", dim=True))
-    merge_dotenv(path, updates)
-    click.echo("")
-    click.echo(stylize("Done — pins saved.", fg="green", bold=True))
-    click.echo(
-        stylize(
-            "Your `.env` now expects the judge profile and generated-registry fingerprints from "
-            "this checkout and env. Run ",
-            dim=True,
-        )
-        + stylize("lemma validator-check", fg="green")
-        + stylize(" next; the judge/registry lines should show OK.\n", dim=True),
-        nl=False,
-    )
-    click.echo("")
-    click.echo(stylize("Notes", fg="cyan", bold=True))
-    click.echo(
-        stylize(
-            "• These values are snapshots only — they do not change how models are called.\n"
-            "• The validator exits when `lemma meta` drifts from these pins (e.g. you change OPENAI_MODEL "
-            "or pull a release without running this command again).\n"
-            "• `judge_rubric_sha256` and `judge_profile_sha256` are different hashes on purpose.\n",
-            dim=True,
-        )
-    )
-    finish_cli_output()
+for _configure_command in MOVED_CONFIGURE_COMMANDS:
+    _register_moved_configure(_configure_command)
 
 
 @main.command("glossary")
@@ -1859,7 +1675,8 @@ def lean_worker_cmd(host: str, port: int) -> None:
         "  lemma judge --trace reasoning.txt\n"
         "  lemma judge --trace trace.txt --theorem Challenge.lean --proof Submission.lean\n"
         "\n"
-        "Configure like a validator: lemma configure judge (or lemma setup). With JUDGE_OPENAI_API_KEY (or legacy "
+        "Configure like a validator: lemma-cli configure judge (or lemma-cli setup). With "
+        "JUDGE_OPENAI_API_KEY (or legacy "
         "OPENAI_API_KEY), the real model runs; otherwise FakeJudge (no HTTP). LEMMA_FAKE_JUDGE=1 forces FakeJudge "
         "even with keys."
     ),

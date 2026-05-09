@@ -102,7 +102,7 @@ def print_glossary() -> None:
             "Synapse **deadline_block** is the chain height after which the answer is late.",
         ),
         (
-            "Subnet hash pins (`lemma configure subnet-pins`)",
+            "Subnet hash pins (`lemma-cli configure subnet-pins`)",
             "Writes expected-hash lines into `.env` copied from `lemma meta`. Validators must have these pins "
             "set and matching live `lemma meta` (judge profile always; generated-registry hash when using "
             "generated problems).",
@@ -112,7 +112,7 @@ def print_glossary() -> None:
             "Use `lemma validator-check` for a clear pre-flight (READY / NOT READY). Usually you’re fine if: "
             "RPC works, hotkey has a UID on NETUID, judge API keys set, subnet pins and Lean image present, "
             "timeouts OK (`lemma doctor` for key/env sanity). If something “doesn’t match,” compare **live** "
-            "`lemma meta` to your pinned expected lines and refresh `lemma configure subnet-pins`.",
+            "`lemma meta` to your pinned expected lines and refresh `lemma-cli configure subnet-pins`.",
         ),
     )
     for title, body in sections:

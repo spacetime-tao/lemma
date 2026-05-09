@@ -16,7 +16,7 @@ So “OpenAI-compatible” is about the **wire format** (how the request/respons
 
 **Anthropic** is different again: it has its own API (`/v1/messages`, separate fields). Lemma uses **`AsyncAnthropic`** when `PROVER_PROVIDER=anthropic` / `JUDGE_PROVIDER=anthropic`.
 
-Interactive setup (`lemma configure judge` / `configure prover`): reply with a **row number** or the **backend keyword** (`chutes`, `gemini`, …). For **`lemma configure prover`**, you **pick the vendor first** (Chutes, Gemini, Anthropic, hosted OpenAI, or custom OpenAI-compat URL); the next prompts ask for API keys and **`PROVER_MODEL`** (with dim examples in-terminal — preset tiers for Gemini, defaults for Chutes/Anthropic, required string for OpenAI, provider-specific id for custom).
+Interactive setup (`lemma-cli configure judge` / `configure prover`): reply with a **row number** or the **backend keyword** (`chutes`, `gemini`, …). For **`lemma-cli configure prover`**, you **pick the vendor first** (Chutes, Gemini, Anthropic, hosted OpenAI, or custom OpenAI-compat URL); the next prompts ask for API keys and **`PROVER_MODEL`** (with dim examples in-terminal — preset tiers for Gemini, defaults for Chutes/Anthropic, required string for OpenAI, provider-specific id for custom).
 
 ## Catalog
 

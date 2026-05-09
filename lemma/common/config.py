@@ -34,7 +34,7 @@ class LemmaSettings(BaseSettings):
     ) -> tuple[PydanticBaseSettingsSource, ...]:
         """Prefer ``.env`` over process environment for the same variable name.
 
-        Default pydantic-settings order lets exported shell variables beat ``merge_dotenv`` / ``lemma setup``.
+        Default pydantic-settings order lets exported shell variables beat ``merge_dotenv`` / ``lemma-cli setup``.
         Explicit constructor kwargs still win (handled first). Set ``LEMMA_PREFER_PROCESS_ENV=1`` to restore
         the library default (environment overrides ``.env``) for CI/containers that rely on it.
         """
@@ -232,7 +232,8 @@ class LemmaSettings(BaseSettings):
         default="chutes",
         validation_alias=AliasChoices("JUDGE_PROVIDER", "judge_provider"),
         description=(
-            "``chutes`` = subnet judge via OpenAI-compatible HTTP to Chutes (same stack as ``lemma configure judge`` "
+            "``chutes`` = subnet judge via OpenAI-compatible HTTP to Chutes "
+            "(same stack as ``lemma-cli configure judge`` "
             f"→ Chutes). Legacy alias: ``openai``. Anthropic: ``anthropic``. Validators must use ``chutes`` with "
             f"OPENAI_MODEL={CANONICAL_JUDGE_OPENAI_MODEL!r} and OPENAI_BASE_URL={CANONICAL_JUDGE_OPENAI_BASE_URL!r}."
         ),
