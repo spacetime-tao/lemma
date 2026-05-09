@@ -222,7 +222,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **`epoch._verify_one`**: seven defaulted kwargs for K>1 path (default K=1); **`asyncio.gather` without `return_exceptions`** → one UID exception can drop whole batch.
 - **`validator/protocol_migration.py`** no-op removed; validator startup now checks live settings directly.
 - **`validator/query.py`** thin wrapper removed; epoch calls `bt.Dendrite` directly.
-- **`reputation.apply_ema_to_entries`**: third return element discarded — simplify API.
+- **`reputation.apply_ema_to_entries`**: third return element discarded; removed from API.
 - **`scoring/dedup.py`**: parallel `dedup_identical` / `dedup_coldkeys` → generic helper candidate.
 - **`scoring/__init__.py`**: re-exports unused by validator imports.
 - **Style proliferation:** mixed dataclass / pydantic / hand JSON (`ScoredEntry`, `RubricScore`, …).
@@ -284,7 +284,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **`scripts/load_minif2f.py`** removed; `scripts/build_lemma_catalog.py` is the single catalog rebuild path.
 - **`scripts/lemma-run`** removed; docs use standard `uv run` commands instead of a repo wrapper.
 - **`docs/comparator.md`** clarified as experimental/default-off; no bundled production comparator or profile pin.
-- **`pyproject.toml` extras** — `tiktoken` removed; `anthropic` moved to optional extra; remaining CLI split candidate needs a broader package decision.
+- **`pyproject.toml` extras** — `tiktoken` removed; `anthropic` and `btcli` moved to optional extras.
 - **`Dockerfile`** no longer installs full `docker.io`; runtime image uses Python Docker SDK + mounted host socket. Added `.dockerignore`.
 
 ---

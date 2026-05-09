@@ -522,7 +522,7 @@ async def run_epoch(
     alpha = float(settings.lemma_reputation_ema_alpha)
     cred_exp = float(settings.lemma_reputation_credibility_exponent)
     if scored and not dry_run and (alpha > 0.0 or cred_exp > 0.0):
-        scored, rep_store.ema_by_uid, _ = apply_ema_to_entries(
+        scored, rep_store.ema_by_uid = apply_ema_to_entries(
             scored,
             alpha=alpha,
             credibility_exponent=cred_exp,

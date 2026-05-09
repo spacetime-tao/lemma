@@ -6,7 +6,7 @@ def test_apply_ema_smoothes() -> None:
     entries = [
         ScoredEntry(uid=1, reasoning_score=1.0, tokens=10, composite=1.0, submission_fp=""),
     ]
-    out, ema, _instant = apply_ema_to_entries(
+    out, ema = apply_ema_to_entries(
         entries,
         alpha=0.5,
         credibility_exponent=1.0,
@@ -18,7 +18,7 @@ def test_apply_ema_smoothes() -> None:
 
 def test_apply_ema_alpha_zero_no_smoothing() -> None:
     entries = [ScoredEntry(uid=1, reasoning_score=0.7, tokens=3, composite=0.7, submission_fp="")]
-    out, ema, _ = apply_ema_to_entries(
+    out, ema = apply_ema_to_entries(
         entries,
         alpha=0.0,
         credibility_exponent=1.0,
@@ -42,7 +42,7 @@ def test_apply_ema_credibility_multiplier() -> None:
     entries = [
         ScoredEntry(uid=2, reasoning_score=1.0, tokens=3, composite=1.0, submission_fp=""),
     ]
-    out, ema, _ = apply_ema_to_entries(
+    out, ema = apply_ema_to_entries(
         entries,
         alpha=0.0,
         credibility_exponent=2.0,

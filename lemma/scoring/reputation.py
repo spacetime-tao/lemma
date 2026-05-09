@@ -74,18 +74,17 @@ def apply_ema_to_entries(
     credibility_exponent: float,
     prev_ema: dict[int, float],
     credibility_by_uid: dict[int, float] | None = None,
-) -> tuple[list[ScoredEntry], dict[int, float], dict[int, float]]:
+) -> tuple[list[ScoredEntry], dict[int, float]]:
     """Return entries with ``reasoning_score``/``composite`` replaced by EMA-smoothed values.
 
     ``credibility_by_uid`` holds per-UID verify-pass EMA in ``[0, 1]`` (default 1.0 if missing).
     Final score uses ``smoothed * (credibility ** credibility_exponent)``.
 
-    Returns ``(new_entries, new_ema_map, round_instant_scores)``.
+    Returns ``(new_entries, new_ema_map)``.
     """
     raw_alpha = float(alpha)
     exp_p = max(0.0, float(credibility_exponent))
     cred_map = credibility_by_uid or {}
-    instant: dict[int, float] = {e.uid: float(e.reasoning_score) for e in entries}
     new_ema: dict[int, float] = dict(prev_ema)
 
     out: list[ScoredEntry] = []
@@ -109,4 +108,4 @@ def apply_ema_to_entries(
                 submission_fp=e.submission_fp,
             ),
         )
-    return out, new_ema, instant
+    return out, new_ema

@@ -16,7 +16,7 @@ Splitting the CLI is possible, but it should be done in stages. The core repo cu
 
 ### 1. Local Source Of Truth
 
-Use `/Users/leehall/lemma` as the working checkout. It is clean and already at commit `6d8a441`.
+Use `/Users/leehall/lemma` as the working checkout. It is clean and synced with `main`.
 
 Do not keep editing the temporary Codex snapshot. It was useful for inspection only.
 
@@ -24,12 +24,12 @@ Do not keep editing the temporary Codex snapshot. It was useful for inspection o
 
 These stay in `spacetime-tao/lemma` because they affect scoring agreement.
 
-1. Fail closed when response body hash is missing or mismatched in production.
-2. Reject missing `deadline_block` on responses that were sent with a deadline.
-3. Make generated registry hashes cover the real template body and RNG version tag, not only names/order.
-4. Fix generated problem documentation so the builder count matches code.
-5. Expand the validator scoring/profile pin to cover subnet-critical settings beyond the judge prompt/model.
-6. Make FakeJudge impossible in live validator mode unless an explicit local-only flag is active.
+1. Fail closed when response body hash is missing or mismatched in production. **Done.**
+2. Reject missing `deadline_block` on responses that were sent with a deadline. **Done.**
+3. Make generated registry hashes cover the real template body and RNG version tag, not only names/order. **Done.**
+4. Fix generated problem documentation so the builder count matches code. **Done.**
+5. Expand the validator scoring/profile pin to cover subnet-critical settings beyond the judge prompt/model. **Done.**
+6. Make FakeJudge impossible in live validator mode unless an explicit local-only flag is active. **Done.**
 
 ### 3. Scoring Simplification
 
@@ -80,16 +80,17 @@ Once `lemma-cli` exists and can call core functions:
 2. Thin or remove no-op glue like `validator/query.py` and `validator/protocol_migration.py`. **Done: removed both; epoch calls `bt.Dendrite` directly.**
 3. Move catalog-building helpers out of runtime package if only scripts/tests use them. **Done: builder/parser helpers moved to `tools/catalog`; runtime keeps `lemma/catalog/constants.py`.**
 4. Remove root stubs and unused assets once docs no longer point at them. **Root cleanup done: removed `validator.py`, `voibes.jpeg`, obsolete `env.example`, superseded `scripts/load_minif2f.py`, and the old `scripts/lemma-run` wrapper. Comparator docs now match default-off behavior; `tiktoken` was removed, `anthropic` and `btcli` are optional, and the runtime Docker image no longer installs the full Docker engine. Larger misc items remain.**
-5. Keep tests focused on proof acceptance, scoring, protocol integrity, and deterministic problem selection.
+5. Keep tests focused on proof acceptance, scoring, protocol integrity, and deterministic problem selection. **Ongoing.**
+6. Simplify small glue APIs when an audit item has a single unused path. **Started: removed the unused third return from `apply_ema_to_entries`.**
 
 ## First PR Sequence
 
-1. Add this workplan and agree on repo split boundaries.
-2. Patch generated problem count docs and registry hash contents.
-3. Patch response integrity/deadline fail-closed behavior with tests.
-4. Patch live validator FakeJudge fail-closed behavior.
+1. Add this workplan and agree on repo split boundaries. **Done.**
+2. Patch generated problem count docs and registry hash contents. **Done.**
+3. Patch response integrity/deadline fail-closed behavior with tests. **Done.**
+4. Patch live validator FakeJudge fail-closed behavior. **Done.**
 5. Scaffold `lemma-cli` as a separate repo and move only non-consensus UI code first. **Started.**
-6. Remove migrated CLI code from core after `lemma-cli` can install and run against it.
+6. Remove migrated CLI code from core after `lemma-cli` can install and run against it. **Mostly done; keep minimal core commands.**
 
 ## Non-Goals For Now
 
