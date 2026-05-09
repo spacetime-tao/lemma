@@ -16,7 +16,7 @@ The final score blends two signals:
 The default is `LEMMA_SCORE_PROOF_WEIGHT=0.10`, meaning the heuristic contributes
 10 percent of the blend and the judge contributes 90 percent. The heuristic is
 deterministic and local: it strips Lean comments by default, then scores proof
-text length, `by` frequency, and line count.
+text length, `by` frequency, and non-empty line count.
 
 ## Problem
 
@@ -132,7 +132,7 @@ the exported rows with `tools.proof_metrics_analyze`.
 | `rfl` | 115 | 538 | 9 | 0.3159 | Small baseline. |
 | `norm_num` | 120 | 2129 | 32 | 0.3182 | Larger printed proof term than `rfl`. |
 | Structured `have` proof | 214 | 2526 | 40 | 0.4256 | Metric rises with real proof structure. |
-| Comment padding + `norm_num` | 4190 | 2129 | 32 | 0.5217 | Lean metric matches `norm_num`; text heuristic still rises because stripped comment lines leave line-count bulk. |
+| Comment padding + `norm_num` | 4190 | 2129 | 32 | 0.5217 | Historical run: Lean metric matched `norm_num`; the text heuristic still rose because stripped comment lines left line-count bulk. |
 | String padding + `norm_num` | 2150 | 4160 | 34 | 0.4760 | Lean metric also rises; the probe is not padding-proof. |
 
 Analyzer summary:
@@ -151,6 +151,11 @@ pure comment padding in this sample. It is not sufficient as a scoring signal:
 valid but useless term-level padding, such as an unused large string, can still
 inflate it. Keep it compare-only until a better Lean/elaborator-backed metric is
 defined and tested against more padding attempts.
+
+Follow-up: the historical run above exposed one direct bug in the current
+heuristic. Comment-only and blank lines are now normalized out before line count,
+so comment padding no longer receives leftover line-count credit. This is a
+normalization fix, not a broader proof-quality metric.
 
 Signals to avoid as scoring inputs:
 

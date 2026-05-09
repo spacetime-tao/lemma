@@ -25,6 +25,15 @@ def test_proof_intrinsic_comment_padding_stripped_by_default() -> None:
     )
 
 
+def test_proof_intrinsic_comment_only_lines_do_not_inflate_score() -> None:
+    base = "theorem t : True := by\n  trivial\n"
+    padded = base + ("-- by by by by by by by by by by\n\n" * 100)
+    assert proof_intrinsic_score(padded, strip_comments=True) == proof_intrinsic_score(
+        base,
+        strip_comments=True,
+    )
+
+
 def test_strip_lean_comments_removes_blocks_and_lines() -> None:
     s = "/- outer /- inner -/ -/\ntheorem t : True := by trivial -- trailing"
     out = strip_lean_comments_for_intrinsic(s)

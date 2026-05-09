@@ -7,7 +7,7 @@ import re
 
 
 def strip_lean_comments_for_intrinsic(src: str) -> str:
-    """Best-effort removal of Lean ``--`` line comments and ``/- ... -/`` blocks.
+    """Best-effort removal of Lean comments and empty lines.
 
     Imperfect inside string literals, but removes the dominant comment-padding pattern for
     ``proof_intrinsic_score``. Innermost ``/- ... -/`` pairs are stripped repeatedly until stable.
@@ -19,7 +19,7 @@ def strip_lean_comments_for_intrinsic(src: str) -> str:
             break
         out = new
     out = re.sub(r"--[^\n]*", "", out)
-    return out
+    return "\n".join(line for line in out.splitlines() if line.strip())
 
 
 def proof_intrinsic_score(proof_script: str, *, strip_comments: bool = True) -> float:
