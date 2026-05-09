@@ -79,7 +79,8 @@ def render_report(report: MetricsReport, *, outlier_limit: int = 8) -> str:
 
     bytes_v = [r.proof_metric_bytes for r in ok_rows]
     lines_v = [r.proof_metric_lines for r in ok_rows]
-    delimiters_v = [r.proof_metric_delimiters for r in ok_rows if r.proof_metric_delimiters is not None]
+    delimiter_rows = [r for r in ok_rows if r.proof_metric_delimiters is not None]
+    delimiters_v = [r.proof_metric_delimiters for r in delimiter_rows]
     depth_v = [r.proof_metric_max_depth for r in ok_rows if r.proof_metric_max_depth is not None]
     proof_len_v = [r.proof_len for r in ok_rows]
     intrinsic_v = [r.proof_intrinsic for r in ok_rows]
@@ -99,6 +100,12 @@ def render_report(report: MetricsReport, *, outlier_limit: int = 8) -> str:
             _stats_line("proof_len_chars", proof_len_v),
             f"corr(metric_bytes, proof_len_chars)={_format_corr(_pearson(bytes_v, proof_len_v))}",
             f"corr(metric_bytes, proof_intrinsic)={_format_corr(_pearson(bytes_v, intrinsic_v))}",
+            "corr(metric_delimiters, proof_len_chars)="
+            + _format_corr(_pearson(delimiters_v, [r.proof_len for r in delimiter_rows]) if delimiters_v else None),
+            "corr(metric_delimiters, proof_intrinsic)="
+            + _format_corr(
+                _pearson(delimiters_v, [r.proof_intrinsic for r in delimiter_rows]) if delimiters_v else None,
+            ),
             "corr(metric_bytes, judge_composite)="
             + _format_corr(_pearson([x for x, _ in judged], [y for _, y in judged]) if judged else None),
             "corr(metric_delimiters, judge_composite)="
