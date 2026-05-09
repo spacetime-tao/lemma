@@ -2,16 +2,14 @@
 
 from __future__ import annotations
 
-import os
 import shutil
 import subprocess
-import sys
 from typing import Literal
 
 import bittensor as bt
 import click
 
-from lemma.cli.style import finish_cli_output, flush_stdio, stylize
+from lemma.cli.style import finish_cli_output, stylize
 from lemma.common.config import LemmaSettings, validator_judge_stack_strict_issue
 from lemma.common.subtensor import get_subtensor
 from lemma.judge.profile import judge_profile_sha256
@@ -25,7 +23,7 @@ def _print_ready_footer(*, outcome: Literal["ok", "warn"]) -> None:
     click.echo(stylize("READY", fg="green", bold=True))
     click.echo(
         stylize(
-            "  Next: lemma validator start    (append --dry-run to skip set_weights)",
+            "  Next: lemma validator start    (or `lemma validator dry-run` to skip set_weights)",
             dim=True,
         )
     )
@@ -37,43 +35,6 @@ def _print_ready_footer(*, outcome: Literal["ok", "warn"]) -> None:
     else:
         click.echo(stylize("validator-check: OK", fg="green"))
     click.echo("")
-
-
-def _interactive_validator_start_prompt_ok() -> bool:
-    """TTY-only so scripts and CI never block waiting for input."""
-    if os.environ.get("LEMMA_VALIDATOR_CHECK_NO_PROMPT", "").strip().lower() in ("1", "true", "yes"):
-        return False
-    return sys.stdin.isatty()
-
-
-def _maybe_prompt_validator_start(settings: LemmaSettings, *, had_warnings: bool) -> None:
-    """Interactive handoff to `lemma validator start` (same process)."""
-    if had_warnings:
-        ok = click.confirm(
-            "Start the scoring loop now (`lemma validator start`)? "
-            "Warnings above may affect scoring.",
-            default=False,
-        )
-    else:
-        ok = click.confirm(
-            "Start the scoring loop now (`lemma validator start`)?",
-            default=False,
-        )
-    if not ok:
-        click.echo(
-            stylize(
-                "Skipping validator start. Your shell prompt should appear below — "
-                "if not, press Enter once.",
-                dim=True,
-            ),
-        )
-        finish_cli_output()
-        return
-    from lemma.validator.service import ValidatorService
-
-    ValidatorService(settings, dry_run=False).run_blocking()
-    click.echo("")
-    flush_stdio()
 
 
 def _docker_image_available(image: str) -> bool:
@@ -386,13 +347,9 @@ def run_validator_check(settings: LemmaSettings) -> int:
 
     if warn:
         _print_ready_footer(outcome="warn")
-        if _interactive_validator_start_prompt_ok():
-            _maybe_prompt_validator_start(settings, had_warnings=True)
         finish_cli_output()
         return 0
 
     _print_ready_footer(outcome="ok")
-    if _interactive_validator_start_prompt_ok():
-        _maybe_prompt_validator_start(settings, had_warnings=False)
     finish_cli_output()
     return 0
