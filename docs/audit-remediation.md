@@ -213,6 +213,7 @@ CLI alone cited as **43 %** of `lemma/` and **83 %** of combined runtime core si
 - **`try_prover.py`** (~677 LoC) local operator preview moved to `lemma-cli`; core keeps redirects only.
 - **`start_screen.py`** (~569 LoC) single mega-menu; removed in the first CLI extraction trim.
 - **`glossary.py`** moved to `lemma-cli`; core keeps a redirect only.
+- **`doctor`** moved to `lemma-cli`; core keeps a redirect only.
 - **`bittensor[cli]`** moved behind optional `btcli` extra; core depends on the Bittensor SDK only, while operators can still run `uv sync --extra btcli` for wallet/register commands.
 - **`validator-check` interactive start prompt** removed; core pre-flight now exits after READY / NOT READY, while guided handoff belongs in `lemma-cli`.
 - **`local-loop`** undocumented FakeJudge + host-Lean dev shortcut removed; use explicit `lemma validator dry-run` or `lemma-cli rehearsal` instead.
