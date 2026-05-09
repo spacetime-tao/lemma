@@ -70,6 +70,7 @@ Track in issues or refactors as capacity allows: consolidate CLI dry-run paths, 
 
 ## References
 
+- Non-overlapping cleanup and repo-split plan: [workplan.md](workplan.md)
 - Full external-audit remediation checklist (prioritized): [audit-remediation.md](audit-remediation.md)
 - Implementation map: [incentive_migration.md](incentive_migration.md)
 - Reserved flags module: `lemma/validator/protocol_migration.py`

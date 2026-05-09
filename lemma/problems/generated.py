@@ -13,6 +13,7 @@ varies by template (easy rfl/norm_num vs heavier tactics).
 from __future__ import annotations
 
 import hashlib
+import inspect
 import json
 import random
 from collections.abc import Callable
@@ -549,13 +550,29 @@ _BUILDERS: tuple[tuple[Split, Callable[[random.Random, str, int], Problem]], ...
 )
 
 
+def _builder_source_sha256(fn: BuilderFn) -> str:
+    return hashlib.sha256(inspect.getsource(fn).encode("utf-8")).hexdigest()
+
+
 def generated_registry_canonical_dict() -> dict[str, object]:
     """Stable description of template registry (for ``lemma meta`` and optional pinning)."""
+    split_counts = {
+        spl: sum(1 for builder_split, _ in _RAW_BUILDERS if builder_split == spl)
+        for spl in ("easy", "medium", "hard")
+    }
     return {
         "kind": "lemma_generated_registry_v1",
+        "rng_mix_tag": RNG_MIX_TAG,
         "topics": list(TOPICS),
+        "builder_count": len(_RAW_BUILDERS),
+        "split_counts": split_counts,
         "builders": [
-            {"index": i, "split": spl, "fn": fn.__name__}
+            {
+                "index": i,
+                "split": spl,
+                "fn": fn.__name__,
+                "source_sha256": _builder_source_sha256(fn),
+            }
             for i, (spl, fn) in enumerate(_RAW_BUILDERS)
         ],
     }
