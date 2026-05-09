@@ -259,9 +259,9 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 ### 13.6 Configuration (`config.py`)
 
 - File cited ~**980 LoC** — growth without removing scaffolding.
-- **102 `Field` / 103 `AliasChoices`** — lower-case aliases allegedly unused in production.
+- **102 `Field` / 102 `AliasChoices`** — lower-case aliases allegedly unused in production.
 - Triple aliases on several wallet/prover fields.
-- **`allow_noncanonical_judge_model`** — zero readers per audit grep snapshot (verify before delete).
+- **`allow_noncanonical_judge_model`** — removed; it was an ignored compatibility knob and did not affect validator judge policy.
 - Resolver collapse opportunities (`anthropic` vs OpenAI keys).
 - **`validator_judge_stack_strict`** vs unreachable Anthropic judge branch on validator.
 - Six env names for two wallet values.
