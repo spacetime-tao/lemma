@@ -277,9 +277,9 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 
 ### 13.9 Repository-root / misc
 
-- Root **`validator.py`** stub — README-only redirect candidate.
-- **`voibes.jpeg`** — unused asset (audit).
-- **`env.example`** vs **`.env.example`** confusion.
+- Root **`validator.py`** stub removed; docs point to `lemma validator start`.
+- **`voibes.jpeg`** unused asset removed.
+- **`env.example`** removed; **`.env.example`** is the only env template.
 - **`scripts/load_minif2f.py`** superseded header.
 - **`scripts/lemma-run`** vs Makefile.
 - **`docs/comparator.md`** aspirational vs default-off comparator.
@@ -296,7 +296,7 @@ Abbreviated; see `knowledge/` for full YAML. Status reflects **Round 3 narrative
 |-----------|------------|----------------------|
 | One-sentence primary design axis | `subnet.invariants.yaml` | Still violated |
 | Validator-only development | `subnet.invariants.yaml#architecture.validator_only_development` | Still violated (reference miner + PROVER_SYSTEM) |
-| Single-file validator pattern | `validator.contract.yaml` | Violated — root stub + package |
+| Single-file validator pattern | `validator.contract.yaml` | Still violated by package layout; root `validator.py` stub removed |
 | Push compute to miners | `subnet.invariants.yaml#compute_distribution` | Still violated |
 | EMA for stability | `validator.rules.yaml` | Honored |
 | Credibility tracking tuning | `incentive.primitives.yaml` | Wired; default exponent cited as wrong vs spec |
