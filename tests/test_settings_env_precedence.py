@@ -61,6 +61,38 @@ def test_explicit_init_kwarg_beats_all(monkeypatch: pytest.MonkeyPatch, tmp_path
     assert s.openai_model == "explicit"
 
 
+def test_lowercase_field_env_aliases_are_ignored(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    monkeypatch.delenv("LEMMA_PREFER_PROCESS_ENV", raising=False)
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "\n".join(
+            [
+                "openai_model=lowercase-env",
+                "lean_use_docker=false",
+                "miner_max_concurrent_forwards=99",
+            ],
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    s = LemmaSettings(_env_file=str(env_file))
+    assert s.openai_model == CANONICAL_JUDGE_OPENAI_MODEL
+    assert s.lean_use_docker is True
+    assert s.miner_max_concurrent_forwards == 8
+
+
+def test_constructor_field_names_still_work() -> None:
+    s = LemmaSettings(
+        _env_file=None,
+        openai_model="explicit",
+        lean_use_docker=False,
+        miner_max_concurrent_forwards=3,
+    )
+    assert s.openai_model == "explicit"
+    assert s.lean_use_docker is False
+    assert s.miner_max_concurrent_forwards == 3
+
+
 def test_documented_validator_wallet_env_overrides_miner_wallet(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     monkeypatch.delenv("LEMMA_PREFER_PROCESS_ENV", raising=False)
     env_file = tmp_path / ".env"

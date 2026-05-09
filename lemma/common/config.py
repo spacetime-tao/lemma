@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import Literal
 
-from pydantic import AliasChoices, Field
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic_settings.sources import PydanticBaseSettingsSource
 
@@ -26,8 +26,19 @@ class LemmaSettings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore",
-        populate_by_name=True,
+        populate_by_name=False,
     )
+
+    def __init__(self, **data: object) -> None:
+        """Accept Python field-name kwargs without accepting field-name env vars."""
+        for name, field in type(self).model_fields.items():
+            if name not in data:
+                continue
+            alias = field.validation_alias
+            if isinstance(alias, str):
+                data.setdefault(alias, data[name])
+                data.pop(name)
+        super().__init__(**data)
 
     @classmethod
     def settings_customise_sources(
@@ -62,19 +73,16 @@ class LemmaSettings(BaseSettings):
             file_secret_settings,
         )
 
-    netuid: int = Field(default=0, ge=0, validation_alias=AliasChoices("NETUID", "netuid"))
+    netuid: int = Field(default=0, ge=0, validation_alias="NETUID")
 
     problem_source: Literal["generated", "frozen"] = Field(
         default="generated",
-        validation_alias=AliasChoices("LEMMA_PROBLEM_SOURCE", "problem_source"),
+        validation_alias="LEMMA_PROBLEM_SOURCE",
         description="generated = seed-expanded templates; frozen = minif2f_frozen.json catalog.",
     )
     lemma_dev_allow_frozen_problem_source: bool = Field(
         default=False,
-        validation_alias=AliasChoices(
-            "LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE",
-            "lemma_dev_allow_frozen_problem_source",
-        ),
+        validation_alias="LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE",
         description=(
             "Allow LEMMA_PROBLEM_SOURCE=frozen (bundled public-eval catalog). Default false — "
             "subnet-like deployments should use generated templates."
@@ -84,10 +92,7 @@ class LemmaSettings(BaseSettings):
         default=100,
         ge=1,
         le=1_000_000,
-        validation_alias=AliasChoices(
-            "LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS",
-            "problem_seed_quantize_blocks",
-        ),
+        validation_alias="LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS",
         description=(
             "Used when LEMMA_PROBLEM_SEED_MODE=quantize: problem_seed = (chain_head // N) * N "
             "(e.g. N=100 and ~12 s/block ≈ 20 min per theorem). "
@@ -96,7 +101,7 @@ class LemmaSettings(BaseSettings):
     )
     problem_seed_mode: Literal["quantize", "subnet_epoch"] = Field(
         default="quantize",
-        validation_alias=AliasChoices("LEMMA_PROBLEM_SEED_MODE", "problem_seed_mode"),
+        validation_alias="LEMMA_PROBLEM_SEED_MODE",
         description=(
             "quantize: fixed N-block windows (`LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`) — same theorem for everyone "
             "between rotations. "
@@ -107,10 +112,7 @@ class LemmaSettings(BaseSettings):
         default=0,
         ge=0,
         le=128,
-        validation_alias=AliasChoices(
-            "LEMMA_PROBLEM_SEED_CHAIN_HEAD_SLACK_BLOCKS",
-            "lemma_problem_seed_chain_head_slack_blocks",
-        ),
+        validation_alias="LEMMA_PROBLEM_SEED_CHAIN_HEAD_SLACK_BLOCKS",
         description=(
             "Subtract this many blocks from RPC chain head before problem_seed resolution and forward HTTP "
             "deadline math (same value used for both). Default 0; try 1 if validators disagree on theorem by "
@@ -119,15 +121,12 @@ class LemmaSettings(BaseSettings):
     )
     minif2f_catalog_path: Path | None = Field(
         default=None,
-        validation_alias=AliasChoices("LEMMA_MINIF2F_CATALOG_PATH", "minif2f_catalog_path"),
+        validation_alias="LEMMA_MINIF2F_CATALOG_PATH",
         description="Optional path to frozen JSON array (default: bundled lemma/problems/minif2f_frozen.json).",
     )
     generated_registry_expected_sha256: str | None = Field(
         default=None,
-        validation_alias=AliasChoices(
-            "LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED",
-            "generated_registry_expected_sha256",
-        ),
+        validation_alias="LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED",
         description=(
             "Validators with LEMMA_PROBLEM_SOURCE=generated must set this; startup fails unless it matches "
             "the live generated-registry hash (`lemma meta`)."
@@ -135,10 +134,7 @@ class LemmaSettings(BaseSettings):
     )
     lemma_generated_legacy_plain_rng: bool = Field(
         default=False,
-        validation_alias=AliasChoices(
-            "LEMMA_GENERATED_LEGACY_PLAIN_RNG",
-            "lemma_generated_legacy_plain_rng",
-        ),
+        validation_alias="LEMMA_GENERATED_LEGACY_PLAIN_RNG",
         description=(
             "If true, template RNG uses random.Random(chain_seed) (legacy). Default false: SHA256-mix chain seed "
             "before RNG for less correlated template picks across adjacent seeds (see lemma/problems/generated.py)."
@@ -146,53 +142,47 @@ class LemmaSettings(BaseSettings):
     )
     subtensor_network: str = Field(
         default="finney",
-        validation_alias=AliasChoices("SUBTENSOR_NETWORK", "subtensor_network"),
+        validation_alias="SUBTENSOR_NETWORK",
     )
     subtensor_chain_endpoint: str | None = Field(
         default=None,
-        validation_alias=AliasChoices("SUBTENSOR_CHAIN_ENDPOINT", "subtensor_chain_endpoint"),
+        validation_alias="SUBTENSOR_CHAIN_ENDPOINT",
     )
 
     wallet_cold: str = Field(
         default="default",
-        validation_alias=AliasChoices("BT_WALLET_COLD", "wallet_cold"),
+        validation_alias="BT_WALLET_COLD",
     )
     wallet_hot: str = Field(
         default="default",
-        validation_alias=AliasChoices("BT_WALLET_HOT", "wallet_hot"),
+        validation_alias="BT_WALLET_HOT",
     )
     validator_wallet_cold: str | None = Field(
         default=None,
-        validation_alias=AliasChoices(
-            "BT_VALIDATOR_WALLET_COLD",
-            "validator_wallet_cold",
-        ),
+        validation_alias="BT_VALIDATOR_WALLET_COLD",
         description="If set, `lemma validator` / `validator-check` use this coldkey instead of BT_WALLET_COLD.",
     )
     validator_wallet_hot: str | None = Field(
         default=None,
-        validation_alias=AliasChoices(
-            "BT_VALIDATOR_WALLET_HOT",
-            "validator_wallet_hot",
-        ),
+        validation_alias="BT_VALIDATOR_WALLET_HOT",
         description="If set, validator uses this hotkey name instead of BT_WALLET_HOT.",
     )
 
-    axon_port: int = Field(default=8091, validation_alias=AliasChoices("AXON_PORT", "axon_port"))
+    axon_port: int = Field(default=8091, validation_alias="AXON_PORT")
     axon_external_ip: str | None = Field(
         default=None,
-        validation_alias=AliasChoices("AXON_EXTERNAL_IP", "axon_external_ip"),
+        validation_alias="AXON_EXTERNAL_IP",
         description="Public IPv4/host validators use to reach this axon; set explicitly for production miners.",
     )
     axon_discover_external_ip: bool = Field(
         default=False,
-        validation_alias=AliasChoices("AXON_DISCOVER_EXTERNAL_IP", "axon_discover_external_ip"),
+        validation_alias="AXON_DISCOVER_EXTERNAL_IP",
         description="If true and AXON_EXTERNAL_IP is unset, fetch public IPv4 over HTTPS before serving.",
     )
 
     lean_sandbox_image: str = Field(
         default="lemma/lean-sandbox:latest",
-        validation_alias=AliasChoices("LEAN_SANDBOX_IMAGE", "lean_sandbox_image"),
+        validation_alias="LEAN_SANDBOX_IMAGE",
         description=(
             "Docker image/ref used for Lean verification. The local default is mutable; production templates "
             "should set the subnet-published immutable tag or digest."
@@ -201,7 +191,7 @@ class LemmaSettings(BaseSettings):
     lean_verify_timeout_s: int = Field(
         default=300,
         ge=1,
-        validation_alias=AliasChoices("LEAN_VERIFY_TIMEOUT_S", "lean_verify_timeout_s"),
+        validation_alias="LEAN_VERIFY_TIMEOUT_S",
         description=(
             "Seconds for Docker/host lake build + axiom check per miner submission. "
             "Default 300 (5m); raise for heavy Mathlib builds if timeouts are false positives."
@@ -209,19 +199,19 @@ class LemmaSettings(BaseSettings):
     )
     lean_sandbox_cpu: float = Field(
         default=2.0,
-        validation_alias=AliasChoices("LEAN_SANDBOX_CPU", "lean_sandbox_cpu"),
+        validation_alias="LEAN_SANDBOX_CPU",
     )
     lean_sandbox_mem_mb: int = Field(
         default=8192,
-        validation_alias=AliasChoices("LEAN_SANDBOX_MEM_MB", "lean_sandbox_mem_mb"),
+        validation_alias="LEAN_SANDBOX_MEM_MB",
     )
     lean_sandbox_network: str = Field(
         default="none",
-        validation_alias=AliasChoices("LEAN_SANDBOX_NETWORK", "lean_sandbox_network"),
+        validation_alias="LEAN_SANDBOX_NETWORK",
     )
     lean_use_docker: bool = Field(
         default=True,
-        validation_alias=AliasChoices("LEMMA_USE_DOCKER", "lean_use_docker"),
+        validation_alias="LEMMA_USE_DOCKER",
         description=(
             "When true (default), validators/miners/`lemma verify` use Docker for LeanSandbox — subnet parity. "
             "Set false only for host `lake` when toolchain matches `LEAN_SANDBOX_IMAGE` and policy allows."
@@ -229,7 +219,7 @@ class LemmaSettings(BaseSettings):
     )
     allow_host_lean: bool = Field(
         default=False,
-        validation_alias=AliasChoices("LEMMA_ALLOW_HOST_LEAN", "allow_host_lean"),
+        validation_alias="LEMMA_ALLOW_HOST_LEAN",
         description=(
             "If true, allow `lemma verify --host-lean`, `lemma-cli try-prover --host-lean`, and "
             "`LEMMA_TRY_PROVER_HOST_VERIFY` for local debugging. Production validators should leave this false."
@@ -238,7 +228,7 @@ class LemmaSettings(BaseSettings):
 
     judge_provider: str = Field(
         default="chutes",
-        validation_alias=AliasChoices("JUDGE_PROVIDER", "judge_provider"),
+        validation_alias="JUDGE_PROVIDER",
         description=(
             "``chutes`` = subnet judge via OpenAI-compatible HTTP to Chutes "
             "(same stack as ``lemma-cli configure judge`` "
@@ -249,15 +239,15 @@ class LemmaSettings(BaseSettings):
     )
     anthropic_api_key: str | None = Field(
         default=None,
-        validation_alias=AliasChoices("ANTHROPIC_API_KEY", "anthropic_api_key"),
+        validation_alias="ANTHROPIC_API_KEY",
     )
     anthropic_model: str = Field(
         default="claude-3-5-sonnet-20241022",
-        validation_alias=AliasChoices("ANTHROPIC_MODEL", "anthropic_model"),
+        validation_alias="ANTHROPIC_MODEL",
     )
     openai_api_key: str | None = Field(
         default=None,
-        validation_alias=AliasChoices("OPENAI_API_KEY", "openai_api_key"),
+        validation_alias="OPENAI_API_KEY",
         description=(
             "Legacy shared fallback for the judge and OpenAI-compatible prover. Prefer JUDGE_OPENAI_API_KEY "
             "and PROVER_OPENAI_API_KEY so those keys stay separate."
@@ -265,7 +255,7 @@ class LemmaSettings(BaseSettings):
     )
     judge_openai_api_key: str | None = Field(
         default=None,
-        validation_alias=AliasChoices("JUDGE_OPENAI_API_KEY", "judge_openai_api_key"),
+        validation_alias="JUDGE_OPENAI_API_KEY",
         description=(
             "Chutes/OpenAI-compatible API key used **only** by the judge (scores traces). "
             "If unset, the judge falls back to OPENAI_API_KEY."
@@ -273,7 +263,7 @@ class LemmaSettings(BaseSettings):
     )
     openai_model: str = Field(
         default=CANONICAL_JUDGE_OPENAI_MODEL,
-        validation_alias=AliasChoices("OPENAI_MODEL", "openai_model"),
+        validation_alias="OPENAI_MODEL",
         description=(
             f"Judge model when JUDGE_PROVIDER is chutes or openai. Validators must use "
             f"{CANONICAL_JUDGE_OPENAI_MODEL!r} (miners: use PROVER_MODEL for a different prover id)."
@@ -281,7 +271,7 @@ class LemmaSettings(BaseSettings):
     )
     openai_base_url: str = Field(
         default="https://llm.chutes.ai/v1",
-        validation_alias=AliasChoices("OPENAI_BASE_URL", "openai_base_url"),
+        validation_alias="OPENAI_BASE_URL",
         description=(
             f"Judge API base. Validators must use {CANONICAL_JUDGE_OPENAI_BASE_URL!r}; miners may point "
             "`PROVER_OPENAI_BASE_URL` elsewhere."
@@ -291,33 +281,27 @@ class LemmaSettings(BaseSettings):
         default=0.2,
         ge=0.0,
         le=2.0,
-        validation_alias=AliasChoices("JUDGE_TEMPERATURE", "judge_temperature"),
+        validation_alias="JUDGE_TEMPERATURE",
         description="Sampling temperature for OpenAI-compatible judges and local Anthropic judge tooling.",
     )
     judge_max_tokens: int = Field(
         default=256,
         ge=16,
         le=4096,
-        validation_alias=AliasChoices("JUDGE_MAX_TOKENS", "judge_max_tokens"),
+        validation_alias="JUDGE_MAX_TOKENS",
         description="Max completion tokens for judge responses (short JSON rubric).",
     )
     judge_llm_retry_attempts: int = Field(
         default=4,
         ge=1,
         le=32,
-        validation_alias=AliasChoices(
-            "LEMMA_JUDGE_LLM_RETRY_ATTEMPTS",
-            "judge_llm_retry_attempts",
-        ),
+        validation_alias="LEMMA_JUDGE_LLM_RETRY_ATTEMPTS",
         description="Judge-only retries on 429 / timeouts / 5xx for each score() call.",
     )
     judge_llm_http_timeout_s: float | None = Field(
         default=None,
         gt=0.0,
-        validation_alias=AliasChoices(
-            "LEMMA_JUDGE_HTTP_TIMEOUT_S",
-            "judge_llm_http_timeout_s",
-        ),
+        validation_alias="LEMMA_JUDGE_HTTP_TIMEOUT_S",
         description=(
             "If set, overrides LEMMA_LLM_HTTP_TIMEOUT_S for judge HTTP reads only "
             "(small JSON output; use a tighter cap to fail fast on stalls)."
@@ -325,10 +309,7 @@ class LemmaSettings(BaseSettings):
     )
     judge_profile_expected_sha256: str | None = Field(
         default=None,
-        validation_alias=AliasChoices(
-            "JUDGE_PROFILE_SHA256_EXPECTED",
-            "judge_profile_expected_sha256",
-        ),
+        validation_alias="JUDGE_PROFILE_SHA256_EXPECTED",
         description=(
             "Validators must set this; startup fails unless it matches live judge_profile_sha256 "
             "(`lemma meta`)."
@@ -336,11 +317,11 @@ class LemmaSettings(BaseSettings):
     )
     prover_provider: str = Field(
         default="anthropic",
-        validation_alias=AliasChoices("PROVER_PROVIDER", "prover_provider"),
+        validation_alias="PROVER_PROVIDER",
     )
     prover_model: str | None = Field(
         default=None,
-        validation_alias=AliasChoices("PROVER_MODEL", "prover_model"),
+        validation_alias="PROVER_MODEL",
         description="Miner-only model id. Use a capable reasoning model; see docs/models.md.",
     )
     prover_max_tokens: int = Field(
@@ -401,7 +382,7 @@ class LemmaSettings(BaseSettings):
     )
     prover_openai_base_url: str | None = Field(
         default=None,
-        validation_alias=AliasChoices("PROVER_OPENAI_BASE_URL", "prover_openai_base_url"),
+        validation_alias="PROVER_OPENAI_BASE_URL",
         description=(
             "Miner-only: OpenAI-compatible API base for PROVER_PROVIDER=openai. "
             "If unset, prover uses OPENAI_BASE_URL (validator judge is unchanged)."
@@ -409,20 +390,20 @@ class LemmaSettings(BaseSettings):
     )
     prover_openai_api_key: str | None = Field(
         default=None,
-        validation_alias=AliasChoices("PROVER_OPENAI_API_KEY", "prover_openai_api_key"),
+        validation_alias="PROVER_OPENAI_API_KEY",
         description=(
             "Miner-only: API key for the prover’s OpenAI-compatible endpoint. "
             "If unset, prover falls back to OPENAI_API_KEY."
         ),
     )
 
-    log_level: str = Field(default="INFO", validation_alias=AliasChoices("LOG_LEVEL", "log_level"))
+    log_level: str = Field(default="INFO", validation_alias="LOG_LEVEL")
 
     # Validator — forward query (HTTP wait derived from block height × block time)
     llm_http_timeout_s: float = Field(
         default=900.0,
         gt=30.0,
-        validation_alias=AliasChoices("LEMMA_LLM_HTTP_TIMEOUT_S", "llm_http_timeout_s"),
+        validation_alias="LEMMA_LLM_HTTP_TIMEOUT_S",
         description=(
             "HTTP read timeout for OpenAI-compatible + Anthropic LLM calls (prover + judge). "
             "Should fit inside one round’s forward wait (blocks × LEMMA_BLOCK_TIME_SEC_ESTIMATE)."
@@ -432,27 +413,24 @@ class LemmaSettings(BaseSettings):
         default=12.0,
         gt=0,
         le=60.0,
-        validation_alias=AliasChoices("LEMMA_BLOCK_TIME_SEC_ESTIMATE", "block_time_sec_estimate"),
+        validation_alias="LEMMA_BLOCK_TIME_SEC_ESTIMATE",
         description="Rough seconds per chain block — converts remaining blocks to forward HTTP timeout.",
     )
     forward_wait_min_s: float = Field(
         default=60.0,
         gt=0,
-        validation_alias=AliasChoices("LEMMA_FORWARD_WAIT_MIN_S", "forward_wait_min_s"),
+        validation_alias="LEMMA_FORWARD_WAIT_MIN_S",
         description="Floor for forward HTTP timeout after blocks×block-time (avoid unusably short waits).",
     )
     forward_wait_max_s: float = Field(
         default=86400.0,
         gt=0,
-        validation_alias=AliasChoices("LEMMA_FORWARD_WAIT_MAX_S", "forward_wait_max_s"),
+        validation_alias="LEMMA_FORWARD_WAIT_MAX_S",
         description="Ceiling for forward HTTP timeout (safety cap even when many blocks remain).",
     )
     miner_reject_past_deadline_block: bool = Field(
         default=True,
-        validation_alias=AliasChoices(
-            "LEMMA_MINER_REJECT_PAST_DEADLINE_BLOCK",
-            "miner_reject_past_deadline_block",
-        ),
+        validation_alias="LEMMA_MINER_REJECT_PAST_DEADLINE_BLOCK",
         description="If true, refuse axon work when chain head >= synapse.deadline_block (when set).",
     )
     timeout_scale_by_split: bool = Field(
@@ -484,10 +462,7 @@ class LemmaSettings(BaseSettings):
         default=4,
         ge=1,
         le=128,
-        validation_alias=AliasChoices(
-            "LEMMA_LEAN_VERIFY_MAX_CONCURRENT",
-            "lemma_lean_verify_max_concurrent",
-        ),
+        validation_alias="LEMMA_LEAN_VERIFY_MAX_CONCURRENT",
         description=(
             "Max concurrent Lean sandbox.verify jobs per epoch (each may spawn Docker). "
             "Raise on large validators when many miners return proofs; lower if CPU/RAM or Docker struggles."
@@ -497,10 +472,7 @@ class LemmaSettings(BaseSettings):
         default=8,
         ge=1,
         le=256,
-        validation_alias=AliasChoices(
-            "LEMMA_JUDGE_MAX_CONCURRENT",
-            "lemma_judge_max_concurrent",
-        ),
+        validation_alias="LEMMA_JUDGE_MAX_CONCURRENT",
         description=(
             "Max concurrent judge LLM HTTP calls per epoch (after Lean passes). "
             "Caps bursts against Chutes to reduce 429 rate limits when many miners verify."
@@ -508,10 +480,7 @@ class LemmaSettings(BaseSettings):
     )
     lean_verify_workspace_cache_dir: Path | None = Field(
         default=None,
-        validation_alias=AliasChoices(
-            "LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR",
-            "lean_verify_workspace_cache_dir",
-        ),
+        validation_alias="LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR",
         description=(
             "Optional directory on fast local disk to reuse a warm `.lake` per theorem template. "
             "After the first passing verify for a template, later verifies only rebuild ``Submission`` "
@@ -520,10 +489,7 @@ class LemmaSettings(BaseSettings):
     )
     lemma_lean_workspace_cache_include_submission_hash: bool = Field(
         default=False,
-        validation_alias=AliasChoices(
-            "LEMMA_LEAN_WORKSPACE_CACHE_INCLUDE_SUBMISSION_HASH",
-            "lemma_lean_workspace_cache_include_submission_hash",
-        ),
+        validation_alias="LEMMA_LEAN_WORKSPACE_CACHE_INCLUDE_SUBMISSION_HASH",
         description=(
             "If true, cache slot names include a truncated SHA256 of Submission.lean (distinct proofs never "
             "share a directory; more disk vs template-only keys). Default false."
@@ -531,20 +497,14 @@ class LemmaSettings(BaseSettings):
     )
     lemma_lean_proof_metrics_enabled: bool = Field(
         default=False,
-        validation_alias=AliasChoices(
-            "LEMMA_LEAN_PROOF_METRICS",
-            "lemma_lean_proof_metrics_enabled",
-        ),
+        validation_alias="LEMMA_LEAN_PROOF_METRICS",
         description=(
             "Opt-in compare-only Lean proof metrics in VerifyResult. Does not affect rewards or weights."
         ),
     )
     lemma_lean_docker_worker: str | None = Field(
         default=None,
-        validation_alias=AliasChoices(
-            "LEMMA_LEAN_DOCKER_WORKER",
-            "lemma_lean_docker_worker",
-        ),
+        validation_alias="LEMMA_LEAN_DOCKER_WORKER",
         description=(
             "Name of a **running** sandbox container: Lemma uses `docker exec` instead of `docker run` per "
             "verify (much lower latency). Must bind-mount `LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR` — see "
@@ -553,10 +513,7 @@ class LemmaSettings(BaseSettings):
     )
     lean_verify_remote_url: str | None = Field(
         default=None,
-        validation_alias=AliasChoices(
-            "LEMMA_LEAN_VERIFY_REMOTE_URL",
-            "lean_verify_remote_url",
-        ),
+        validation_alias="LEMMA_LEAN_VERIFY_REMOTE_URL",
         description=(
             "Optional base URL (http/https) of a dedicated Lean verify worker process "
             "(POST `/verify` JSON — see `lemma lean-worker`). When unset, verification runs in-process "
@@ -565,10 +522,7 @@ class LemmaSettings(BaseSettings):
     )
     lean_verify_remote_bearer: str | None = Field(
         default=None,
-        validation_alias=AliasChoices(
-            "LEMMA_LEAN_VERIFY_REMOTE_BEARER",
-            "lean_verify_remote_bearer",
-        ),
+        validation_alias="LEMMA_LEAN_VERIFY_REMOTE_BEARER",
         description=(
             "Optional shared secret; sent as ``Authorization: Bearer`` when calling "
             "``LEMMA_LEAN_VERIFY_REMOTE_URL``."
@@ -578,10 +532,7 @@ class LemmaSettings(BaseSettings):
         default=30.0,
         ge=0.0,
         le=600.0,
-        validation_alias=AliasChoices(
-            "LEMMA_LEAN_VERIFY_REMOTE_TIMEOUT_MARGIN_S",
-            "lean_verify_remote_timeout_margin_s",
-        ),
+        validation_alias="LEMMA_LEAN_VERIFY_REMOTE_TIMEOUT_MARGIN_S",
         description=(
             "Added to ``LEAN_VERIFY_TIMEOUT_S`` (per-request split scaling included) "
             "for HTTP client read timeout."
@@ -591,37 +542,31 @@ class LemmaSettings(BaseSettings):
         default=3,
         ge=1,
         le=20,
-        validation_alias=AliasChoices("SET_WEIGHTS_MAX_RETRIES", "set_weights_max_retries"),
+        validation_alias="SET_WEIGHTS_MAX_RETRIES",
     )
     set_weights_retry_delay_s: float = Field(
         default=2.0,
         ge=0.1,
-        validation_alias=AliasChoices("SET_WEIGHTS_RETRY_DELAY_S", "set_weights_retry_delay_s"),
+        validation_alias="SET_WEIGHTS_RETRY_DELAY_S",
     )
     empty_epoch_weights_policy: Literal["skip", "uniform"] = Field(
         default="skip",
-        validation_alias=AliasChoices("EMPTY_EPOCH_WEIGHTS_POLICY", "empty_epoch_weights_policy"),
+        validation_alias="EMPTY_EPOCH_WEIGHTS_POLICY",
         description="If no miner passes verify+judge: skip set_weights, or emit uniform weights across all UIDs.",
     )
     validator_abort_if_not_registered: bool = Field(
         default=False,
-        validation_alias=AliasChoices(
-            "VALIDATOR_ABORT_IF_NOT_REGISTERED",
-            "validator_abort_if_not_registered",
-        ),
+        validation_alias="VALIDATOR_ABORT_IF_NOT_REGISTERED",
         description="If true, skip epochs when this wallet has no UID on the subnet.",
     )
     training_export_jsonl: Path | None = Field(
         default=None,
-        validation_alias=AliasChoices("LEMMA_TRAINING_EXPORT_JSONL", "training_export_jsonl"),
+        validation_alias="LEMMA_TRAINING_EXPORT_JSONL",
         description="Append one JSON object per scored miner per epoch (PRM dataset export).",
     )
     lemma_training_export_profile: Literal["full", "reasoning_only"] = Field(
         default="full",
-        validation_alias=AliasChoices(
-            "LEMMA_TRAINING_EXPORT_PROFILE",
-            "lemma_training_export_profile",
-        ),
+        validation_alias="LEMMA_TRAINING_EXPORT_PROFILE",
         description=(
             "`full`: schema v1 includes proof_script, rubric, pareto_weight. "
             "`reasoning_only`: schema v2 omits proof, judge labels, and weights — less useful for gaming "
@@ -634,7 +579,7 @@ class LemmaSettings(BaseSettings):
         default=0.10,
         ge=0.0,
         le=1.0,
-        validation_alias=AliasChoices("LEMMA_SCORE_PROOF_WEIGHT", "lemma_score_proof_weight"),
+        validation_alias="LEMMA_SCORE_PROOF_WEIGHT",
         description=(
             "Blend intrinsic proof-text heuristic with judge rubric: "
             "round_score = w * proof_intrinsic + (1-w) * judge_composite. "
@@ -643,38 +588,26 @@ class LemmaSettings(BaseSettings):
     )
     lemma_scoring_dedup_identical: bool = Field(
         default=True,
-        validation_alias=AliasChoices(
-            "LEMMA_SCORING_DEDUP_IDENTICAL",
-            "lemma_scoring_dedup_identical",
-        ),
+        validation_alias="LEMMA_SCORING_DEDUP_IDENTICAL",
         description="Collapse identical (theorem, proof, trace) submissions; keep best round score per cluster.",
     )
     lemma_scoring_coldkey_dedup: bool = Field(
         default=True,
-        validation_alias=AliasChoices(
-            "LEMMA_SCORING_COLDKEY_DEDUP",
-            "lemma_scoring_coldkey_dedup",
-        ),
+        validation_alias="LEMMA_SCORING_COLDKEY_DEDUP",
         description="Keep only the best-scoring hotkey per coldkey (metagraph.coldkeys) each epoch.",
     )
     lemma_reputation_ema_alpha: float = Field(
         default=0.08,
         ge=0.0,
         le=1.0,
-        validation_alias=AliasChoices(
-            "LEMMA_REPUTATION_EMA_ALPHA",
-            "lemma_reputation_ema_alpha",
-        ),
+        validation_alias="LEMMA_REPUTATION_EMA_ALPHA",
         description="EMA smoothing for per-UID scores before Pareto weights (0 disables smoothing).",
     )
     lemma_reputation_credibility_exponent: float = Field(
         default=1.0,
         ge=0.0,
         le=4.0,
-        validation_alias=AliasChoices(
-            "LEMMA_REPUTATION_CREDIBILITY_EXPONENT",
-            "lemma_reputation_credibility_exponent",
-        ),
+        validation_alias="LEMMA_REPUTATION_CREDIBILITY_EXPONENT",
         description=(
             "Multiply EMA-smoothed score by (verify credibility)**exponent. "
             "Exponent 0 disables the multiplier (always 1). Default 1 applies a linear credibility curve."
@@ -684,10 +617,7 @@ class LemmaSettings(BaseSettings):
         default=0.08,
         ge=0.0,
         le=1.0,
-        validation_alias=AliasChoices(
-            "LEMMA_REPUTATION_VERIFY_CREDIBILITY_ALPHA",
-            "lemma_reputation_verify_credibility_alpha",
-        ),
+        validation_alias="LEMMA_REPUTATION_VERIFY_CREDIBILITY_ALPHA",
         description=(
             "EMA alpha for per-UID verify credibility (1.0 = Lean verify passed, 0.0 = failed). "
             "0 disables updates; new UIDs start at credibility 1.0."
@@ -695,10 +625,7 @@ class LemmaSettings(BaseSettings):
     )
     lemma_proof_intrinsic_strip_comments: bool = Field(
         default=True,
-        validation_alias=AliasChoices(
-            "LEMMA_PROOF_INTRINSIC_STRIP_COMMENTS",
-            "lemma_proof_intrinsic_strip_comments",
-        ),
+        validation_alias="LEMMA_PROOF_INTRINSIC_STRIP_COMMENTS",
         description=(
             "Strip Lean line/block comments and empty lines before proof_intrinsic heuristic "
             "(reduces comment-padding)."
@@ -706,20 +633,14 @@ class LemmaSettings(BaseSettings):
     )
     lemma_reputation_state_path: Path | None = Field(
         default=None,
-        validation_alias=AliasChoices(
-            "LEMMA_REPUTATION_STATE_PATH",
-            "lemma_reputation_state_path",
-        ),
+        validation_alias="LEMMA_REPUTATION_STATE_PATH",
         description="JSON file for per-UID EMA persistence (default: ~/.lemma/validator_reputation.json).",
     )
     lemma_epoch_problem_count: int = Field(
         default=1,
         ge=1,
         le=32,
-        validation_alias=AliasChoices(
-            "LEMMA_EPOCH_PROBLEM_COUNT",
-            "lemma_epoch_problem_count",
-        ),
+        validation_alias="LEMMA_EPOCH_PROBLEM_COUNT",
         description="Number of distinct theorems sampled per validator epoch (sequential miner queries).",
     )
     lemma_commit_reveal_enabled: bool = Field(
@@ -793,33 +714,33 @@ class LemmaSettings(BaseSettings):
     miner_min_validator_stake: float = Field(
         default=0.0,
         ge=0.0,
-        validation_alias=AliasChoices("MINER_MIN_VALIDATOR_STAKE", "miner_min_validator_stake"),
+        validation_alias="MINER_MIN_VALIDATOR_STAKE",
         description="Minimum metagraph stake (TAO) for caller hotkey; 0 disables check.",
     )
     miner_metagraph_refresh_s: float = Field(
         default=300.0,
         ge=5.0,
-        validation_alias=AliasChoices("MINER_METAGRAPH_REFRESH_S", "miner_metagraph_refresh_s"),
+        validation_alias="MINER_METAGRAPH_REFRESH_S",
     )
     miner_max_concurrent_forwards: int = Field(
         default=8,
         ge=1,
         le=256,
-        validation_alias=AliasChoices("MINER_MAX_CONCURRENT_FORWARDS", "miner_max_concurrent_forwards"),
+        validation_alias="MINER_MAX_CONCURRENT_FORWARDS",
     )
     miner_max_forwards_per_day: int = Field(
         default=0,
         ge=0,
-        validation_alias=AliasChoices("MINER_MAX_FORWARDS_PER_DAY", "miner_max_forwards_per_day"),
+        validation_alias="MINER_MAX_FORWARDS_PER_DAY",
         description="If >0, refuse new forwards after this many successful invokes per UTC day (0=unlimited).",
     )
     miner_require_validator_permit: bool = Field(
         default=False,
-        validation_alias=AliasChoices("MINER_REQUIRE_VALIDATOR_PERMIT", "miner_require_validator_permit"),
+        validation_alias="MINER_REQUIRE_VALIDATOR_PERMIT",
     )
     miner_priority_by_stake: bool = Field(
         default=False,
-        validation_alias=AliasChoices("MINER_PRIORITY_BY_STAKE", "miner_priority_by_stake"),
+        validation_alias="MINER_PRIORITY_BY_STAKE",
         description="Use validator stake as axon priority (requires periodic metagraph sync).",
     )
     miner_log_forwards: bool = Field(
@@ -846,23 +767,23 @@ class LemmaSettings(BaseSettings):
     )
     miner_local_verify: bool = Field(
         default=False,
-        validation_alias=AliasChoices("LEMMA_MINER_LOCAL_VERIFY", "miner_local_verify"),
+        validation_alias="LEMMA_MINER_LOCAL_VERIFY",
         description="Run Lean sandbox on Submission.lean after prover returns (same Docker/host as validators).",
     )
     synapse_max_statement_chars: int = Field(
         default=500_000,
         ge=1024,
-        validation_alias=AliasChoices("SYNAPSE_MAX_STATEMENT_CHARS", "synapse_max_statement_chars"),
+        validation_alias="SYNAPSE_MAX_STATEMENT_CHARS",
     )
     synapse_max_proof_chars: int = Field(
         default=500_000,
         ge=1024,
-        validation_alias=AliasChoices("SYNAPSE_MAX_PROOF_CHARS", "synapse_max_proof_chars"),
+        validation_alias="SYNAPSE_MAX_PROOF_CHARS",
     )
     synapse_max_trace_chars: int = Field(
         default=400_000,
         ge=1024,
-        validation_alias=AliasChoices("SYNAPSE_MAX_TRACE_CHARS", "synapse_max_trace_chars"),
+        validation_alias="SYNAPSE_MAX_TRACE_CHARS",
     )
 
     def prover_openai_base_url_resolved(self) -> str:
