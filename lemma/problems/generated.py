@@ -603,6 +603,59 @@ def _b_finset_subset_card_le_hard(rng: random.Random, topic: str, seed: int, nam
     )
 
 
+def _b_finset_range_card_easy(rng: random.Random, topic: str, seed: int, name: str) -> Problem:
+    n = rng.randint(2, 40)
+    body = f"""theorem {name} : (Finset.range {n}).card = {n} := by
+  sorry"""
+    return _mk_problem(
+        seed=seed,
+        topic=topic,
+        split="easy",
+        theorem_name=name,
+        type_expr=f"(Finset.range {n}).card = {n}",
+        challenge_body=body,
+    )
+
+
+def _b_list_append_length_medium(rng: random.Random, topic: str, seed: int, name: str) -> Problem:
+    body = f"""theorem {name} (xs ys : List Nat) : (xs ++ ys).length = xs.length + ys.length := by
+  sorry"""
+    return _mk_problem(
+        seed=seed,
+        topic=topic,
+        split="medium",
+        theorem_name=name,
+        type_expr="∀ xs ys : List Nat, (xs ++ ys).length = xs.length + ys.length",
+        challenge_body=body,
+    )
+
+
+def _b_set_union_subset_medium(rng: random.Random, topic: str, seed: int, name: str) -> Problem:
+    body = f"""theorem {name} (A B : Set Nat) : A ⊆ A ∪ B := by
+  sorry"""
+    return _mk_problem(
+        seed=seed,
+        topic=topic,
+        split="medium",
+        theorem_name=name,
+        type_expr="∀ A B : Set Nat, A ⊆ A ∪ B",
+        challenge_body=body,
+    )
+
+
+def _b_set_subset_antisymm_hard(rng: random.Random, topic: str, seed: int, name: str) -> Problem:
+    body = f"""theorem {name} (A B : Set Nat) : A ⊆ B → B ⊆ A → A = B := by
+  sorry"""
+    return _mk_problem(
+        seed=seed,
+        topic=topic,
+        split="hard",
+        theorem_name=name,
+        type_expr="∀ A B : Set Nat, A ⊆ B → B ⊆ A → A = B",
+        challenge_body=body,
+    )
+
+
 def _bind_builder(builder_index: int, fn: BuilderFn) -> Callable[[random.Random, str, int], Problem]:
     """Capture builder index so theorem names stay unique per (seed, template)."""
 
@@ -659,6 +712,10 @@ _RAW_BUILDERS: tuple[tuple[Split, BuilderFn], ...] = (
     ("medium", _b_logic_and_comm_medium),
     ("medium", _b_min_le_left_nat_medium),
     ("hard", _b_finset_subset_card_le_hard),
+    ("easy", _b_finset_range_card_easy),
+    ("medium", _b_list_append_length_medium),
+    ("medium", _b_set_union_subset_medium),
+    ("hard", _b_set_subset_antisymm_hard),
 )
 
 # Consensus-critical: append-only ordering; indices appear in ``_theorem_name``.
