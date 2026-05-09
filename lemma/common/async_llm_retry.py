@@ -1,4 +1,4 @@
-"""Shared exponential backoff for transient OpenAI / Anthropic HTTP errors."""
+"""Shared exponential backoff for transient LLM HTTP errors."""
 
 from __future__ import annotations
 
@@ -7,7 +7,6 @@ import random
 from collections.abc import Awaitable, Callable
 from typing import TypeVar
 
-import anthropic
 from loguru import logger
 from openai import APIConnectionError, APITimeoutError, InternalServerError, RateLimitError
 
@@ -21,12 +20,26 @@ TRANSIENT_OPENAI_COMPAT: tuple[type[BaseException], ...] = (
     RateLimitError,
 )
 
-TRANSIENT_ANTHROPIC: tuple[type[BaseException], ...] = (
-    anthropic.APIConnectionError,
-    anthropic.APITimeoutError,
-    anthropic.InternalServerError,
-    anthropic.RateLimitError,
-)
+def require_anthropic_sdk():
+    try:
+        import anthropic
+    except ImportError as e:
+        raise RuntimeError("Anthropic support requires the optional dependency: uv sync --extra anthropic") from e
+    return anthropic
+
+
+def anthropic_async_client_cls():
+    return require_anthropic_sdk().AsyncAnthropic
+
+
+def anthropic_transient_exceptions() -> tuple[type[BaseException], ...]:
+    anthropic = require_anthropic_sdk()
+    return (
+        anthropic.APIConnectionError,
+        anthropic.APITimeoutError,
+        anthropic.InternalServerError,
+        anthropic.RateLimitError,
+    )
 
 
 def fail_fast_instead_of_retry(exc: BaseException) -> bool:

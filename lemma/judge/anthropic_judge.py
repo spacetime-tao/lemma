@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-from anthropic import AsyncAnthropic
-
-from lemma.common.async_llm_retry import TRANSIENT_ANTHROPIC, async_llm_retry
+from lemma.common.async_llm_retry import anthropic_async_client_cls, anthropic_transient_exceptions, async_llm_retry
 from lemma.judge.base import RubricScore
 from lemma.judge.json_util import parse_rubric_json
 from lemma.judge.prompt_sanitize import sanitize_miner_fenced_block
@@ -25,7 +23,7 @@ class AnthropicJudge:
         kw: dict[str, object] = {"api_key": api_key}
         if timeout is not None:
             kw["timeout"] = timeout
-        self._client = AsyncAnthropic(**kw)
+        self._client = anthropic_async_client_cls()(**kw)
         self._model = model
         self._temperature = temperature
         self._max_tokens = max_tokens
@@ -55,6 +53,6 @@ class AnthropicJudge:
         text = await async_llm_retry(
             _call,
             max_attempts=self._retry_attempts,
-            transient_exceptions=TRANSIENT_ANTHROPIC,
+            transient_exceptions=anthropic_transient_exceptions(),
         )
         return parse_rubric_json(text)

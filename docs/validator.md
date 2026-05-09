@@ -8,7 +8,7 @@ Validators **always** wait for subnet epoch boundaries before each round — no 
 
 Validator→miner transport uses Bittensor Dendrite/Axon and synapse body-hash integrity — [transport.md](transport.md).
 
-Judge: Chutes when prompted is the documented default; Anthropic and custom OpenAI-compatible URLs optional.
+Judge: Chutes is the live validator path. Anthropic is only for local/experimental judge tooling and requires `uv sync --extra anthropic`.
 
 ## Test scoring (simple map)
 
