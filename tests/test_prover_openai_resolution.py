@@ -23,3 +23,17 @@ def test_prover_openai_can_override_gateway_and_key() -> None:
     )
     assert "googleapis.com" in s.prover_openai_base_url_resolved()
     assert s.prover_openai_api_key_resolved() == "gemini-key"
+
+
+def test_prover_openai_key_strips_whitespace() -> None:
+    s = LemmaSettings.model_construct(
+        openai_api_key=" legacy ",
+        prover_openai_api_key=" prover ",
+    )
+    assert s.prover_openai_api_key_resolved() == "prover"
+
+    fallback = LemmaSettings.model_construct(
+        openai_api_key=" legacy ",
+        prover_openai_api_key=" ",
+    )
+    assert fallback.prover_openai_api_key_resolved() == "legacy"

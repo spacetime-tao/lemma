@@ -15,6 +15,11 @@ CANONICAL_JUDGE_OPENAI_MODEL = "deepseek-ai/DeepSeek-V3.2-TEE"
 CANONICAL_JUDGE_OPENAI_BASE_URL = "https://llm.chutes.ai/v1"
 
 
+def _stripped_or_none(value: str | None) -> str | None:
+    s = (value or "").strip()
+    return s or None
+
+
 class LemmaSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -255,8 +260,8 @@ class LemmaSettings(BaseSettings):
         default=None,
         validation_alias=AliasChoices("OPENAI_API_KEY", "openai_api_key"),
         description=(
-            "Legacy fallback: Chutes/OpenAI-compatible API key for the **judge** when JUDGE_OPENAI_API_KEY is unset. "
-            "Prefer JUDGE_OPENAI_API_KEY so Gemini/prover keys can live under PROVER_OPENAI_API_KEY only."
+            "Legacy shared fallback for the judge and OpenAI-compatible prover. Prefer JUDGE_OPENAI_API_KEY "
+            "and PROVER_OPENAI_API_KEY so those keys stay separate."
         ),
     )
     judge_openai_api_key: str | None = Field(
@@ -924,19 +929,12 @@ class LemmaSettings(BaseSettings):
         return p if p else (self.openai_base_url or "").strip()
 
     def prover_openai_api_key_resolved(self) -> str | None:
-        """API key for prover when ``PROVER_PROVIDER=openai``; defaults to ``OPENAI_API_KEY``."""
-        pk = self.prover_openai_api_key
-        if pk is not None and str(pk).strip():
-            return pk
-        return self.openai_api_key
+        """API key for prover when ``PROVER_PROVIDER=openai``; falls back to ``OPENAI_API_KEY``."""
+        return _stripped_or_none(self.prover_openai_api_key) or _stripped_or_none(self.openai_api_key)
 
     def judge_openai_api_key_resolved(self) -> str | None:
         """API key for judge when ``JUDGE_PROVIDER`` is chutes/openai; prefers ``JUDGE_OPENAI_API_KEY``."""
-        jk = (self.judge_openai_api_key or "").strip()
-        if jk:
-            return jk
-        ok = (self.openai_api_key or "").strip()
-        return ok or None
+        return _stripped_or_none(self.judge_openai_api_key) or _stripped_or_none(self.openai_api_key)
 
     def validator_wallet_names(self) -> tuple[str, str]:
         """Cold/hot key names for signing and metagraph (validator). Falls back to BT_WALLET_*."""
