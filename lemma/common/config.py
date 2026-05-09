@@ -181,12 +181,12 @@ class LemmaSettings(BaseSettings):
     axon_external_ip: str | None = Field(
         default=None,
         validation_alias=AliasChoices("AXON_EXTERNAL_IP", "axon_external_ip"),
-        description="Public IPv4/host validators use to reach this axon; leave unset to auto-discover.",
+        description="Public IPv4/host validators use to reach this axon; set explicitly for production miners.",
     )
     axon_discover_external_ip: bool = Field(
-        default=True,
+        default=False,
         validation_alias=AliasChoices("AXON_DISCOVER_EXTERNAL_IP", "axon_discover_external_ip"),
-        description="If AXON_EXTERNAL_IP is unset, fetch public IPv4 over HTTPS before serving.",
+        description="If true and AXON_EXTERNAL_IP is unset, fetch public IPv4 over HTTPS before serving.",
     )
 
     lean_sandbox_image: str = Field(
