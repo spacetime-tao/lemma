@@ -48,7 +48,7 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 
 ### Trust & sybil
 
-- [x] **Sybil economics** — Operator guide [sybil_economics.md](sybil_economics.md): Lemma dedup vs coldkey sybil realities, UID pressure; tie-break / stake policy remains subnet governance ([`knowledge/sybil.realities.yaml`](../knowledge/sybil.realities.yaml)).
+- [x] **Sybil economics** — Operator guide [sybil_economics.md](sybil_economics.md): Lemma dedup vs coldkey sybil realities, UID pressure, and the decision gate required before sybil/Pareto reward changes; tie-break / stake policy remains subnet governance ([`knowledge/sybil.realities.yaml`](../knowledge/sybil.realities.yaml)).
 - [x] **Judge / infra trust** — HTTP peer check for **`judge_profile_sha256`** ships (`LEMMA_JUDGE_PROFILE_ATTEST_*`) and is documented as operator coordination, not Byzantine consensus or transport security. Stronger attestations (e.g. signed/on-chain or k-of-n governance) remain a separate design. See [judge-profile-attest.md](judge-profile-attest.md).
 
 ### Compute placement

@@ -37,6 +37,54 @@ sybil deterrent    ≈ cost_of_N_slots > reward_from_running_N_parallel_miners
 3. **Prefer** mechanism design where **running K independent miners** is **not** ~K× as attractive as one good miner (e.g. diminishing returns, uncopyable work, rate limits via economics rather than identity).
 4. **Optional policy knobs** (not enforced by this doc — subnet governance): tie-break rules when scores tie, registration burns, emissions caps per coldkey family, off-chain KYC — those are **outside** Lemma’s default codebase unless you add them explicitly.
 
+## Decision gate before changing rewards
+
+Do not add another sybil/Pareto scoring layer until the subnet has answered this gate. The default code should stay simple until there is evidence that a specific policy beats the current anti-clutter dedup rules.
+
+Minimum evidence:
+
+1. **UID cost context** — current registration cost, expected reward per slot, and whether the subnet is under high or low UID pressure.
+2. **Replay data** — at least one offline reward replay with identical-submission dedup on/off and coldkey dedup on/off.
+3. **K-miner pressure** — compare one strong miner against K coordinated miners with copied, lightly rewritten, or complementary outputs.
+4. **Accepted bypasses** — explicitly name which attacks remain acceptable for now: distinct coldkeys, semantic trace rewrites, copied proofs with rewritten explanations, or tied scores.
+5. **Rollback plan** — any scoring change must be profile-pinned, env-gated for rollout, and easy to disable without changing consensus code.
+
+Policy choices to make:
+
+| Choice | When it fits | Cost |
+| --- | --- | --- |
+| **Keep current dedup only** | Sybil pressure is theoretical, UID cost is already meaningful, or replay data is inconclusive. | Accepts that coldkey sybils remain possible. |
+| **Cap or dampen near-duplicate reward** | Replays show copied / lightly rewritten work taking too much emission. | Needs a precise similarity rule; easy to overfit. |
+| **Winners-take-most by problem subset** | K coordinated miners are consistently close to K× profitable. | Bigger mechanism change; must be simulated before live use. |
+| **Uncopyable work lane** | The subnet can generate tasks where extra miners do not cheaply clone the same answer. | Requires problem-supply and validator design, not just scoring. |
+| **External identity / governance policy** | The subnet intentionally wants off-chain identity or stake policy. | Outside Lemma’s default open scoring code. |
+
+Decision-record template:
+
+```text
+Sybil / Pareto economics decision:
+Chosen policy:
+Reason:
+
+Evidence reviewed:
+- UID registration cost:
+- Expected reward per slot:
+- Offline replay dataset:
+- K-miner result:
+- Known bypasses accepted:
+
+Reward/profile changes:
+- Dedup defaults:
+- Pareto/scoring changes:
+- Profile pin fields:
+- Rollout env gates:
+
+Rollback:
+- Disable path:
+- Operator notice:
+- Follow-up review date:
+```
+
 ## References
 
 - Dedup implementation: [`lemma/scoring/dedup.py`](../lemma/scoring/dedup.py), used from [`lemma/validator/epoch.py`](../lemma/validator/epoch.py).
