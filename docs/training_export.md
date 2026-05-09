@@ -16,6 +16,42 @@ LEMMA_TRAINING_EXPORT_JSONL=/var/lib/lemma/train.jsonl
 LEMMA_TRAINING_EXPORT_PROFILE=reasoning_only
 ```
 
+## Collect proof-metrics calibration data
+
+Use this only for private validator research, not public dataset sharing. The
+`full` profile includes proof text, judge labels, optional proof metrics, and
+Pareto weights.
+
+On a validator run where you want proof-side calibration rows:
+
+```bash
+LEMMA_TRAINING_EXPORT_JSONL=/var/lib/lemma/proof-metrics.jsonl
+LEMMA_TRAINING_EXPORT_PROFILE=full
+LEMMA_LEAN_PROOF_METRICS=1
+```
+
+Keep the normal production pins aligned (`LEAN_SANDBOX_IMAGE`, judge stack,
+timeouts, registry/profile hashes). `LEMMA_LEAN_PROOF_METRICS=1` adds one
+compare-only Lean probe after a proof already passes verification; it does **not**
+change rewards or weights.
+
+After collecting rows, run:
+
+```bash
+uv run python -m tools.proof_metrics_analyze /var/lib/lemma/proof-metrics.jsonl
+```
+
+Keep the analyzer report with any scoring decision notes. Look first at:
+
+- `rows_with_successful_proof_metrics` vs failed probe rows,
+- correlations between metric bytes, proof text length, current
+  `proof_intrinsic_score`, and judge composite,
+- padding-looking outliers.
+
+Do **not** change `LEMMA_SCORE_PROOF_WEIGHT` from one report alone. The proof-side
+gate in [proof-intrinsic-decision.md](proof-intrinsic-decision.md) still requires
+real export data plus adversarial padding fixtures before live reward changes.
+
 Analyze a local `full` export with proof metrics:
 
 ```bash
