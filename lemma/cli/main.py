@@ -518,119 +518,6 @@ def _miner_emit_dry_run_summary() -> None:
     )
 
 
-def _miner_emit_observability_panel() -> None:
-    """Operator-facing: logs vs judge scores (synapse has no return grade)."""
-    s = LemmaSettings()
-    setup_logging(s.log_level)
-    click.echo(stylize("\nMiner — observability (CLI)\n", fg="cyan", bold=True), nl=False)
-    click.echo(
-        stylize(
-            "Validators score your response after the HTTP reply — the axon does not receive a judge grade "
-            "back on the wire. You can still see your own outputs in logs and aggregate incentives on-chain.\n",
-            dim=True,
-        ),
-    )
-    click.echo(stylize("On this machine (stdout / logs)\n", fg="cyan", bold=True), nl=False)
-    click.echo(
-        "  "
-        + stylize("LEMMA_MINER_FORWARD_TIMELINE=1", fg="yellow")
-        + stylize(
-            " — three INFO lines per forward: RECEIVE (deadline vs head), SOLVED, OUTCOME "
-            "(best view in this terminal).\n",
-            dim=True,
-        ),
-        nl=False,
-    )
-    click.echo(
-        "  "
-        + stylize("LEMMA_MINER_LOG_FORWARDS=1", fg="yellow")
-        + stylize(
-            " — log INFO excerpts of reasoning + proof_script each forward (set in `.env` before ",
-            dim=True,
-        )
-        + stylize("lemma miner start", fg="green")
-        + stylize(").\n", dim=True),
-        nl=False,
-    )
-    click.echo(
-        "  "
-        + stylize("LEMMA_MINER_FORWARD_SUMMARY=1", fg="yellow")
-        + stylize(
-            " — one line per forward (default on unless you disable it).\n",
-            dim=True,
-        ),
-        nl=False,
-    )
-    click.echo(
-        "  "
-        + stylize("LEMMA_MINER_LOCAL_VERIFY=1", fg="yellow")
-        + stylize(
-            " — run Lean verify locally after each forward "
-            "(same idea as validators’ kernel check; not the LLM judge).\n",
-            dim=True,
-        ),
-        nl=False,
-    )
-    click.echo(
-        "  "
-        + stylize("LOG_LEVEL=DEBUG", fg="yellow")
-        + stylize(" — more verbose prover logging when debugging.\n", dim=True),
-        nl=False,
-    )
-    click.echo(stylize("On-chain (aggregate, not one theorem’s judge score)\n", fg="cyan", bold=True), nl=False)
-    click.echo(
-        "  "
-        + stylize(
-            f"btcli subnet show --netuid {s.netuid} --network {s.subtensor_network}",
-            fg="green",
-        )
-        + stylize(
-            " — incentive / stake / trust from the metagraph (updates as validators set weights).\n",
-            dim=True,
-        ),
-        nl=False,
-    )
-    click.echo(
-        stylize(
-            "If you thought you saw a “judge score” in docs or logs: that is usually the validator pipeline "
-            "(Lean → judge rubric → weights), described in docs/faq.md — "
-            "not a score returned to the miner over HTTP.\n",
-            dim=True,
-        ),
-    )
-    click.echo(stylize("On the validator machine (not your miner)\n", fg="cyan", bold=True), nl=False)
-    click.echo(
-        stylize(
-            "  INFO lines like ",
-            dim=True,
-        )
-        + stylize("lemma_epoch_summary … scored=N …", fg="yellow")
-        + stylize(
-            " count how many miners got a judge rubric that round. ",
-            dim=True,
-        )
-        + stylize("lemma validator", fg="green")
-        + stylize(
-            " dry-runs may print weight snippets. With ",
-            dim=True,
-        )
-        + stylize("LEMMA_TRAINING_EXPORT_JSONL", fg="yellow")
-        + stylize(
-            ", validators can append per-UID rubric rows to a JSONL file.\n",
-            dim=True,
-        ),
-        nl=False,
-    )
-    click.echo(stylize("Subnet round timing\n", fg="cyan", bold=True), nl=False)
-    click.echo(
-        stylize(
-            "Validators always wait for subnet epoch boundaries before each scoring round — same cadence for "
-            "every operator; there is no timer-only mode in Lemma.\n",
-            dim=True,
-        ),
-    )
-
-
 def _miner_run_axon(max_forwards_per_day: int | None) -> None:
     from lemma.miner.service import MinerService
 
@@ -697,7 +584,7 @@ def miner_group_dry_run_cmd() -> None:
     help="Explain how to see forwards in logs vs on-chain incentives (judge scores are not returned to the axon).",
 )
 def miner_observability_cmd() -> None:
-    _miner_emit_observability_panel()
+    _echo_moved_to_lemma_cli(("miner-observability",), heading="Miner observability moved to lemma-cli.")
 
 
 MOVED_COMMAND_CONTEXT = {
