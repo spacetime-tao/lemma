@@ -381,13 +381,6 @@ class LeanSandbox:
         if r.returncode != 0:
             # Lake often prints errors on stdout; always merge both (same as Docker log merge).
             combined = ((r.stderr or "") + "\n" + (r.stdout or ""))[-16_000:]
-            if lake_build_environment_failed(combined):
-                return VerifyResult(
-                    passed=False,
-                    reason="compile_error",
-                    stderr_tail=combined,
-                    build_seconds=elapsed,
-                )
             return VerifyResult(
                 passed=False,
                 reason="compile_error",
