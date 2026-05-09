@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
+
+import pytest
 from lemma.common.config import LemmaSettings
-from lemma.miner.prover import _normalize_prover_payload, _stub
+from lemma.miner.prover import LLMProver, _normalize_prover_payload, _stub
 from lemma.protocol import LemmaChallenge
 
 
@@ -102,6 +105,34 @@ def test_missing_key_stub_does_not_solve_demo_theorem() -> None:
         metronome_id="m1",
     )
     trace, proof, steps = _stub(synapse)
+
+    assert trace == "stub: no PROVER API key configured"
+    assert proof == synapse.theorem_statement
+    assert steps is not None and steps[0].text == trace
+
+
+@pytest.mark.parametrize("provider", ["openai", "anthropic"])
+def test_llm_prover_missing_key_uses_fail_closed_stub(monkeypatch: pytest.MonkeyPatch, provider: str) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("PROVER_OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    synapse = LemmaChallenge(
+        theorem_id="demo/two_plus_two",
+        theorem_statement="theorem two_plus_two_eq_four : (2 : Nat) + 2 = 4 := by\n  sorry\n",
+        lean_toolchain="lean4",
+        mathlib_rev="mathlib",
+        deadline_unix=1,
+        metronome_id="m1",
+    )
+    settings = LemmaSettings(
+        _env_file=None,
+        prover_provider=provider,
+        openai_api_key=None,
+        prover_openai_api_key=None,
+        anthropic_api_key=None,
+    )
+
+    trace, proof, steps = asyncio.run(LLMProver(settings).solve(synapse))
 
     assert trace == "stub: no PROVER API key configured"
     assert proof == synapse.theorem_statement

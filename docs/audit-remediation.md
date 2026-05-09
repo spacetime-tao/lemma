@@ -247,7 +247,8 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 ### 13.5 Miner
 
 - **`PROVER_SYSTEM`** (~130 lines) — reference-spec liability (`prover.py`).
-- Duplicated OpenAI vs Anthropic branches in prover.
+- Duplicated OpenAI vs Anthropic branches in prover — shared solve/log/parse flow extracted; provider-specific
+  HTTP calls remain separate.
 - Four orthogonal observability toggles → log shape explosion.
 - **`daily_budget`** JSON persistence when enabled.
 - **`public_ip.py`** third-party calls — public IP discovery is now opt-in (`AXON_DISCOVER_EXTERNAL_IP=true`);
