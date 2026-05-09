@@ -8,7 +8,7 @@ This document tracks **post-audit** mechanism changes in Lemma: proof-centric sc
 
 | Mechanism | Env / behavior |
 |-----------|----------------|
-| Proof + judge blend | `LEMMA_SCORE_PROOF_WEIGHT` (default **0.35** intrinsic / **0.65** judge composite); tune per subnet policy. See [proof-intrinsic-decision.md](proof-intrinsic-decision.md) before changing defaults. |
+| Proof + judge blend | `LEMMA_SCORE_PROOF_WEIGHT` (default **0.10** intrinsic / **0.90** judge composite); tune per subnet policy. See [proof-intrinsic-decision.md](proof-intrinsic-decision.md) before changing defaults. |
 | Identical submission dedup | `LEMMA_SCORING_DEDUP_IDENTICAL=1` — same `(theorem, proof, trace)` keeps best score. |
 | Coldkey dedup | `LEMMA_SCORING_COLDKEY_DEDUP=1` — one hotkey per coldkey (metagraph). |
 | EMA reputation | `LEMMA_REPUTATION_EMA_ALPHA` (default **0.08**); state file `LEMMA_REPUTATION_STATE_PATH` or `~/.lemma/validator_reputation.json`. |

@@ -58,6 +58,13 @@ def test_judge_profile_includes_validator_scoring_policy() -> None:
     assert "secret" not in salt_hash
 
 
+def test_default_score_proof_weight_is_low_bootstrap_signal(monkeypatch) -> None:
+    monkeypatch.delenv("LEMMA_SCORE_PROOF_WEIGHT", raising=False)
+    s = LemmaSettings(_env_file=None)
+    assert s.lemma_score_proof_weight == 0.10
+    assert judge_profile_dict(s)["scoring_policy"]["lemma_score_proof_weight"] == 0.10
+
+
 def test_judge_profile_hash_changes_when_scoring_policy_changes() -> None:
     a = LemmaSettings(lemma_score_proof_weight=0.35)
     b = LemmaSettings(lemma_score_proof_weight=0.5)

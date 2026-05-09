@@ -13,8 +13,8 @@ The final score blends two signals:
 1. `proof_intrinsic_score`, controlled by `LEMMA_SCORE_PROOF_WEIGHT`.
 2. The judged informal reasoning rubric.
 
-The default is `LEMMA_SCORE_PROOF_WEIGHT=0.35`, meaning the heuristic contributes
-35 percent of the blend and the judge contributes 65 percent. The heuristic is
+The default is `LEMMA_SCORE_PROOF_WEIGHT=0.10`, meaning the heuristic contributes
+10 percent of the blend and the judge contributes 90 percent. The heuristic is
 deterministic and local: it strips Lean comments by default, then scores proof
 text length, `by` frequency, and line count.
 
@@ -48,8 +48,8 @@ of the incentive mechanism.
 
 ## Acceptable Next Code Changes
 
-1. Lower the default `LEMMA_SCORE_PROOF_WEIGHT` after an operator-facing note,
-   likely to something closer to 0.10 than 0.35.
+1. Keep `LEMMA_SCORE_PROOF_WEIGHT` low by default unless a stronger proof-side
+   signal replaces the current text heuristic.
 2. Add focused tests that preserve the current heuristic behavior while the
    migration is planned, so accidental scoring drift is visible.
 3. Prototype a replacement metric outside the live default path, using signals
@@ -75,7 +75,7 @@ These are starting points, not approved designs.
 
 ## Open Questions
 
-- Should the next behavior patch lower `LEMMA_SCORE_PROOF_WEIGHT` from 0.35?
+- What Lean-backed signal should eventually replace the text heuristic?
 - Is informal reasoning a permanent incentive target, or only a bootstrap aid?
 - Should hard theorem supply and bounty-style curation become the stronger long
   term path instead of trying to infer proof difficulty from one submitted proof?

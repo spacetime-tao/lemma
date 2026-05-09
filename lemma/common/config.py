@@ -657,14 +657,14 @@ class LemmaSettings(BaseSettings):
 
     # Scoring / incentive hard-migration (validators)
     lemma_score_proof_weight: float = Field(
-        default=0.35,
+        default=0.10,
         ge=0.0,
         le=1.0,
         validation_alias=AliasChoices("LEMMA_SCORE_PROOF_WEIGHT", "lemma_score_proof_weight"),
         description=(
             "Blend intrinsic proof-text heuristic with judge rubric: "
             "round_score = w * proof_intrinsic + (1-w) * judge_composite. "
-            "Default favors judge composite over the heuristic (see docs/incentive_migration.md)."
+            "Default keeps the text heuristic low-weight (see docs/proof-intrinsic-decision.md)."
         ),
     )
     lemma_scoring_dedup_identical: bool = Field(
