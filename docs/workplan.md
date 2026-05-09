@@ -59,7 +59,7 @@ Move first:
 1. Guided menu and start screen. **Done as a core trim; rebuild richer UX in `lemma-cli` only.**
 2. Environment wizard. **Moved to `lemma-cli`; core has redirects only.**
 3. Docs opener/glossary. **Moved to `lemma-cli`; core has redirects only.**
-4. Shell activation helpers. **Removed from core; docs use `.venv` activation, `uv run`, or `scripts/lemma-run`.**
+4. Shell activation helpers. **Removed from core; docs use standard `uv run` commands or explicit `.venv` activation.**
 5. Local try-prover/rehearsal wrappers. **Moved to `lemma-cli`; core has redirects only.**
 6. Human-friendly doctor/validator-check wrappers, once the core repo exposes stable machine-readable checks.
 
@@ -79,7 +79,7 @@ Once `lemma-cli` exists and can call core functions:
 1. Delete duplicate dry-run aliases. **Done: canonicalized to `miner dry-run`, `validator dry-run`, and `validator config`.**
 2. Thin or remove no-op glue like `validator/query.py` and `validator/protocol_migration.py`. **Done: removed both; epoch calls `bt.Dendrite` directly.**
 3. Move catalog-building helpers out of runtime package if only scripts/tests use them. **Done: builder/parser helpers moved to `tools/catalog`; runtime keeps `lemma/catalog/constants.py`.**
-4. Remove root stubs and unused assets once docs no longer point at them. **Root cleanup done: removed `validator.py`, `voibes.jpeg`, obsolete `env.example`, and superseded `scripts/load_minif2f.py`; larger misc items remain.**
+4. Remove root stubs and unused assets once docs no longer point at them. **Root cleanup done: removed `validator.py`, `voibes.jpeg`, obsolete `env.example`, superseded `scripts/load_minif2f.py`, and the old `scripts/lemma-run` wrapper; larger misc items remain.**
 5. Keep tests focused on proof acceptance, scoring, protocol integrity, and deterministic problem selection.
 
 ## First PR Sequence

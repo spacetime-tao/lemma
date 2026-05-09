@@ -281,7 +281,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **`voibes.jpeg`** unused asset removed.
 - **`env.example`** removed; **`.env.example`** is the only env template.
 - **`scripts/load_minif2f.py`** removed; `scripts/build_lemma_catalog.py` is the single catalog rebuild path.
-- **`scripts/lemma-run`** vs Makefile.
+- **`scripts/lemma-run`** removed; docs use standard `uv run` commands instead of a repo wrapper.
 - **`docs/comparator.md`** aspirational vs default-off comparator.
 - **`pyproject.toml` extras** — anthropic/tiktoken/cli optional split candidate.
 - **`Dockerfile`** full `docker.io` engine vs CLI-only — image size.

@@ -2,7 +2,7 @@
 
 Walkthrough: [getting-started.md](getting-started.md) — `lemma-cli setup` (validator or both) sets judge and `LEAN_SANDBOX_IMAGE` via prompts.
 
-**Short checklist:** `bash scripts/prebuild_lean_image.sh` → **`lemma-cli rehearsal`** (prover + Lean + judge preview) → `lemma validator-check` until READY → `lemma validator start` (or **validator-check** from `lemma-cli`). Same keys/chain setup as a miner if you run both roles.
+**Short checklist:** `bash scripts/prebuild_lean_image.sh` → **`lemma-cli rehearsal`** (prover + Lean + judge preview) → `uv run lemma validator-check` until READY → `uv run lemma validator start` (or **validator-check** from `lemma-cli`). Same keys/chain setup as a miner if you run both roles.
 
 Validators **always** wait for subnet epoch boundaries before each round — no timer-only mode; every operator shares the same on-chain cadence.
 
@@ -16,15 +16,15 @@ Judge: Chutes when prompted is the documented default; Anthropic and custom Open
 | --- | --- |
 | **End-to-end** preview (prover → Lean → judge) on the live theorem | **`lemma-cli rehearsal`** (default Lean on; `--no-verify` to skip) |
 | Exercise **prover** only | `lemma-cli try-prover` (add `--verify` for local Lean) |
-| Exercise **judge** alone on text files you saved | `lemma judge --trace reasoning.txt` (optional `--theorem` / `--proof` paths) |
-| Rehearse the **full validator** without `set_weights` | `lemma validator dry-run` — rubric step uses **FakeJudge** by default; set **`LEMMA_DRY_RUN_REAL_JUDGE=1`** to bill the real judge during dry-run |
-| Only print validator-related env | `lemma validator config` (not a scoring run) |
+| Exercise **judge** alone on text files you saved | `uv run lemma judge --trace reasoning.txt` (optional `--theorem` / `--proof` paths) |
+| Rehearse the **full validator** without `set_weights` | `uv run lemma validator dry-run` — rubric step uses **FakeJudge** by default; set **`LEMMA_DRY_RUN_REAL_JUDGE=1`** to bill the real judge during dry-run |
+| Only print validator-related env | `uv run lemma validator config` (not a scoring run) |
 
-`LEMMA_FAKE_JUDGE=1` is accepted only for validator dry-runs; live `lemma validator start` refuses FakeJudge because the subnet expects a real Chutes judge.
+`LEMMA_FAKE_JUDGE=1` is accepted only for validator dry-runs; live `uv run lemma validator start` refuses FakeJudge because the subnet expects a real Chutes judge.
 
 ## System requirements (Docker)
 
-- **Docker Engine / Docker Desktop** must be installed and **running** whenever **`LEMMA_USE_DOCKER=1`** (default for `lemma validator start`, `lemma verify`, and **`lemma-cli try-prover --verify`**). Lemma talks to the Docker API to **create** a one-shot container per verification job (unless you use a long-lived **`LEMMA_LEAN_DOCKER_WORKER`**); when the job finishes, that container exits.
+- **Docker Engine / Docker Desktop** must be installed and **running** whenever **`LEMMA_USE_DOCKER=1`** (default for `uv run lemma validator start`, `uv run lemma verify`, and **`lemma-cli try-prover --verify`**). Lemma talks to the Docker API to **create** a one-shot container per verification job (unless you use a long-lived **`LEMMA_LEAN_DOCKER_WORKER`**); when the job finishes, that container exits.
 
 ### Fast Docker verify (sub‑10s warm, still Docker)
 
@@ -62,7 +62,7 @@ Requires the **`docker`** CLI on `PATH` for `exec`. CPU/memory limits apply to h
 
 To keep the **validator VM** light (Axon + orchestration + judge only), run Lean on a **separate** box that shares the same **`.env`** pins (`LEAN_SANDBOX_IMAGE`, cache dir, optional **`LEMMA_LEAN_DOCKER_WORKER`**, etc.):
 
-1. On the worker host: `lemma lean-worker --host 0.0.0.0 --port 8787` (or bind behind an internal LB).
+1. On the worker host: `uv run lemma lean-worker --host 0.0.0.0 --port 8787` (or bind behind an internal LB).
 2. On the validator: set **`LEMMA_LEAN_VERIFY_REMOTE_URL=http://<worker>:8787`** (optional **`LEMMA_LEAN_VERIFY_REMOTE_BEARER`** on both sides).
 
 The validator **POSTs** each proof to **`/verify`**; the worker returns the same **`VerifyResult`** JSON as local **`LeanSandbox`**. HTTP read timeout is **`LEAN_VERIFY_TIMEOUT_S`** (including split scaling from the validator) plus **`LEMMA_LEAN_VERIFY_REMOTE_TIMEOUT_MARGIN_S`**.
@@ -87,23 +87,23 @@ Steady-state cost is **incremental `lake build Submission`**, not “Mathlib fro
 
 ```bash
 bash scripts/prebuild_lean_image.sh
-./scripts/lemma-run lemma validator dry-run
-./scripts/lemma-run lemma validator start
+uv run lemma validator dry-run
+uv run lemma validator start
 ```
 
-For a cheap local loop without any inference HTTP, use **`lemma validator dry-run`**, which defaults to FakeJudge in the rubric step. Prefer **`lemma judge --trace …`** to test only the judge stack, or set **`LEMMA_DRY_RUN_REAL_JUDGE=1`** during dry-run when you want to bill the live judge.
+For a cheap local loop without any inference HTTP, use **`uv run lemma validator dry-run`**, which defaults to FakeJudge in the rubric step. Prefer **`uv run lemma judge --trace …`** to test only the judge stack, or set **`LEMMA_DRY_RUN_REAL_JUDGE=1`** during dry-run when you want to bill the live judge.
 
 ## Fingerprints
 
 ```bash
-./scripts/lemma-run lemma meta
+uv run lemma meta
 ```
 
 [governance.md](governance.md).
 
 ## Judge profile peer attest (optional)
 
-Some subnets require validators to **agree with peers on the same validator scoring profile**, not only match **`JUDGE_PROFILE_SHA256_EXPECTED`** locally. When **`LEMMA_JUDGE_PROFILE_ATTEST_ENABLED=1`**, startup (and **`lemma validator-check`**) HTTP GETs each URL in **`LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS`** and checks the body matches this process’s **`judge_profile_sha256`** (same fingerprint as **`lemma meta`** / **`lemma-cli configure subnet-pins`**).
+Some subnets require validators to **agree with peers on the same validator scoring profile**, not only match **`JUDGE_PROFILE_SHA256_EXPECTED`** locally. When **`LEMMA_JUDGE_PROFILE_ATTEST_ENABLED=1`**, startup (and **`uv run lemma validator-check`**) HTTP GETs each URL in **`LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS`** and checks the body matches this process’s **`judge_profile_sha256`** (same fingerprint as **`uv run lemma meta`** / **`lemma-cli configure subnet-pins`**).
 
 | Env | Role |
 | --- | --- |
