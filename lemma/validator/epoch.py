@@ -148,6 +148,25 @@ def _merge_multi_round_entries(uid_groups: dict[int, list[ScoredEntry]]) -> list
     return merged
 
 
+def _update_verify_credibility(
+    credibility_by_uid: dict[int, float],
+    candidates: list[tuple[int, LemmaChallenge]],
+    verified: list[tuple[int, LemmaChallenge, VerifyResult]],
+    *,
+    alpha: float,
+) -> None:
+    ca = max(1e-9, min(1.0, float(alpha)))
+    attest_trusted_uids = {uid for uid, _resp, vr in verified if vr.reason == "attest_trusted"}
+    verified_by_validator_uids = {uid for uid, _resp, vr in verified if vr.reason != "attest_trusted"}
+    for uid, _resp in candidates:
+        if uid in attest_trusted_uids:
+            continue
+        outcome = 1.0 if uid in verified_by_validator_uids else 0.0
+        old_c = credibility_by_uid.get(uid, 1.0)
+        new_c = ca * outcome + (1.0 - ca) * old_c
+        credibility_by_uid[uid] = max(0.0, min(1.0, new_c))
+
+
 async def run_epoch(
     settings: LemmaSettings,
     problem_source: ProblemSource,
@@ -420,13 +439,12 @@ async def run_epoch(
 
             vca = float(settings.lemma_reputation_verify_credibility_alpha)
             if not dry_run and vca > 0.0 and candidates:
-                ca = max(1e-9, min(1.0, vca))
-                passed_uids = {t[0] for t in verified}
-                for uid, _resp in candidates:
-                    outcome = 1.0 if uid in passed_uids else 0.0
-                    old_c = rep_store.credibility_by_uid.get(uid, 1.0)
-                    new_c = ca * outcome + (1.0 - ca) * old_c
-                    rep_store.credibility_by_uid[uid] = max(0.0, min(1.0, new_c))
+                _update_verify_credibility(
+                    rep_store.credibility_by_uid,
+                    candidates,
+                    verified,
+                    alpha=vca,
+                )
 
             judge_sem = asyncio.Semaphore(max(1, settings.lemma_judge_max_concurrent))
 
