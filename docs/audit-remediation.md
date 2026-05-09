@@ -236,9 +236,9 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 
 - Three execution paths (one-shot Docker, exec worker, host `lake`).
 - Three Lake warm / cache-get strategies + env gates.
-- **`_clone_dot_lake`** darwin vs linux copy + long timeouts.
+- **`_clone_dot_lake`** removed; first passing verify publishes the whole workspace by same-directory rename.
 - **`_template_slot_lock`** LRU in-process only.
-- **`_publish_workspace_cache`** atomic rename story without cross-process guarantee per audit narrative.
+- **`_publish_workspace_cache`** simplified to one locked same-directory rename into an empty cache slot.
 - **HTTP worker** subsystem optional (~250 LoC) — topology docs “advanced.”
 - Duplicate `r.returncode` branches in `_verify_host` removed; local double cheat scan removed (remote pre-scan retained before POST).
 - Docker verify script now writes a workspace script and invokes Docker with argv/workdir instead of a quoted `bash -lc` command string.
