@@ -199,6 +199,47 @@ heuristic. Comment-only and blank lines are now normalized out before line count
 so comment padding no longer receives leftover line-count credit. This is a
 normalization fix, not a broader proof-quality metric.
 
+V2 follow-up: on 2026-05-09, the same theorem was recalibrated with
+`print_decl_pp_all_v2`, which records byte count, line count, delimiter count,
+and max delimiter depth. The run used real Docker Lean verification with isolated
+warm workspaces for each proof shape.
+
+| Proof shape | Proof chars | Metric bytes | Metric lines | Delimiters | Max depth | Current `proof_intrinsic_score` | Note |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| `rfl` | 115 | 698 | 11 | 35 | 4 | 0.3020 | Small baseline. |
+| `norm_num` | 120 | 2289 | 34 | 128 | 8 | 0.3043 | Larger printed proof term than `rfl`. |
+| Structured `have` proof | 167 | 2644 | 41 | 148 | 8 | 0.3606 | Delimiter count rose with a used intermediate proof. |
+| Comment padding + `norm_num` | 7391 | 2289 | 34 | 128 | 8 | 0.3043 | Matches `norm_num`; comments no longer inflate the heuristic or Lean metrics. |
+| String padding + `norm_num` | 1893 | 4072 | 36 | 128 | 8 | 0.4566 | Bytes rose, but delimiter shape stayed at `norm_num`. |
+| Unused trivial `have` padding + `norm_num` | 225 | 2379 | 37 | 128 | 8 | 0.4534 | Lean metrics barely moved; text heuristic still rose. |
+| Long-name padding + `norm_num` | 337 | 2505 | 37 | 128 | 8 | 0.3985 | Bytes rose modestly; delimiter shape stayed at `norm_num`. |
+
+Analyzer summary:
+
+```text
+rows_total=7
+rows_with_proof_metrics=7
+rows_with_successful_proof_metrics=7
+rows_with_failed_proof_metrics=0
+gate_verdict=research_only
+gate_reasons=padding_outliers
+metric_bytes: n=7 min=698 median=2379.0 mean=2410.9 max=4072
+metric_lines: n=7 min=11 median=36.0 mean=32.9 max=41
+metric_delimiters: n=7 min=35 median=128.0 mean=117.6 max=148
+metric_max_depth: n=7 min=4 median=8.0 mean=7.4 max=8
+proof_len_chars: n=7 min=115 median=225.0 mean=1464.0 max=7391
+corr(metric_bytes, proof_len_chars)=0.1322
+corr(metric_bytes, proof_intrinsic)=0.6740
+```
+
+Interpretation: delimiter count looks more useful than raw bytes for this small
+sample because it ignores string padding, long-name padding, and unused trivial
+`have` padding while still rising for the used structured proof. It is not yet a
+reward signal: the sample is tiny, max depth saturates quickly, and the analyzer
+still reports `research_only`. The next proof-side step should compare delimiter
+shape on real validator exports before replacing, reducing, or removing the
+current low-weight text heuristic.
+
 Signals to avoid as scoring inputs:
 
 - Wall-clock build time, because it depends on hardware, cache warmth, and Docker
