@@ -97,6 +97,10 @@ this field.
 The opt-in Docker and host Lean golden tests assert that the probe returns
 metrics on a real passing proof when those suites are enabled.
 
+When `LEMMA_TRAINING_EXPORT_JSONL` is set, the `full` export profile includes
+`proof_metrics` for successfully judged rows. `reasoning_only` intentionally
+omits it because the field is proof-derived research data.
+
 Signals to avoid as scoring inputs:
 
 - Wall-clock build time, because it depends on hardware, cache warmth, and Docker
