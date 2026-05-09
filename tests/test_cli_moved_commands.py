@@ -26,3 +26,11 @@ def test_moved_configure_group_lists_topics() -> None:
     assert result.exit_code == 0
     assert "Run `lemma-cli configure`." in result.output
     assert "subnet-pins" in result.output
+
+
+def test_moved_miner_observability_command_points_to_lemma_cli() -> None:
+    result = CliRunner().invoke(main, ["miner", "observability"])
+
+    assert result.exit_code == 0
+    assert "Miner observability moved to lemma-cli." in result.output
+    assert "Run `lemma-cli miner-observability`." in result.output
