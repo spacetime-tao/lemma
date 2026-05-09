@@ -19,7 +19,7 @@ Rough guidance for one machine; scale for heavy workloads.
 | CPU | 2+ cores. |
 | RAM | **≥ 16 GB** recommended: Docker sandbox + Lake/Mathlib workspace caches, plus OS headroom. The **judge** calls a remote OpenAI-compatible API (default **Chutes**); validators do not load judge weights locally. |
 | Disk | ≥ 20 GB for images and caches. |
-| Docker | **Required** for production: lean-sandbox image. `LEMMA_USE_DOCKER=false` is for **local debugging only**, not a supported production mode. |
+| Docker | **Required** for production: host Docker daemon plus lean-sandbox image. The Lemma runtime image uses the host socket through the Python Docker SDK and does not bundle a Docker daemon. `LEMMA_USE_DOCKER=false` is for **local debugging only**, not a supported production mode. |
 | Judge | Pinned **Chutes** stack per subnet policy — see [models.md](models.md). |
 
 ## Rounds and timeouts

@@ -77,6 +77,15 @@ def _maybe_prompt_validator_start(settings: LemmaSettings, *, had_warnings: bool
 
 
 def _docker_image_available(image: str) -> bool:
+    try:
+        import docker
+
+        client = docker.from_env()
+        client.images.get(image)
+        return True
+    except Exception:
+        pass
+
     if not shutil.which("docker"):
         return False
     try:
@@ -322,12 +331,22 @@ def run_validator_check(settings: LemmaSettings) -> int:
                 ),
             )
         if worker:
-            click.echo(
-                stylize(
-                    f"OK Lean worker  LEMMA_LEAN_DOCKER_WORKER={worker!r} — verify uses `docker exec`",
-                    fg="green",
-                ),
-            )
+            if shutil.which("docker"):
+                click.echo(
+                    stylize(
+                        f"OK Lean worker  LEMMA_LEAN_DOCKER_WORKER={worker!r} — verify uses `docker exec`",
+                        fg="green",
+                    ),
+                )
+            else:
+                warn.append("LEMMA_LEAN_DOCKER_WORKER is set, but Docker CLI is not on PATH; one-shot verify will run.")
+                click.echo(
+                    stylize(
+                        "WARN Lean worker configured, but Docker CLI is missing — one-shot verify will run",
+                        fg="yellow",
+                    ),
+                    err=True,
+                )
         else:
             click.echo(
                 stylize(
