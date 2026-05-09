@@ -44,7 +44,7 @@
 From audit §19 — **not all are agreed team policy**; use as a prioritized debate list.
 
 1. Delete or replace **`proof_intrinsic_score`** (elaborator-backed metric vs length heuristic).
-2. Raise **`LEMMA_REPUTATION_CREDIBILITY_EXPONENT`** default toward **2.5** (align with documented spec) — one-line default change + rationale.
+2. Decide **`LEMMA_REPUTATION_CREDIBILITY_EXPONENT`** default vs KB **2.5** target — document divergence or make an intentional reward change.
 3. **Expand `judge_profile_sha256`** (or sibling hash) to cover subnet-critical knobs currently outside the pin (~18 fields in Round 3).
 4. **Fail closed** when `computed_body_hash` missing — remove fail-open in `synapse_miner_response_integrity_ok`; update/remove tests that codify bypass.
 5. **Per-validator salt** in attest spot-verify selection hash (reduces predictable skip + UID grinding).
@@ -86,7 +86,7 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 | ID | Issue | Source § | Priority | Remediation direction | Key refs |
 |----|--------|----------|----------|------------------------|----------|
 | **P1** | Comment stripping defeats **one** padding class; **string literals**, trivial `have … by trivial`, long names still inflate | R3 §2.1 | P2 | Default weight lowered; compare-only Lean probe + initial calibration added; next real fix requires broader validation before scoring use | `lemma/scoring/proof_intrinsic.py`, `config.py`, `docs/proof-intrinsic-decision.md` |
-| **P2** | Default credibility exponent `1.0` vs KB mention of `2.5` | R3 §7 | P3 | Align default or document divergence | `config.py`, `scoring/reputation.py` |
+| **P2** | Default credibility exponent `1.0` vs KB mention of `2.5` | R3 §7 | P3 | **Done:** documented divergence; keep `1.0` default until calibrated/governed. Operators can explicitly set `2.5`. | `config.py`, `scoring/reputation.py`, `docs/credibility-exponent-decision.md` |
 | **P3** | Credibility rises on Lean pass; padding that passes Lean **does not** get penalized by cred | R3 §7 | P2 | Accept or add orthogonal signal |
 | **P4** | Spot-verify skip returns pass → cred EMA increases without verify | R3 §3.2, §7 | P1 | Do not treat attest-only path as verify success for cred; split signals | `epoch.py`, `protocol_attest.py` |
 
@@ -302,7 +302,7 @@ Abbreviated; see `knowledge/` for full YAML. Status reflects **Round 3 narrative
 | Single-file validator pattern | `validator.contract.yaml` | Still violated by package layout; root `validator.py` stub removed |
 | Push compute to miners | `subnet.invariants.yaml#compute_distribution` | Still violated |
 | EMA for stability | `validator.rules.yaml` | Honored |
-| Credibility tracking tuning | `incentive.primitives.yaml` | Wired; default exponent cited as wrong vs spec |
+| Credibility tracking tuning | `incentive.primitives.yaml` | Wired; default exponent divergence documented in `docs/credibility-exponent-decision.md` |
 | Secret eval sets | `validator.rules.yaml` | Still gated; not in judge pin |
 | N miners profitability | `sybil.realities.yaml` | Still violated |
 | Coldkey dedup ≠ sybil resistance | `sybil.realities.yaml` | Still violated by design |
