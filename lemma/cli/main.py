@@ -81,36 +81,6 @@ def main(ctx: click.Context) -> None:
         return
 
 
-@main.command("start")
-def start_cmd() -> None:
-    """Point guided onboarding users to lemma-cli."""
-    click.echo(stylize("Guided setup moved to lemma-cli.", fg="cyan", bold=True))
-    click.echo("Run `lemma-cli` or `lemma-cli start` for the friendly operator screen.")
-    click.echo("Core commands still live here: `lemma miner start`, `lemma validator start`, `lemma verify`.")
-
-
-@main.command(
-    "doctor",
-    context_settings={"ignore_unknown_options": True, "allow_extra_args": True},
-    add_help_option=False,
-)
-@click.argument("args", nargs=-1, type=click.UNPROCESSED)
-def doctor_cmd(args: tuple[str, ...]) -> None:
-    """Point operator health checks to lemma-cli."""
-    _echo_moved_to_lemma_cli(("doctor", *args), heading="Doctor moved to lemma-cli.")
-
-
-@main.command(
-    "docs",
-    context_settings={"ignore_unknown_options": True, "allow_extra_args": True},
-    add_help_option=False,
-)
-@click.argument("args", nargs=-1, type=click.UNPROCESSED)
-def docs_cmd(args: tuple[str, ...]) -> None:
-    """Point documentation helpers to lemma-cli."""
-    _echo_moved_to_lemma_cli(("docs", *args), heading="Docs helper moved to lemma-cli.")
-
-
 @main.command("meta")
 @click.option(
     "--raw",
@@ -363,28 +333,6 @@ def meta_cmd(raw: bool) -> None:
         + stylize(" is compact copy/paste + one-line JSON.\n", dim=True),
         nl=False,
     )
-
-
-@main.command(
-    "try-prover",
-    context_settings={"ignore_unknown_options": True, "allow_extra_args": True},
-    add_help_option=False,
-)
-@click.argument("args", nargs=-1, type=click.UNPROCESSED)
-def try_prover_cmd(args: tuple[str, ...]) -> None:
-    """Point local prover previews to lemma-cli."""
-    _echo_moved_to_lemma_cli(("try-prover", *args), heading="try-prover moved to lemma-cli.")
-
-
-@main.command(
-    "rehearsal",
-    context_settings={"ignore_unknown_options": True, "allow_extra_args": True},
-    add_help_option=False,
-)
-@click.argument("args", nargs=-1, type=click.UNPROCESSED)
-def rehearsal_cmd(args: tuple[str, ...]) -> None:
-    """Point local scoring previews to lemma-cli."""
-    _echo_moved_to_lemma_cli(("rehearsal", *args), heading="rehearsal moved to lemma-cli.")
 
 
 @main.command("status")
@@ -752,10 +700,19 @@ def miner_observability_cmd() -> None:
     _miner_emit_observability_panel()
 
 
-MOVED_SETUP_CONTEXT = {
+MOVED_COMMAND_CONTEXT = {
     "ignore_unknown_options": True,
     "allow_extra_args": True,
 }
+MOVED_MAIN_COMMANDS = (
+    ("start", "Guided setup moved to lemma-cli."),
+    ("doctor", "Doctor moved to lemma-cli."),
+    ("docs", "Docs helper moved to lemma-cli."),
+    ("try-prover", "Try-prover moved to lemma-cli."),
+    ("rehearsal", "Rehearsal moved to lemma-cli."),
+    ("setup", "Interactive setup moved to lemma-cli."),
+    ("glossary", "Glossary moved to lemma-cli."),
+)
 MOVED_CONFIGURE_COMMANDS = (
     "chain",
     "axon",
@@ -779,11 +736,15 @@ def _echo_moved_to_lemma_cli(
     click.echo("Core commands still live here: `lemma miner start`, `lemma validator start`, `lemma verify`.")
 
 
-@main.command("setup", context_settings=MOVED_SETUP_CONTEXT, add_help_option=False)
-@click.argument("args", nargs=-1, type=click.UNPROCESSED)
-def setup_cmd(args: tuple[str, ...]) -> None:
-    """Point first-time configuration users to lemma-cli."""
-    _echo_moved_to_lemma_cli(("setup", *args))
+def _register_moved_main_command(command: str, heading: str) -> None:
+    @main.command(command, context_settings=MOVED_COMMAND_CONTEXT, add_help_option=False, help=heading)
+    @click.argument("args", nargs=-1, type=click.UNPROCESSED)
+    def moved_main_command(args: tuple[str, ...], command: str = command, heading: str = heading) -> None:
+        _echo_moved_to_lemma_cli((command, *args), heading=heading)
+
+
+for _moved_command, _moved_heading in MOVED_MAIN_COMMANDS:
+    _register_moved_main_command(_moved_command, _moved_heading)
 
 
 @main.group("configure", invoke_without_command=True)
@@ -796,7 +757,7 @@ def configure_grp(ctx: click.Context) -> None:
 
 
 def _register_moved_configure(command: str) -> None:
-    @configure_grp.command(command, context_settings=MOVED_SETUP_CONTEXT, add_help_option=False)
+    @configure_grp.command(command, context_settings=MOVED_COMMAND_CONTEXT, add_help_option=False)
     @click.argument("args", nargs=-1, type=click.UNPROCESSED)
     def moved_configure(args: tuple[str, ...], command: str = command) -> None:
         _echo_moved_to_lemma_cli(("configure", command, *args))
@@ -804,12 +765,6 @@ def _register_moved_configure(command: str) -> None:
 
 for _configure_command in MOVED_CONFIGURE_COMMANDS:
     _register_moved_configure(_configure_command)
-
-
-@main.command("glossary")
-def glossary_cmd() -> None:
-    """Point short operator definitions to lemma-cli."""
-    _echo_moved_to_lemma_cli(("glossary",), heading="Glossary moved to lemma-cli.")
 
 
 def _validator_run_blocking(*, dry_run: bool) -> None:
