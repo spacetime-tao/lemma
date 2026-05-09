@@ -127,6 +127,30 @@ def _hotkey_ss58_for_uid(metagraph: object, uid: int) -> str | None:
         return None
 
 
+def _response_matches_problem_challenge(
+    resp: LemmaChallenge,
+    problem: Problem,
+    *,
+    metronome_id: str,
+    deadline_block: int | None,
+) -> bool:
+    if resp.theorem_id != problem.id:
+        return False
+    if resp.theorem_statement != problem.challenge_source():
+        return False
+    if list(resp.imports or []) != list(problem.imports):
+        return False
+    if resp.lean_toolchain != problem.lean_toolchain:
+        return False
+    if resp.mathlib_rev != problem.mathlib_rev:
+        return False
+    if str(resp.metronome_id or "") != str(metronome_id):
+        return False
+    if resp.deadline_block is None or deadline_block is None:
+        return False
+    return int(resp.deadline_block) == int(deadline_block)
+
+
 def _merge_multi_round_entries(uid_groups: dict[int, list[ScoredEntry]]) -> list[ScoredEntry]:
     merged: list[ScoredEntry] = []
     for uid, es in uid_groups.items():
@@ -240,6 +264,7 @@ async def run_epoch(
     dedup_dropped = 0
     coldkey_dropped = 0
     deadline_rejects = 0
+    challenge_rejects = 0
     attest_rejects = 0
     commit_reveal_rejects = 0
     last_problem: Problem | None = None
@@ -319,6 +344,18 @@ async def run_epoch(
                         "(tampered payload or miner/validator version skew)",
                         uid,
                     )
+                    continue
+                if not _response_matches_problem_challenge(
+                    resp,
+                    problem,
+                    metronome_id=str(seed_k),
+                    deadline_block=deadline_block,
+                ):
+                    logger.warning(
+                        "uid={} dropping response: challenge fields do not match current theorem/metronome",
+                        uid,
+                    )
+                    challenge_rejects += 1
                     continue
                 db = resp.deadline_block
                 if db is not None and block_after_query >= int(db):
@@ -594,6 +631,7 @@ async def run_epoch(
         "problem_seed={} problem_seed_tag={} split={} "
         "theorem_id={} k_problems={} verified={} scored={} pareto_entries={} "
         "judge_errors={} judge_parse_rejects={} dedup_dropped={} coldkey_dropped={} deadline_rejects={} "
+        "challenge_rejects={} "
         "attest_rejects={} commit_reveal_rejects={} "
         "skip_set_weights={} seconds={:.2f}  "
         "[verified=Lean proof OK; scored=proof+judge blend then EMA/dedup; pareto_entries=weight rows]",
@@ -613,6 +651,7 @@ async def run_epoch(
         dedup_dropped,
         coldkey_dropped,
         deadline_rejects,
+        challenge_rejects,
         attest_rejects,
         commit_reveal_rejects,
         skip_chain_write,

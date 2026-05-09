@@ -44,7 +44,7 @@ These stay in the core repo, but should be handled as product decisions, not tin
 
 These should be either hardened or removed from the default mental model.
 
-1. Miner verify attest: keep full validator Lean verify as default; do not let attest-only paths inflate credibility. **Done for credibility; verify batch now isolates per-UID verifier exceptions.**
+1. Miner verify attest: keep full validator Lean verify as default; do not let attest-only paths inflate credibility. **Done for credibility; verify batch now isolates per-UID verifier exceptions; attest-trusted responses must still match the current challenge fields before scoring.**
 2. Commit-reveal: keep active, with bounded cache, validator identity binding, and shared commitment hex normalization. **In progress.**
 3. Judge peer attest: treat as operator coordination, not strong security.
 

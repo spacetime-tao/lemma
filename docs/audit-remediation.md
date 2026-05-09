@@ -99,10 +99,10 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 | **A1** | Attest preimage does not bind **reasoning** (judge axis); trace swap vs body_hash story | R3 §3.1 | P2 | Document threat model; optional bind extension |
 | **A2** | No validator hotkey in attest; cross-validator replay | R3 §3.1 | P2 | Add bind field + version byte if product wants it |
 | **A3** | Spot fraction `<1` → predictable selection; no per-validator salt; UID grinding | R3 §3.2 | P1 | Salted selection, raise minimum spot, or separate cred impact |
-| **A4** | On spot skip, theorem/proof mismatch not caught by verify | R3 §3.3 | P1 | Always validate theorem id vs response before scoring; cheap checks |
+| **A4** | On spot skip, theorem/proof mismatch not caught by verify | R3 §3.3 | P1 | **Done:** validator rejects responses whose challenge fields do not match the current theorem/metronome before attest trust or scoring. | `lemma/validator/epoch.py`, `tests/test_validator_challenge_binding.py` |
 | **A5** | “TEE” naming vs actual user-space Docker attest | R3 §3.4 | P3 | Docs + naming; no fake hardware claims |
 
-**2026-05 progress:** P4/A3 credibility impact patched: attest-trusted spot skips remain scoreable, but no longer improve verify credibility. Credibility only increases from validator Lean verification; full-verify failures still lower it. Spot selection now accepts `LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_SALT`; `judge_profile_sha256` pins its SHA-256 without exposing the salt.
+**2026-05 progress:** P4/A3/A4 patched: attest-trusted spot skips remain scoreable, but no longer improve verify credibility. Credibility only increases from validator Lean verification; full-verify failures still lower it. Spot selection now accepts `LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_SALT`; `judge_profile_sha256` pins its SHA-256 without exposing the salt. Validators also reject responses whose theorem, challenge source, toolchain pins, metronome id, or deadline block do not match the current challenge before attest trust or scoring.
 
 ---
 
