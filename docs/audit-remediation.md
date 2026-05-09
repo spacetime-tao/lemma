@@ -114,6 +114,8 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 | **C4** | `looks_like_commitment_hex` vs `0x` — regex strict; reveal path strips `0x` | R3 §4.3 | P2 | Accept `0x` consistently everywhere | `protocol_commit_reveal.py`, `epoch.py`, miner forward |
 | **C5** | `json.dumps(..., sort_keys=True)` on **list** in `reasoning_blob_for_commit` — meaningless flag | R3 §4.4 | P3 | Remove dead arg or serialize deterministically as designed |
 
+**2026-05 progress:** C2/C3/C4/C5 patched for the usable commit-reveal path: miner commit cache is TTL/max-entry bounded, cache keys include validator dendrite hotkey, commitment hex accepts optional `0x`, and the no-op `sort_keys=True` was removed from list serialization.
+
 ---
 
 ## 8. Judge profile peer quorum

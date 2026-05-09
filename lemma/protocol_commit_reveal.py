@@ -22,7 +22,7 @@ def reasoning_blob_for_commit(trace: str | None, steps: list | None) -> str:
             title = getattr(st, "title", None)
             text = getattr(st, "text", "") or ""
             ser.append([title, text])
-        return json.dumps(ser, sort_keys=True)
+        return json.dumps(ser)
     return trace or ""
 
 
@@ -61,7 +61,7 @@ def verify_reveal_against_commitment(
     reasoning_blob: str,
 ) -> bool:
     raw = (nonce_hex or "").strip()
-    if raw.startswith("0x"):
+    if raw.lower().startswith("0x"):
         raw = raw[2:]
     if len(raw) != 64:
         return False
@@ -92,4 +92,7 @@ _COMMIT_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 
 
 def looks_like_commitment_hex(s: str | None) -> bool:
-    return bool(s and _COMMIT_HEX_RE.match(s.strip()))
+    raw = (s or "").strip()
+    if raw.lower().startswith("0x"):
+        raw = raw[2:]
+    return bool(_COMMIT_HEX_RE.match(raw))

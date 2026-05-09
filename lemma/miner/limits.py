@@ -23,7 +23,7 @@ def synapse_payload_error(synapse: LemmaChallenge, settings: LemmaSettings) -> s
     pc = (synapse.proof_commitment_hex or "").strip()
     if phase == "commit" and pc:
         if not looks_like_commitment_hex(pc):
-            return "proof_commitment_hex must be 64 hex chars"
+            return "proof_commitment_hex must be 64 hex chars, with optional 0x prefix"
         if (synapse.proof_script or "").strip() or (synapse.reasoning_trace or "").strip():
             return "commit phase response must not include proof_script or reasoning_trace"
         if synapse.reasoning_steps:
