@@ -6,10 +6,6 @@ Top-level imports stay light: the console script is named ``lemma``, and importi
 
 from __future__ import annotations
 
-from lemma.cli.uv_bootstrap import maybe_reexec_under_uv
-
-maybe_reexec_under_uv()
-
 import asyncio
 import os
 import sys
@@ -91,41 +87,6 @@ def start_cmd() -> None:
     click.echo(stylize("Guided setup moved to lemma-cli.", fg="cyan", bold=True))
     click.echo("Run `lemma-cli` or `lemma-cli start` for the friendly operator screen.")
     click.echo("Core commands still live here: `lemma miner start`, `lemma validator start`, `lemma verify`.")
-
-
-@main.command("env")
-@click.option(
-    "--fish",
-    is_flag=True,
-    help="Print activation for fish shell (if activate.fish exists).",
-)
-def env_cmd(fish: bool) -> None:
-    """Print how to activate `.venv` so `lemma` and `btcli` work without prefixing `uv run`."""
-    from lemma.cli.env_paths import venv_activate_script
-    from lemma.cli.style import stylize
-
-    act = venv_activate_script()
-    if act is None:
-        click.echo(
-            stylize(
-                "Could not find `.venv/bin/activate`. From the Lemma repo root run `uv sync --extra dev`.",
-                fg="red",
-            ),
-            err=True,
-        )
-        raise SystemExit(1)
-    if fish:
-        fish_act = act.parent / "activate.fish"
-        click.echo(f"source {fish_act if fish_act.is_file() else act}")
-    else:
-        click.echo(f"source {act}")
-    click.echo(
-        stylize(
-            "Paste once per terminal tab. After that, `lemma` / `btcli` use this repo's `.venv`. "
-            "`uv run …` does not replace this — it only wraps a single command.",
-            dim=True,
-        )
-    )
 
 
 def _doctor_api_lines(s: LemmaSettings) -> tuple[list[str], bool]:
@@ -330,7 +291,6 @@ def doctor_cmd() -> None:
     click.echo(
         stylize(
             "\n5  Next commands\n"
-            "     lemma env              — print `source …/activate`\n"
             "     lemma meta             — judge + template hashes\n"
             "     lemma validator-check  — before `lemma validator start`\n"
             "     lemma rehearsal        — prover + Lean + judge on the live theorem (preview before miner/validator)\n"

@@ -59,7 +59,7 @@ Move first:
 1. Guided menu and start screen. **Done as a core trim; rebuild richer UX in `lemma-cli` only.**
 2. Environment wizard. **Moved to `lemma-cli`; core has redirects only.**
 3. Docs opener/glossary. **Moved to `lemma-cli`; core has redirects only.**
-4. Shell activation helpers.
+4. Shell activation helpers. **Removed from core; docs use `.venv` activation, `uv run`, or `scripts/lemma-run`.**
 5. Human-friendly doctor/validator-check wrappers, once the core repo exposes stable machine-readable checks.
 
 Keep temporarily in core:
