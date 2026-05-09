@@ -12,7 +12,7 @@
 
 No subnet is perfectly ungameable; the goal is to make the easiest strategy also the useful one.
 
-- **Predictable problem selection:** if the pool is tiny/static, miners can pre-solve. Mitigation: rotate/expand templates and keep registry upgrades coordinated.
+- **Predictable problem selection:** if the pool is tiny/static, miners can pre-solve. Mitigation: rotate/expand templates and keep registry upgrades coordinated ([problem-supply-policy.md](problem-supply-policy.md)).
 - **Prompt injection in miner traces:** miners can write manipulative text, but it is untrusted input. Mitigation: Lean pass is required first, judge uses a fixed rubric/schema, and validators keep judge stack pins aligned.
 - **Latency and infra advantages:** warm caches and faster hardware can win ties. Mitigation: this is visible/expected operational competition, and correctness still requires Lean.
 - **Judge-style over-optimization:** miners may tune wording for rubric points. Mitigation: Pareto combines rubric with brevity and operators can evolve rubric/profile hashes.

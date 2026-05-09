@@ -96,5 +96,6 @@ After real traffic: consider **partial-progress** or **lemma-submission** tracks
 | --- | --- |
 | [Architecture](architecture.md) | Components and data flow today. |
 | [Governance](governance.md) | Pins, meta, policy. |
+| [Problem supply policy](problem-supply-policy.md) | Public generated supply boundary and builder promotion checklist. |
 | [Getting started](getting-started.md) | Install and first commands. |
 | [Miner](miner.md) / [Validator](validator.md) | Operator detail. |

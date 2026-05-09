@@ -40,6 +40,7 @@ lemma --help
 | Tests | [testing.md](docs/testing.md) |
 | Comparator hook | [comparator.md](docs/comparator.md) |
 | Generated problems | [generated-problems.md](docs/generated-problems.md) |
+| Problem supply policy | [problem-supply-policy.md](docs/problem-supply-policy.md) |
 | Catalog sources | [catalog-sources.md](docs/catalog-sources.md) |
 | Proof intrinsic scoring | [proof-intrinsic-decision.md](docs/proof-intrinsic-decision.md) |
 | Credibility exponent policy | [credibility-exponent-decision.md](docs/credibility-exponent-decision.md) |

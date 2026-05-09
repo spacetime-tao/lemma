@@ -4,13 +4,13 @@ Lean verification is objective; LLM judging is subjective. Coordinate visible be
 
 ## Generated templates (`LEMMA_PROBLEM_SOURCE=generated`)
 
-Validators map block seed → theorem via [`generated.py`](../lemma/problems/generated.py). Consensus needs the same registry and release.
+Validators map block seed → theorem via [`generated.py`](../lemma/problems/generated.py). Consensus needs the same registry and release. The map is public and precomputable; [problem-supply-policy.md](problem-supply-policy.md) records that this is a supply/governance boundary, not a secrecy mechanism.
 
 ```bash
 uv run lemma meta
 ```
 
-Publish `generated_registry_sha256`; validators may set `LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED`. Difficulty mix: [generated-problems.md](generated-problems.md).
+Publish `generated_registry_sha256`; validators may set `LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED`. Difficulty mix: [generated-problems.md](generated-problems.md). Builder promotion checklist: [problem-supply-policy.md](problem-supply-policy.md).
 
 ## Frozen catalog (`LEMMA_PROBLEM_SOURCE=frozen`)
 
