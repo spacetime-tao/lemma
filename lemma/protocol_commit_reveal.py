@@ -12,6 +12,25 @@ import json
 import re
 
 _MAGIC = b"LemmaCommitRevealV1"
+_NONCE_HEX_CHARS = 64
+_COMMIT_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
+
+
+def _strip_hex_prefix(s: str | None) -> str:
+    raw = (s or "").strip()
+    if raw.lower().startswith("0x"):
+        return raw[2:]
+    return raw
+
+
+def _bytes_from_fixed_hex(s: str | None, *, hex_chars: int) -> bytes | None:
+    raw = _strip_hex_prefix(s)
+    if len(raw) != hex_chars:
+        return None
+    try:
+        return bytes.fromhex(raw)
+    except ValueError:
+        return None
 
 
 def reasoning_blob_for_commit(trace: str | None, steps: list | None) -> str:
@@ -51,6 +70,14 @@ def commitment_hex_from_preimage(preimage: bytes) -> str:
     return hashlib.sha256(preimage).hexdigest()
 
 
+def normalize_commitment_hex(s: str | None) -> str | None:
+    """Return lowercase commitment hex, accepting an optional ``0x`` prefix."""
+    raw = _strip_hex_prefix(s)
+    if not _COMMIT_HEX_RE.fullmatch(raw):
+        return None
+    return raw.lower()
+
+
 def verify_reveal_against_commitment(
     *,
     expected_commitment_hex: str,
@@ -60,16 +87,8 @@ def verify_reveal_against_commitment(
     proof_script: str,
     reasoning_blob: str,
 ) -> bool:
-    raw = (nonce_hex or "").strip()
-    if raw.lower().startswith("0x"):
-        raw = raw[2:]
-    if len(raw) != 64:
-        return False
-    try:
-        nonce = bytes.fromhex(raw)
-    except ValueError:
-        return False
-    if len(nonce) != 32:
+    nonce = _bytes_from_fixed_hex(nonce_hex, hex_chars=_NONCE_HEX_CHARS)
+    if nonce is None:
         return False
     try:
         pre = commit_preimage_v1(
@@ -82,17 +101,11 @@ def verify_reveal_against_commitment(
     except ValueError:
         return False
     digest = commitment_hex_from_preimage(pre).lower()
-    exp = (expected_commitment_hex or "").strip().lower()
-    if exp.startswith("0x"):
-        exp = exp[2:]
+    exp = normalize_commitment_hex(expected_commitment_hex)
+    if exp is None:
+        return False
     return digest == exp
 
 
-_COMMIT_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
-
-
 def looks_like_commitment_hex(s: str | None) -> bool:
-    raw = (s or "").strip()
-    if raw.lower().startswith("0x"):
-        raw = raw[2:]
-    return bool(_COMMIT_HEX_RE.match(raw))
+    return normalize_commitment_hex(s) is not None

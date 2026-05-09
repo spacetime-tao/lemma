@@ -35,7 +35,7 @@ from lemma.protocol_attest import (
     verify_miner_verify_attest_signature,
 )
 from lemma.protocol_commit_reveal import (
-    looks_like_commitment_hex,
+    normalize_commitment_hex,
     reasoning_blob_for_commit,
     verify_reveal_against_commitment,
 )
@@ -274,8 +274,9 @@ async def run_epoch(
                     if not isinstance(resp_c, LemmaChallenge) or not resp_c.is_success:
                         continue
                     hx = (resp_c.proof_commitment_hex or "").strip()
-                    if looks_like_commitment_hex(hx):
-                        commits_by_uid[uid_c] = hx.lower().removeprefix("0x")
+                    norm_commit = normalize_commitment_hex(hx)
+                    if norm_commit is not None:
+                        commits_by_uid[uid_c] = norm_commit
                 synapse = LemmaChallenge(**base_syn, commit_reveal_phase="reveal")
                 responses = await dendrite(axons, synapse, timeout=forward_wait_s, run_async=True)
             else:
