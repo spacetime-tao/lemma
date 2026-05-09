@@ -79,16 +79,9 @@ def _docker_network_allows_remote_cache(network_mode: str) -> bool:
 def lake_exe_cache_get_needed(work: Path) -> bool:
     """Whether to run ``lake exe cache get`` — skip when Mathlib checkout already exists (warm workspace).
 
-    Override with ``LEMMA_LEAN_ALWAYS_CACHE_GET=1`` (always fetch) or
-    ``LEMMA_LEAN_SKIP_CACHE_GET_WHEN_WARM=0`` (always try fetch when networking allows).
+    Override with ``LEMMA_LEAN_ALWAYS_CACHE_GET=1`` to fetch even when the workspace is warm.
     """
     if _env_truthy("LEMMA_LEAN_ALWAYS_CACHE_GET"):
-        return True
-    if os.environ.get("LEMMA_LEAN_SKIP_CACHE_GET_WHEN_WARM", "1").strip().lower() in (
-        "0",
-        "false",
-        "no",
-    ):
         return True
     return not (work / ".lake" / "packages" / "mathlib").is_dir()
 
