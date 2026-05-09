@@ -30,9 +30,15 @@ def get_problem_source(settings: LemmaSettings) -> ProblemSource:
 
 
 def resolve_problem(settings: LemmaSettings, problem_id: str) -> Problem:
-    """Resolve ``gen/<int>`` via generation; otherwise load frozen catalog."""
+    """Resolve ``gen/<int>`` via generation; otherwise load gated frozen catalog."""
     if problem_id.startswith("gen/"):
         return GeneratedProblemSource(
             legacy_plain_rng=settings.lemma_generated_legacy_plain_rng,
         ).get(problem_id)
+    if not settings.lemma_dev_allow_frozen_problem_source:
+        raise ValueError(
+            "Frozen catalog problem ids are disabled by default (public miniF2F-style catalog). "
+            "Use gen/<seed> ids for subnet traffic, or set LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1 "
+            "for local benchmarking only (see docs/catalog-sources.md).",
+        )
     return MiniF2FSource(settings.minif2f_catalog_path).get(problem_id)
