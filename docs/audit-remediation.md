@@ -252,7 +252,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **`model_card_text`** — validator does not score it.
 - **`_stats` / `_commit_reveal_cache`** globals in forward handler (unbounded cache overlaps §7 **C2**).
 - Stub proof for `two_plus_two` in production path per audit.
-- **`synapse_payload_error` triple invocation** in commit-reveal mode.
+- **`synapse_payload_error` triple invocation** in commit-reveal mode clarified: incoming challenge checks now skip response-only validation; outgoing commit/reveal responses still run response validation.
 
 ### 13.6 Configuration (`config.py`)
 

@@ -14,11 +14,18 @@ def _reasoning_payload_len(synapse: LemmaChallenge) -> int:
     return len(synapse.reasoning_trace or "")
 
 
-def synapse_payload_error(synapse: LemmaChallenge, settings: LemmaSettings) -> str | None:
-    """Return an error message if challenge fields exceed configured caps."""
+def synapse_payload_error(
+    synapse: LemmaChallenge,
+    settings: LemmaSettings,
+    *,
+    response: bool = True,
+) -> str | None:
+    """Return an error message if challenge/response fields exceed configured caps."""
     stmt = synapse.theorem_statement or ""
     if len(stmt) > settings.synapse_max_statement_chars:
         return "theorem_statement too large"
+    if not response:
+        return None
     phase = (synapse.commit_reveal_phase or "off").strip().lower()
     pc = (synapse.proof_commitment_hex or "").strip()
     if phase == "commit" and pc:

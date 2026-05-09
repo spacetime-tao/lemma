@@ -113,7 +113,7 @@ def make_forward(
     sem = asyncio.Semaphore(max(1, settings.miner_max_concurrent_forwards))
 
     async def forward(synapse: LemmaChallenge) -> LemmaChallenge:
-        err = synapse_payload_error(synapse, settings)
+        err = synapse_payload_error(synapse, settings, response=False)
         if err:
             return reject_synopsis(synapse, 413, err)
 
