@@ -3,7 +3,13 @@
 import json
 from pathlib import Path
 
-from tools.proof_metrics_analyze import load_report, main, padding_outliers, render_report
+from tools.proof_metrics_analyze import (
+    load_report,
+    low_judge_high_metric_candidates,
+    main,
+    padding_outliers,
+    render_report,
+)
 
 FIXTURE = Path(__file__).parent / "fixtures" / "proof_metrics_validation.jsonl"
 
@@ -62,6 +68,7 @@ def test_load_report_summarizes_metric_rows(tmp_path) -> None:
     assert "rows_with_failed_proof_metrics=1" in rendered
     assert "corr(metric_bytes, proof_len_chars)=" in rendered
     assert "padding_outliers_by_proof_len_minus_metric_bytes:" in rendered
+    assert "low_judge_high_metric_candidates:" in rendered
     assert "theorem=padded" in rendered
     assert "theorem=failed-probe" not in rendered
 
@@ -128,6 +135,7 @@ def test_validation_fixture_separates_padding_from_failed_probes() -> None:
     assert "rows_with_successful_proof_metrics=4" in rendered
     assert "rows_with_failed_proof_metrics=1" in rendered
     assert "theorem=comment-padding" in rendered
+    assert "theorem=string-padding" in rendered
     assert "theorem=failed-probe-padding" not in rendered
     assert "theorem=honest-short" not in rendered
     assert "theorem=honest-structured" not in rendered
@@ -135,3 +143,7 @@ def test_validation_fixture_separates_padding_from_failed_probes() -> None:
     outlier_ids = [r.theorem_id for r in padding_outliers(report.metric_rows, limit=4)]
     assert outlier_ids == ["comment-padding"]
     assert "failed-probe-padding" not in outlier_ids
+
+    risk_ids = [r.theorem_id for r in low_judge_high_metric_candidates(report.metric_rows, limit=4)]
+    assert risk_ids == ["string-padding", "comment-padding"]
+    assert "failed-probe-padding" not in risk_ids

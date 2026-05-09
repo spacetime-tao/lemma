@@ -102,12 +102,33 @@ def render_report(report: MetricsReport, *, outlier_limit: int = 8) -> str:
             )
     else:
         lines.append("padding_outliers_by_proof_len_minus_metric_bytes: none")
+
+    candidates = low_judge_high_metric_candidates(ok_rows, limit=outlier_limit)
+    if candidates:
+        lines.append("low_judge_high_metric_candidates:")
+        for r in candidates:
+            lines.append(
+                f"  line={r.line_no} theorem={r.theorem_id} uid={r.uid} "
+                f"judge={r.judge_composite:.4f} metric_bytes={r.proof_metric_bytes} "
+                f"proof_len={r.proof_len} intrinsic={r.proof_intrinsic:.4f}",
+            )
+    else:
+        lines.append("low_judge_high_metric_candidates: none")
     return "\n".join(lines)
 
 
 def padding_outliers(rows: list[MetricRow], *, limit: int) -> list[MetricRow]:
     ok_rows = [r for r in rows if r.probe_exit_code == 0 and r.proof_len > r.proof_metric_bytes]
     return sorted(ok_rows, key=lambda r: (r.proof_len - r.proof_metric_bytes, r.proof_len), reverse=True)[:limit]
+
+
+def low_judge_high_metric_candidates(rows: list[MetricRow], *, limit: int, max_judge: float = 0.5) -> list[MetricRow]:
+    candidates = [
+        r for r in rows if r.probe_exit_code == 0 and r.judge_composite is not None and r.judge_composite <= max_judge
+    ]
+    return sorted(candidates, key=lambda r: (r.proof_metric_bytes, r.proof_intrinsic, r.proof_len), reverse=True)[
+        :limit
+    ]
 
 
 def main(argv: list[str] | None = None) -> int:
