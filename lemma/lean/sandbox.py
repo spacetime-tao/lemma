@@ -6,7 +6,6 @@ import os
 import shlex
 import shutil
 import subprocess
-import sys
 import tempfile
 import threading
 import time
@@ -38,44 +37,8 @@ _DOCKER_VERIFY_SCRIPT = ".lemma_verify.sh"
 
 @lru_cache(maxsize=512)
 def _template_slot_lock(cache_key: str) -> threading.RLock:
-    """Serialize in-place verify + cache publish for one theorem template (reentrant for nested publish)."""
+    """Serialize in-place verify + cache publish for one theorem template."""
     return threading.RLock()
-
-
-def _clone_dot_lake(src: Path, dst: Path) -> None:
-    """Clone ``.lake`` for an isolated build tree.
-
-    Plain ``shutil.copytree`` duplicates gigabytes on every verify (slow). On APFS (macOS)
-    ``cp -cR`` uses copy-on-write clones when possible — fast and **independent** trees (Lake
-    may write during ``lake build``, so we must not use ``os.link`` sharing with the slot).
-    Linux tries ``cp --reflink=auto`` (btrfs/xfs). Falls back to a full copy.
-    """
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    if dst.exists():
-        shutil.rmtree(dst)
-    if sys.platform == "darwin":
-        try:
-            subprocess.run(
-                ["cp", "-cR", str(src), str(dst)],
-                check=True,
-                timeout=7200,
-                capture_output=True,
-            )
-            return
-        except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
-            pass
-    if sys.platform.startswith("linux"):
-        try:
-            subprocess.run(
-                ["cp", "-a", "--reflink=auto", str(src), str(dst)],
-                check=True,
-                timeout=7200,
-                capture_output=True,
-            )
-            return
-        except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
-            pass
-    shutil.copytree(src, dst, symlinks=True, dirs_exist_ok=True)
 
 
 def _env_truthy(name: str) -> bool:
@@ -211,10 +174,9 @@ class LeanSandbox:
                 stderr_tail=cheat_scan_stderr_tail(cheat),
             )
 
-        # Warm cache: if the template slot already has `.lake`, verify **in that directory** under a
-        # per-template lock. That avoids copying or cloning multi‑GB `.lake` trees (still slow on
-        # APFS even with `cp -cR`). Cold path: fresh temp under the cache root (same volume as
-        # `LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR` when set) and publish on first success.
+        # Warm cache: if the template slot already has `.lake`, verify in that directory under a
+        # per-template lock. Cold path: fresh temp under the cache root and rename it into place
+        # after the first passing verify.
         cache_key: str | None = None
         slot: Path | None = None
         work: Path | None = None
@@ -282,32 +244,21 @@ class LeanSandbox:
                 shutil.rmtree(work, ignore_errors=True)
 
     def _publish_workspace_cache(self, slot: Path, work: Path, key: str) -> None:
-        """First passing verify for this template — save `.lake` for faster follow-ups."""
-        root = self.workspace_cache_dir
-        if root is None or not (work / ".lake").is_dir():
+        """First passing verify for this template — keep the verified workspace as the warm slot."""
+        if self.workspace_cache_dir is None or not (work / ".lake").is_dir():
             return
         lock = _template_slot_lock(key)
         with lock:
             if (slot / ".lake").is_dir():
                 return
-        wip = root / f"._wip_{key}"
-        try:
-            shutil.rmtree(wip, ignore_errors=True)
-            wip.mkdir(parents=True, exist_ok=True)
-            _clone_dot_lake(work / ".lake", wip / ".lake")
-        except OSError as e:
-            logger.warning("lean workspace cache publish (copy) failed: {}", e)
-            shutil.rmtree(wip, ignore_errors=True)
-            return
-        with lock:
-            if (slot / ".lake").is_dir():
-                shutil.rmtree(wip, ignore_errors=True)
+            if slot.exists():
+                logger.warning("lean workspace cache publish skipped; slot exists without .lake: {}", slot)
                 return
             try:
-                wip.rename(slot)
+                work.rename(slot)
                 logger.debug("lean workspace cache primed template={}", key)
-            except OSError:
-                shutil.rmtree(wip, ignore_errors=True)
+            except OSError as e:
+                logger.warning("lean workspace cache publish (rename) failed: {}", e)
 
     def _maybe_lake_cache_get(self, work: Path, env: dict[str, str]) -> None:
         """Warm mathlib cache when possible (matches Docker stub workflow); ignore failures."""
