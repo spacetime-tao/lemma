@@ -22,15 +22,7 @@ def dedup_identical_submissions(
     key_fn: Callable[[ScoredEntry], str],
 ) -> tuple[list[ScoredEntry], int]:
     """Keep the highest ``reasoning_score`` entry per identical key; return (kept, dropped_count)."""
-    best: dict[str, ScoredEntry] = {}
-    for e in entries:
-        k = key_fn(e)
-        cur = best.get(k)
-        if cur is None or e.reasoning_score > cur.reasoning_score:
-            best[k] = e
-    kept = list(best.values())
-    dropped = max(0, len(entries) - len(kept))
-    return kept, dropped
+    return _dedup_by_key(entries, key_fn)
 
 
 def dedup_coldkeys(
@@ -38,12 +30,20 @@ def dedup_coldkeys(
     uid_to_coldkey: Callable[[int], str],
 ) -> tuple[list[ScoredEntry], int]:
     """Keep the highest ``reasoning_score`` entry per coldkey string."""
+    return _dedup_by_key(entries, lambda e: uid_to_coldkey(e.uid))
+
+
+def _dedup_by_key(
+    entries: list[ScoredEntry],
+    key_fn: Callable[[ScoredEntry], str],
+) -> tuple[list[ScoredEntry], int]:
+    """Keep the highest ``reasoning_score`` entry per key."""
     best: dict[str, ScoredEntry] = {}
     for e in entries:
-        ck = uid_to_coldkey(e.uid)
-        cur = best.get(ck)
+        key = key_fn(e)
+        cur = best.get(key)
         if cur is None or e.reasoning_score > cur.reasoning_score:
-            best[ck] = e
+            best[key] = e
     kept = list(best.values())
     dropped = max(0, len(entries) - len(kept))
     return kept, dropped
