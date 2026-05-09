@@ -6,11 +6,15 @@ import json
 from typing import Protocol, TypeVar
 
 import httpx
-from anthropic import AsyncAnthropic
 from loguru import logger
 from openai import AsyncOpenAI
 
-from lemma.common.async_llm_retry import TRANSIENT_ANTHROPIC, TRANSIENT_OPENAI_COMPAT, async_llm_retry
+from lemma.common.async_llm_retry import (
+    TRANSIENT_OPENAI_COMPAT,
+    anthropic_async_client_cls,
+    anthropic_transient_exceptions,
+    async_llm_retry,
+)
 from lemma.common.config import LemmaSettings
 from lemma.protocol import LemmaChallenge, ReasoningStep
 from lemma.reasoning.format import format_reasoning_steps
@@ -181,6 +185,7 @@ class LLMProver:
             sys_prompt = PROVER_SYSTEM
 
             async def _anthropic_call() -> str:
+                AsyncAnthropic = anthropic_async_client_cls()
                 client = AsyncAnthropic(api_key=key, timeout=t_out)
                 # Many Claude models cap output at 8192; avoid provider errors if PROVER_MAX_TOKENS is higher.
                 max_out = min(int(self._settings.prover_max_tokens), 8192)
@@ -200,7 +205,7 @@ class LLMProver:
             text = await async_llm_retry(
                 _anthropic_call,
                 max_attempts=attempts,
-                transient_exceptions=TRANSIENT_ANTHROPIC,
+                transient_exceptions=anthropic_transient_exceptions(),
             )
         if self._settings.miner_log_forwards:
             tail = text if len(text) <= 16_000 else text[:8000] + "\n... [truncated] ...\n" + text[-8000:]

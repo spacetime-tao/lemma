@@ -14,7 +14,7 @@ So “OpenAI-compatible” is about the **wire format** (how the request/respons
 
 **Not the same thing:** Google’s **native** Gemini REST API under `…/v1beta/models/…:generateContent` uses a **different** JSON schema (`contents` / `parts`, etc.). Lemma does **not** use that path today for the main prover; it uses the **OpenAI-compatible** base `https://generativelanguage.googleapis.com/v1beta/openai/` so the same `AsyncOpenAI` code can talk to Gemini. See Google’s [OpenAI compatibility](https://ai.google.dev/gemini-api/docs/openai) docs.
 
-**Anthropic** is different again: it has its own API (`/v1/messages`, separate fields). Lemma uses **`AsyncAnthropic`** when `PROVER_PROVIDER=anthropic` / `JUDGE_PROVIDER=anthropic`.
+**Anthropic** is different again: it has its own API (`/v1/messages`, separate fields). That SDK is an optional install: use `uv sync --extra anthropic` when `PROVER_PROVIDER=anthropic` or local judge tooling uses `JUDGE_PROVIDER=anthropic`.
 
 Interactive setup (`lemma-cli configure judge` / `configure prover`): reply with a **row number** or the **backend keyword** (`chutes`, `gemini`, …). For **`lemma-cli configure prover`**, you **pick the vendor first** (Chutes, Gemini, Anthropic, hosted OpenAI, or custom OpenAI-compat URL); the next prompts ask for API keys and **`PROVER_MODEL`** (with dim examples in-terminal — preset tiers for Gemini, defaults for Chutes/Anthropic, required string for OpenAI, provider-specific id for custom).
 
@@ -48,3 +48,5 @@ Set `PROVER_PROVIDER=openai`, **`PROVER_OPENAI_BASE_URL`** (or rely on judge `OP
 The live miner (`lemma miner start`) starts solving **as soon as** a validator forwards a challenge — no deliberate wait for block ticks. `lemma-cli try-prover` is separate (manual smoke test).
 
 Custom **`PROVER_OPENAI_BASE_URL`** / keys for the **prover** are normal (any OpenAI-compatible host you operate). The **subnet judge** for validators stays on the pinned Chutes stack above—self-hosted judge endpoints are not the default production path.
+
+Anthropic prover support is optional. Install it with `uv sync --extra anthropic`, then set `PROVER_PROVIDER=anthropic`, `ANTHROPIC_API_KEY`, and `PROVER_MODEL` or `ANTHROPIC_MODEL`.
