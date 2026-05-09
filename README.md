@@ -44,6 +44,7 @@ lemma --help
 | Credibility exponent policy | [credibility-exponent-decision.md](docs/credibility-exponent-decision.md) |
 | Commit-reveal threat model | [commit-reveal.md](docs/commit-reveal.md) |
 | Miner verify attest threat model | [miner-verify-attest.md](docs/miner-verify-attest.md) |
+| Judge profile peer attest threat model | [judge-profile-attest.md](docs/judge-profile-attest.md) |
 | System requirements | [system-requirements.md](docs/system-requirements.md) |
 
 ## References

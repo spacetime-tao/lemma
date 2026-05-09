@@ -46,7 +46,7 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 ### Trust & sybil
 
 - [x] **Sybil economics** — Operator guide [sybil_economics.md](sybil_economics.md): Lemma dedup vs coldkey sybil realities, UID pressure; tie-break / stake policy remains subnet governance ([`knowledge/sybil.realities.yaml`](../knowledge/sybil.realities.yaml)).
-- [ ] **Judge / infra trust** — HTTP peer quorum for **`judge_profile_sha256`** ships (`LEMMA_JUDGE_PROFILE_ATTEST_*`). Still open: stronger attestations (e.g. on-chain), operational hardening beyond URL probes.
+- [x] **Judge / infra trust** — HTTP peer check for **`judge_profile_sha256`** ships (`LEMMA_JUDGE_PROFILE_ATTEST_*`) and is documented as operator coordination, not Byzantine consensus or transport security. Stronger attestations (e.g. signed/on-chain or k-of-n governance) remain a separate design. See [judge-profile-attest.md](judge-profile-attest.md).
 
 ### Compute placement
 
@@ -82,5 +82,6 @@ Track in issues or refactors as capacity allows: consolidate CLI dry-run paths, 
 - Credibility exponent decision: [credibility-exponent-decision.md](credibility-exponent-decision.md)
 - Commit-reveal threat model: [commit-reveal.md](commit-reveal.md)
 - Miner verify attest threat model: [miner-verify-attest.md](miner-verify-attest.md)
+- Judge profile peer attest threat model: [judge-profile-attest.md](judge-profile-attest.md)
 - Scoring entrypoint: `lemma/scoring/rewards.py`, `lemma/scoring/proof_intrinsic.py`
 - Epoch loop: `lemma/validator/epoch.py`

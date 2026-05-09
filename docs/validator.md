@@ -121,7 +121,7 @@ Some subnets require validators to **agree with peers on the same validator scor
 lemma validator judge-attest-serve --host 0.0.0.0 --port 8799
 ```
 
-Serves **`GET /lemma/judge_profile_sha256`** (`text/plain` hash) and **`GET /health`**. See [.env.example](../.env.example) and [incentive_migration.md](incentive_migration.md).
+Serves **`GET /lemma/judge_profile_sha256`** (`text/plain` hash) and **`GET /health`**. This is operator coordination, not Byzantine consensus or transport security; see [judge-profile-attest.md](judge-profile-attest.md), [.env.example](../.env.example), and [incentive_migration.md](incentive_migration.md).
 
 ## Compose
 

@@ -810,7 +810,7 @@ class LemmaSettings(BaseSettings):
         description=(
             "Optional HTTP peer quorum: each URL must return this validator's judge_profile_sha256. "
             "See LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS, LEMMA_JUDGE_PROFILE_ATTEST_SKIP, "
-            "`lemma validator judge-attest-serve`, docs/incentive_migration.md."
+            "`lemma validator judge-attest-serve`, docs/judge-profile-attest.md."
         ),
     )
     lemma_judge_profile_attest_peer_urls: str = Field(
@@ -831,7 +831,7 @@ class LemmaSettings(BaseSettings):
             "lemma_judge_profile_attest_allow_skip",
         ),
         description=(
-            "When attest is enabled, skip peer HTTP (solo / dev). Logs as WARN at validator startup — "
+            "When attest is enabled, skip peer HTTP (solo / dev only). Logs as WARN at validator startup — "
             "not for production multi-validator alignment."
         ),
     )
