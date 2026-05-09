@@ -205,7 +205,7 @@ CLI alone cited as **43 %** of `lemma/` and **83 %** of combined runtime core si
 - **`uv_bootstrap.py`** + tests vs documenting `uv run`; removed from core.
 - **`interactive_venv_shell.py`** (~176 LoC) vs one-line `source .venv`; removed in the first CLI extraction trim.
 - **`_looks_like_shell_step`** frozenset — partial shell interception.
-- **`leaderboard_cmd`** wraps `btcli`; **`miner_menu` / `validator_menu`** duplicated subcommands and were removed in the first CLI extraction trim.
+- **`leaderboard_cmd`** wrapped metagraph display already available through `btcli subnet show`; removed from core. **`miner_menu` / `validator_menu`** duplicated subcommands and were removed in the first CLI extraction trim.
 - **`docs/` opener** + `_DOCS_BY_SLUG` hardcoded tuple moved to `lemma-cli`; core keeps a redirect only.
 - **`configure` ×8** near-identical subcommands moved to `lemma-cli`; core keeps redirect shims only.
 - **`try_prover.py`** (~677 LoC) vs epoch.

@@ -39,7 +39,7 @@ def metagraph_incentive_for_hotkey(
     cache: MetagraphCache,
     hotkey_ss58: str,
 ) -> tuple[int | None, float | None]:
-    """Your subnet UID and incentive column from the cached metagraph (same basis as ``lemma leaderboard``)."""
+    """Your subnet UID and incentive column from the cached Bittensor metagraph."""
     mg = cache.get()
     uid = _uid_for_hotkey(mg, hotkey_ss58)
     if uid is None:

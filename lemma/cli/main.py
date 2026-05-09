@@ -902,21 +902,6 @@ def status_cmd() -> None:
     click.echo(f"  {stylize('lemma meta', fg='green')}  " + stylize("judge + template hashes", dim=True))
 
 
-@main.command("leaderboard")
-@click.option("--top", type=int, default=25, help="Rows to show (max 64).")
-@click.option(
-    "--sort",
-    type=click.Choice(["stake", "incentive", "trust"]),
-    default="stake",
-    help="Metagraph sort key (not on-chain Lean proof rate).",
-)
-def leaderboard_cmd(top: int, sort: str) -> None:
-    """Show subnet metagraph: stake / incentive (chain view, not per-theorem scores)."""
-    from lemma.cli.leaderboard_cmd import run_leaderboard
-
-    run_leaderboard(LemmaSettings(), top=top, sort=sort)
-
-
 def _miner_apply_daily_cap(max_forwards_per_day: int | None) -> None:
     if max_forwards_per_day is not None:
         os.environ["MINER_MAX_FORWARDS_PER_DAY"] = str(max_forwards_per_day)
@@ -1043,7 +1028,10 @@ def _miner_emit_observability_panel() -> None:
     click.echo(stylize("On-chain (aggregate, not one theorem’s judge score)\n", fg="cyan", bold=True), nl=False)
     click.echo(
         "  "
-        + stylize("lemma leaderboard", fg="green")
+        + stylize(
+            f"btcli subnet show --netuid {s.netuid} --network {s.subtensor_network}",
+            fg="green",
+        )
         + stylize(
             " — incentive / stake / trust from the metagraph (updates as validators set weights).\n",
             dim=True,
