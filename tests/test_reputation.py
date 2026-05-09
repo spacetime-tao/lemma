@@ -4,7 +4,7 @@ from lemma.scoring.reputation import ReputationStore, apply_ema_to_entries, load
 
 def test_apply_ema_smoothes() -> None:
     entries = [
-        ScoredEntry(uid=1, reasoning_score=1.0, tokens=10, composite=1.0, submission_fp=""),
+        ScoredEntry(uid=1, reasoning_score=1.0, tokens=10, submission_fp=""),
     ]
     out, ema = apply_ema_to_entries(
         entries,
@@ -17,7 +17,7 @@ def test_apply_ema_smoothes() -> None:
 
 
 def test_apply_ema_alpha_zero_no_smoothing() -> None:
-    entries = [ScoredEntry(uid=1, reasoning_score=0.7, tokens=3, composite=0.7, submission_fp="")]
+    entries = [ScoredEntry(uid=1, reasoning_score=0.7, tokens=3, submission_fp="")]
     out, ema = apply_ema_to_entries(
         entries,
         alpha=0.0,
@@ -40,7 +40,7 @@ def test_reputation_roundtrip(tmp_path) -> None:
 
 def test_apply_ema_credibility_multiplier() -> None:
     entries = [
-        ScoredEntry(uid=2, reasoning_score=1.0, tokens=3, composite=1.0, submission_fp=""),
+        ScoredEntry(uid=2, reasoning_score=1.0, tokens=3, submission_fp=""),
     ]
     out, ema = apply_ema_to_entries(
         entries,

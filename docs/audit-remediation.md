@@ -226,7 +226,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **`scoring/dedup.py`**: parallel `dedup_identical` / `dedup_coldkeys` now share one internal best-by-key helper.
 - **`scoring/__init__.py`**: unused convenience re-exports removed; callers import concrete scoring modules directly.
 - **Style proliferation:** mixed dataclass / pydantic / hand JSON (`ScoredEntry`, `RubricScore`, …).
-- **`ScoredEntry.composite` vs `reasoning_score`**: duplicate identity — consolidate naming.
+- **`ScoredEntry.composite` vs `reasoning_score`**: duplicate identity removed; `ScoredEntry` keeps `reasoning_score` only.
 - **`tokens.py` / tiktoken:** replaced with deterministic `len(text)` trace-length proxy; dependency removed.
 - **Dead merge path:** `mix_sub_problem_seed` multi-round when K=1 default.
 
