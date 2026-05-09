@@ -21,7 +21,6 @@ from lemma.common.problem_seed import (
 from lemma.common.split_timeout import split_timeout_multiplier
 from lemma.common.subtensor import get_subtensor
 from lemma.common.uids import axon_list_for_uids
-from lemma.judge.anthropic_judge import AnthropicJudge
 from lemma.judge.base import Judge
 from lemma.judge.fake import FakeJudge
 from lemma.judge.fingerprint import rubric_sha256
@@ -75,25 +74,18 @@ def _build_judge(settings: LemmaSettings, dry_run: bool) -> Judge:
     to = float(settings.judge_llm_http_timeout_s or settings.llm_http_timeout_s)
     ra = max(1, int(settings.judge_llm_retry_attempts))
     prov = (settings.judge_provider or "chutes").lower()
-    if prov in ("openai", "chutes"):
-        key = settings.judge_openai_api_key_resolved()
-        if not key:
-            raise RuntimeError("JUDGE_OPENAI_API_KEY / OPENAI_API_KEY missing; cannot score live validator epoch")
-        return OpenAIJudge(
-            key,
-            settings.openai_model,
-            base_url=settings.openai_base_url,
-            temperature=settings.judge_temperature,
-            max_tokens=settings.judge_max_tokens,
-            timeout=to,
-            retry_attempts=ra,
+    if prov not in ("openai", "chutes"):
+        raise RuntimeError(
+            "validator epochs require JUDGE_PROVIDER=chutes; legacy openai alias accepted; "
+            "Anthropic is local judge tooling only"
         )
-    key = settings.anthropic_api_key
+    key = settings.judge_openai_api_key_resolved()
     if not key:
-        raise RuntimeError("ANTHROPIC_API_KEY missing; cannot score live validator epoch")
-    return AnthropicJudge(
+        raise RuntimeError("JUDGE_OPENAI_API_KEY / OPENAI_API_KEY missing; cannot score live validator epoch")
+    return OpenAIJudge(
         key,
-        settings.anthropic_model,
+        settings.openai_model,
+        base_url=settings.openai_base_url,
         temperature=settings.judge_temperature,
         max_tokens=settings.judge_max_tokens,
         timeout=to,
