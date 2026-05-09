@@ -20,7 +20,6 @@ from lemma.common.problem_seed import (
 )
 from lemma.common.split_timeout import split_timeout_multiplier
 from lemma.common.subtensor import get_subtensor
-from lemma.common.uids import axon_list_for_uids
 from lemma.judge.base import Judge
 from lemma.judge.fake import FakeJudge
 from lemma.judge.fingerprint import rubric_sha256
@@ -305,7 +304,7 @@ async def run_epoch(
                 "timeout": forward_wait_s,
             }
 
-            axons = axon_list_for_uids(metagraph, uids)
+            axons = [metagraph.axons[uid] for uid in uids]
             commits_by_uid: dict[int, str] = {}
             if settings.lemma_commit_reveal_enabled:
                 syn_commit = LemmaChallenge(**base_syn, commit_reveal_phase="commit")
