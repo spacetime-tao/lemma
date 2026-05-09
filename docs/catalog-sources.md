@@ -21,8 +21,6 @@ uv sync --extra catalog   # FormalMATH sources only
 python scripts/build_lemma_catalog.py \
   --out lemma/problems/minif2f_frozen.json \
   --sources yangky,dm,putnam
-
-python scripts/load_minif2f.py --out lemma/problems/minif2f_frozen.json   # yangky miniF2F-lean4 only
 ```
 
 ## Sources

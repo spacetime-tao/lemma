@@ -280,7 +280,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - Root **`validator.py`** stub removed; docs point to `lemma validator start`.
 - **`voibes.jpeg`** unused asset removed.
 - **`env.example`** removed; **`.env.example`** is the only env template.
-- **`scripts/load_minif2f.py`** superseded header.
+- **`scripts/load_minif2f.py`** removed; `scripts/build_lemma_catalog.py` is the single catalog rebuild path.
 - **`scripts/lemma-run`** vs Makefile.
 - **`docs/comparator.md`** aspirational vs default-off comparator.
 - **`pyproject.toml` extras** — anthropic/tiktoken/cli optional split candidate.
