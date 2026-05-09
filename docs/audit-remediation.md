@@ -277,8 +277,8 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
   undocumented lowercase env aliases were removed from the commit-reveal, miner-attest, and judge-attest switches.
 - Timeout-split / prover self-rejection knobs — documented uppercase env names remain; undocumented lowercase
   env aliases were removed. Timeout-split stays validator policy; prover minimums stay miner-only retry policy.
-- Prover budget/retry/temperature aliases trimmed to documented `LEMMA_PROVER_*` names; older bare `PROVER_*`
-  knobs are ignored except for documented provider/model/endpoint credentials.
+- Settings env aliases now accept documented uppercase names only; lowercase field-name env aliases were removed
+  while Python constructor kwargs remain available through an init-time alias shim.
 
 ### 13.7 Tests (coverage imbalance)
 
