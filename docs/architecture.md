@@ -16,7 +16,7 @@
 
 - Cheat scan ([`cheats.py`](../lemma/lean/cheats.py)).
 - Mathlib axiom allowlist from `#print axioms`.
-- Optional comparator ([comparator.md](comparator.md)).
+- Optional experimental comparator hook ([comparator.md](comparator.md)).
 
 ## References
 
