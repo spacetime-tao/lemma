@@ -82,6 +82,10 @@ probe rows. It also reports minimum data-readiness blockers using conservative
 defaults: at least 50 successful proof-metric rows, 5 theorem ids, 5 UIDs, and
 judge composite labels.
 
+For release checklists, add `--require-decision-ready`. It exits nonzero unless
+`decision_ready=yes`. This is only a readiness guard: it still requires manual
+review and does not approve a scoring change.
+
 The repo also keeps a synthetic analyzer fixture at
 `tests/fixtures/proof_metrics_validation.jsonl`. It is useful for checking the
 analysis code, but it is not evidence for a scoring change; use real validator
