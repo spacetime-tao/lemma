@@ -51,6 +51,7 @@ def training_record(
     row = {
         "schema_version": 1,
         **common,
+        "theorem_statement": resp.theorem_statement,
         "proof_script": resp.proof_script or "",
         "rubric": rubric.model_dump(),
     }

@@ -45,6 +45,7 @@ def test_training_record_roundtrip_fields(tmp_path: Path) -> None:
     assert row["uid"] == 7
     assert row["coldkey"] == "coldkey-public"
     assert row["theorem_id"] == "tid"
+    assert row["theorem_statement"] == "theorem p : True := by sorry"
     assert row["reasoning_steps"] is not None
     assert len(row["reasoning_steps"]) == 2
     assert row["rubric"]["composite"] == 0.8
@@ -87,6 +88,7 @@ def test_training_record_reasoning_only_no_scores(tmp_path: Path) -> None:
     assert row["schema_version"] == 2
     assert row["export_profile"] == "reasoning_only"
     assert "proof_script" not in row
+    assert "theorem_statement" not in row
     assert "rubric" not in row
     assert "proof_metrics" not in row
     assert "coldkey" not in row
