@@ -21,7 +21,7 @@ lemma --help
 
 `lemma` alone prints **command help** (like `btcli`). Use the separate **[lemma-cli](https://github.com/spacetime-tao/lemma-cli)** repo for the friendly operator screen (`setup`, `doctor`, `docs`, …). Create wallets with the **`btcli`** command from official **[bittensor-cli](https://pypi.org/project/bittensor-cli/)** (installed via **`bittensor[cli]`** when you `uv sync`—see **getting-started** for PyPI package names vs the `btcli` executable).
 
-**Validator entrypoint:** use **`lemma validator start`** (or Docker `ENTRYPOINT ["lemma"]` / `CMD ["validator", "start"]`). Do **not** run `python validator.py` at the repo root — that file is a **stub** that exits with instructions; the old “burn 100% to UID 0” demo script lives under **`examples/legacy_subnet_burn_validator.py`** only.
+**Validator entrypoint:** use **`lemma validator start`** (or Docker `ENTRYPOINT ["lemma"]` / `CMD ["validator", "start"]`). The old “burn 100% to UID 0” demo script lives under **`examples/legacy_subnet_burn_validator.py`** only.
 
 ## Docs
 

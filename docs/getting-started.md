@@ -92,7 +92,7 @@ bash scripts/prebuild_lean_image.sh
 ./scripts/lemma-run lemma validator start
 ```
 
-Use **`lemma validator start`** only — not `python validator.py` at the repo root (that file is a stub; a legacy burn-to-UID-0 demo lives under **`examples/`** for reference).
+Use **`lemma validator start`** only. A legacy burn-to-UID-0 demo lives under **`examples/`** for reference.
 
 Parity: `./scripts/lemma-run lemma meta` — [governance.md](governance.md).
 
