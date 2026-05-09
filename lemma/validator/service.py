@@ -9,7 +9,7 @@ import time
 import bittensor as bt
 from loguru import logger
 
-from lemma.common.config import LemmaSettings, assert_validator_judge_stack_strict
+from lemma.common.config import LemmaSettings, validator_judge_stack_strict_issue
 from lemma.common.logging import setup_logging
 from lemma.common.subtensor import get_subtensor
 from lemma.judge.profile import judge_profile_sha256
@@ -18,15 +18,82 @@ from lemma.problems.generated import generated_registry_sha256
 from lemma.validator import epoch as ep
 from lemma.validator.judge_profile_attest import judge_profile_peer_check_errors
 
+_DOCKER_REQUIRED_ERROR = (
+    "lemma validator requires Docker for Lean verify (LEMMA_USE_DOCKER=true).\n"
+    "Host `lake` is not supported for validators — set LEMMA_USE_DOCKER=true in `.env`."
+)
+
 
 def _require_docker_for_validator(settings: LemmaSettings) -> None:
     """Validators must use Docker for Lean — no host-lake escape hatch."""
     if settings.lean_use_docker:
         return
-    raise SystemExit(
-        "lemma validator requires Docker for Lean verify (LEMMA_USE_DOCKER=true).\n"
-        "Host `lake` is not supported for validators — set LEMMA_USE_DOCKER=true in `.env`.",
-    )
+    raise SystemExit(_DOCKER_REQUIRED_ERROR)
+
+
+def validator_startup_issues(settings: LemmaSettings, *, dry_run: bool) -> tuple[list[str], list[str]]:
+    """Consensus-critical gates shared by `validator start` and `validator-check`."""
+    fatal: list[str] = []
+    warn: list[str] = []
+
+    if not settings.lean_use_docker:
+        fatal.append(_DOCKER_REQUIRED_ERROR)
+
+    judge_policy = validator_judge_stack_strict_issue(settings)
+    if judge_policy:
+        fatal.append(judge_policy)
+
+    dry_run_real_judge = dry_run and os.environ.get("LEMMA_DRY_RUN_REAL_JUDGE", "").strip() == "1"
+    if (not dry_run or dry_run_real_judge) and not (settings.judge_openai_api_key_resolved() or "").strip():
+        fatal.append("JUDGE_OPENAI_API_KEY / OPENAI_API_KEY missing; cannot score live validator epoch")
+
+    if not (settings.judge_profile_expected_sha256 or "").strip():
+        fatal.append(
+            "lemma validator requires JUDGE_PROFILE_SHA256_EXPECTED in `.env` "
+            "(run `lemma-cli configure subnet-pins` or copy from `lemma meta --raw`).",
+        )
+    else:
+        expected_raw = (settings.judge_profile_expected_sha256 or "").strip()
+        actual_judge = judge_profile_sha256(settings).strip().lower()
+        if actual_judge != expected_raw.lower():
+            fatal.append(
+                f"judge profile mismatch: expected JUDGE_PROFILE_SHA256_EXPECTED={expected_raw!r} "
+                f"but current config hashes to {actual_judge!r}.\n"
+                "Align judge env with the subnet, then run `lemma-cli configure subnet-pins` "
+                "(or set the pin to match `lemma meta` / `lemma meta --raw` manually).",
+            )
+
+    problem_source = (settings.problem_source or "").strip().lower()
+    if problem_source == "generated":
+        if not (settings.generated_registry_expected_sha256 or "").strip():
+            fatal.append(
+                "lemma validator requires LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED when "
+                "LEMMA_PROBLEM_SOURCE=generated (run `lemma-cli configure subnet-pins`).",
+            )
+        else:
+            gr_actual = generated_registry_sha256()
+            gre = (settings.generated_registry_expected_sha256 or "").strip()
+            if gr_actual.strip().lower() != gre.lower():
+                fatal.append(
+                    f"generated registry mismatch: expected LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED={gre!r} "
+                    f"but current code hashes to {gr_actual!r}.\n"
+                    "Use the same lemma commit as the subnet, then `lemma-cli configure subnet-pins` "
+                    "(or update the registry pin from `lemma meta --raw`).",
+                )
+    elif problem_source == "frozen" and not settings.lemma_dev_allow_frozen_problem_source:
+        fatal.append(
+            "LEMMA_PROBLEM_SOURCE=frozen requires LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1 "
+            "(public eval catalog). Use generated for subnet traffic — see docs/catalog-sources.md",
+        )
+
+    if settings.lemma_judge_profile_attest_enabled and settings.lemma_judge_profile_attest_allow_skip:
+        warn.append(
+            "LEMMA_JUDGE_PROFILE_ATTEST_SKIP=1 — peer judge profile HTTP checks skipped "
+            "(solo / dev only; not production alignment)",
+        )
+    fatal.extend(judge_profile_peer_check_errors(settings))
+
+    return fatal, warn
 
 
 class ValidatorService:
@@ -40,49 +107,13 @@ class ValidatorService:
             "Validator running — press Ctrl+C to stop and return to your shell.",
         )
         s = self.settings
-        _require_docker_for_validator(s)
-        assert_validator_judge_stack_strict(s)
-        if not (s.judge_profile_expected_sha256 or "").strip():
-            raise SystemExit(
-                "lemma validator requires JUDGE_PROFILE_SHA256_EXPECTED in `.env` "
-                "(run `lemma-cli configure subnet-pins` or copy from `lemma meta --raw`)."
-            )
+        fatal, warn = await asyncio.to_thread(validator_startup_issues, s, dry_run=self.dry_run)
+        for msg in warn:
+            logger.warning(msg)
+        if fatal:
+            raise SystemExit(fatal[0])
         if (s.problem_source or "").strip().lower() == "generated":
-            if not (s.generated_registry_expected_sha256 or "").strip():
-                raise SystemExit(
-                    "lemma validator requires LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED when "
-                    "LEMMA_PROBLEM_SOURCE=generated (run `lemma-cli configure subnet-pins`)."
-                )
-
-        expected_raw = (s.judge_profile_expected_sha256 or "").strip()
-        expected_j = expected_raw.lower()
-        actual_judge = judge_profile_sha256(s).strip().lower()
-        if actual_judge != expected_j:
-            raise SystemExit(
-                f"judge profile mismatch: expected JUDGE_PROFILE_SHA256_EXPECTED={expected_raw!r} "
-                f"but current config hashes to {actual_judge!r}.\n"
-                "Align judge env with the subnet, then run `lemma-cli configure subnet-pins` "
-                "(or set the pin to match `lemma meta` / `lemma meta --raw` manually)."
-            )
-        if (s.problem_source or "").strip().lower() == "generated":
-            gr_actual = generated_registry_sha256()
-            logger.info("generated_registry_sha256={}", gr_actual)
-            gre = (s.generated_registry_expected_sha256 or "").strip()
-            if gr_actual.strip().lower() != gre.lower():
-                raise SystemExit(
-                    f"generated registry mismatch: expected LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED={gre!r} "
-                    f"but current code hashes to {gr_actual!r}.\n"
-                    "Use the same lemma commit as the subnet, then `lemma-cli configure subnet-pins` "
-                    "(or update the registry pin from `lemma meta --raw`)."
-                )
-        if s.lemma_judge_profile_attest_enabled and s.lemma_judge_profile_attest_allow_skip:
-            logger.warning(
-                "LEMMA_JUDGE_PROFILE_ATTEST_SKIP=1 — peer judge profile HTTP checks skipped "
-                "(solo / dev only; not production alignment)",
-            )
-        attest_errs = await asyncio.to_thread(judge_profile_peer_check_errors, s)
-        if attest_errs:
-            raise SystemExit(attest_errs[0])
+            logger.info("generated_registry_sha256={}", generated_registry_sha256())
         subtensor = get_subtensor(s)
         source = get_problem_source(s)
         logger.info("problem_source={}", s.problem_source)

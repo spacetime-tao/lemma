@@ -10,11 +10,11 @@ import bittensor as bt
 import click
 
 from lemma.cli.style import finish_cli_output, stylize
-from lemma.common.config import LemmaSettings, validator_judge_stack_strict_issue
+from lemma.common.config import LemmaSettings
 from lemma.common.subtensor import get_subtensor
 from lemma.judge.profile import judge_profile_sha256
 from lemma.problems.generated import generated_registry_sha256
-from lemma.validator.judge_profile_attest import judge_profile_peer_check_errors
+from lemma.validator.service import validator_startup_issues
 
 
 def _print_ready_footer(*, outcome: Literal["ok", "warn"]) -> None:
@@ -63,44 +63,13 @@ def _docker_image_available(image: str) -> bool:
 
 def run_validator_check(settings: LemmaSettings) -> int:
     """Print checklist; return 0 if OK to start, 1 if blocking issues."""
-    fatal: list[str] = []
-    warn: list[str] = []
-
     click.echo(stylize("Validator pre-flight", fg="cyan", bold=True))
     click.echo(
         stylize("(run before `lemma validator start` — not the same as `lemma validator config`)\n", dim=True),
         nl=False,
     )
-
-    # --- Subnet pin requirements (same gates as ValidatorService) ---
-    if not (settings.judge_profile_expected_sha256 or "").strip():
-        fatal.append(
-            "lemma validator requires JUDGE_PROFILE_SHA256_EXPECTED in `.env` "
-            "(run `lemma-cli configure subnet-pins` or copy from `lemma meta --raw`).",
-        )
-    if (settings.problem_source or "").strip().lower() == "generated":
-        if not (settings.generated_registry_expected_sha256 or "").strip():
-            fatal.append(
-                "lemma validator requires LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED when "
-                "LEMMA_PROBLEM_SOURCE=generated (run `lemma-cli configure subnet-pins`).",
-            )
-    if (settings.problem_source or "").strip().lower() == "frozen":
-        if not settings.lemma_dev_allow_frozen_problem_source:
-            fatal.append(
-                "LEMMA_PROBLEM_SOURCE=frozen requires LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1 "
-                "(public eval catalog). Use generated for subnet traffic — see docs/catalog-sources.md",
-            )
-
-    judge_policy = validator_judge_stack_strict_issue(settings)
-    if judge_policy:
-        fatal.append(judge_policy)
-
-    # --- Judge keys ---
-    jp = (settings.judge_provider or "chutes").lower()
-    if jp in ("openai", "chutes") and not (settings.judge_openai_api_key_resolved() or "").strip():
-        fatal.append(
-            "JUDGE_OPENAI_API_KEY (or legacy OPENAI_API_KEY) missing — live validator cannot score miners.",
-        )
+    fatal, warn = validator_startup_issues(settings, dry_run=False)
+    startup_fatal = tuple(fatal)
 
     click.echo(
         stylize(
@@ -164,9 +133,13 @@ def run_validator_check(settings: LemmaSettings) -> int:
     if exp_j:
         actual_j = judge_profile_sha256(settings).strip().lower()
         if actual_j != exp_j:
-            fatal.append(
-                f"JUDGE_PROFILE_SHA256_EXPECTED mismatch: env expects {exp_j[:16]}… but live `lemma meta` is "
-                f"{actual_j[:16]}… — align judge env or refresh `lemma-cli configure subnet-pins`.",
+            click.echo(
+                stylize(
+                    "FAIL judge pin  JUDGE_PROFILE_SHA256_EXPECTED mismatch vs live `lemma meta`",
+                    fg="red",
+                    bold=True,
+                ),
+                err=True,
             )
         else:
             click.echo(stylize("OK judge pin   matches live judge_profile_sha256", fg="green"))
@@ -185,9 +158,13 @@ def run_validator_check(settings: LemmaSettings) -> int:
         if exp_g:
             actual_g = generated_registry_sha256().strip().lower()
             if actual_g != exp_g:
-                fatal.append(
-                    "LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED mismatch vs current code — align git/release "
-                    "or refresh pins.",
+                click.echo(
+                    stylize(
+                        "FAIL registry pin  LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED mismatch vs current code",
+                        fg="red",
+                        bold=True,
+                    ),
+                    err=True,
                 )
             else:
                 click.echo(stylize("OK registry pin matches generated_registry_sha256", fg="green"))
@@ -212,8 +189,11 @@ def run_validator_check(settings: LemmaSettings) -> int:
                     fg="yellow",
                 ),
             )
-        attest_errs = judge_profile_peer_check_errors(settings)
-        fatal.extend(attest_errs)
+        attest_errs = [
+            msg
+            for msg in startup_fatal
+            if msg.startswith("judge profile attest:") or msg.startswith("LEMMA_JUDGE_PROFILE_ATTEST_ENABLED")
+        ]
         if attest_errs:
             click.echo(
                 stylize(
@@ -269,7 +249,6 @@ def run_validator_check(settings: LemmaSettings) -> int:
             ),
             err=True,
         )
-        fatal.append("LEMMA_USE_DOCKER=false — lemma validator requires Docker (LEMMA_USE_DOCKER=true).")
 
     if use_docker and not remote_u:
         cache_dir = settings.lean_verify_workspace_cache_dir

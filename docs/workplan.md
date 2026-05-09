@@ -64,7 +64,7 @@ Move first:
 3. Docs opener/glossary. **Moved to `lemma-cli`; core has redirects only.**
 4. Shell activation helpers. **Removed from core; docs use standard `uv run` commands or explicit `.venv` activation.**
 5. Local try-prover/rehearsal wrappers. **Moved to `lemma-cli`; core has redirects only.**
-6. Human-friendly doctor/validator-check wrappers, once the core repo exposes stable machine-readable checks. **Started:** core `validator-check` now exits after READY / NOT READY instead of prompting to start the validator; richer guided handoff belongs in `lemma-cli`.
+6. Human-friendly doctor/validator-check wrappers, once the core repo exposes stable machine-readable checks. **In progress:** core `validator-check` exits after READY / NOT READY and shares startup gates with `lemma validator start`; richer guided handoff belongs in `lemma-cli`.
 
 Keep temporarily in core:
 
