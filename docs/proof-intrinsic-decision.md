@@ -73,6 +73,29 @@ Possible research directions include proof term size, elaborator trace summaries
 nontrivial goal transitions, tactic trace structure, and imported theorem usage.
 These are starting points, not approved designs.
 
+## Prototype Boundary
+
+Do not wire a new proof-side metric into live scoring until it passes the gate
+above. The first prototype should be outside the default validator scoring path
+and should write measurements for comparison only.
+
+Good prototype shape:
+
+- Reuse the existing verified workspace after Lean pass.
+- Add one extra Lean probe file only in the prototype path.
+- Record candidate metrics beside the current score so they can be compared on
+  real submissions before any default changes.
+- Keep `entry_from_scores` behavior pinned by tests while the replacement is
+  evaluated.
+
+Signals to avoid as scoring inputs:
+
+- Wall-clock build time, because it depends on hardware, cache warmth, and Docker
+  placement.
+- Raw proof text length, because that is the current weak proxy.
+- Axiom count by itself, because legitimate math can require allowed classical
+  axioms.
+
 ## Open Questions
 
 - What Lean-backed signal should eventually replace the text heuristic?
