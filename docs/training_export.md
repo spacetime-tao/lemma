@@ -99,6 +99,9 @@ coldkey replay assumes one coldkey per UID. That is still useful for
 identical-copy and rewritten-copy pressure, but it is not evidence that coldkey
 dedup is sybil resistance.
 
+The report prints aggregate `summary_*` lines for exact-copy and rewritten-copy
+clone pressure across the sampled epochs, then the per-epoch replay details.
+
 ## Gaming and leakage (why `reasoning_only` exists)
 
 Exports are **not** a neutral “public good.” Depending on fields, they can teach models to:

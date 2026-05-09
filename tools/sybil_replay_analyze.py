@@ -103,8 +103,8 @@ def render_report(report: ReplayReport, *, clone_k: int = 5, epoch_limit: int = 
     lines.append(f"epochs_total={len(epochs)}")
     lines.append(f"epochs_rendered={len(selected)}")
 
+    epoch_results = []
     for block, epoch_rows in selected:
-        lines.append(f"epoch={block} rows={len(epoch_rows)}")
         base = replay_epoch(epoch_rows, name="base", identical_dedup=True, coldkey_dedup=True)
         scenarios = [
             base,
@@ -112,11 +112,22 @@ def render_report(report: ReplayReport, *, clone_k: int = 5, epoch_limit: int = 
             replay_epoch(epoch_rows, name="no_coldkey_dedup", identical_dedup=True, coldkey_dedup=False),
             replay_epoch(epoch_rows, name="no_dedup", identical_dedup=False, coldkey_dedup=False),
         ]
+        exact = clone_pressure(epoch_rows, clone_k=clone_k, rewrite=False)
+        rewritten = clone_pressure(epoch_rows, clone_k=clone_k, rewrite=True)
+        epoch_results.append((block, epoch_rows, scenarios, exact, rewritten))
+
+    exact_pressures = [r[3] for r in epoch_results]
+    rewritten_pressures = [r[4] for r in epoch_results]
+    lines.append(f"clone_k={max(0, int(clone_k))}")
+    lines.append(_pressure_summary_line("exact_clone_extra_share", exact_pressures))
+    lines.append(_pressure_summary_line("rewritten_clone_extra_share", rewritten_pressures))
+    lines.append(_pressure_summary_line("rewritten_clone_group_share", rewritten_pressures, field="group_share"))
+
+    for block, epoch_rows, scenarios, exact, rewritten in epoch_results:
+        lines.append(f"epoch={block} rows={len(epoch_rows)}")
         for outcome in scenarios:
             lines.append("  " + _outcome_line(outcome))
 
-        exact = clone_pressure(epoch_rows, clone_k=clone_k, rewrite=False)
-        rewritten = clone_pressure(epoch_rows, clone_k=clone_k, rewrite=True)
         if exact is not None:
             lines.append("  " + _clone_line("exact_clone", exact, clone_k=clone_k))
         if rewritten is not None:
@@ -314,6 +325,13 @@ def _clone_line(name: str, pressure: ClonePressure, *, clone_k: int) -> str:
         f"extra_share={pressure.extra_share:.4f} identical_dropped={pressure.outcome.identical_dropped} "
         f"coldkey_dropped={pressure.outcome.coldkey_dropped}"
     )
+
+
+def _pressure_summary_line(name: str, pressures: list[ClonePressure | None], *, field: str = "extra_share") -> str:
+    values = [float(getattr(p, field)) for p in pressures if p is not None]
+    if not values:
+        return f"summary_{name}: n=0"
+    return f"summary_{name}: n={len(values)} max={max(values):.4f} mean={sum(values) / len(values):.4f}"
 
 
 def _env_export_path() -> Path | None:

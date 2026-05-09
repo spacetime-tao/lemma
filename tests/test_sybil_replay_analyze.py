@@ -88,6 +88,10 @@ def test_replay_compares_dedup_modes_and_clone_pressure(tmp_path) -> None:
     assert "Sybil/Pareto replay analysis" in rendered
     assert "rows_replayable=3" in rendered
     assert "coldkey_note=no coldkeys in export" in rendered
+    assert "clone_k=2" in rendered
+    assert "summary_exact_clone_extra_share: n=1 max=0.0000 mean=0.0000" in rendered
+    assert "summary_rewritten_clone_extra_share: n=1" in rendered
+    assert "summary_rewritten_clone_group_share: n=1" in rendered
     assert "base: weighted_uids=2" in rendered
     assert "no_identical_dedup: weighted_uids=3" in rendered
     assert "exact_clone_k=2:" in rendered
