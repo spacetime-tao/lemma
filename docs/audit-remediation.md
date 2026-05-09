@@ -254,7 +254,8 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **`model_card_text`** — validator does not score it.
 - **`_stats` / `_commit_reveal_cache`** globals in forward handler; commit-reveal cache is now TTL/max-entry
   bounded and validator-keyed; miner summary stats are now scoped to the `make_forward` handler instance.
-- Stub proof for `two_plus_two` in production path per audit.
+- Stub proof for `two_plus_two` in production path per audit — removed; missing prover keys now always return
+  the unsolved challenge as a fail-closed stub.
 - **`synapse_payload_error` triple invocation** in commit-reveal mode clarified: incoming challenge checks now skip response-only validation; outgoing commit/reveal responses still run response validation.
 
 ### 13.6 Configuration (`config.py`)
