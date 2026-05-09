@@ -6,7 +6,6 @@ from lemma.judge.base import RubricScore
 from lemma.scoring.dedup import submission_fingerprint
 from lemma.scoring.pareto import ScoredEntry
 from lemma.scoring.proof_intrinsic import proof_intrinsic_score
-from lemma.scoring.tokens import count_tokens
 
 
 def entry_from_scores(
@@ -23,11 +22,10 @@ def entry_from_scores(
     w = max(0.0, min(1.0, float(proof_weight)))
     p_inst = proof_intrinsic_score(proof_script, strip_comments=proof_intrinsic_strip_comments)
     combined = w * p_inst + (1.0 - w) * float(rubric.composite)
-    toks = count_tokens(trace)
     fp = submission_fingerprint(theorem_statement, proof_script, trace)
     return ScoredEntry(
         uid=uid,
         reasoning_score=combined,
-        tokens=toks,
+        tokens=len(trace or ""),
         submission_fp=fp,
     )
