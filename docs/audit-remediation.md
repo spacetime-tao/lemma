@@ -262,7 +262,8 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **102 `Field` / 102 `AliasChoices`** — lower-case aliases allegedly unused in production.
 - Triple aliases on several wallet/prover fields.
 - **`allow_noncanonical_judge_model`** — removed; it was an ignored compatibility knob and did not affect validator judge policy.
-- Resolver collapse opportunities (`anthropic` vs OpenAI keys).
+- Resolver collapse opportunities (`anthropic` vs OpenAI keys) — validator pre-flight now follows the single
+  Chutes-compatible key path; OpenAI-compatible judge/prover key resolvers trim consistently.
 - **`validator_judge_stack_strict`** vs unreachable Anthropic judge branch on validator — Anthropic branch removed from validator epoch builder; local one-shot judge tooling remains.
 - Six env names for two wallet values.
 - Reserved protocol toggles default **False** but many Fields persist.
