@@ -19,6 +19,21 @@ def test_parse_rubric_json_rejects_multiple_distinct_objects() -> None:
         parse_rubric_json(text)
 
 
+def test_parse_rubric_json_rejects_repeated_identical_rubric_objects() -> None:
+    rubric = '{"coherence": 0.5, "exploration": 0.5, "clarity": 0.5}'
+    text = f"{rubric}\n{rubric}"
+    with pytest.raises(ValueError, match="found 2 valid candidate"):
+        parse_rubric_json(text)
+
+
+def test_parse_rubric_json_rejects_echoed_fenced_rubric_plus_final_rubric() -> None:
+    echoed = '{"coherence": 0.1, "exploration": 0.1, "clarity": 0.1}'
+    final = '{"coherence": 0.8, "exploration": 0.7, "clarity": 0.9}'
+    text = f"Miner trace echoed:\n```trace\n{echoed}\n```\nFinal:\n{final}"
+    with pytest.raises(ValueError, match="found 2 valid candidate"):
+        parse_rubric_json(text)
+
+
 def test_parse_rubric_json_rejects_extra_keys() -> None:
     text = '{"coherence": 0.5, "exploration": 0.5, "clarity": 0.5, "hack": 1}'
     with pytest.raises(ValueError, match=r"wrong_keys=1.*sample_wrong_keys="):

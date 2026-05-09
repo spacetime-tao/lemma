@@ -137,12 +137,12 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 
 | ID | Issue | Source § | Priority | Remediation direction | Key refs |
 |----|--------|----------|----------|------------------------|----------|
-| **G1** | **Dedupe** of identical dicts across parse passes → **echo** rubric may collapse to one valid score | R3 §10.1 | P2 | Policy: e.g. reject if rubric text appears in miner fence; require single extraction path; tests for echo |
-| **G2** | Two **distinct** valid rubrics in trace → parse fails → miner dropped | R3 §10.1 | P2 | UX: fail-soft rule or strip miner fences only |
-| **G3** | Sanitizer only escapes ``` ; many other injection channels | R3 §10.2–10.3 | P2 | Expand sanitizer + model-side prompts; injection tests |
+| **G1** | **Dedupe** of identical dicts across parse passes → **echo** rubric may collapse to one valid score | R3 §10.1 | P2 | **Done:** parser now rejects repeated valid rubric occurrences even when values are identical; tests cover echoed fenced rubric + final rubric. | `lemma/judge/json_util.py`, `tests/test_judge_json.py` |
+| **G2** | Two **distinct** valid rubrics in trace → parse fails → miner dropped | R3 §10.1 | P2 | **Done:** fail-closed policy pinned; exactly one valid rubric object is required, while wrong-shaped junk JSON can be skipped before a later valid rubric. | `lemma/judge/json_util.py`, `tests/test_judge_json.py` |
+| **G3** | Sanitizer only escapes ``` ; many other injection channels | R3 §10.2–10.3 | P2 | **Done/partial:** prompt fences miner text, breaks triple-backtick fence escapes, and tells judge to ignore instructions/JSON inside fences; determined model-side injection remains model-dependent. | `lemma/judge/prompt_sanitize.py`, `lemma/judge/prompts.py`, `tests/test_prompt_sanitize.py` |
 | **G4** | **FakeJudge** length curve; missing API key falls back with log only | R3 §10.4 | P1 | Fail closed in production profile; align `LEMMA_FAKE_JUDGE` parsing | `judge/fake.py`, `epoch.py`, `config.py` |
 
-**2026-05 progress:** G4 patched in validator judge construction: live validator epochs now raise when judge API keys are missing or `LEMMA_FAKE_JUDGE` is forced; dry-run still uses FakeJudge by default.
+**2026-05 progress:** G1/G2/G3/G4 patched/documented. Judge parsing is fail-closed around valid rubric multiplicity, including identical repeated rubric objects; invalid dict-shaped junk can be skipped so a later single valid rubric can win. Miner-controlled theorem, trace, and proof are fenced before judge calls, triple-backtick escapes are broken, and the prompt tells the model to ignore instructions/JSON inside those fences. Live validator epochs now raise when judge API keys are missing or `LEMMA_FAKE_JUDGE` is forced; dry-run still uses FakeJudge by default.
 
 ---
 
