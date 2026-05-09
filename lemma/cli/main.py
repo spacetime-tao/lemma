@@ -14,7 +14,7 @@ from pathlib import Path
 import click
 
 from lemma import __version__
-from lemma.cli.style import colors_enabled, finish_cli_output, stylize
+from lemma.cli.style import colors_enabled, stylize
 from lemma.common.config import LemmaSettings
 from lemma.common.logging import setup_logging
 from lemma.problems.factory import get_problem_source, resolve_problem
@@ -29,7 +29,7 @@ def main(ctx: click.Context) -> None:
     \b
     Common commands:
       lemma-cli rehearsal  Live theorem → prover → Lean → judge (scoring preview)
-      lemma doctor     Config + keys + chain sanity
+      lemma-cli doctor     Config + keys + chain sanity
       lemma-cli        Friendly operator setup/help wrapper
       lemma --help     Full command list
     """
@@ -38,7 +38,7 @@ def main(ctx: click.Context) -> None:
             stylize("Lemma ", fg="cyan", bold=True)
             + stylize(__version__, dim=True)
             + stylize("  —  ", dim=True)
-            + stylize("lemma doctor", fg="green")
+            + stylize("lemma-cli doctor", fg="green")
             + stylize(" checks · ", dim=True)
             + stylize("lemma-cli", fg="green")
             + stylize(" friendly setup · ", dim=True)
@@ -89,231 +89,15 @@ def start_cmd() -> None:
     click.echo("Core commands still live here: `lemma miner start`, `lemma validator start`, `lemma verify`.")
 
 
-def _doctor_api_lines(s: LemmaSettings) -> tuple[list[str], bool]:
-    """Lines about inference keys (never print secrets). Returns (lines, all_required_ok)."""
-    lines: list[str] = []
-    ok_all = True
-
-    def _present(val: str | None) -> bool:
-        return bool(val and str(val).strip())
-
-    jp = (s.judge_provider or "chutes").lower()
-    pp = (s.prover_provider or "anthropic").lower()
-
-    tasks: list[tuple[str, str]] = []
-    if jp in ("openai", "chutes"):
-        tasks.append(("Judge", "openai"))
-    elif jp == "anthropic":
-        tasks.append(("Judge", "anthropic"))
-    else:
-        lines.append(f"INFO judge: JUDGE_PROVIDER={jp!r}")
-
-    if pp == "openai":
-        tasks.append(("Prover", "openai"))
-    elif pp == "anthropic":
-        tasks.append(("Prover", "anthropic"))
-    else:
-        lines.append(f"INFO prover: PROVER_PROVIDER={pp!r}")
-
-    for role, kind in tasks:
-        if kind == "openai":
-            if role == "Judge":
-                ok = _present(s.judge_openai_api_key_resolved())
-                key_hint = (
-                    "JUDGE_OPENAI_API_KEY"
-                    if (s.judge_openai_api_key or "").strip()
-                    else "JUDGE_OPENAI_API_KEY or OPENAI_API_KEY"
-                )
-            else:
-                ok = _present(s.prover_openai_api_key_resolved())
-                key_hint = (
-                    "PROVER_OPENAI_API_KEY"
-                    if s.prover_openai_api_key and str(s.prover_openai_api_key).strip()
-                    else "OPENAI_API_KEY (fallback)"
-                )
-            if not ok:
-                ok_all = False
-            tag = "OK" if ok else "WARN"
-            lines.append(
-                f"{tag} {role} (OpenAI-compatible): "
-                + (f"{key_hint} present (hidden)" if ok else f"{key_hint} missing"),
-            )
-        else:
-            ok = _present(s.anthropic_api_key)
-            if not ok:
-                ok_all = False
-            tag = "OK" if ok else "WARN"
-            lines.append(
-                f"{tag} {role} (Anthropic): "
-                + ("ANTHROPIC_API_KEY present (hidden)" if ok else "ANTHROPIC_API_KEY missing"),
-            )
-
-    return lines, ok_all
-
-
-@main.command("doctor")
-def doctor_cmd() -> None:
-    """Quick checks: venv, config load, optional chain RPC."""
-    ok = True
-    keys_ok = True
-    root = Path.cwd()
-    click.echo(stylize("\nlemma doctor", fg="cyan", bold=True))
-    click.echo(stylize("─" * 42, dim=True))
-
-    click.echo(stylize("\n1  Environment", fg="cyan", bold=True))
-    if (root / ".venv").is_dir():
-        click.echo(stylize("   OK", fg="green") + "    .venv present (`uv sync --extra dev`)")
-    else:
-        click.echo(stylize("   MISS", fg="red") + "  .venv — run: uv sync --extra dev", err=True)
-        ok = False
-    try:
-        s = LemmaSettings()
-        click.echo(stylize("\n2  Configuration (.env)", fg="cyan", bold=True))
-        click.echo(
-            stylize("   OK", fg="green")
-            + f"    NETUID={s.netuid}  problem_source={s.problem_source}",
-        )
-        key_lines, keys_ok = _doctor_api_lines(s)
-        for ln in key_lines:
-            click.echo(f"   {ln}")
-        click.echo(
-            stylize(
-                "   (Keys above follow active config — `.env` wins over shell unless LEMMA_PREFER_PROCESS_ENV=1.)",
-                dim=True,
-            ),
-        )
-        jp2 = (s.judge_provider or "chutes").lower()
-        pp2 = (s.prover_provider or "anthropic").lower()
-        if jp2 in ("openai", "chutes"):
-            click.echo(
-                stylize("   ·", dim=True)
-                + f"    Judge   JUDGE_PROVIDER={jp2}  OPENAI_MODEL={s.openai_model!r} @ {s.openai_base_url!r}",
-            )
-        elif jp2 == "anthropic":
-            click.echo(stylize("   ·", dim=True) + f"    Judge   ANTHROPIC_MODEL={s.anthropic_model!r}")
-        if pp2 == "openai":
-            pm = s.prover_model or s.openai_model
-            purl = s.prover_openai_base_url_resolved()
-            click.echo(
-                stylize("   ·", dim=True)
-                + f"    Prover  model={pm!r} @ {purl!r}  (miner may use PROVER_* to differ from judge)",
-            )
-        elif pp2 == "anthropic":
-            pm = s.prover_model or s.anthropic_model
-            click.echo(
-                stylize("   ·", dim=True)
-                + f"    Prover  model={pm!r}",
-            )
-
-        click.echo(stylize("\n3  Timeouts (vs validator forward window)", fg="cyan", bold=True))
-        try:
-            from lemma.common.block_deadline import forward_wait_at_chain_head
-            from lemma.common.subtensor import get_subtensor
-
-            st = get_subtensor(s)
-            head = int(st.get_current_block())
-            _, _, _, forward_wait = forward_wait_at_chain_head(
-                settings=s,
-                subtensor=st,
-                chain_head_block=head,
-            )
-        except Exception:
-            forward_wait = None
-
-        if forward_wait is not None:
-            fw = float(forward_wait)
-            hi = float(s.forward_wait_max_s)
-            llm_t = float(s.llm_http_timeout_s)
-            # Only WARN when the LLM budget cannot fit any round (exceeds clamp ceiling).
-            # Near the end of an N-block window, forward HTTP wait is short — comparing LLM to that
-            # head snapshot alone would WARN almost every day without indicating misconfiguration.
-            if llm_t > hi + 0.01:
-                click.echo(
-                    stylize(
-                        "   WARN  LEMMA_LLM_HTTP_TIMEOUT_S exceeds LEMMA_FORWARD_WAIT_MAX_S — "
-                        "prover cannot finish inside any validator axon wait window.",
-                        fg="yellow",
-                    ),
-                    err=True,
-                )
-            elif llm_t > fw + 0.01:
-                click.echo(
-                    stylize(
-                        f"   OK    LLM timeout {llm_t:.0f}s > this-head forward wait ~{fw:.0f}s "
-                        f"(normal near a seed edge; lower LLM timeout only if miners time out late-window).",
-                        dim=True,
-                    ),
-                )
-            else:
-                click.echo(
-                    stylize(
-                        f"   OK    LLM timeout ≤ forward wait at this head (~{fw:.0f}s)",
-                        dim=True,
-                    ),
-                )
-        elif s.llm_http_timeout_s > s.forward_wait_max_s + 0.01:
-            click.echo(
-                stylize(
-                    "   WARN  LEMMA_LLM_HTTP_TIMEOUT_S > LEMMA_FORWARD_WAIT_MAX_S — "
-                    "cannot fit any round’s forward wait.",
-                    fg="yellow",
-                ),
-                err=True,
-            )
-        else:
-            click.echo(
-                stylize(
-                    "   INFO  Connect chain RPC for a block-accurate LLM vs forward-wait check.",
-                    dim=True,
-                ),
-            )
-        if not (s.judge_profile_expected_sha256 or "").strip():
-            click.echo(
-                stylize(
-                    "   Tip   Validators: set JUDGE_PROFILE_SHA256_EXPECTED (`lemma-cli configure subnet-pins`; "
-                    "copy from `lemma meta --raw`).",
-                    dim=True,
-                ),
-            )
-    except Exception as e:  # noqa: BLE001
-        click.echo(stylize("CONFIG ERROR: ", fg="red") + str(e), err=True)
-        finish_cli_output()
-        raise SystemExit(1) from e
-
-    click.echo(stylize("\n4  Chain RPC", fg="cyan", bold=True))
-    try:
-        from lemma.common.subtensor import get_subtensor
-
-        head = int(get_subtensor(s).get_current_block())
-        click.echo(stylize("   OK", fg="green") + f"    head_block={head}")
-    except Exception as e:  # noqa: BLE001
-        click.echo(stylize("   SKIP", fg="yellow") + f"  (offline OK): {e}")
-    click.echo(
-        stylize(
-            "\n5  Next commands\n"
-            "     lemma meta             — judge + template hashes\n"
-            "     lemma validator-check  — before `lemma validator start`\n"
-            "     lemma-cli rehearsal    — prover + Lean + judge preview\n"
-            "     lemma-cli try-prover       — prover only  ·  lemma judge --trace FILE — judge on files\n"
-            "     lemma-cli              — friendly operator screen  ·  lemma-cli configure --help\n",
-            dim=True,
-        ),
-        nl=False,
-    )
-    if not ok:
-        finish_cli_output()
-        raise SystemExit(1)
-    if not keys_ok:
-        click.echo(
-            stylize(
-                "\nSummary: WARN — add missing inference keys (judge for validators; prover for miners).",
-                fg="yellow",
-            ),
-            err=True,
-        )
-    else:
-        click.echo(stylize("\nSummary: OK", fg="green"))
-    finish_cli_output()
+@main.command(
+    "doctor",
+    context_settings={"ignore_unknown_options": True, "allow_extra_args": True},
+    add_help_option=False,
+)
+@click.argument("args", nargs=-1, type=click.UNPROCESSED)
+def doctor_cmd(args: tuple[str, ...]) -> None:
+    """Point operator health checks to lemma-cli."""
+    _echo_moved_to_lemma_cli(("doctor", *args), heading="Doctor moved to lemma-cli.")
 
 
 @main.command(
