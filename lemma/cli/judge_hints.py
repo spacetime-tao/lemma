@@ -73,7 +73,7 @@ def echo_judge_http_failure_hints(exc: BaseException, settings: LemmaSettings) -
         click.echo(
             stylize(
                 f"Hint: Judge stack is JUDGE_PROVIDER={prov!r} OPENAI_MODEL={model!r} @ {base!r} — see "
-                "`lemma doctor` and `lemma-cli configure judge`.",
+                "`lemma-cli doctor` and `lemma-cli configure judge`.",
                 dim=True,
             ),
             err=True,
