@@ -27,12 +27,11 @@ from lemma.protocol_commit_reveal import (
     reasoning_blob_for_commit,
 )
 
-_cr_lock = threading.Lock()
 _COMMIT_REVEAL_CACHE_TTL_S = 900.0
 _COMMIT_REVEAL_CACHE_MAX_ENTRIES = 512
 _CommitRevealKey = tuple[str, str, str]
 _CommitRevealEntry = tuple[float, str, str, str, list | None]
-_commit_reveal_cache: dict[_CommitRevealKey, _CommitRevealEntry] = {}
+_CommitRevealValue = tuple[str, str, str, list | None]
 
 
 def _commit_reveal_cache_key(synapse: LemmaChallenge) -> _CommitRevealKey | None:
@@ -46,41 +45,53 @@ def _commit_reveal_cache_key(synapse: LemmaChallenge) -> _CommitRevealKey | None
     )
 
 
-def _prune_commit_reveal_cache(now: float | None = None) -> None:
-    ts = time.time() if now is None else float(now)
-    expired = [key for key, entry in _commit_reveal_cache.items() if entry[0] <= ts]
-    for key in expired:
-        _commit_reveal_cache.pop(key, None)
-    while len(_commit_reveal_cache) > _COMMIT_REVEAL_CACHE_MAX_ENTRIES:
-        oldest = min(_commit_reveal_cache, key=lambda key: _commit_reveal_cache[key][0])
-        _commit_reveal_cache.pop(oldest, None)
+class CommitRevealCache:
+    def __init__(
+        self,
+        *,
+        ttl_s: float = _COMMIT_REVEAL_CACHE_TTL_S,
+        max_entries: int = _COMMIT_REVEAL_CACHE_MAX_ENTRIES,
+    ) -> None:
+        self._ttl_s = max(1.0, float(ttl_s))
+        self._max_entries = max(1, int(max_entries))
+        self._lock = threading.Lock()
+        self._entries: dict[_CommitRevealKey, _CommitRevealEntry] = {}
 
+    def _prune_unlocked(self, ts: float) -> None:
+        expired = [key for key, entry in self._entries.items() if entry[0] <= ts]
+        for key in expired:
+            self._entries.pop(key, None)
+        while len(self._entries) > self._max_entries:
+            oldest = min(self._entries, key=lambda key: self._entries[key][0])
+            self._entries.pop(oldest, None)
 
-def _store_commit_reveal_cache(
-    key: _CommitRevealKey,
-    value: tuple[str, str, str, list | None],
-    *,
-    now: float | None = None,
-    ttl_s: float = _COMMIT_REVEAL_CACHE_TTL_S,
-) -> None:
-    ts = time.time() if now is None else float(now)
-    _prune_commit_reveal_cache(ts)
-    _commit_reveal_cache[key] = (ts + max(1.0, float(ttl_s)), *value)
-    _prune_commit_reveal_cache(ts)
+    def store(
+        self,
+        key: _CommitRevealKey,
+        value: _CommitRevealValue,
+        *,
+        now: float | None = None,
+    ) -> None:
+        ts = time.time() if now is None else float(now)
+        with self._lock:
+            self._prune_unlocked(ts)
+            self._entries[key] = (ts + self._ttl_s, *value)
+            self._prune_unlocked(ts)
 
-
-def _pop_commit_reveal_cache(
-    key: _CommitRevealKey,
-    *,
-    now: float | None = None,
-) -> tuple[str, str, str, list | None] | None:
-    ts = time.time() if now is None else float(now)
-    _prune_commit_reveal_cache(ts)
-    entry = _commit_reveal_cache.pop(key, None)
-    if entry is None:
-        return None
-    _expires_at, nonce_hex, proof, trace, steps = entry
-    return nonce_hex, proof, trace, steps
+    def pop(
+        self,
+        key: _CommitRevealKey,
+        *,
+        now: float | None = None,
+    ) -> _CommitRevealValue | None:
+        ts = time.time() if now is None else float(now)
+        with self._lock:
+            self._prune_unlocked(ts)
+            entry = self._entries.pop(key, None)
+        if entry is None:
+            return None
+        _expires_at, nonce_hex, proof, trace, steps = entry
+        return nonce_hex, proof, trace, steps
 
 
 def _optional_chain_head(settings: LemmaSettings) -> int | None:
@@ -106,10 +117,12 @@ def make_forward(
     metagraph_cache: MetagraphCache | None = None,
     miner_hotkey_ss58: str | None = None,
     wallet: object | None = None,
+    commit_reveal_cache: CommitRevealCache | None = None,
 ):
     sem = asyncio.Semaphore(max(1, settings.miner_max_concurrent_forwards))
     stats_lock = threading.Lock()
     stats: dict[str, float | int] = {"forwards": 0, "local_ok": 0, "local_fail": 0, "solve_s_total": 0.0}
+    cr_cache = commit_reveal_cache or CommitRevealCache()
 
     async def forward(synapse: LemmaChallenge) -> LemmaChallenge:
         err = synapse_payload_error(synapse, settings, response=False)
@@ -202,8 +215,7 @@ def make_forward(
         solve_s = 0.0
         trace, proof, steps = "", "", None
         if phase == "reveal":
-            with _cr_lock:
-                cached = _pop_commit_reveal_cache(cr_key)
+            cached = cr_cache.pop(cr_key)
             if cached is None:
                 return reject_synopsis(
                     synapse,
@@ -361,11 +373,7 @@ def make_forward(
                 reasoning_blob=rblob,
             )
             ch = commitment_hex_from_preimage(pre)
-            with _cr_lock:
-                _store_commit_reveal_cache(
-                    cr_key,
-                    (nonce_b.hex(), proof or "", trace or "", steps),
-                )
+            cr_cache.store(cr_key, (nonce_b.hex(), proof or "", trace or "", steps))
             synapse.proof_commitment_hex = ch
             synapse.commit_reveal_phase = "commit"
             synapse.proof_script = ""
