@@ -15,7 +15,7 @@ This document tracks **post-audit** mechanism changes in Lemma: proof-centric sc
 | Verify credibility | `LEMMA_REPUTATION_VERIFY_CREDIBILITY_ALPHA` (default **0.08**) — EMA toward 1.0 on Lean verify pass, 0.0 on fail; persisted with reputation JSON. Applied as `(credibility ** LEMMA_REPUTATION_CREDIBILITY_EXPONENT)` after EMA smoothing. The default exponent is **1.0**; exponent **0** disables the multiplier. See [credibility-exponent-decision.md](credibility-exponent-decision.md). |
 | Proof intrinsic | `LEMMA_SCORE_PROOF_WEIGHT` blend; `LEMMA_PROOF_INTRINSIC_STRIP_COMMENTS` (default **on**) strips Lean `--` / `/- … -/` before the length/`by`-count heuristic. Current stance: low-weight bootstrap signal only; do not extend with more regex padding checks. |
 | Multi-theorem epochs | `LEMMA_EPOCH_PROBLEM_COUNT` (default **1**) — sequential challenges per epoch. |
-| Judge hardening | Fenced miner blocks + strict single-object JSON rubric parse (anchored rubric spans + skip-invalid candidates when multiple `{...}` fragments appear). |
+| Judge hardening | Fenced miner blocks + strict single-object JSON rubric parse (anchored rubric spans + skip-invalid candidates when multiple `{...}` fragments appear; repeated valid rubric occurrences fail closed even when identical). |
 | Empty-epoch uniform | Validator UID excluded from uniform weights when possible. |
 | Response deadline | After each forward, responses with `deadline_block` set are dropped if chain head is already at or past that block (late HTTP completions are not scored). |
 | Frozen miniF2F catalog | `LEMMA_PROBLEM_SOURCE=frozen` requires **`LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`** (fail-closed otherwise). |

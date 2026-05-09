@@ -58,7 +58,7 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 
 ### Judge input robustness
 
-- [x] **Trace/Judge parsing** — `parse_rubric_json` prefers brace-balanced spans that open like `{"coherence"|"exploration"|"clarity"` before naive first-`{` slicing; invalid dict-shaped candidates are skipped so a later valid rubric object can win. Determined injection remains model-strength dependent.
+- [x] **Trace/Judge parsing** — `parse_rubric_json` prefers brace-balanced spans that open like `{"coherence"|"exploration"|"clarity"` before naive first-`{` slicing; invalid dict-shaped candidates are skipped so a later valid rubric object can win; repeated valid rubric occurrences, even identical echoes, fail closed. Miner text is fenced and triple-backtick escapes are broken before judge calls. Determined injection remains model-strength dependent.
 
 ### Optional protocol hooks
 

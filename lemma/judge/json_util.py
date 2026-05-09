@@ -56,9 +56,9 @@ def _balanced_object_at(text: str, start: int) -> str | None:
     return None
 
 
-def _extract_balanced_objects(text: str) -> list[str]:
-    """Return substrings that look like top-level JSON objects (brace-balanced)."""
-    out: list[str] = []
+def _extract_balanced_objects(text: str) -> list[tuple[int, str]]:
+    """Return ``(start, substring)`` pairs that look like JSON objects (brace-balanced)."""
+    out: list[tuple[int, str]] = []
     n = len(text)
     i = 0
     while i < n:
@@ -67,19 +67,19 @@ def _extract_balanced_objects(text: str) -> list[str]:
             continue
         span = _balanced_object_at(text, i)
         if span is not None:
-            out.append(span)
+            out.append((i, span))
             i += len(span)
         else:
             i += 1
     return out
 
 
-def _anchored_rubric_json_spans(text: str) -> list[str]:
-    """Brace-balanced spans that open like ``{\"coherence\"`` / ``{\"exploration\"`` / ``{\"clarity\"``.
+def _anchored_rubric_json_spans(text: str) -> list[tuple[int, str]]:
+    """Brace-balanced ``(start, span)`` pairs that open like a rubric object.
 
     Reduces false positives when the model emits unrelated ``{ ... }`` before the rubric JSON.
     """
-    spans: list[str] = []
+    spans: list[tuple[int, str]] = []
     seen_start: set[int] = set()
     for m in _RUBRIC_KEY_OPEN.finditer(text):
         st = m.start()
@@ -88,7 +88,7 @@ def _anchored_rubric_json_spans(text: str) -> list[str]:
         seen_start.add(st)
         span = _balanced_object_at(text, st)
         if span:
-            spans.append(span)
+            spans.append((st, span))
     return spans
 
 
@@ -114,46 +114,30 @@ def parse_rubric_json(text: str) -> RubricScore:
         raise ValueError("judge returned empty response")
 
     candidates: list[dict[str, Any]] = []
+    candidate_spans: list[tuple[int, str]] = []
+    seen_start: set[int] = set()
 
-    # 1) Whole string is JSON
-    try:
-        obj = json.loads(raw)
-        if isinstance(obj, dict):
-            candidates.append(obj)
-    except json.JSONDecodeError:
-        pass
+    # 1) Rubric-shaped openings first (robust when prose contains unrelated `{ ... }`).
+    for start, frag in _anchored_rubric_json_spans(raw):
+        candidate_spans.append((start, frag))
+        seen_start.add(start)
 
-    # 2) Rubric-shaped openings first (robust when prose contains unrelated `{ ... }`).
-    for frag in _anchored_rubric_json_spans(raw):
+    # 2) Any balanced { ... } slices (legacy path; keys may appear in any order in fragment).
+    for start, frag in _extract_balanced_objects(raw):
+        if start in seen_start:
+            continue
+        candidate_spans.append((start, frag))
+        seen_start.add(start)
+
+    for _start, frag in candidate_spans:
         try:
             obj = json.loads(frag)
             if isinstance(obj, dict):
                 candidates.append(obj)
         except json.JSONDecodeError:
             continue
-
-    # 3) Any balanced { ... } slices (legacy path; keys may appear in any order in fragment)
-    for frag in _extract_balanced_objects(raw):
-        try:
-            obj = json.loads(frag)
-            if isinstance(obj, dict):
-                candidates.append(obj)
-        except json.JSONDecodeError:
-            continue
-
-    # Same object may be collected via whole-string, anchored, and balanced paths — dedupe for counts.
-    deduped: list[dict[str, Any]] = []
-    seen_sig: set[str] = set()
-    for obj in candidates:
-        sig = json.dumps(obj, sort_keys=True, separators=(",", ":"))
-        if sig in seen_sig:
-            continue
-        seen_sig.add(sig)
-        deduped.append(obj)
-    candidates = deduped
 
     valid: list[RubricScore] = []
-    seen: set[tuple[float, float, float]] = set()
     reject_wrong_keys = 0
     reject_out_of_range = 0
     sample_wrong_keys: str | None = None
@@ -176,10 +160,7 @@ def parse_rubric_json(text: str) -> RubricScore:
         except (TypeError, KeyError):
             continue
         else:
-            key = (score.coherence, score.exploration, score.clarity)
-            if key not in seen:
-                seen.add(key)
-                valid.append(score)
+            valid.append(score)
 
     if len(valid) != 1:
         bits: list[str] = [
