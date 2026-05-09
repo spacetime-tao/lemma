@@ -82,7 +82,7 @@ def make_miner_blacklist(settings: LemmaSettings, cache: MetagraphCache):
     def blacklist(synapse: LemmaChallenge) -> Tuple[bool, str]:  # noqa: UP006
         from lemma.miner.limits import synapse_payload_error
 
-        pay_err = synapse_payload_error(synapse, settings)
+        pay_err = synapse_payload_error(synapse, settings, response=False)
         if pay_err:
             return True, pay_err
 
