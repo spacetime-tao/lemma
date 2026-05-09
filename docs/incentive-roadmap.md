@@ -60,6 +60,10 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 
 - [x] **Trace/Judge parsing** — `parse_rubric_json` prefers brace-balanced spans that open like `{"coherence"|"exploration"|"clarity"` before naive first-`{` slicing; invalid dict-shaped candidates are skipped so a later valid rubric object can win. Determined injection remains model-strength dependent.
 
+### Optional protocol hooks
+
+- [x] **Commit-reveal** — Usable optional path has bounded validator-keyed miner cache, shared hex normalization, reveal preimage checks, and an explicit threat model. See [commit-reveal.md](commit-reveal.md).
+
 ---
 
 ## Plumbing / cleanup (lower urgency than mechanism gaps)
@@ -75,5 +79,6 @@ Track in issues or refactors as capacity allows: consolidate CLI dry-run paths, 
 - Implementation map: [incentive_migration.md](incentive_migration.md)
 - Proof intrinsic scoring decision: [proof-intrinsic-decision.md](proof-intrinsic-decision.md)
 - Credibility exponent decision: [credibility-exponent-decision.md](credibility-exponent-decision.md)
+- Commit-reveal threat model: [commit-reveal.md](commit-reveal.md)
 - Scoring entrypoint: `lemma/scoring/rewards.py`, `lemma/scoring/proof_intrinsic.py`
 - Epoch loop: `lemma/validator/epoch.py`

@@ -45,7 +45,7 @@ These stay in the core repo, but should be handled as product decisions, not tin
 These should be either hardened or removed from the default mental model.
 
 1. Miner verify attest: keep full validator Lean verify as default; do not let attest-only paths inflate credibility. **Done for credibility; verify batch now isolates per-UID verifier exceptions; attest-trusted responses must still match the current challenge fields before scoring.**
-2. Commit-reveal: keep active, with bounded cache, validator identity binding, and shared commitment hex normalization. **In progress.**
+2. Commit-reveal: keep active, with bounded cache, validator identity binding, shared commitment hex normalization, and an explicit same-round threat model. **Done for optional usable path; stronger public fairness would be a separate design.**
 3. Judge peer attest: treat as operator coordination, not strong security.
 
 ### 5. CLI Extraction
@@ -97,4 +97,4 @@ Once `lemma-cli` exists and can call core functions:
 - Do not redesign the entire subnet in one pass.
 - Do not move validator scoring into the CLI repo.
 - Do not add more config knobs to solve unclear incentives.
-- Do not make commit-reveal or attest more central until their threat models are clean.
+- Do not make commit-reveal or attest more central than their documented threat models justify.

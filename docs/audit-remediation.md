@@ -110,13 +110,13 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 
 | ID | Issue | Source § | Priority | Remediation direction | Key refs |
 |----|--------|----------|----------|------------------------|----------|
-| **C1** | Two phases **same validator process**, no chain delay — may not match threat model that CR usually assumes | R3 §4 | P4 | Document “why CR exists”; consider removal if no wire threat |
+| **C1** | Two phases **same validator process**, no chain delay — may not match threat model that CR usually assumes | R3 §4 | P4 | **Done:** threat model documented; commit-reveal is optional same-round payload binding, not chain-anchored public fairness. | `docs/commit-reveal.md` |
 | **C2** | Miner `forward.py` cache **no eviction** — memory growth | R3 §4.1 | P1 | TTL / max entries / keyed by validator id |
 | **C3** | Cache key `(theorem_id, metronome_id)` → cross-validator overwrite | R3 §4.2 | P1 | Include validator identity or disable CR for multi-validator until fixed |
 | **C4** | `looks_like_commitment_hex` vs `0x` — regex strict; reveal path strips `0x` | R3 §4.3 | P2 | Accept `0x` consistently everywhere | `protocol_commit_reveal.py`, `epoch.py`, miner forward |
 | **C5** | `json.dumps(..., sort_keys=True)` on **list** in `reasoning_blob_for_commit` — meaningless flag | R3 §4.4 | P3 | Remove dead arg or serialize deterministically as designed |
 
-**2026-05 progress:** C2/C3/C4/C5 patched for the usable commit-reveal path: miner commit cache is TTL/max-entry bounded, cache keys include validator dendrite hotkey, commitment hex accepts optional `0x`, and the no-op `sort_keys=True` was removed from list serialization.
+**2026-05 progress:** C1/C2/C3/C4/C5 patched for the usable commit-reveal path: miner commit cache is TTL/max-entry bounded, cache keys include validator dendrite hotkey, commitment hex accepts optional `0x`, the no-op `sort_keys=True` was removed from list serialization, and [commit-reveal.md](commit-reveal.md) records the limited same-round threat model.
 
 ---
 
@@ -311,7 +311,7 @@ Abbreviated; see `knowledge/` for full YAML. Status reflects **Round 3 narrative
 | Open-source / corpus | `subnet.invariants.yaml` | Partially mitigated (`reasoning_only` export) |
 | Hardware attestation | `trust.assumptions.yaml` | “TEE” = model name; not remote attestation |
 | Container / red-blue patterns | `container_execution.yaml`, `adversarial_red_blue.yaml` | Not adopted |
-| Commit-reveal when needed | `subnet.invariants.yaml#commit_reveal` | Cited as misapplied |
+| Commit-reveal when needed | `subnet.invariants.yaml#commit_reveal` | Optional same-round binding documented; not chain-anchored fairness |
 | Similarity detection | `validator.rules.yaml` | Byte-equal dedup evaded |
 | HTTP + Epistula for miners | `miner.contract.yaml` | Not used |
 

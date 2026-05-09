@@ -42,6 +42,7 @@ lemma --help
 | Catalog sources | [catalog-sources.md](docs/catalog-sources.md) |
 | Proof intrinsic scoring | [proof-intrinsic-decision.md](docs/proof-intrinsic-decision.md) |
 | Credibility exponent policy | [credibility-exponent-decision.md](docs/credibility-exponent-decision.md) |
+| Commit-reveal threat model | [commit-reveal.md](docs/commit-reveal.md) |
 | System requirements | [system-requirements.md](docs/system-requirements.md) |
 
 ## References
