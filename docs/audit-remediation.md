@@ -272,7 +272,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 
 - ~**20 %** mechanism math tests vs **~40 %** protocol vs **~42 %** glue vs **~7 %** pure CLI — author breakdown; periodically recompute.
 - Tests called out as low value: `uv_bootstrap` (removed), `try_prover` flag tables (moved to `lemma-cli`), `problem_views` title case, `protocol_migration` no-op test (removed), **`test_protocol.py` codifying body-hash fail-open**, thin `prompt_sanitize` coverage.
-- **Missing:** `tests/test_rewards.py` for **`entry_from_scores`** / rewards assembly (audit claim).
+- **`tests/test_rewards.py`** added for **`entry_from_scores`** / rewards assembly.
 
 ### 13.8 Catalog (`lemma/catalog/`)
 
