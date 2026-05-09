@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
-from lemma.catalog.json_merge import load_catalog_json
+from tools.catalog.json_merge import load_catalog_json
 
 
 def test_load_catalog_json_ok(tmp_path: Path) -> None:

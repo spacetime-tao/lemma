@@ -273,7 +273,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 
 ### 13.8 Catalog (`lemma/catalog/`)
 
-- ~388 LoC; production cited as **`catalog/constants.py` only** — remainder for scripts/tests → move to `tools/` per audit.
+- ~388 LoC; production cited as **`catalog/constants.py` only** — builder/parser helpers moved to `tools/catalog`; runtime `lemma/catalog` now keeps constants only.
 
 ### 13.9 Repository-root / misc
 

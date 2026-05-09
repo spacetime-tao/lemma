@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from lemma.catalog.minif2f_parse import parse_minif2f_file
+from tools.catalog.minif2f_parse import parse_minif2f_file
 
 
 def _skip_path(path: Path) -> bool:

@@ -40,7 +40,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from lemma.catalog.constants import DEFAULT_LEAN_TOOLCHAIN, DEFAULT_MATHLIB_REV
-from lemma.catalog.minif2f_parse import collect_minif2f_layout
+from tools.catalog.minif2f_parse import collect_minif2f_layout
 
 
 def _clone(repo: str, ref: str, dest: Path) -> None:
@@ -151,7 +151,7 @@ def main() -> int:
             print(f"dm: {len(rows)} problems")
 
         if "putnam" in keys:
-            from lemma.catalog.putnam import collect_putnam_src
+            from tools.catalog.putnam import collect_putnam_src
 
             root = base / "PutnamBench"
             _clone(args.putnam_repo, args.putnam_ref, root)
@@ -181,7 +181,7 @@ def main() -> int:
                     file=sys.stderr,
                 )
                 return 1
-            from lemma.catalog.formalmath import row_from_hf_record
+            from tools.catalog.formalmath import row_from_hf_record
 
             ds = load_dataset(hf_id, split="train", streaming=True)
             rows = []
@@ -210,7 +210,7 @@ def main() -> int:
             if not args.mathlib_root or not args.mathlib_root.is_dir():
                 print("--mathlib-root required for mathlib source", file=sys.stderr)
                 return 1
-            from lemma.catalog.mathlib_sample import collect_mathlib_theorems
+            from tools.catalog.mathlib_sample import collect_mathlib_theorems
 
             rows = collect_mathlib_theorems(
                 args.mathlib_root,
@@ -232,7 +232,7 @@ def main() -> int:
                     r["split"] = f"{prefix}_{r['split']}"
                 _pin_standard(rows, args.toolchain, args.mathlib_rev)
             else:
-                from lemma.catalog.loose_scan import collect_loose_lean_repo
+                from tools.catalog.loose_scan import collect_loose_lean_repo
 
                 rows = collect_loose_lean_repo(
                     dest,
@@ -245,7 +245,7 @@ def main() -> int:
             print(f"extra-repo {prefix}: {len(rows)} problems")
 
     for mj in args.merge_json:
-        from lemma.catalog.json_merge import load_catalog_json
+        from tools.catalog.json_merge import load_catalog_json
 
         rows = load_catalog_json(mj)
         _pin_standard(rows, args.toolchain, args.mathlib_rev)

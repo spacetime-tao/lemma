@@ -22,7 +22,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from lemma.catalog.constants import DEFAULT_LEAN_TOOLCHAIN, DEFAULT_MATHLIB_REV
-from lemma.catalog.minif2f_parse import collect_minif2f_layout
+from tools.catalog.minif2f_parse import collect_minif2f_layout
 
 
 def main() -> int:
