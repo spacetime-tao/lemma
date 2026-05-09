@@ -30,7 +30,7 @@ uv run lemma meta
 ```
 
 - `judge_rubric_sha256`: prompts only.
-- `judge_profile_sha256`: prompts + provider + model + sampling + base URL (OpenAI-compatible).
+- `judge_profile_sha256`: validator scoring profile: judge rubric/stack plus problem cadence, verification policy, scoring blend, dedup, reputation, and response-acceptance hooks.
 
 Production: one pinned stack; `JUDGE_PROFILE_SHA256_EXPECTED`. Dev may use multiple backends.
 
@@ -48,7 +48,7 @@ Optional hook ([comparator.md](comparator.md)). If any validator enables it, all
 
 ## Shared validator settings
 
-The **subnet operator** publishes one configuration for the subnet: timeouts, seeds, judge, sandbox image, comparator flags. Validators are expected to deploy **that** template so scores stay comparable. Document and distribute: `LEMMA_BLOCK_TIME_SEC_ESTIMATE`, `LEMMA_FORWARD_WAIT_MIN_S`, `LEMMA_FORWARD_WAIT_MAX_S`, `LEAN_VERIFY_TIMEOUT_S`, `LEMMA_TIMEOUT_SCALE_BY_SPLIT` / `LEMMA_TIMEOUT_SPLIT_*_MULT` (only if the operator’s policy includes them), `LEMMA_PROBLEM_SEED_MODE`, `LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`, `EMPTY_EPOCH_WEIGHTS_POLICY`, `LEAN_SANDBOX_*`, `JUDGE_*`, `OPENAI_MODEL` (subnet canonical judge id on Chutes), `OPENAI_BASE_URL`, `LEMMA_COMPARATOR_*`. Nothing here is “per-validator preference”; mismatch is misconfiguration. On-chain code does not enforce equality — parity relies on the published policy ([faq.md](faq.md)).
+The **subnet operator** publishes one configuration for the subnet: timeouts, seeds, judge, sandbox image, comparator flags. Validators are expected to deploy **that** template so scores stay comparable. Document and distribute: `LEMMA_BLOCK_TIME_SEC_ESTIMATE`, `LEMMA_FORWARD_WAIT_MIN_S`, `LEMMA_FORWARD_WAIT_MAX_S`, `LEAN_VERIFY_TIMEOUT_S`, `LEMMA_TIMEOUT_SCALE_BY_SPLIT` / `LEMMA_TIMEOUT_SPLIT_*_MULT` (only if the operator’s policy includes them), `LEMMA_PROBLEM_SEED_MODE`, `LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`, `EMPTY_EPOCH_WEIGHTS_POLICY`, `LEAN_SANDBOX_*`, `JUDGE_*`, `OPENAI_MODEL` (subnet canonical judge id on Chutes), `OPENAI_BASE_URL`, `LEMMA_COMPARATOR_*`. The main scoring/cadence/verification fields are pinned by `judge_profile_sha256`; nothing here is “per-validator preference.” On-chain code does not enforce equality — parity relies on the published policy ([faq.md](faq.md)).
 
 ### Parity checklist
 

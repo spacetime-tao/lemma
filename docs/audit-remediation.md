@@ -123,6 +123,8 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 | **J3** | Hash omits many subnet-critical env vars | R3 §5.3 | P2 | Expand profile hash or separate “scoring profile” attestation |
 | **J4** | `LEMMA_JUDGE_PROFILE_ATTEST_SKIP` foot-gun | R3 §5.1 | P3 | Loud metrics / mainnet deny |
 
+**2026-05 progress:** J3 patched by broadening `judge_profile_sha256` into a validator scoring profile: it now covers the judge stack plus deterministic problem cadence, verification timeout/image policy, scoring blend/dedup/reputation settings, and protocol hooks that affect response acceptance.
+
 ---
 
 ## 9. Judge JSON / prompt / FakeJudge

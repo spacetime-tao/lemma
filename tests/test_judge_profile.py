@@ -22,6 +22,43 @@ def test_judge_profile_openai_includes_base_url() -> None:
     assert "anthropic_model" not in d
 
 
+def test_judge_profile_includes_validator_scoring_policy() -> None:
+    s = LemmaSettings(
+        problem_seed_quantize_blocks=55,
+        lemma_problem_seed_chain_head_slack_blocks=1,
+        lean_verify_timeout_s=123,
+        forward_wait_min_s=10,
+        forward_wait_max_s=100,
+        timeout_scale_by_split=True,
+        timeout_split_easy_mult=1.1,
+        timeout_split_medium_mult=1.2,
+        timeout_split_hard_mult=1.3,
+        lemma_score_proof_weight=0.4,
+        lemma_reputation_credibility_exponent=2.0,
+        lemma_epoch_problem_count=3,
+        lemma_commit_reveal_enabled=True,
+        lemma_miner_verify_attest_enabled=True,
+        lemma_miner_verify_attest_spot_verify_fraction=0.25,
+    )
+    d = judge_profile_dict(s)
+
+    assert d["profile_schema"] == "lemma_validator_profile_v2"
+    assert d["problem_policy"]["problem_seed_quantize_blocks"] == 55
+    assert d["verification_policy"]["lean_verify_timeout_s"] == 123
+    assert d["verification_policy"]["timeout_split_hard_mult"] == 1.3
+    assert d["scoring_policy"]["lemma_score_proof_weight"] == 0.4
+    assert d["scoring_policy"]["lemma_reputation_credibility_exponent"] == 2.0
+    assert d["scoring_policy"]["lemma_epoch_problem_count"] == 3
+    assert d["protocol_policy"]["lemma_commit_reveal_enabled"] is True
+    assert d["protocol_policy"]["lemma_miner_verify_attest_spot_verify_fraction"] == 0.25
+
+
+def test_judge_profile_hash_changes_when_scoring_policy_changes() -> None:
+    a = LemmaSettings(lemma_score_proof_weight=0.35)
+    b = LemmaSettings(lemma_score_proof_weight=0.5)
+    assert judge_profile_sha256(a) != judge_profile_sha256(b)
+
+
 def test_judge_profile_stable_sha256() -> None:
     s = LemmaSettings(
         judge_provider="openai",
