@@ -93,3 +93,34 @@ def test_documented_protocol_env_names_work(monkeypatch: pytest.MonkeyPatch, tmp
     assert s.lemma_judge_profile_attest_peer_urls == "http://peer/lemma/judge_profile_sha256"
     assert s.lemma_judge_profile_attest_allow_skip is True
     assert s.lemma_judge_profile_attest_http_timeout_s == 3.0
+
+
+def test_documented_timeout_and_prover_policy_env_names_work(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    monkeypatch.delenv("LEMMA_PREFER_PROCESS_ENV", raising=False)
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "\n".join(
+            [
+                "LEMMA_TIMEOUT_SCALE_BY_SPLIT=1",
+                "LEMMA_TIMEOUT_SPLIT_EASY_MULT=1.1",
+                "LEMMA_TIMEOUT_SPLIT_MEDIUM_MULT=1.2",
+                "LEMMA_TIMEOUT_SPLIT_HARD_MULT=1.3",
+                "LEMMA_PROVER_MIN_REASONING_STEPS=4",
+                "LEMMA_PROVER_MIN_REASONING_TOTAL_CHARS=1200",
+                "LEMMA_PROVER_MIN_PROOF_SCRIPT_CHARS=500",
+            ],
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    s = LemmaSettings(_env_file=str(env_file))
+    assert s.timeout_scale_by_split is True
+    assert s.timeout_split_easy_mult == 1.1
+    assert s.timeout_split_medium_mult == 1.2
+    assert s.timeout_split_hard_mult == 1.3
+    assert s.prover_min_reasoning_steps == 4
+    assert s.prover_min_reasoning_total_chars == 1200
+    assert s.prover_min_proof_script_chars == 500
