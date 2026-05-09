@@ -49,7 +49,7 @@ To see what validators would sample, use **`lemma status`** / **`lemma problems`
 ## Validator pipeline (each round)
 
 1. Query miners (`proof_script` + reasoning).
-2. Docker sandbox: `lake build`, axiom policy, optional experimental comparator hook.
+2. Docker sandbox: `lake build`, axiom policy.
 3. If Lean passes: judge HTTP (`JUDGE_PROVIDER`, `OPENAI_*`).
 
 Miners use a separate prover API to generate proofs.
@@ -192,7 +192,6 @@ Roughly: (challenges answered) × ($/challenge). Measure from logs.
 | `cheat_token` | Banned constructs |
 | `timeout` / `oom` | Resource limits |
 | `docker_error` | Sandbox error |
-| `comparator_rejected` | Comparator hook failed |
 
 **`lemma-cli try-prover` says FAIL but the proof is just `rfl` on arithmetic literals:** The LLM answer may still be **mathematically fine**. Logs like `no previous manifest`, `creating one from scratch`, `mathlib: running post-update hooks`, then `error: build failed` usually mean **Lake is building Mathlib** (slow), **post-update hooks** failed, **network blocked** (Docker `network_mode=none`), or **timeout** — not that `rfl` is wrong. Fix the **environment** (prebuilt `LEAN_SANDBOX_IMAGE`, `LEAN_SANDBOX_NETWORK=bridge`, higher `LEAN_VERIFY_TIMEOUT_S`) and retry.
 
@@ -260,6 +259,6 @@ One sampled problem per validator round. The forward HTTP wait (block-derived) b
 
 `bittensor` loads lazily so top-level help stays normal Click output.
 
-## Comparator / lean-eval
+## Stricter Lean Isolation
 
-Core: `lake build` + axiom allowlist + cheat scan. Optional experimental hook: [comparator.md](comparator.md); stricter isolation may follow [lean-eval](https://github.com/leanprover/lean-eval).
+Core: `lake build` + axiom allowlist + cheat scan. Stricter isolation may follow [lean-eval](https://github.com/leanprover/lean-eval) once there is a pinned subnet policy.

@@ -42,13 +42,9 @@ Coldkey dedup and identical-submission dedup reduce certain games but **do not**
 
 Validator→miner calls use Bittensor Dendrite/Axon today; synapse **`body_hash`** vs **`computed_body_hash`** catches tampering — [transport.md](transport.md).
 
-## Comparator
-
-Experimental default-off hook ([comparator.md](comparator.md)). If an operator enables it, every scoring validator or remote Lean worker must export the same `LEMMA_COMPARATOR_*` process environment, or scores diverge.
-
 ## Shared validator settings
 
-The **subnet operator** publishes one configuration for the subnet: timeouts, seeds, judge, sandbox image, and any experimental comparator process env. Validators are expected to deploy **that** template so scores stay comparable. Document and distribute: `LEMMA_BLOCK_TIME_SEC_ESTIMATE`, `LEMMA_FORWARD_WAIT_MIN_S`, `LEMMA_FORWARD_WAIT_MAX_S`, `LEAN_VERIFY_TIMEOUT_S`, `LEMMA_TIMEOUT_SCALE_BY_SPLIT` / `LEMMA_TIMEOUT_SPLIT_*_MULT` (only if the operator’s policy includes them), `LEMMA_PROBLEM_SEED_MODE`, `LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`, `EMPTY_EPOCH_WEIGHTS_POLICY`, `LEAN_SANDBOX_*`, `JUDGE_*`, `OPENAI_MODEL` (subnet canonical judge id on Chutes), `OPENAI_BASE_URL`, and, only if used, `LEMMA_COMPARATOR_*`. The main scoring/cadence/verification fields are pinned by `judge_profile_sha256`; comparator env is not currently pinned there. Nothing here is “per-validator preference.” On-chain code does not enforce equality — parity relies on the published policy ([faq.md](faq.md)).
+The **subnet operator** publishes one configuration for the subnet: timeouts, seeds, judge, and sandbox image. Validators are expected to deploy **that** template so scores stay comparable. Document and distribute: `LEMMA_BLOCK_TIME_SEC_ESTIMATE`, `LEMMA_FORWARD_WAIT_MIN_S`, `LEMMA_FORWARD_WAIT_MAX_S`, `LEAN_VERIFY_TIMEOUT_S`, `LEMMA_TIMEOUT_SCALE_BY_SPLIT` / `LEMMA_TIMEOUT_SPLIT_*_MULT` (only if the operator’s policy includes them), `LEMMA_PROBLEM_SEED_MODE`, `LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`, `EMPTY_EPOCH_WEIGHTS_POLICY`, `LEAN_SANDBOX_*`, `JUDGE_*`, `OPENAI_MODEL` (subnet canonical judge id on Chutes), and `OPENAI_BASE_URL`. The main scoring/cadence/verification fields are pinned by `judge_profile_sha256`. Nothing here is “per-validator preference.” On-chain code does not enforce equality — parity relies on the published policy ([faq.md](faq.md)).
 
 ### Parity checklist
 

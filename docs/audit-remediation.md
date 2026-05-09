@@ -242,7 +242,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **HTTP worker** subsystem optional (~250 LoC) — topology docs “advanced.”
 - Duplicate `r.returncode` branches in `_verify_host` removed; local double cheat scan removed (remote pre-scan retained before POST).
 - Docker verify script now writes a workspace script and invokes Docker with argv/workdir instead of a quoted `bash -lc` command string.
-- **`comparator_hook`**: wired but default-off / no production comparator.
+- Default-off comparator hook removed from the verifier; external comparator experiments should live outside core scoring until there is a pinned subnet policy.
 
 ### 13.5 Miner
 
@@ -295,7 +295,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **`env.example`** removed; **`.env.example`** is the only env template.
 - **`scripts/load_minif2f.py`** removed; `scripts/build_lemma_catalog.py` is the single catalog rebuild path.
 - **`scripts/lemma-run`** removed; docs use standard `uv run` commands instead of a repo wrapper.
-- **`docs/comparator.md`** clarified as experimental/default-off; no bundled production comparator or profile pin.
+- **`docs/comparator.md`** and runtime comparator hook removed; no bundled production comparator or unpinned post-verify command path.
 - **`pyproject.toml` extras** — `tiktoken` removed; `anthropic` and `btcli` moved to optional extras.
 - **`Dockerfile`** no longer installs full `docker.io`; runtime image uses Python Docker SDK + mounted host socket. Added `.dockerignore`.
 
