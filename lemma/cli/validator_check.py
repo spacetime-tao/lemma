@@ -98,7 +98,7 @@ def run_validator_check(settings: LemmaSettings) -> int:
 
     click.echo(stylize("Validator pre-flight", fg="cyan", bold=True))
     click.echo(
-        stylize("(run before `lemma validator start` — not the same as `lemma validator-dry`)\n", dim=True),
+        stylize("(run before `lemma validator start` — not the same as `lemma validator config`)\n", dim=True),
         nl=False,
     )
 

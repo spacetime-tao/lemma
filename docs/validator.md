@@ -18,7 +18,7 @@ Judge: Chutes when prompted is the documented default; Anthropic and custom Open
 | Exercise **prover** only | `lemma try-prover` (add `--verify` for local Lean) |
 | Exercise **judge** alone on text files you saved | `lemma judge --trace reasoning.txt` (optional `--theorem` / `--proof` paths) |
 | Rehearse the **full validator** without `set_weights` | `lemma validator dry-run` — rubric step uses **FakeJudge** by default; set **`LEMMA_DRY_RUN_REAL_JUDGE=1`** to bill the real judge during dry-run |
-| Only print validator-related env | `lemma validator-dry` (not a scoring run) |
+| Only print validator-related env | `lemma validator config` (not a scoring run) |
 
 `LEMMA_FAKE_JUDGE=1` is accepted only for validator dry-runs; live `lemma validator start` refuses FakeJudge because the subnet expects a real Chutes judge.
 

@@ -1015,8 +1015,8 @@ def _miner_emit_dry_run_summary() -> None:
         + stylize(" — bind port and wait for validators · ", dim=True)
         + stylize("lemma miner observability", fg="green")
         + stylize(" — what you can see in this terminal · ", dim=True)
-        + stylize("lemma miner", fg="green")
-        + stylize(" — interactive menu.\n", dim=True),
+        + stylize("lemma-cli", fg="green")
+        + stylize(" — friendly operator screen.\n", dim=True),
         nl=False,
     )
 
@@ -1149,12 +1149,6 @@ def _miner_run_axon(max_forwards_per_day: int | None) -> None:
     ),
 )
 @click.option(
-    "--dry-run",
-    is_flag=True,
-    default=False,
-    help="Print axon settings only (no server). Same as `lemma miner dry-run`.",
-)
-@click.option(
     "--max-forwards-per-day",
     type=int,
     default=None,
@@ -1166,14 +1160,10 @@ def _miner_run_axon(max_forwards_per_day: int | None) -> None:
 @click.pass_context
 def miner_group(
     ctx: click.Context,
-    dry_run: bool,
     max_forwards_per_day: int | None,
 ) -> None:
     """Use explicit subcommands from scripts."""
     if ctx.invoked_subcommand is not None:
-        return
-    if dry_run:
-        _miner_emit_dry_run_summary()
         return
     if max_forwards_per_day is not None:
         _miner_run_axon(max_forwards_per_day)
@@ -1208,11 +1198,6 @@ def miner_group_dry_run_cmd() -> None:
 )
 def miner_observability_cmd() -> None:
     _miner_emit_observability_panel()
-
-
-@main.command("miner-dry", help="Same as `lemma miner dry-run` (print axon settings, no server).")
-def miner_dry_cmd() -> None:
-    _miner_emit_dry_run_summary()
 
 
 MOVED_SETUP_CONTEXT = {
@@ -1292,41 +1277,22 @@ def _validator_run_blocking(*, dry_run: bool) -> None:
         "Typical path: bash scripts/prebuild_lean_image.sh → lemma validator-check → lemma validator start."
     ),
 )
-@click.option(
-    "--dry-run",
-    "legacy_dry",
-    is_flag=True,
-    default=False,
-    help=(
-        "Run rounds without set_weights (legacy shortcut for `lemma validator dry-run`). "
-        "Same FakeJudge default as dry-run unless LEMMA_DRY_RUN_REAL_JUDGE=1."
-    ),
-)
 @click.pass_context
-def validator_group(ctx: click.Context, legacy_dry: bool) -> None:
+def validator_group(ctx: click.Context) -> None:
     """Use explicit subcommands from scripts."""
     if ctx.invoked_subcommand is not None:
         return
-    if legacy_dry:
-        _validator_run_blocking(dry_run=True)
-        return
     click.echo(ctx.get_help(), color=colors_enabled())
-    click.echo("Use `lemma validator start`, `lemma validator dry-run`, or `lemma validator-check`.")
+    click.echo(
+        "Use `lemma validator start`, `lemma validator dry-run`, `lemma validator config`, "
+        "or `lemma validator-check`."
+    )
     click.echo("For the friendly operator screen, use `lemma-cli`.")
 
 
 @validator_group.command("start", help="Run scoring rounds until Ctrl+C.")
-@click.option(
-    "--dry-run",
-    is_flag=True,
-    default=False,
-    help=(
-        "No on-chain set_weights this session. Judge defaults to FakeJudge unless LEMMA_DRY_RUN_REAL_JUDGE=1."
-    ),
-)
-def validator_start_cmd(dry_run: bool) -> None:
-    dr = dry_run or os.environ.get("LEMMA_DRY_RUN") == "1"
-    _validator_run_blocking(dry_run=dr)
+def validator_start_cmd() -> None:
+    _validator_run_blocking(dry_run=False)
 
 
 @validator_group.command(
@@ -1394,11 +1360,11 @@ def _echo_validator_dry_wallet_section(settings: LemmaSettings) -> None:
         )
 
 
-@main.command(
-    "validator-dry",
+@validator_group.command(
+    "config",
     help="Print validator env summary and exit (no scoring loop, no chain writes).",
 )
-def validator_dry_cmd() -> None:
+def validator_config_cmd() -> None:
     """One-shot preview — unlike `lemma validator dry-run`, does not run the metronome loop."""
     settings = LemmaSettings()
     setup_logging(settings.log_level)

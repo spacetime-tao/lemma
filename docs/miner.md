@@ -2,7 +2,7 @@
 
 Walkthrough: [getting-started.md](getting-started.md) — **`btcli`** (Bittensor CLI), `lemma-cli setup`, `lemma-run`. Prefer prompts over hand-editing `.env` (`lemma-cli configure chain`, `configure prover`, `configure axon`).
 
-**Short checklist:** `lemma-cli setup` → coldkey funded → `btcli subnet register` on the same network/netuid as `.env` → `lemma miner dry-run` → **`lemma rehearsal`** (see prover + Lean + judge on the live theorem) → fix axon IP/port if needed → `lemma miner start`. Run `lemma` for core command help; run `lemma-cli` for the friendly operator screen (**miner-dry** then core miner commands).
+**Short checklist:** `lemma-cli setup` → coldkey funded → `btcli subnet register` on the same network/netuid as `.env` → `lemma miner dry-run` → **`lemma rehearsal`** (see prover + Lean + judge on the live theorem) → fix axon IP/port if needed → `lemma miner start`. Run `lemma` for core command help; run `lemma-cli` for the friendly operator screen.
 
 ### Prover LLM (`lemma-cli configure prover`)
 
@@ -13,7 +13,7 @@ Inference: Chutes is the usual default when prompted.
 ## Run
 
 ```bash
-./scripts/lemma-run lemma miner --dry-run
+./scripts/lemma-run lemma miner dry-run
 ./scripts/lemma-run lemma miner start
 ```
 
