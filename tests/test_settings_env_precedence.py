@@ -44,3 +44,22 @@ def test_explicit_init_kwarg_beats_all(monkeypatch: pytest.MonkeyPatch, tmp_path
     monkeypatch.setenv("OPENAI_MODEL", "legacy/from-shell")
     s = LemmaSettings(_env_file=str(env_file), openai_model="explicit")
     assert s.openai_model == "explicit"
+
+
+def test_documented_validator_wallet_env_overrides_miner_wallet(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    monkeypatch.delenv("LEMMA_PREFER_PROCESS_ENV", raising=False)
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "\n".join(
+            [
+                "BT_WALLET_COLD=miner-cold",
+                "BT_WALLET_HOT=miner-hot",
+                "BT_VALIDATOR_WALLET_COLD=validator-cold",
+                "BT_VALIDATOR_WALLET_HOT=validator-hot",
+            ],
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    s = LemmaSettings(_env_file=str(env_file))
+    assert s.validator_wallet_names() == ("validator-cold", "validator-hot")
