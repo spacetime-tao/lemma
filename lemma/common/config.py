@@ -739,7 +739,10 @@ class LemmaSettings(BaseSettings):
             "LEMMA_PROOF_INTRINSIC_STRIP_COMMENTS",
             "lemma_proof_intrinsic_strip_comments",
         ),
-        description="Strip Lean line/block comments before proof_intrinsic heuristic (reduces comment-padding).",
+        description=(
+            "Strip Lean line/block comments and empty lines before proof_intrinsic heuristic "
+            "(reduces comment-padding)."
+        ),
     )
     lemma_reputation_state_path: Path | None = Field(
         default=None,
