@@ -94,6 +94,9 @@ Current prototype: set `LEMMA_LEAN_PROOF_METRICS=1` to attach compare-only
 printed byte count, line count, and probe exit code. Rewards and weights ignore
 this field.
 
+The opt-in Docker and host Lean golden tests assert that the probe returns
+metrics on a real passing proof when those suites are enabled.
+
 Signals to avoid as scoring inputs:
 
 - Wall-clock build time, because it depends on hardware, cache warmth, and Docker

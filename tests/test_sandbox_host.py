@@ -31,6 +31,10 @@ theorem two_plus_two_eq_four : (2 : Nat) + 2 = 4 := by rfl
 
 end Submission
 """
-    sb = LeanSandbox(use_docker=False, timeout_s=900)
+    sb = LeanSandbox(use_docker=False, timeout_s=900, proof_metrics_enabled=True)
     vr = sb.verify(p, submission)
     assert vr.passed, vr.stderr_tail + vr.stdout_tail
+    assert vr.proof_metrics is not None
+    assert vr.proof_metrics.probe_exit_code == 0
+    assert vr.proof_metrics.proof_declaration_bytes > 0
+    assert vr.proof_metrics.proof_declaration_lines > 0
