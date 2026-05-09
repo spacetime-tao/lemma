@@ -19,12 +19,6 @@ from lemma.common.config import (
 from lemma.judge.fingerprint import rubric_sha256
 
 
-def judge_uses_openai_compatible_http(settings: LemmaSettings) -> bool:
-    """Chutes and ``openai`` both use the OpenAI-compatible HTTP client to the configured base URL."""
-    p = (settings.judge_provider or "chutes").lower()
-    return p in ("openai", "chutes")
-
-
 def judge_provider_for_profile_hash(settings: LemmaSettings) -> str:
     """Canonical ``judge_provider`` value stored in ``lemma meta`` / pin JSON.
 
