@@ -124,12 +124,12 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 
 | ID | Issue | Source § | Priority | Remediation direction |
 |----|--------|----------|----------|------------------------|
-| **J1** | HTTP plaintext / no auth; MITM | R3 §5.1 | P2 | TLS, auth, or document “operator honor system only” |
-| **J2** | All-of-N flaky; no Byzantine resistance | R3 §5.1 | P2 | k-of-n, retries, health checks |
-| **J3** | Hash omits many subnet-critical env vars | R3 §5.3 | P2 | Expand profile hash or separate “scoring profile” attestation |
-| **J4** | `LEMMA_JUDGE_PROFILE_ATTEST_SKIP` foot-gun | R3 §5.1 | P3 | Loud metrics / mainnet deny |
+| **J1** | HTTP plaintext / no auth; MITM | R3 §5.1 | P2 | **Done:** documented as operator-controlled transport; use TLS/private network/auth outside this helper. |
+| **J2** | All-of-N flaky; no Byzantine resistance | R3 §5.1 | P2 | **Done:** documented current all-of-N behavior and non-Byzantine limits; stronger k-of-n/on-chain design deferred. |
+| **J3** | Hash omits many subnet-critical env vars | R3 §5.3 | P2 | **Done:** profile hash broadened into validator scoring profile. |
+| **J4** | `LEMMA_JUDGE_PROFILE_ATTEST_SKIP` foot-gun | R3 §5.1 | P3 | **Done:** docs and validator-check wording label skip as solo/dev only, not production alignment. |
 
-**2026-05 progress:** J3 patched by broadening `judge_profile_sha256` into a validator scoring profile: it now covers the judge stack plus deterministic problem cadence, verification timeout/image policy, scoring blend/dedup/reputation settings, and protocol hooks that affect response acceptance.
+**2026-05 progress:** J1/J2/J3/J4 patched/documented. `judge_profile_sha256` is now a validator scoring profile covering judge stack, deterministic problem cadence, verification timeout/image policy, scoring blend/dedup/reputation settings, and protocol hooks that affect response acceptance. [judge-profile-attest.md](judge-profile-attest.md) records the HTTP peer check as operator coordination, not Byzantine consensus or transport security.
 
 ---
 
@@ -306,7 +306,7 @@ Abbreviated; see `knowledge/` for full YAML. Status reflects **Round 3 narrative
 | Secret eval sets | `validator.rules.yaml` | Still gated; not in judge pin |
 | N miners profitability | `sybil.realities.yaml` | Still violated |
 | Coldkey dedup ≠ sybil resistance | `sybil.realities.yaml` | Still violated by design |
-| Validators not individually trusted | `trust.assumptions.yaml` | Softer-trust model (Chutes + voluntary HTTP quorum) |
+| Validators not individually trusted | `trust.assumptions.yaml` | Softer-trust model documented for Chutes + voluntary HTTP peer checks |
 | Synapse deprecated | `subnet.invariants.yaml` | Still violated |
 | Open-source / corpus | `subnet.invariants.yaml` | Partially mitigated (`reasoning_only` export) |
 | Hardware attestation | `trust.assumptions.yaml` | Miner verify attest documented as non-TEE hotkey signature over local Lean claim |

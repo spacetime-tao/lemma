@@ -77,7 +77,8 @@ class ValidatorService:
                 )
         if s.lemma_judge_profile_attest_enabled and s.lemma_judge_profile_attest_allow_skip:
             logger.warning(
-                "LEMMA_JUDGE_PROFILE_ATTEST_SKIP=1 — peer judge profile HTTP checks skipped (solo / dev only)",
+                "LEMMA_JUDGE_PROFILE_ATTEST_SKIP=1 — peer judge profile HTTP checks skipped "
+                "(solo / dev only; not production alignment)",
             )
         attest_errs = await asyncio.to_thread(judge_profile_peer_check_errors, s)
         if attest_errs:

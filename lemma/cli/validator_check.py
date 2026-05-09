@@ -252,7 +252,8 @@ def run_validator_check(settings: LemmaSettings) -> int:
         if settings.lemma_judge_profile_attest_allow_skip:
             click.echo(
                 stylize(
-                    "WARN judge attest  LEMMA_JUDGE_PROFILE_ATTEST_SKIP=1 — peer URLs not checked",
+                    "WARN judge attest  LEMMA_JUDGE_PROFILE_ATTEST_SKIP=1 — peer URLs not checked "
+                    "(solo/dev only; not production alignment)",
                     fg="yellow",
                 ),
             )
