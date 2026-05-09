@@ -305,12 +305,12 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 
 ## 14. Knowledge-base contract scorecard (Round 3 §17)
 
-Abbreviated; see `knowledge/` for full YAML. Status reflects **Round 3 narrative** — verify before treating as current gate.
+Abbreviated; see `knowledge/` for full YAML. Status reflects the current remediation state against the Round 3 narrative; major mechanism rows still need design review before becoming gates.
 
-| Invariant | KB pointer | Round 3 cited status |
+| Invariant | KB pointer | Current remediation status |
 |-----------|------------|----------------------|
 | One-sentence primary design axis | `subnet.invariants.yaml` | Current objective pinned in `docs/objective-decision.md`; judge layer bounded separately |
-| Validator-only development | `subnet.invariants.yaml#architecture.validator_only_development` | Still violated (reference miner + PROVER_SYSTEM) |
+| Validator-only development | `subnet.invariants.yaml#architecture.validator_only_development` | Still violated by bundled reference miner; `PROVER_SYSTEM` is slimmed but still present |
 | Single-file validator pattern | `validator.contract.yaml` | Still violated by package layout; root `validator.py` stub removed |
 | Push compute to miners | `subnet.invariants.yaml#compute_distribution` | Still violated |
 | EMA for stability | `validator.rules.yaml` | Honored |
@@ -324,7 +324,7 @@ Abbreviated; see `knowledge/` for full YAML. Status reflects **Round 3 narrative
 | Hardware attestation | `trust.assumptions.yaml` | Miner verify attest documented as non-TEE hotkey signature over local Lean claim |
 | Container / red-blue patterns | `container_execution.yaml`, `adversarial_red_blue.yaml` | Not adopted |
 | Commit-reveal when needed | `subnet.invariants.yaml#commit_reveal` | Optional same-round binding documented; not chain-anchored fairness |
-| Similarity detection | `validator.rules.yaml` | Byte-equal dedup evaded |
+| Similarity detection | `validator.rules.yaml` | Partial: exact fingerprint strips proof comments and collapses whitespace; semantic rewrites remain |
 | HTTP + Epistula for miners | `miner.contract.yaml` | Not used |
 
 ---
@@ -352,5 +352,6 @@ Examples called out in Round 3: judge model/URL, Anthropic default model age, Le
 |------|------|
 | 2026-05 | Initial consolidation from Round 3 audit narrative + repo pointers |
 | 2026-05 | Merged **full** Round 3 Part 2 (§14–16), §17 KB scorecard, §18 pointer, §19 → §2a |
+| 2026-05 | Refreshed scorecard after CLI extraction, dedup normalization, and miner prompt trims |
 
 **Maintainers:** bump §17 when you materially change scope or close a whole section.
