@@ -44,6 +44,8 @@ docker run -d --name lemma-lean-worker --restart unless-stopped \
 
 Requires the **`docker`** CLI on `PATH` for `exec`. CPU/memory limits apply to how you started the worker; each exec inherits that container’s cgroup.
 
+The bundled runtime Docker image is intentionally CLI-light: it talks to the host Docker socket through the Python Docker SDK for one-shot verification, but it does not install the full Docker engine. If you run Lemma itself inside that image, leave **`LEMMA_LEAN_DOCKER_WORKER`** unset unless you build a custom image with a Docker CLI.
+
 **Threads:** Lemma exports **`LEAN_NUM_THREADS`** for host `lake` and inside Docker (Lean’s thread pool; see the [reference](https://lean-lang.org/doc/reference/latest/IO/Tasks-and-Threads/)). Override with **`LEMMA_LEAN_NUM_THREADS`** if your cgroup CPU limit is tight (many threads on a 2‑CPU container can add contention).
 
 **Profiling:** Set **`LEMMA_LEAN_VERIFY_TIMING=1`** for INFO logs with **`docker_exec`** vs **`docker_one_shot`** wall time.

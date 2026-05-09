@@ -284,7 +284,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **`scripts/lemma-run`** removed; docs use standard `uv run` commands instead of a repo wrapper.
 - **`docs/comparator.md`** clarified as experimental/default-off; no bundled production comparator or profile pin.
 - **`pyproject.toml` extras** — `tiktoken` removed; `anthropic` moved to optional extra; remaining CLI split candidate needs a broader package decision.
-- **`Dockerfile`** full `docker.io` engine vs CLI-only — image size.
+- **`Dockerfile`** no longer installs full `docker.io`; runtime image uses Python Docker SDK + mounted host socket. Added `.dockerignore`.
 
 ---
 
