@@ -83,6 +83,20 @@ The repo also keeps a synthetic analyzer fixture at
 analysis code, but it is not evidence for a scoring change; use real validator
 exports for that.
 
+## Collect sybil/Pareto replay data
+
+Use a private `full` export when evaluating sybil/Pareto reward changes. The
+replay helper compares the current dedup/Pareto behavior against dedup-off
+baselines and simulates exact-copy vs lightly rewritten K-miner pressure:
+
+```bash
+uv run python -m tools.sybil_replay_analyze /var/lib/lemma/train.jsonl
+```
+
+If the export does not include coldkeys, the coldkey replay assumes one coldkey
+per UID. That is still useful for identical-copy and rewritten-copy pressure,
+but it is not evidence that coldkey dedup is sybil resistance.
+
 ## Gaming and leakage (why `reasoning_only` exists)
 
 Exports are **not** a neutral “public good.” Depending on fields, they can teach models to:
@@ -111,4 +125,5 @@ Exports are **not** a neutral “public good.” Depending on fields, they can t
 
 - Implementation: [`lemma/validator/training_export.py`](../lemma/validator/training_export.py), epoch hook in [`lemma/validator/epoch.py`](../lemma/validator/epoch.py).
 - Offline proof-metrics analyzer: [`tools/proof_metrics_analyze.py`](../tools/proof_metrics_analyze.py).
+- Offline sybil/Pareto replay analyzer: [`tools/sybil_replay_analyze.py`](../tools/sybil_replay_analyze.py).
 - Backlog context: [incentive-roadmap.md](incentive-roadmap.md) (training export item).

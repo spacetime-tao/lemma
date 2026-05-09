@@ -1,0 +1,122 @@
+"""Offline sybil/Pareto replay analyzer."""
+
+import json
+from pathlib import Path
+
+import pytest
+from tools.sybil_replay_analyze import clone_pressure, load_report, main, render_report, replay_epoch
+
+
+def _row(
+    *,
+    block: int = 100,
+    theorem_id: str = "t",
+    uid: int,
+    composite: float,
+    proof: str = "theorem t : True := by trivial\n",
+    trace: str = "clear proof",
+    coldkey: str | None = None,
+) -> dict:
+    row = {
+        "schema_version": 1,
+        "block": block,
+        "theorem_id": theorem_id,
+        "uid": uid,
+        "reasoning_text": trace,
+        "proof_script": proof,
+        "rubric": {
+            "coherence": composite,
+            "exploration": composite,
+            "clarity": composite,
+            "composite": composite,
+        },
+    }
+    if coldkey is not None:
+        row["coldkey"] = coldkey
+    return row
+
+
+def _write_jsonl(path: Path, rows: list[dict], *, bad_json: bool = False) -> None:
+    text = "\n".join(json.dumps(row) for row in rows)
+    if bad_json:
+        text += "\n{bad json"
+    path.write_text(text + "\n", encoding="utf-8")
+
+
+def test_replay_compares_dedup_modes_and_clone_pressure(tmp_path) -> None:
+    path = tmp_path / "train.jsonl"
+    _write_jsonl(
+        path,
+        [
+            _row(uid=1, composite=1.0),
+            _row(uid=2, composite=0.8, proof="theorem u : True := by trivial\n", trace="short"),
+            _row(uid=3, composite=1.0),  # exact duplicate of uid 1
+            {"schema_version": 2, "uid": 4},
+        ],
+        bad_json=True,
+    )
+
+    report = load_report(path, proof_weight=0.0)
+    assert report.total_rows == 5
+    assert report.invalid_json_lines == 1
+    assert len(report.replay_rows) == 3
+
+    base = replay_epoch(report.replay_rows, name="base", identical_dedup=True, coldkey_dedup=True)
+    assert base.identical_dropped == 1
+    assert 3 not in base.weights
+
+    no_identical = replay_epoch(
+        report.replay_rows,
+        name="no_identical",
+        identical_dedup=False,
+        coldkey_dedup=True,
+    )
+    assert no_identical.identical_dropped == 0
+    assert 3 in no_identical.weights
+
+    exact = clone_pressure(report.replay_rows, clone_k=2, rewrite=False)
+    rewritten = clone_pressure(report.replay_rows, clone_k=2, rewrite=True)
+    assert exact is not None
+    assert rewritten is not None
+    assert exact.extra_share == pytest.approx(0.0)
+    assert rewritten.extra_share > exact.extra_share
+
+    rendered = render_report(report, clone_k=2)
+    assert "Sybil/Pareto replay analysis" in rendered
+    assert "rows_replayable=3" in rendered
+    assert "coldkey_note=no coldkeys in export" in rendered
+    assert "base: weighted_uids=2" in rendered
+    assert "no_identical_dedup: weighted_uids=3" in rendered
+    assert "exact_clone_k=2:" in rendered
+    assert "rewritten_clone_k=2:" in rendered
+
+
+def test_replay_uses_coldkey_rows_when_present(tmp_path) -> None:
+    path = tmp_path / "train.jsonl"
+    _write_jsonl(
+        path,
+        [
+            _row(uid=1, composite=0.9, coldkey="same"),
+            _row(uid=2, composite=0.8, proof="theorem u : True := by trivial\n", trace="other", coldkey="same"),
+        ],
+    )
+    rows = load_report(path, proof_weight=0.0).replay_rows
+
+    base = replay_epoch(rows, name="base", identical_dedup=True, coldkey_dedup=True)
+    no_coldkey = replay_epoch(rows, name="no_coldkey", identical_dedup=True, coldkey_dedup=False)
+
+    assert base.coldkey_dropped == 1
+    assert set(base.weights) == {1}
+    assert no_coldkey.coldkey_dropped == 0
+    assert set(no_coldkey.weights) == {1, 2}
+
+
+def test_main_uses_env_path(tmp_path, monkeypatch, capsys) -> None:
+    path = tmp_path / "train.jsonl"
+    _write_jsonl(path, [_row(uid=1, composite=0.9)])
+    monkeypatch.setenv("LEMMA_TRAINING_EXPORT_JSONL", str(path))
+
+    assert main(["--clone-k", "1", "--epochs", "1", "--proof-weight", "0"]) == 0
+    rendered = capsys.readouterr().out
+    assert "rows_replayable=1" in rendered
+    assert "exact_clone_k=1:" in rendered
