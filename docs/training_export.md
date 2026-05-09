@@ -27,6 +27,11 @@ analyzer reports failed proof-metric probes separately and excludes them from
 correlations/outlier lists, so calibration is based only on successful Lean
 probe rows.
 
+The repo also keeps a synthetic analyzer fixture at
+`tests/fixtures/proof_metrics_validation.jsonl`. It is useful for checking the
+analysis code, but it is not evidence for a scoring change; use real validator
+exports for that.
+
 ## Gaming and leakage (why `reasoning_only` exists)
 
 Exports are **not** a neutral “public good.” Depending on fields, they can teach models to:

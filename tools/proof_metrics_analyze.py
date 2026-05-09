@@ -106,7 +106,7 @@ def render_report(report: MetricsReport, *, outlier_limit: int = 8) -> str:
 
 
 def padding_outliers(rows: list[MetricRow], *, limit: int) -> list[MetricRow]:
-    ok_rows = [r for r in rows if r.probe_exit_code == 0]
+    ok_rows = [r for r in rows if r.probe_exit_code == 0 and r.proof_len > r.proof_metric_bytes]
     return sorted(ok_rows, key=lambda r: (r.proof_len - r.proof_metric_bytes, r.proof_len), reverse=True)[:limit]
 
 
