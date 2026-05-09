@@ -6,7 +6,7 @@ Validators optionally append one JSON object per **successfully judged** miner r
 
 | Profile | Schema | Contents | Use when |
 | --- | --- | --- | --- |
-| **`full`** (default) | `schema_version` **1** | `reasoning_*`, `proof_script`, public `coldkey` when available from the metagraph, `rubric` (coherence / exploration / clarity / composite), optional `proof_metrics` when `LEMMA_LEAN_PROOF_METRICS=1`, plus **`pareto_weight`** after weights are computed | Internal research, calibration, full offline replay |
+| **`full`** (default) | `schema_version` **1** | `reasoning_*`, `theorem_statement`, `proof_script`, public `coldkey` when available from the metagraph, `rubric` (coherence / exploration / clarity / composite), optional `proof_metrics` when `LEMMA_LEAN_PROOF_METRICS=1`, plus **`pareto_weight`** after weights are computed | Internal research, calibration, full offline replay |
 | **`reasoning_only`** | `schema_version` **2** | Same reasoning fields + `block`, `theorem_id`, `uid`, `model_card`; **no** proof text, **no** rubric, **no** `proof_metrics`, **no** `pareto_weight` | Sharing datasets more broadly, PRM-style trace data with weaker direct judge/incentive labels |
 
 Set in `.env`:
@@ -93,11 +93,11 @@ baselines and simulates exact-copy vs lightly rewritten K-miner pressure:
 uv run python -m tools.sybil_replay_analyze /var/lib/lemma/train.jsonl
 ```
 
-Current full exports include public coldkeys when the validator metagraph
-provides them. If older exports do not include coldkeys, the coldkey replay
-assumes one coldkey per UID. That is still useful for identical-copy and
-rewritten-copy pressure, but it is not evidence that coldkey dedup is sybil
-resistance.
+Current full exports include `theorem_statement` and public coldkeys when the
+validator metagraph provides them. If older exports do not include coldkeys, the
+coldkey replay assumes one coldkey per UID. That is still useful for
+identical-copy and rewritten-copy pressure, but it is not evidence that coldkey
+dedup is sybil resistance.
 
 ## Gaming and leakage (why `reasoning_only` exists)
 
@@ -114,7 +114,7 @@ Exports are **not** a neutral “public good.” Depending on fields, they can t
 
 ### `full` (`schema_version` 1)
 
-- **`proof_script`**, **`rubric`**: see [`training_export.py`](../lemma/validator/training_export.py).
+- **`theorem_statement`**, **`proof_script`**, **`rubric`**: see [`training_export.py`](../lemma/validator/training_export.py).
 - **`coldkey`**: public metagraph coldkey when available; omitted if unavailable.
 - **`proof_metrics`**: optional compare-only Lean probe output when `LEMMA_LEAN_PROOF_METRICS=1`.
 - After the epoch, **`pareto_weight`** is merged per UID.
