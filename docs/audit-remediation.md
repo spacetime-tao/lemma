@@ -269,7 +269,8 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
   `BT_VALIDATOR_WALLET_COLD` / `BT_VALIDATOR_WALLET_HOT` env names and drop the unused `LEMMA_*` aliases.
 - Reserved protocol toggles default **False** but many Fields persist — documented `LEMMA_*` env names remain;
   undocumented lowercase env aliases were removed from the commit-reveal, miner-attest, and judge-attest switches.
-- Timeout-split / prover self-rejection knobs — validator-side usefulness questioned in audit.
+- Timeout-split / prover self-rejection knobs — documented uppercase env names remain; undocumented lowercase
+  env aliases were removed. Timeout-split stays validator policy; prover minimums stay miner-only retry policy.
 
 ### 13.7 Tests (coverage imbalance)
 

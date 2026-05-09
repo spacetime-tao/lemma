@@ -385,10 +385,7 @@ class LemmaSettings(BaseSettings):
         default=0,
         ge=0,
         le=64,
-        validation_alias=AliasChoices(
-            "LEMMA_PROVER_MIN_REASONING_STEPS",
-            "prover_min_reasoning_steps",
-        ),
+        validation_alias="LEMMA_PROVER_MIN_REASONING_STEPS",
         description=(
             "If > 0, reject prover JSON unless reasoning_steps has at least this many steps after parsing. "
             "0 = no minimum (subnet default)."
@@ -398,10 +395,7 @@ class LemmaSettings(BaseSettings):
         default=0,
         ge=0,
         le=500_000,
-        validation_alias=AliasChoices(
-            "LEMMA_PROVER_MIN_REASONING_TOTAL_CHARS",
-            "prover_min_reasoning_total_chars",
-        ),
+        validation_alias="LEMMA_PROVER_MIN_REASONING_TOTAL_CHARS",
         description=(
             "If > 0, reject unless the sum of trimmed reasoning step text lengths meets this minimum. 0 = off."
         ),
@@ -410,10 +404,7 @@ class LemmaSettings(BaseSettings):
         default=0,
         ge=0,
         le=500_000,
-        validation_alias=AliasChoices(
-            "LEMMA_PROVER_MIN_PROOF_SCRIPT_CHARS",
-            "prover_min_proof_script_chars",
-        ),
+        validation_alias="LEMMA_PROVER_MIN_PROOF_SCRIPT_CHARS",
         description=(
             "If > 0, reject JSON unless proof_script (full Submission.lean string) has at least this many "
             "characters after strip. 0 = off (default). Use to force longer formal proofs on your miner."
@@ -477,10 +468,7 @@ class LemmaSettings(BaseSettings):
     )
     timeout_scale_by_split: bool = Field(
         default=False,
-        validation_alias=AliasChoices(
-            "LEMMA_TIMEOUT_SCALE_BY_SPLIT",
-            "timeout_scale_by_split",
-        ),
+        validation_alias="LEMMA_TIMEOUT_SCALE_BY_SPLIT",
         description=(
             "If true, multiply forward HTTP wait and LEAN_VERIFY_TIMEOUT_S by easy/medium/hard multipliers."
         ),
@@ -489,28 +477,19 @@ class LemmaSettings(BaseSettings):
         default=1.0,
         ge=0.1,
         le=50.0,
-        validation_alias=AliasChoices(
-            "LEMMA_TIMEOUT_SPLIT_EASY_MULT",
-            "timeout_split_easy_mult",
-        ),
+        validation_alias="LEMMA_TIMEOUT_SPLIT_EASY_MULT",
     )
     timeout_split_medium_mult: float = Field(
         default=1.5,
         ge=0.1,
         le=50.0,
-        validation_alias=AliasChoices(
-            "LEMMA_TIMEOUT_SPLIT_MEDIUM_MULT",
-            "timeout_split_medium_mult",
-        ),
+        validation_alias="LEMMA_TIMEOUT_SPLIT_MEDIUM_MULT",
     )
     timeout_split_hard_mult: float = Field(
         default=2.0,
         ge=0.1,
         le=50.0,
-        validation_alias=AliasChoices(
-            "LEMMA_TIMEOUT_SPLIT_HARD_MULT",
-            "timeout_split_hard_mult",
-        ),
+        validation_alias="LEMMA_TIMEOUT_SPLIT_HARD_MULT",
     )
     lemma_lean_verify_max_concurrent: int = Field(
         default=4,
