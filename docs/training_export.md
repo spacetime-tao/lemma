@@ -16,6 +16,14 @@ LEMMA_TRAINING_EXPORT_JSONL=/var/lib/lemma/train.jsonl
 LEMMA_TRAINING_EXPORT_PROFILE=reasoning_only
 ```
 
+Analyze a local `full` export with proof metrics:
+
+```bash
+uv run python -m tools.proof_metrics_analyze /var/lib/lemma/train.jsonl
+```
+
+If the path is omitted, the tool reads `LEMMA_TRAINING_EXPORT_JSONL`.
+
 ## Gaming and leakage (why `reasoning_only` exists)
 
 Exports are **not** a neutral “public good.” Depending on fields, they can teach models to:
@@ -43,4 +51,5 @@ Exports are **not** a neutral “public good.” Depending on fields, they can t
 ## References
 
 - Implementation: [`lemma/validator/training_export.py`](../lemma/validator/training_export.py), epoch hook in [`lemma/validator/epoch.py`](../lemma/validator/epoch.py).
+- Offline proof-metrics analyzer: [`tools/proof_metrics_analyze.py`](../tools/proof_metrics_analyze.py).
 - Backlog context: [incentive-roadmap.md](incentive-roadmap.md) (training export item).

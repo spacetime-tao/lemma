@@ -101,6 +101,10 @@ When `LEMMA_TRAINING_EXPORT_JSONL` is set, the `full` export profile includes
 `proof_metrics` for successfully judged rows. `reasoning_only` intentionally
 omits it because the field is proof-derived research data.
 
+Use `uv run python -m tools.proof_metrics_analyze <train.jsonl>` to compare
+exported proof metrics against proof text length, current `proof_intrinsic_score`,
+and judge composite before considering any scoring change.
+
 Signals to avoid as scoring inputs:
 
 - Wall-clock build time, because it depends on hardware, cache warmth, and Docker
