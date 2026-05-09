@@ -18,7 +18,7 @@ What **28 builders** means is **not** “there are only 28 problems total.” It
 
 You should **not** picture a short list to memorize. You picture **many instances** flowing from **a small cookbook**. The **topic** labels (algebra, analysis, …) are mainly for logging—they are not separate rule sets in Lean.
 
-**Honest limit:** these are **variations inside fixed templates**, not “every possible theorem in mathematics.” Over time, miners may still recognize **which shapes repeat**—that is normal. **More diversity** comes from adding builders, frozen/catalog problems, or separate bounty lanes—whatever governance turns on.
+**Honest limit:** these are **variations inside fixed templates**, not “every possible theorem in mathematics.” Over time, miners may still recognize **which shapes repeat**—that is normal. **More diversity** comes from adding builders, frozen/catalog problems, or separate bounty lanes—whatever governance turns on. See [problem-supply-policy.md](problem-supply-policy.md) for the explicit predictability boundary.
 
 **Future directions** (not all implemented): more builders or splits; imports from formalized contest corpora (e.g. miniF2F-style); harder multi-lemma templates; curated `sorry` bounties alongside generated traffic—governance decides what is live.
 
@@ -46,4 +46,4 @@ Each epoch is independent: pass Lean → judge → Pareto weights for that round
 | Lean fails | No weight |
 | Lean OK + judged | Enters Pareto pool |
 
-Registry changes: [governance.md](governance.md). Frozen mode: [catalog-sources.md](catalog-sources.md).
+Registry changes: [governance.md](governance.md). Predictability policy: [problem-supply-policy.md](problem-supply-policy.md). Frozen mode: [catalog-sources.md](catalog-sources.md).

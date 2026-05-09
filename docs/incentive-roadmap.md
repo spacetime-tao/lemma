@@ -34,7 +34,7 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 
 ### Problem supply & predictability
 
-- [x] **Template / seed predictability** — Default: **SHA256-mix** chain seed before template `random.Random` (`expand_seed_for_problem_rng` in `lemma/problems/generated.py`); ids stay `gen/<seed>`. **Public** seed→theorem map remains deterministic (precompute still possible). Rollback: **`LEMMA_GENERATED_LEGACY_PLAIN_RNG=1`**. See [catalog-sources.md](catalog-sources.md).
+- [x] **Template / seed predictability** — Default: **SHA256-mix** chain seed before template `random.Random` (`expand_seed_for_problem_rng` in `lemma/problems/generated.py`); ids stay `gen/<seed>`. **Public** seed→theorem map remains deterministic (precompute still possible). Rollback: **`LEMMA_GENERATED_LEGACY_PLAIN_RNG=1`**. Boundary and builder promotion checklist: [problem-supply-policy.md](problem-supply-policy.md).
 - [x] **`LEMMA_PROBLEM_SOURCE=frozen` (miniF2F)** — Fail-closed unless **`LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`** (`get_problem_source`, direct frozen-id `resolve_problem`, `validator-check`).
 - [x] **Toolchain / image pins** — Lean and Mathlib pins remain release inputs; local `lemma/lean-sandbox:latest` is dev-only. Production operators publish an immutable sandbox ref and set `LEAN_SANDBOX_IMAGE` consistently. See [toolchain-image-policy.md](toolchain-image-policy.md).
 
@@ -79,6 +79,7 @@ Track in issues or refactors as capacity allows: consolidate CLI dry-run paths, 
 - Non-overlapping cleanup and repo-split plan: [workplan.md](workplan.md)
 - Full external-audit remediation checklist (prioritized): [audit-remediation.md](audit-remediation.md)
 - Toolchain and image pinning: [toolchain-image-policy.md](toolchain-image-policy.md)
+- Problem supply policy: [problem-supply-policy.md](problem-supply-policy.md)
 - Implementation map: [incentive_migration.md](incentive_migration.md)
 - Proof intrinsic scoring decision: [proof-intrinsic-decision.md](proof-intrinsic-decision.md)
 - Credibility exponent decision: [credibility-exponent-decision.md](credibility-exponent-decision.md)

@@ -31,6 +31,7 @@ These stay in `spacetime-tao/lemma` because they affect scoring agreement.
 5. Expand the validator scoring/profile pin to cover subnet-critical settings beyond the judge prompt/model. **Done.**
 6. Make FakeJudge impossible in live validator mode unless an explicit local-only flag is active. **Done.**
 7. Document production Lean/toolchain image pinning so local `latest` stays a dev-only convenience. **Done:** [toolchain-image-policy.md](toolchain-image-policy.md).
+8. Document the public deterministic problem-supply boundary and builder promotion checklist. **Done:** [problem-supply-policy.md](problem-supply-policy.md).
 
 ### 3. Scoring Simplification
 
