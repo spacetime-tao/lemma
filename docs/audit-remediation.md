@@ -48,7 +48,7 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 3. **Expand `judge_profile_sha256`** (or sibling hash) to cover subnet-critical knobs currently outside the pin (~18 fields in Round 3). **Done.**
 4. **Fail closed** when `computed_body_hash` missing — remove fail-open in `synapse_miner_response_integrity_ok`; update/remove tests that codify bypass. **Done.**
 5. **Per-validator salt** in attest spot-verify selection hash (reduces predictable skip + UID grinding). **Done/partial:** salt shipped; residual UID-grinding economics remain design-level.
-6. **Sybil / Pareto:** move beyond coldkey dedup toward mechanism aligned with Affine-style winners-take-all-per-subset (needs design). **Bounded next step:** [sybil_economics.md](sybil_economics.md) now requires a replay/economics decision gate before reward-code changes.
+6. **Sybil / Pareto:** move beyond coldkey dedup toward mechanism aligned with Affine-style winners-take-all-per-subset (needs design). **Bounded next step:** [sybil_economics.md](sybil_economics.md) now requires a replay/economics decision gate before reward-code changes; replay tooling exists, but real export data + governance are still required.
 7. Drop **`LEMMA_PROBLEM_SOURCE=frozen`** / bundled JSON if policy allows (large policy decision). **Partial:** direct frozen use is dev-gated.
 8. **Aggressively cut CLI / wizard / `main.py` surface** (Part 2 scale stats). **Mostly done:** friendly UX moved to `lemma-cli`, core keeps shims/minimal commands.
 9. Move **`lemma/catalog/`** dev tooling to `tools/` (audit flagged twice). **Done.**
@@ -75,7 +75,7 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 |----|--------|----------|----------|------------------------|
 | **O1** | Rank mixes kernel-verifiable proof with **LLM judge** on miner prose; lowering proof weight to default `w=0.10` reduces text-heuristic padding risk but leaves judge dominance explicit | R3 §2, §11 | P4 / product | **Decision boundary documented:** judge is bootstrap by default unless governance chooses permanent explanation-quality incentives; next scoring change must choose permanent judge, capped/bootstrap judge, or judge-free mode using the decision-record template ([judge-incentive-decision.md](judge-incentive-decision.md)). |
 | **O2** | `primary_design_axis` / one-sentence rule in KB violated by current honest description | R3 §2.3 | P4 | **Done/bounded:** current objective pinned as Lean-valid theorem proving; judged reasoning documented as a bootstrap ranking layer, not the default identity of the subnet ([objective-decision.md](objective-decision.md)). |
-| **O3** | Pareto + coldkey dedup + identical dedup still allow sybil farming per R3 math | R3 §2.2, §8, §12 | P2/P4 | **Needs-design:** economic modeling; not fixable by parser alone. [sybil_economics.md](sybil_economics.md) records the minimum replay/economics gate; `tools/sybil_replay_analyze.py` provides the first offline replay helper. |
+| **O3** | Pareto + coldkey dedup + identical dedup still allow sybil farming per R3 math | R3 §2.2, §8, §12 | P2/P4 | **Needs-design:** economic modeling; not fixable by parser alone. [sybil_economics.md](sybil_economics.md) records the minimum replay/economics gate; `tools/sybil_replay_analyze.py` provides offline replay summaries from private full exports. |
 
 ---
 
@@ -322,7 +322,7 @@ Abbreviated; see `knowledge/` for full YAML. Status reflects the current remedia
 | EMA for stability | `validator.rules.yaml` | Honored |
 | Credibility tracking tuning | `incentive.primitives.yaml` | Wired; default exponent divergence documented in `docs/credibility-exponent-decision.md` |
 | Secret eval sets | `validator.rules.yaml` | Still gated; not in judge pin |
-| N miners profitability | `sybil.realities.yaml` | Still violated; decision gate and offline replay helper added before reward-code changes |
+| N miners profitability | `sybil.realities.yaml` | Still violated; decision gate and offline replay helper added, real replay data/governance still pending before reward-code changes |
 | Coldkey dedup ≠ sybil resistance | `sybil.realities.yaml` | Still violated by design; documented as anti-clutter only |
 | Validators not individually trusted | `trust.assumptions.yaml` | Softer-trust model documented for Chutes + voluntary HTTP peer checks |
 | Synapse deprecated | `subnet.invariants.yaml` | Still violated |
