@@ -49,7 +49,7 @@ To see what validators would sample, use **`lemma status`** / **`lemma problems`
 ## Validator pipeline (each round)
 
 1. Query miners (`proof_script` + reasoning).
-2. Docker sandbox: `lake build`, axiom policy, optional comparator (local compute).
+2. Docker sandbox: `lake build`, axiom policy, optional experimental comparator hook.
 3. If Lean passes: judge HTTP (`JUDGE_PROVIDER`, `OPENAI_*`).
 
 Miners use a separate prover API to generate proofs.
@@ -262,4 +262,4 @@ One sampled problem per validator round. The forward HTTP wait (block-derived) b
 
 ## Comparator / lean-eval
 
-Core: `lake build` + axiom allowlist + cheat scan. Optional: [comparator.md](comparator.md); stricter isolation may follow [lean-eval](https://github.com/leanprover/lean-eval).
+Core: `lake build` + axiom allowlist + cheat scan. Optional experimental hook: [comparator.md](comparator.md); stricter isolation may follow [lean-eval](https://github.com/leanprover/lean-eval).

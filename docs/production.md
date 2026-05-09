@@ -40,7 +40,7 @@ Document `EMPTY_EPOCH_WEIGHTS_POLICY`, `SET_WEIGHTS_*`, block-derived forward wa
 
 ## Comparator
 
-Optional post-verify hook ([comparator.md](comparator.md)).
+Leave the experimental comparator hook off unless the operator publishes an exact shared process-env policy ([comparator.md](comparator.md)).
 
 ## Remote Lean verify worker (`lemma lean-worker`)
 
