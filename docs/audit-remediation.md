@@ -206,11 +206,11 @@ CLI alone cited as **43 %** of `lemma/` and **83 %** of combined runtime core si
 - **`interactive_venv_shell.py`** (~176 LoC) vs one-line `source .venv`; removed in the first CLI extraction trim.
 - **`_looks_like_shell_step`** frozenset — partial shell interception.
 - **`leaderboard_cmd`** wraps `btcli`; **`miner_menu` / `validator_menu`** duplicated subcommands and were removed in the first CLI extraction trim.
-- **`docs/` opener** + `_DOCS_BY_SLUG` hardcoded tuple.
+- **`docs/` opener** + `_DOCS_BY_SLUG` hardcoded tuple moved to `lemma-cli`; core keeps a redirect only.
 - **`configure` ×8** near-identical subcommands moved to `lemma-cli`; core keeps redirect shims only.
 - **`try_prover.py`** (~677 LoC) vs epoch.
 - **`start_screen.py`** (~569 LoC) single mega-menu; removed in the first CLI extraction trim.
-- **`glossary.py`** duplicates help + docs.
+- **`glossary.py`** moved to `lemma-cli`; core keeps a redirect only.
 
 Extraction note: `lemma-cli` now owns the friendly `start` surface; the core repo keeps only a small compatibility hint and explicit miner/validator subcommands.
 
