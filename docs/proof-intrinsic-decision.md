@@ -99,9 +99,9 @@ cost to make validator operation worse.
 
 The synthetic fixture at `tests/fixtures/proof_metrics_validation.jsonl` exists
 only to keep the analyzer honest around this gate: successful padding-like rows
-should be visible as outliers, while failed probe rows should be counted but not
-used as calibration evidence. It is not a substitute for real validator export
-data.
+should be visible as outliers or low-judge / high-metric candidates, while failed
+probe rows should be counted but not used as calibration evidence. It is not a
+substitute for real validator export data.
 
 Any accepted scoring change must update tests, operator docs, migration notes,
 and the validator scoring/profile pin. It must not be hidden inside cleanup.
@@ -138,7 +138,9 @@ Use `uv run python -m tools.proof_metrics_analyze <train.jsonl>` to compare
 exported proof metrics against proof text length, current `proof_intrinsic_score`,
 and judge composite before considering any scoring change. The analyzer counts
 failed proof-metric probes separately and excludes them from correlations and
-padding-outlier lists; failed probe output is not proof-term evidence.
+diagnostic candidate lists; failed probe output is not proof-term evidence. It
+also reports low-judge / high-metric candidates so term-size inflation, such as
+string-padding, stays visible even when the Lean probe rises with the padding.
 
 ## Credibility Boundary
 
