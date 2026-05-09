@@ -1,6 +1,6 @@
 # Getting started
 
-End-to-end: **uv** + repo → **keys** → **`lemma setup`** → **miner or validator**. Sections below are copy-paste commands (swap wallet names and paths if yours differ).
+End-to-end: **uv** + repo → **keys** → **`lemma-cli setup`** → **miner or validator**. Sections below are copy-paste commands (swap wallet names and paths if yours differ).
 
 - Run `lemma` alone for core command help (same as `lemma --help`). The friendly operator screen lives in the separate [lemma-cli](https://github.com/spacetime-tao/lemma-cli) repo.
 - Inference defaults: [Chutes](https://chutes.ai) OpenAI-compatible `https://llm.chutes.ai/v1` (see `.env.example`). Other OpenAI-compatible stacks use the same env vars.
@@ -9,7 +9,7 @@ End-to-end: **uv** + repo → **keys** → **`lemma setup`** → **miner or vali
 
 ## Paths at a glance
 
-**Miner (most common first path):** `uv sync` → keys (`btcli`) → `lemma setup` → fund wallet → `btcli subnet register --netuid 467 --network test …` → `lemma miner dry-run` (or `lemma-cli miner-dry`) → **`lemma rehearsal`** (optional: live theorem → prover → Lean → judge preview) → open `AXON_PORT` → `lemma miner start`. Details: [miner.md](miner.md).
+**Miner (most common first path):** `uv sync` → keys (`btcli`) → `lemma-cli setup` → fund wallet → `btcli subnet register --netuid 467 --network test …` → `lemma miner dry-run` (or `lemma-cli miner-dry`) → **`lemma rehearsal`** (optional: live theorem → prover → Lean → judge preview) → open `AXON_PORT` → `lemma miner start`. Details: [miner.md](miner.md).
 
 **Validator:** same env/keys/setup as above, then **`bash scripts/prebuild_lean_image.sh`** (first build is large) → **`lemma rehearsal`** (recommended preview) → `lemma validator-check` → `lemma validator start`. Prefer explicit `lemma validator start` / `lemma validator dry-run` over ad-hoc Python entrypoints. Details: [validator.md](validator.md).
 
@@ -44,7 +44,7 @@ echo 'alias lemma-run='"'"'/ABS/PATH/TO/lemma/scripts/lemma-run'"'"'' >> ~/.zshr
 
 ## Keys (Bittensor CLI: `btcli`)
 
-Names you will enter in `lemma setup`. Keys live under `~/.bittensor/wallets/`. Commands below use the **`btcli`** executable from **`bittensor-cli`** (see above).
+Names you will enter in `lemma-cli setup`. Keys live under `~/.bittensor/wallets/`. Commands below use the **`btcli`** executable from **`bittensor-cli`** (see above).
 
 ```bash
 ./scripts/lemma-run btcli wallet new_coldkey --wallet.name my_wallet --n_words 12
@@ -54,15 +54,15 @@ Names you will enter in `lemma setup`. Keys live under `~/.bittensor/wallets/`. 
 
 Registration and stake: [Bittensor CLI](https://docs.learnbittensor.org/).
 
-## Configure (`lemma setup`)
+## Configure (`lemma-cli setup`)
 
-**Chain:** the wizard only sets **Bittensor testnet** and writes **`NETUID=467`** (no separate netuid question). Then: wallet names, API keys, axon port, judge, and (for validators) Lean image. **Finney (mainnet) is TBD** for `lemma configure chain` — hand-edit `.env` if Lemma later registers on mainnet; see comments in `.env.example`. Seeds from `.env.example` if `.env` is missing.
+**Chain:** the wizard only sets **Bittensor testnet** and writes **`NETUID=467`** (no separate netuid question). Then: wallet names, API keys, axon port, judge, and (for validators) Lean image. **Finney (mainnet) is TBD** for `lemma-cli configure chain` — hand-edit `.env` if Lemma later registers on mainnet; see comments in `.env.example`. Seeds from `.env.example` if `.env` is missing.
 
 ```bash
-./scripts/lemma-run lemma setup
+lemma-cli setup
 ```
 
-Incremental: `lemma configure chain`, `configure prover`, `configure judge`, `configure axon`, `configure lean-image`.
+Incremental: `lemma-cli configure chain`, `configure prover`, `configure judge`, `configure axon`, `configure lean-image`.
 
 ## Register on-chain
 
@@ -101,7 +101,7 @@ Parity: `./scripts/lemma-run lemma meta` — [governance.md](governance.md).
 - `LEMMA_PROBLEM_SOURCE=generated` (default): block height seeds templates.
 - `frozen`: catalog JSON — requires **`LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`** (public eval set); see [catalog-sources.md](catalog-sources.md).
 
-More tuning: `.env.example` and `lemma configure` where possible.
+More tuning: `.env.example` and `lemma-cli configure` where possible.
 
 ## Checklist
 
@@ -109,7 +109,7 @@ More tuning: `.env.example` and `lemma configure` where possible.
 | ---- | ---------------- |
 | Deps | `uv sync --extra dev` |
 | Keys | `btcli` coldkey + hotkey |
-| Env | `lemma setup` |
+| Env | `lemma-cli setup` |
 | Chain | Fund + `btcli subnet register` |
 | Miner | `lemma miner start` |
 | Validator | `prebuild_lean_image.sh`, `lemma validator start` |

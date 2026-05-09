@@ -30,7 +30,7 @@ def echo_judge_http_failure_hints(exc: BaseException, settings: LemmaSettings) -
                 "Hint: Judge HTTP 401 — the gateway rejected the judge key in JUDGE_OPENAI_API_KEY (preferred) "
                 "or legacy OPENAI_API_KEY (wrong, expired, or for a different host). For Chutes "
                 "(`OPENAI_BASE_URL=https://llm.chutes.ai/v1`), use a Chutes inference token, not a Google key. "
-                "Run `lemma configure judge` or edit `.env`. Judge keys are separate from PROVER_OPENAI_API_KEY "
+                "Run `lemma-cli configure judge` or edit `.env`. Judge keys are separate from PROVER_OPENAI_API_KEY "
                 "and from "
                 "LEMMA_LEAN_VERIFY_REMOTE_BEARER (Lean worker only).",
                 dim=True,
@@ -73,7 +73,7 @@ def echo_judge_http_failure_hints(exc: BaseException, settings: LemmaSettings) -
         click.echo(
             stylize(
                 f"Hint: Judge stack is JUDGE_PROVIDER={prov!r} OPENAI_MODEL={model!r} @ {base!r} — see "
-                "`lemma doctor` and `lemma configure judge`.",
+                "`lemma doctor` and `lemma-cli configure judge`.",
                 dim=True,
             ),
             err=True,

@@ -47,13 +47,13 @@ class ValidatorService:
         if not (s.judge_profile_expected_sha256 or "").strip():
             raise SystemExit(
                 "lemma validator requires JUDGE_PROFILE_SHA256_EXPECTED in `.env` "
-                "(run `lemma configure subnet-pins` or copy from `lemma meta --raw`)."
+                "(run `lemma-cli configure subnet-pins` or copy from `lemma meta --raw`)."
             )
         if (s.problem_source or "").strip().lower() == "generated":
             if not (s.generated_registry_expected_sha256 or "").strip():
                 raise SystemExit(
                     "lemma validator requires LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED when "
-                    "LEMMA_PROBLEM_SOURCE=generated (run `lemma configure subnet-pins`)."
+                    "LEMMA_PROBLEM_SOURCE=generated (run `lemma-cli configure subnet-pins`)."
                 )
 
         expected_raw = (s.judge_profile_expected_sha256 or "").strip()
@@ -63,7 +63,7 @@ class ValidatorService:
             raise SystemExit(
                 f"judge profile mismatch: expected JUDGE_PROFILE_SHA256_EXPECTED={expected_raw!r} "
                 f"but current config hashes to {actual_judge!r}.\n"
-                "Align judge env with the subnet, then run `lemma configure subnet-pins` "
+                "Align judge env with the subnet, then run `lemma-cli configure subnet-pins` "
                 "(or set the pin to match `lemma meta` / `lemma meta --raw` manually)."
             )
         if (s.problem_source or "").strip().lower() == "generated":
@@ -74,7 +74,7 @@ class ValidatorService:
                 raise SystemExit(
                     f"generated registry mismatch: expected LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED={gre!r} "
                     f"but current code hashes to {gr_actual!r}.\n"
-                    "Use the same lemma commit as the subnet, then `lemma configure subnet-pins` "
+                    "Use the same lemma commit as the subnet, then `lemma-cli configure subnet-pins` "
                     "(or update the registry pin from `lemma meta --raw`)."
                 )
         if s.lemma_judge_profile_attest_enabled and s.lemma_judge_profile_attest_allow_skip:

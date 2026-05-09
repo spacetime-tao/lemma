@@ -97,19 +97,22 @@ def run_validator_check(settings: LemmaSettings) -> int:
     warn: list[str] = []
 
     click.echo(stylize("Validator pre-flight", fg="cyan", bold=True))
-    click.echo(stylize("(run before `lemma validator` — not the same as `lemma validator-dry`)\n", dim=True), nl=False)
+    click.echo(
+        stylize("(run before `lemma validator start` — not the same as `lemma validator-dry`)\n", dim=True),
+        nl=False,
+    )
 
     # --- Subnet pin requirements (same gates as ValidatorService) ---
     if not (settings.judge_profile_expected_sha256 or "").strip():
         fatal.append(
             "lemma validator requires JUDGE_PROFILE_SHA256_EXPECTED in `.env` "
-            "(run `lemma configure subnet-pins` or copy from `lemma meta --raw`).",
+            "(run `lemma-cli configure subnet-pins` or copy from `lemma meta --raw`).",
         )
     if (settings.problem_source or "").strip().lower() == "generated":
         if not (settings.generated_registry_expected_sha256 or "").strip():
             fatal.append(
                 "lemma validator requires LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED when "
-                "LEMMA_PROBLEM_SOURCE=generated (run `lemma configure subnet-pins`).",
+                "LEMMA_PROBLEM_SOURCE=generated (run `lemma-cli configure subnet-pins`).",
             )
     if (settings.problem_source or "").strip().lower() == "frozen":
         if not settings.lemma_dev_allow_frozen_problem_source:
@@ -199,7 +202,7 @@ def run_validator_check(settings: LemmaSettings) -> int:
         if actual_j != exp_j:
             fatal.append(
                 f"JUDGE_PROFILE_SHA256_EXPECTED mismatch: env expects {exp_j[:16]}… but live `lemma meta` is "
-                f"{actual_j[:16]}… — align judge env or refresh `lemma configure subnet-pins`.",
+                f"{actual_j[:16]}… — align judge env or refresh `lemma-cli configure subnet-pins`.",
             )
         else:
             click.echo(stylize("OK judge pin   matches live judge_profile_sha256", fg="green"))

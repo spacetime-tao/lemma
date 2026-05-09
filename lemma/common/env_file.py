@@ -37,7 +37,7 @@ def merge_dotenv(path: Path, updates: dict[str, str]) -> None:
 
     if lines_out and lines_out[-1].strip():
         lines_out.append("")
-    lines_out.append("# lemma configure")
+    lines_out.append("# lemma-cli configure")
     for k, v in updates.items():
         lines_out.append(f"{k}={_quote_value(v)}")
     path.write_text("\n".join(lines_out) + "\n", encoding="utf-8")

@@ -1,10 +1,10 @@
 # Miner
 
-Walkthrough: [getting-started.md](getting-started.md) — **`btcli`** (Bittensor CLI), `lemma setup`, `lemma-run`. Prefer prompts over hand-editing `.env` (`lemma configure chain`, `configure prover`, `configure axon`).
+Walkthrough: [getting-started.md](getting-started.md) — **`btcli`** (Bittensor CLI), `lemma-cli setup`, `lemma-run`. Prefer prompts over hand-editing `.env` (`lemma-cli configure chain`, `configure prover`, `configure axon`).
 
-**Short checklist:** `lemma setup` → coldkey funded → `btcli subnet register` on the same network/netuid as `.env` → `lemma miner dry-run` → **`lemma rehearsal`** (see prover + Lean + judge on the live theorem) → fix axon IP/port if needed → `lemma miner start`. Run `lemma` for core command help; run `lemma-cli` for the friendly operator screen (**miner-dry** then core miner commands).
+**Short checklist:** `lemma-cli setup` → coldkey funded → `btcli subnet register` on the same network/netuid as `.env` → `lemma miner dry-run` → **`lemma rehearsal`** (see prover + Lean + judge on the live theorem) → fix axon IP/port if needed → `lemma miner start`. Run `lemma` for core command help; run `lemma-cli` for the friendly operator screen (**miner-dry** then core miner commands).
 
-### Prover LLM (`lemma configure prover`)
+### Prover LLM (`lemma-cli configure prover`)
 
 Choose **which API** runs first (numbered menu), then follow prompts. **Chutes**, **Gemini** (preset tiers + custom id), **Anthropic**, **OpenAI**, or **custom** OpenAI-compatible URL — URLs are preset for all but **custom**. In-terminal blurbs show example **`PROVER_MODEL`** strings (catalog ids on Chutes, Gemini names, Claude ids, OpenAI model names; custom depends on the upstream host). Details and env vars: [models.md](models.md).
 

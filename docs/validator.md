@@ -1,6 +1,6 @@
 # Validator
 
-Walkthrough: [getting-started.md](getting-started.md) — `lemma setup` (validator or both) sets judge and `LEAN_SANDBOX_IMAGE` via prompts.
+Walkthrough: [getting-started.md](getting-started.md) — `lemma-cli setup` (validator or both) sets judge and `LEAN_SANDBOX_IMAGE` via prompts.
 
 **Short checklist:** `bash scripts/prebuild_lean_image.sh` → **`lemma rehearsal`** (prover + Lean + judge preview) → `lemma validator-check` until READY → `lemma validator start` (or **validator-check** from `lemma-cli`). Same keys/chain setup as a miner if you run both roles.
 
@@ -103,7 +103,7 @@ For a cheap local loop without any inference HTTP, use **`lemma validator dry-ru
 
 ## Judge profile peer attest (optional)
 
-Some subnets require validators to **agree with peers on the same validator scoring profile**, not only match **`JUDGE_PROFILE_SHA256_EXPECTED`** locally. When **`LEMMA_JUDGE_PROFILE_ATTEST_ENABLED=1`**, startup (and **`lemma validator-check`**) HTTP GETs each URL in **`LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS`** and checks the body matches this process’s **`judge_profile_sha256`** (same fingerprint as **`lemma meta`** / **`lemma configure subnet-pins`**).
+Some subnets require validators to **agree with peers on the same validator scoring profile**, not only match **`JUDGE_PROFILE_SHA256_EXPECTED`** locally. When **`LEMMA_JUDGE_PROFILE_ATTEST_ENABLED=1`**, startup (and **`lemma validator-check`**) HTTP GETs each URL in **`LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS`** and checks the body matches this process’s **`judge_profile_sha256`** (same fingerprint as **`lemma meta`** / **`lemma-cli configure subnet-pins`**).
 
 | Env | Role |
 | --- | --- |
