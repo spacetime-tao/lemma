@@ -149,7 +149,7 @@ class LLMProver:
         async def _anthropic_call() -> str:
             AsyncAnthropic = anthropic_async_client_cls()
             client = AsyncAnthropic(api_key=key, timeout=t_out)
-            # Many Claude models cap output at 8192; avoid provider errors if PROVER_MAX_TOKENS is higher.
+            # Many Claude models cap output at 8192; avoid provider errors if LEMMA_PROVER_MAX_TOKENS is higher.
             max_out = min(int(self._settings.prover_max_tokens), 8192)
             msg = await client.messages.create(
                 model=model,

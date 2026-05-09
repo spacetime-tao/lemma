@@ -141,6 +141,29 @@ def test_documented_timeout_and_prover_policy_env_names_work(
     assert s.prover_min_proof_script_chars == 500
 
 
+def test_undocumented_prover_policy_aliases_are_ignored(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    monkeypatch.delenv("LEMMA_PREFER_PROCESS_ENV", raising=False)
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "\n".join(
+            [
+                "PROVER_MAX_TOKENS=4096",
+                "PROVER_LLM_RETRY_ATTEMPTS=9",
+                "PROVER_TEMPERATURE=1.7",
+            ],
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    s = LemmaSettings(_env_file=str(env_file))
+    assert s.prover_max_tokens == 32_768
+    assert s.prover_llm_retry_attempts == 4
+    assert s.prover_temperature == 0.3
+
+
 def test_documented_miner_observability_env_names_work(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     monkeypatch.delenv("LEMMA_PREFER_PROCESS_ENV", raising=False)
     env_file = tmp_path / ".env"

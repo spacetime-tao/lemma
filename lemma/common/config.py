@@ -24,6 +24,7 @@ class LemmaSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
+        case_sensitive=True,
         extra="ignore",
         populate_by_name=True,
     )
@@ -346,11 +347,7 @@ class LemmaSettings(BaseSettings):
         default=32_768,
         ge=512,
         le=131_072,
-        validation_alias=AliasChoices(
-            "LEMMA_PROVER_MAX_TOKENS",
-            "PROVER_MAX_TOKENS",
-            "prover_max_tokens",
-        ),
+        validation_alias="LEMMA_PROVER_MAX_TOKENS",
         description=(
             "Max completion tokens for one prover call (reasoning JSON + Submission.lean). "
             "OpenAI-compatible: sent as max_tokens. Anthropic: capped at 8192 (API limit for many models)."
@@ -360,11 +357,7 @@ class LemmaSettings(BaseSettings):
         default=4,
         ge=1,
         le=32,
-        validation_alias=AliasChoices(
-            "LEMMA_PROVER_LLM_RETRY_ATTEMPTS",
-            "PROVER_LLM_RETRY_ATTEMPTS",
-            "prover_llm_retry_attempts",
-        ),
+        validation_alias="LEMMA_PROVER_LLM_RETRY_ATTEMPTS",
         description=(
             "How many times to call the prover LLM on transient errors (429, timeouts, 5xx) per forward. "
             "Backoff between tries grows (capped); raising this helps saturated gateways but uses more wall time."
@@ -374,11 +367,7 @@ class LemmaSettings(BaseSettings):
         default=0.3,
         ge=0.0,
         le=2.0,
-        validation_alias=AliasChoices(
-            "LEMMA_PROVER_TEMPERATURE",
-            "PROVER_TEMPERATURE",
-            "prover_temperature",
-        ),
+        validation_alias="LEMMA_PROVER_TEMPERATURE",
         description="Sampling temperature for prover completions (OpenAI-compatible and Anthropic prover paths).",
     )
     prover_min_reasoning_steps: int = Field(
