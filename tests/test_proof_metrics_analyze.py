@@ -7,6 +7,7 @@ from tools.proof_metrics_analyze import (
     load_report,
     low_judge_high_metric_candidates,
     main,
+    metric_gate,
     padding_outliers,
     render_report,
 )
@@ -66,6 +67,9 @@ def test_load_report_summarizes_metric_rows(tmp_path) -> None:
     assert "rows_with_proof_metrics=3" in rendered
     assert "rows_with_successful_proof_metrics=2" in rendered
     assert "rows_with_failed_proof_metrics=1" in rendered
+    assert "gate_verdict=research_only" in rendered
+    assert "failed_proof_metric_probes" in rendered
+    assert "padding_outliers" in rendered
     assert "corr(metric_bytes, proof_len_chars)=" in rendered
     assert "padding_outliers_by_proof_len_minus_metric_bytes:" in rendered
     assert "low_judge_high_metric_candidates:" in rendered
@@ -96,6 +100,8 @@ def test_render_report_handles_only_failed_probe_rows(tmp_path) -> None:
     assert "rows_with_proof_metrics=1" in rendered
     assert "rows_with_successful_proof_metrics=0" in rendered
     assert "rows_with_failed_proof_metrics=1" in rendered
+    assert "gate_verdict=insufficient_data" in rendered
+    assert "gate_reasons=no_successful_proof_metrics" in rendered
     assert "No successful proof_metrics found." in rendered
     assert padding_outliers(load_report(path).metric_rows, limit=1) == []
 
@@ -121,7 +127,10 @@ def test_main_uses_env_path(tmp_path, monkeypatch, capsys) -> None:
     monkeypatch.setenv("LEMMA_TRAINING_EXPORT_JSONL", str(path))
 
     assert main(["--outliers", "0"]) == 0
-    assert "rows_with_proof_metrics=1" in capsys.readouterr().out
+    rendered = capsys.readouterr().out
+    assert "rows_with_proof_metrics=1" in rendered
+    assert "gate_verdict=manual_review_required" in rendered
+    assert "gate_reasons=none" in rendered
 
 
 def test_validation_fixture_separates_padding_from_failed_probes() -> None:
@@ -134,6 +143,8 @@ def test_validation_fixture_separates_padding_from_failed_probes() -> None:
     rendered = render_report(report, outlier_limit=6)
     assert "rows_with_successful_proof_metrics=6" in rendered
     assert "rows_with_failed_proof_metrics=1" in rendered
+    assert "gate_verdict=research_only" in rendered
+    assert "gate_reasons=failed_proof_metric_probes,padding_outliers,low_judge_high_metric_candidates" in rendered
     assert "theorem=comment-padding" in rendered
     assert "theorem=string-padding" in rendered
     assert "theorem=unused-have-padding" in rendered
@@ -147,5 +158,9 @@ def test_validation_fixture_separates_padding_from_failed_probes() -> None:
     assert "failed-probe-padding" not in outlier_ids
 
     risk_ids = [r.theorem_id for r in low_judge_high_metric_candidates(report.metric_rows, limit=6)]
-    assert risk_ids == ["unused-have-padding", "long-name-padding", "string-padding", "comment-padding"]
+    assert risk_ids == ["unused-have-padding", "long-name-padding", "string-padding"]
     assert "failed-probe-padding" not in risk_ids
+
+    verdict, reasons = metric_gate(report.metric_rows)
+    assert verdict == "research_only"
+    assert reasons == ["failed_proof_metric_probes", "padding_outliers", "low_judge_high_metric_candidates"]

@@ -57,6 +57,7 @@ def render_report(report: MetricsReport, *, outlier_limit: int = 8) -> str:
     rows = report.metric_rows
     ok_rows = [r for r in rows if r.probe_exit_code == 0]
     failed_rows = len(rows) - len(ok_rows)
+    verdict, reasons = metric_gate(rows)
     lines = [
         "Proof metrics export analysis",
         f"rows_total={report.total_rows}",
@@ -64,6 +65,8 @@ def render_report(report: MetricsReport, *, outlier_limit: int = 8) -> str:
         f"rows_with_successful_proof_metrics={len(ok_rows)}",
         f"rows_with_failed_proof_metrics={failed_rows}",
         f"invalid_json_lines={report.invalid_json_lines}",
+        f"gate_verdict={verdict}",
+        "gate_reasons=" + (",".join(reasons) if reasons else "none"),
     ]
     if not rows:
         lines.append("No rows with proof_metrics found.")
@@ -123,12 +126,37 @@ def padding_outliers(rows: list[MetricRow], *, limit: int) -> list[MetricRow]:
 
 
 def low_judge_high_metric_candidates(rows: list[MetricRow], *, limit: int, max_judge: float = 0.5) -> list[MetricRow]:
+    ok_rows = [r for r in rows if r.probe_exit_code == 0]
+    if not ok_rows:
+        return []
+    metric_floor = statistics.median(r.proof_metric_bytes for r in ok_rows)
     candidates = [
-        r for r in rows if r.probe_exit_code == 0 and r.judge_composite is not None and r.judge_composite <= max_judge
+        r
+        for r in ok_rows
+        if r.judge_composite is not None and r.judge_composite <= max_judge and r.proof_metric_bytes >= metric_floor
     ]
     return sorted(candidates, key=lambda r: (r.proof_metric_bytes, r.proof_intrinsic, r.proof_len), reverse=True)[
         :limit
     ]
+
+
+def metric_gate(rows: list[MetricRow]) -> tuple[str, list[str]]:
+    ok_rows = [r for r in rows if r.probe_exit_code == 0]
+    if not rows:
+        return "insufficient_data", ["no_proof_metrics"]
+    if not ok_rows:
+        return "insufficient_data", ["no_successful_proof_metrics"]
+
+    reasons: list[str] = []
+    if len(ok_rows) < len(rows):
+        reasons.append("failed_proof_metric_probes")
+    if padding_outliers(ok_rows, limit=1):
+        reasons.append("padding_outliers")
+    if low_judge_high_metric_candidates(ok_rows, limit=1):
+        reasons.append("low_judge_high_metric_candidates")
+    if reasons:
+        return "research_only", reasons
+    return "manual_review_required", []
 
 
 def main(argv: list[str] | None = None) -> int:

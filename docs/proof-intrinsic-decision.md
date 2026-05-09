@@ -142,7 +142,10 @@ failed proof-metric probes separately and excludes them from correlations and
 diagnostic candidate lists; failed probe output is not proof-term evidence. It
 also reports low-judge / high-metric candidates so term-size inflation from
 strings, unused trivial `have` blocks, or long names stays visible when the Lean
-probe rises with the padding.
+probe rises with the padding. Its `gate_verdict` is intentionally conservative:
+`research_only` means do not wire the metric into rewards, `insufficient_data`
+means collect a usable export first, and `manual_review_required` still does not
+mean automatic approval.
 
 ## Credibility Boundary
 
