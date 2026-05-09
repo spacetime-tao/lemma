@@ -11,6 +11,7 @@ def _row(
     *,
     block: int = 100,
     theorem_id: str = "t",
+    theorem_statement: str | None = None,
     uid: int,
     composite: float,
     proof: str = "theorem t : True := by trivial\n",
@@ -31,6 +32,8 @@ def _row(
             "composite": composite,
         },
     }
+    if theorem_statement is not None:
+        row["theorem_statement"] = theorem_statement
     if coldkey is not None:
         row["coldkey"] = coldkey
     return row
@@ -109,6 +112,23 @@ def test_replay_uses_coldkey_rows_when_present(tmp_path) -> None:
     assert set(base.weights) == {1}
     assert no_coldkey.coldkey_dropped == 0
     assert set(no_coldkey.weights) == {1, 2}
+
+
+def test_replay_fingerprint_uses_theorem_statement_when_present(tmp_path) -> None:
+    path = tmp_path / "train.jsonl"
+    _write_jsonl(
+        path,
+        [
+            _row(uid=1, composite=0.9, theorem_id="same-id", theorem_statement="theorem a : True := by sorry"),
+            _row(uid=2, composite=0.9, theorem_id="same-id", theorem_statement="theorem b : True := by sorry"),
+        ],
+    )
+    rows = load_report(path, proof_weight=0.0).replay_rows
+
+    base = replay_epoch(rows, name="base", identical_dedup=True, coldkey_dedup=True)
+
+    assert base.identical_dropped == 0
+    assert set(base.weights) == {1, 2}
 
 
 def test_main_uses_env_path(tmp_path, monkeypatch, capsys) -> None:
