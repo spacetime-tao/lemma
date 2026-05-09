@@ -62,6 +62,7 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 
 ### Optional protocol hooks
 
+- [x] **Miner verify attest** — Optional path has v2 validator-hotkey-bound signatures, salted spot full-verify selection, no credibility gain for attest-trusted skips, challenge-field binding before scoring, and an explicit non-TEE threat model. See [miner-verify-attest.md](miner-verify-attest.md).
 - [x] **Commit-reveal** — Usable optional path has bounded validator-keyed miner cache, shared hex normalization, reveal preimage checks, and an explicit threat model. See [commit-reveal.md](commit-reveal.md).
 
 ---
@@ -80,5 +81,6 @@ Track in issues or refactors as capacity allows: consolidate CLI dry-run paths, 
 - Proof intrinsic scoring decision: [proof-intrinsic-decision.md](proof-intrinsic-decision.md)
 - Credibility exponent decision: [credibility-exponent-decision.md](credibility-exponent-decision.md)
 - Commit-reveal threat model: [commit-reveal.md](commit-reveal.md)
+- Miner verify attest threat model: [miner-verify-attest.md](miner-verify-attest.md)
 - Scoring entrypoint: `lemma/scoring/rewards.py`, `lemma/scoring/proof_intrinsic.py`
 - Epoch loop: `lemma/validator/epoch.py`

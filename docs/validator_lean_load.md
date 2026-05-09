@@ -15,7 +15,7 @@ Epoch logs include the caps in use (see `lemma_epoch_summary` / debug lines in [
 
 ## Miner verify attest + spot full-verify
 
-Requires **`LEMMA_MINER_VERIFY_ATTEST_ENABLED=1`**. Miners must run local Lean PASS and sign [`miner_verify_attest_message`](../lemma/protocol_attest.py); validators verify Sr25519 against the metagraph hotkey.
+Requires **`LEMMA_MINER_VERIFY_ATTEST_ENABLED=1`**. Miners must run local Lean PASS and sign [`miner_verify_attest_message`](../lemma/protocol_attest.py), which binds the validator hotkey; validators verify Sr25519 against the metagraph hotkey. Threat model: [miner-verify-attest.md](miner-verify-attest.md).
 
 **`LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION`** (default **`1.0`**) controls how often the validator still runs **full Docker Lean verify** vs trusting the attest for scoring that round:
 

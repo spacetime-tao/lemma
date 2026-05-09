@@ -1,8 +1,9 @@
 """Miner Lean-verify attestation (Sr25519 hotkey signatures).
 
 When ``LEMMA_MINER_VERIFY_ATTEST_ENABLED=1``, miners sign a canonical preimage binding
-``theorem_id``, ``metronome_id``, toolchain pins, and ``SHA256(proof_script)``. Validators
-verify the signature against the metagraph hotkey for that UID.
+the validator hotkey, ``theorem_id``, ``metronome_id``, toolchain pins, and
+``SHA256(proof_script)``. Validators verify the signature against the metagraph hotkey
+for that UID.
 """
 
 from __future__ import annotations
@@ -13,15 +14,19 @@ import bittensor as bt
 
 from lemma.protocol import LemmaChallenge
 
-_ATTEST_MAGIC = b"LemmaMinerVerifyAttestV1"
+_ATTEST_MAGIC = b"LemmaMinerVerifyAttestV2"
 
 
-def miner_verify_attest_message(s: LemmaChallenge) -> bytes:
+def miner_verify_attest_message(s: LemmaChallenge, *, validator_hotkey: str) -> bytes:
     """Return the byte message the miner hotkey must sign (challenge + proof binding)."""
+    vh = str(validator_hotkey or "").strip()
+    if not vh:
+        raise ValueError("validator_hotkey is required for miner verify attest")
     proof = (s.proof_script or "").encode("utf-8")
     proof_digest = hashlib.sha256(proof).digest()
     parts = (
         _ATTEST_MAGIC,
+        vh.encode("utf-8"),
         (s.theorem_id or "").encode("utf-8"),
         (s.metronome_id or "").encode("utf-8"),
         (s.lean_toolchain or "").encode("utf-8"),

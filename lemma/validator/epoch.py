@@ -416,7 +416,10 @@ async def run_epoch(
                         attest_rejects += 1
                         logger.warning("uid={} dropping response: no metagraph hotkey", uid_a)
                         continue
-                    msg_a = miner_verify_attest_message(resp_a)
+                    msg_a = miner_verify_attest_message(
+                        resp_a,
+                        validator_hotkey=wallet.hotkey.ss58_address,
+                    )
                     if not verify_miner_verify_attest_signature(
                         hotkey_ss58=hk_a,
                         message=msg_a,
