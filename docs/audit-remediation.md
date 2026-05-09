@@ -219,8 +219,8 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **`protocol_attest`**: redundant length checks post-`fromhex` (dead second check per audit).
 - **`protocol_commit_reveal`**: duplicate strip/length pattern; `verify_reveal` `0x` tolerance possibly unreachable from strict regex path; `sort_keys` on list; single-caller `looks_like_commitment_hex` abstraction.
 - **`epoch._verify_one`**: seven defaulted kwargs for K>1 path (default K=1); **`asyncio.gather` without `return_exceptions`** → one UID exception can drop whole batch.
-- **`validator/protocol_migration.py`**: no-op body retained from migration — inline or delete import surface.
-- **`validator/query.py`**: thin async wrapper — inline candidate.
+- **`validator/protocol_migration.py`** no-op removed; validator startup now checks live settings directly.
+- **`validator/query.py`** thin wrapper removed; epoch calls `bt.Dendrite` directly.
 - **`reputation.apply_ema_to_entries`**: third return element discarded — simplify API.
 - **`scoring/dedup.py`**: parallel `dedup_identical` / `dedup_coldkeys` → generic helper candidate.
 - **`scoring/__init__.py`**: re-exports unused by validator imports.
@@ -268,7 +268,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 ### 13.7 Tests (coverage imbalance)
 
 - ~**20 %** mechanism math tests vs **~40 %** protocol vs **~42 %** glue vs **~7 %** pure CLI — author breakdown; periodically recompute.
-- Tests called out as low value: `uv_bootstrap` (removed), `try_prover` flag tables, `problem_views` title case, `protocol_migration` no-op test, **`test_protocol.py` codifying body-hash fail-open**, thin `prompt_sanitize` coverage.
+- Tests called out as low value: `uv_bootstrap` (removed), `try_prover` flag tables (moved to `lemma-cli`), `problem_views` title case, `protocol_migration` no-op test (removed), **`test_protocol.py` codifying body-hash fail-open**, thin `prompt_sanitize` coverage.
 - **Missing:** `tests/test_rewards.py` for **`entry_from_scores`** / rewards assembly (audit claim).
 
 ### 13.8 Catalog (`lemma/catalog/`)

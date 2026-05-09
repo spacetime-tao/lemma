@@ -8,7 +8,7 @@ Lemma validators call miners over **Bittensor’s Dendrite → Axon** path with 
 | --- | --- |
 | **Validator** | Opens a **`bt.Dendrite`**, sends [`LemmaChallenge`](../lemma/protocol.py) to each miner **`Axon`**. |
 | **Miner** | Axon handler runs the prover / builds the response synapse. |
-| **Batching** | [`query_miners`](../lemma/validator/query.py) forwards one synapse per round; responses are aligned by UID order. |
+| **Batching** | [`run_epoch`](../lemma/validator/epoch.py) forwards one synapse per round with `bt.Dendrite`; responses are aligned by UID order. |
 
 This is the **shipping** stack in this repository. It is **not** replaced here by generic HTTP yet.
 

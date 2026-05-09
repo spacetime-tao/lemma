@@ -17,7 +17,6 @@ from lemma.problems.factory import get_problem_source
 from lemma.problems.generated import generated_registry_sha256
 from lemma.validator import epoch as ep
 from lemma.validator.judge_profile_attest import judge_profile_peer_check_errors
-from lemma.validator.protocol_migration import validate_protocol_feature_flags
 
 
 def _require_docker_for_validator(settings: LemmaSettings) -> None:
@@ -41,7 +40,6 @@ class ValidatorService:
             "Validator running — press Ctrl+C to stop and return to your shell.",
         )
         s = self.settings
-        validate_protocol_feature_flags(s)
         _require_docker_for_validator(s)
         assert_validator_judge_stack_strict(s)
         if not (s.judge_profile_expected_sha256 or "").strip():
