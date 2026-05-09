@@ -430,7 +430,3 @@ def make_forward(
         return synapse
 
     return forward
-
-
-def priority_stub(synapse: LemmaChallenge) -> float:
-    return 0.0
