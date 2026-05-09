@@ -16,7 +16,6 @@ from lemma.lean.verify_runner import run_lean_verify
 from lemma.miner.daily_budget import allow_daily_forward
 from lemma.miner.gating import MetagraphCache, metagraph_incentive_for_hotkey
 from lemma.miner.limits import reject_synopsis, synapse_payload_error
-from lemma.miner.model_card import prover_model_card_text
 from lemma.miner.prover import Prover
 from lemma.problems.factory import resolve_problem
 from lemma.protocol import LemmaChallenge
@@ -380,7 +379,6 @@ def make_forward(
             synapse.reasoning_trace = ""
             synapse.reasoning_steps = None
             synapse.commit_reveal_nonce_hex = None
-            synapse.model_card = prover_model_card_text(settings)
             synapse.miner_verify_attest_signature_hex = None
             err = synapse_payload_error(synapse, settings)
             if err:
@@ -396,7 +394,6 @@ def make_forward(
         synapse.reasoning_steps = steps
         synapse.reasoning_trace = trace
         synapse.proof_script = proof
-        synapse.model_card = prover_model_card_text(settings)
 
         if settings.lemma_miner_verify_attest_enabled:
             if wallet is None or not hasattr(wallet, "hotkey"):

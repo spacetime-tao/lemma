@@ -251,10 +251,10 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
   HTTP calls remain separate.
 - Four orthogonal observability toggles → log shape explosion — documented uppercase env names remain;
   undocumented lowercase env aliases for miner log toggles were removed.
-- **`daily_budget`** JSON persistence when enabled.
+- **`daily_budget`** JSON persistence kept intentionally as an off-by-default API-spend guard.
 - **`public_ip.py`** third-party calls — public IP discovery is now opt-in (`AXON_DISCOVER_EXTERNAL_IP=true`);
   production miners should set `AXON_EXTERNAL_IP` explicitly.
-- **`model_card_text`** — validator does not score it.
+- **`model_card_text`** removed from the built-in miner; `model_card` remains optional protocol/export metadata.
 - **`_stats` / `_commit_reveal_cache`** globals in forward handler — done: miner summary stats and commit-reveal
   cache state are now scoped to the `make_forward` handler instance; the cache remains TTL/max-entry bounded and
   validator-keyed.

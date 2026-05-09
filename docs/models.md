@@ -43,7 +43,7 @@ Use a **reasoning-capable** model that writes valid `Submission.lean`. Recommend
 | Align with subnet judge tier | `deepseek-ai/DeepSeek-V3.2-TEE` |
 | Other reasoning options | Other DeepSeek / Qwen / frontier reasoning listings on Chutes |
 
-Set `PROVER_PROVIDER=openai`, **`PROVER_OPENAI_BASE_URL`** (or rely on judge `OPENAI_BASE_URL` if unset), **`PROVER_OPENAI_API_KEY`** (or legacy `OPENAI_API_KEY` fallback), and **`PROVER_MODEL`** (miner-only id; falls back to `OPENAI_MODEL` if unset). Optional `model_card` for training exports.
+Set `PROVER_PROVIDER=openai`, **`PROVER_OPENAI_BASE_URL`** (or rely on judge `OPENAI_BASE_URL` if unset), **`PROVER_OPENAI_API_KEY`** (or legacy `OPENAI_API_KEY` fallback), and **`PROVER_MODEL`** (miner-only id; falls back to `OPENAI_MODEL` if unset).
 
 The live miner (`lemma miner start`) starts solving **as soon as** a validator forwards a challenge — no deliberate wait for block ticks. `lemma-cli try-prover` is separate (manual smoke test).
 

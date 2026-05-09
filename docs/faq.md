@@ -229,7 +229,7 @@ So repeated “failures” while you believe the proof is right are usually **en
 
 ## Miner provenance
 
-Optional `model_card` on the synapse labels the prover stack for exports.
+Optional `model_card` on the synapse can label a custom prover stack for exports; the built-in miner leaves it unset.
 
 ## Validator isolation
 
