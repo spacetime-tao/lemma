@@ -66,6 +66,7 @@ def render_report(report: MetricsReport, *, outlier_limit: int = 8) -> str:
     verdict, reasons = metric_gate(rows)
     data_blockers, data_warnings = decision_data_findings(ok_rows, failed_rows=failed_rows)
     judged_rows = [r for r in ok_rows if r.judge_composite is not None]
+    ready = decision_ready(rows)
     lines = [
         "Proof metrics export analysis",
         f"rows_total={report.total_rows}",
@@ -80,6 +81,7 @@ def render_report(report: MetricsReport, *, outlier_limit: int = 8) -> str:
         f"judged_rows={len(judged_rows)}",
         "decision_data_blockers=" + (",".join(data_blockers) if data_blockers else "none"),
         "decision_data_warnings=" + (",".join(data_warnings) if data_warnings else "none"),
+        f"decision_ready={'yes' if ready else 'no'}",
         f"gate_verdict={verdict}",
         "gate_reasons=" + (",".join(reasons) if reasons else "none"),
     ]
@@ -197,6 +199,14 @@ def decision_data_findings(ok_rows: list[MetricRow], *, failed_rows: int) -> tup
     return blockers, warnings
 
 
+def decision_ready(rows: list[MetricRow]) -> bool:
+    ok_rows = [r for r in rows if r.probe_exit_code == 0]
+    failed_rows = len(rows) - len(ok_rows)
+    blockers, _warnings = decision_data_findings(ok_rows, failed_rows=failed_rows)
+    verdict, _reasons = metric_gate(rows)
+    return not blockers and verdict == "manual_review_required"
+
+
 def metric_gate(rows: list[MetricRow]) -> tuple[str, list[str]]:
     ok_rows = [r for r in rows if r.probe_exit_code == 0]
     if not rows:
@@ -233,6 +243,11 @@ def main(argv: list[str] | None = None) -> int:
         help="Training export JSONL. Defaults to LEMMA_TRAINING_EXPORT_JSONL.",
     )
     parser.add_argument("--outliers", type=int, default=8, help="Number of padding-looking rows to print.")
+    parser.add_argument(
+        "--require-decision-ready",
+        action="store_true",
+        help="Exit 2 unless the export clears data-readiness blockers and the metric gate reaches manual review.",
+    )
     args = parser.parse_args(argv)
 
     path = args.jsonl or _env_export_path()
@@ -241,7 +256,10 @@ def main(argv: list[str] | None = None) -> int:
     if not path.is_file():
         parser.error(f"not a file: {path}")
 
-    print(render_report(load_report(path), outlier_limit=max(0, int(args.outliers))))
+    report = load_report(path)
+    print(render_report(report, outlier_limit=max(0, int(args.outliers))))
+    if args.require_decision_ready and not decision_ready(report.metric_rows):
+        return 2
     return 0
 
 

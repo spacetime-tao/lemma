@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from tools.proof_metrics_analyze import (
+    decision_ready,
     load_report,
     low_judge_high_metric_candidates,
     main,
@@ -164,6 +165,7 @@ def test_validation_fixture_separates_padding_from_failed_probes() -> None:
     assert "decision_data=successful_rows=6 unique_theorems=6 unique_uids=6 judged_rows=6" in rendered
     assert "decision_data_blockers=fewer_than_50_successful_rows" in rendered
     assert "decision_data_warnings=failed_proof_metric_probes" in rendered
+    assert "decision_ready=no" in rendered
     assert "gate_verdict=research_only" in rendered
     assert "gate_reasons=failed_proof_metric_probes,padding_outliers,low_judge_high_metric_candidates" in rendered
     assert "metric_delimiters: n=6" in rendered
@@ -190,3 +192,59 @@ def test_validation_fixture_separates_padding_from_failed_probes() -> None:
     verdict, reasons = metric_gate(report.metric_rows)
     assert verdict == "research_only"
     assert reasons == ["failed_proof_metric_probes", "padding_outliers", "low_judge_high_metric_candidates"]
+    assert decision_ready(report.metric_rows) is False
+
+
+def test_require_decision_ready_returns_nonzero_for_blocked_export(tmp_path, capsys) -> None:
+    path = tmp_path / "blocked.jsonl"
+    path.write_text(
+        json.dumps(
+            {
+                "theorem_id": "a",
+                "uid": 1,
+                "proof_script": "theorem a : True := by trivial\n",
+                "rubric": {"composite": 0.9},
+                "proof_metrics": {
+                    "proof_declaration_bytes": 100,
+                    "proof_declaration_lines": 5,
+                    "proof_declaration_delimiters": 8,
+                    "proof_declaration_max_depth": 3,
+                    "probe_exit_code": 0,
+                },
+            },
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    assert main([str(path), "--require-decision-ready"]) == 2
+    assert "decision_ready=no" in capsys.readouterr().out
+
+
+def test_require_decision_ready_passes_for_ready_manual_review_export(tmp_path, capsys) -> None:
+    path = tmp_path / "ready.jsonl"
+    rows = []
+    for i in range(50):
+        theorem_id = f"theorem-{i % 5}"
+        rows.append(
+            {
+                "theorem_id": theorem_id,
+                "uid": i % 5,
+                "proof_script": f"theorem t_{i} : True := by trivial\n",
+                "rubric": {"composite": 0.9},
+                "proof_metrics": {
+                    "proof_declaration_bytes": 500 + i,
+                    "proof_declaration_lines": 20,
+                    "proof_declaration_delimiters": 16,
+                    "proof_declaration_max_depth": 4,
+                    "probe_exit_code": 0,
+                },
+            },
+        )
+    path.write_text("\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8")
+
+    assert main([str(path), "--require-decision-ready"]) == 0
+    rendered = capsys.readouterr().out
+    assert "decision_data_blockers=none" in rendered
+    assert "decision_ready=yes" in rendered
+    assert "gate_verdict=manual_review_required" in rendered

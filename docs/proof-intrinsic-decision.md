@@ -151,7 +151,10 @@ means collect a usable export first, and `manual_review_required` still does not
 mean automatic approval. Its `decision_data_blockers` line is separate from the
 metric verdict: blockers mean the export is too small or missing judge labels to
 support a scoring decision, even if the metric gate itself has no obvious
-padding finding.
+padding finding. `--require-decision-ready` is available for release checklists:
+it exits nonzero unless the export clears readiness blockers and reaches the
+manual-review gate. Passing that flag is not approval to change rewards; it only
+means there is enough data to start the human decision.
 
 ## Credibility Boundary
 
