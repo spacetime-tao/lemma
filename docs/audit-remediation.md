@@ -214,6 +214,7 @@ CLI alone cited as **43 %** of `lemma/` and **83 %** of combined runtime core si
 - **`start_screen.py`** (~569 LoC) single mega-menu; removed in the first CLI extraction trim.
 - **`glossary.py`** moved to `lemma-cli`; core keeps a redirect only.
 - **`bittensor[cli]`** moved behind optional `btcli` extra; core depends on the Bittensor SDK only, while operators can still run `uv sync --extra btcli` for wallet/register commands.
+- **`validator-check` interactive start prompt** removed; core pre-flight now exits after READY / NOT READY, while guided handoff belongs in `lemma-cli`.
 
 Extraction note: `lemma-cli` now owns the friendly `start` surface; the core repo keeps only a small compatibility hint and explicit miner/validator subcommands.
 
