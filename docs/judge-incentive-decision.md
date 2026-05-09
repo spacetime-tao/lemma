@@ -57,6 +57,23 @@ The gate fails if the judge ranking is unstable across provider/model changes,
 can be materially improved by prose padding, or conflicts with the stated
 one-sentence objective for the subnet.
 
+Minimum evidence for the decision:
+
+1. A fixed evaluation set with Lean-valid submissions covering short traces,
+   long but useful traces, polished prose padding, rubric-echo attempts, weak
+   reasoning on good proofs, and strong reasoning on equivalent proofs.
+2. A judge-stability report across the current pinned judge stack and any
+   proposed replacement stack.
+3. A comparison against proof-side export data, especially cases where the judge
+   likes prose that proof-side metrics or human review consider low value.
+4. A short governance note naming the chosen path: permanent judge,
+   capped/bootstrap judge, or judge-free.
+5. A scoring/profile pin update if the choice changes consensus-critical reward
+   behavior.
+
+Do not mix that decision with CLI cleanup, prompt wording cleanup, or unrelated
+validator refactors.
+
 ## Acceptable Next Changes
 
 - Add offline evaluation fixtures for judge stability and padding attempts.
@@ -67,3 +84,26 @@ one-sentence objective for the subnet.
 
 Do not add more prompt-only defenses as the main answer to objective mismatch.
 Prompt hardening is useful, but it does not decide what the subnet should reward.
+
+## Decision Record Template
+
+Use this shape for the commit or issue that chooses the next judge path:
+
+```text
+Chosen path: permanent judge | capped/bootstrap judge | judge-free
+
+Evidence reviewed:
+- Evaluation set:
+- Judge stability report:
+- Proof-side export report:
+- Known failures accepted:
+
+Reward/profile changes:
+- Scoring defaults:
+- Profile pin fields:
+- Migration notes:
+
+Rollback:
+- Env/config rollback:
+- Operator notice:
+```
