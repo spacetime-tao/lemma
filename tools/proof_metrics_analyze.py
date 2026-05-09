@@ -23,6 +23,7 @@ class MetricRow:
     judge_composite: float | None
     proof_metric_bytes: int
     proof_metric_lines: int
+    probe_exit_code: int
 
 
 @dataclass(frozen=True)
@@ -54,21 +55,28 @@ def load_report(path: Path) -> MetricsReport:
 
 def render_report(report: MetricsReport, *, outlier_limit: int = 8) -> str:
     rows = report.metric_rows
+    ok_rows = [r for r in rows if r.probe_exit_code == 0]
+    failed_rows = len(rows) - len(ok_rows)
     lines = [
         "Proof metrics export analysis",
         f"rows_total={report.total_rows}",
         f"rows_with_proof_metrics={len(rows)}",
+        f"rows_with_successful_proof_metrics={len(ok_rows)}",
+        f"rows_with_failed_proof_metrics={failed_rows}",
         f"invalid_json_lines={report.invalid_json_lines}",
     ]
     if not rows:
         lines.append("No rows with proof_metrics found.")
         return "\n".join(lines)
+    if not ok_rows:
+        lines.append("No successful proof_metrics found.")
+        return "\n".join(lines)
 
-    bytes_v = [r.proof_metric_bytes for r in rows]
-    lines_v = [r.proof_metric_lines for r in rows]
-    proof_len_v = [r.proof_len for r in rows]
-    intrinsic_v = [r.proof_intrinsic for r in rows]
-    judged = [(r.proof_metric_bytes, r.judge_composite) for r in rows if r.judge_composite is not None]
+    bytes_v = [r.proof_metric_bytes for r in ok_rows]
+    lines_v = [r.proof_metric_lines for r in ok_rows]
+    proof_len_v = [r.proof_len for r in ok_rows]
+    intrinsic_v = [r.proof_intrinsic for r in ok_rows]
+    judged = [(r.proof_metric_bytes, r.judge_composite) for r in ok_rows if r.judge_composite is not None]
 
     lines.extend(
         [
@@ -82,7 +90,7 @@ def render_report(report: MetricsReport, *, outlier_limit: int = 8) -> str:
         ],
     )
 
-    outliers = padding_outliers(rows, limit=outlier_limit)
+    outliers = padding_outliers(ok_rows, limit=outlier_limit)
     if outliers:
         lines.append("padding_outliers_by_proof_len_minus_metric_bytes:")
         for r in outliers:
@@ -98,7 +106,8 @@ def render_report(report: MetricsReport, *, outlier_limit: int = 8) -> str:
 
 
 def padding_outliers(rows: list[MetricRow], *, limit: int) -> list[MetricRow]:
-    return sorted(rows, key=lambda r: (r.proof_len - r.proof_metric_bytes, r.proof_len), reverse=True)[:limit]
+    ok_rows = [r for r in rows if r.probe_exit_code == 0]
+    return sorted(ok_rows, key=lambda r: (r.proof_len - r.proof_metric_bytes, r.proof_len), reverse=True)[:limit]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -141,6 +150,7 @@ def _metric_row(obj: Any, line_no: int) -> MetricRow | None:
     rubric = obj.get("rubric")
     judge = _as_float(rubric.get("composite")) if isinstance(rubric, dict) else None
     uid = _as_int(obj.get("uid"))
+    exit_code = _as_int(metrics.get("probe_exit_code"))
     return MetricRow(
         line_no=line_no,
         theorem_id=str(obj.get("theorem_id") or ""),
@@ -150,6 +160,7 @@ def _metric_row(obj: Any, line_no: int) -> MetricRow | None:
         judge_composite=judge,
         proof_metric_bytes=metric_bytes,
         proof_metric_lines=metric_lines,
+        probe_exit_code=exit_code if exit_code is not None else 0,
     )
 
 
