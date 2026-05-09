@@ -713,7 +713,7 @@ class LemmaSettings(BaseSettings):
         ),
         description=(
             "Multiply EMA-smoothed score by (verify credibility)**exponent. "
-            "Exponent 0 disables the multiplier (always 1). Default 1 applies full credibility curve."
+            "Exponent 0 disables the multiplier (always 1). Default 1 applies a linear credibility curve."
         ),
     )
     lemma_reputation_verify_credibility_alpha: float = Field(

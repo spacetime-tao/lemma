@@ -65,6 +65,13 @@ def test_default_score_proof_weight_is_low_bootstrap_signal(monkeypatch) -> None
     assert judge_profile_dict(s)["scoring_policy"]["lemma_score_proof_weight"] == 0.10
 
 
+def test_default_reputation_credibility_exponent_is_linear_policy(monkeypatch) -> None:
+    monkeypatch.delenv("LEMMA_REPUTATION_CREDIBILITY_EXPONENT", raising=False)
+    s = LemmaSettings(_env_file=None)
+    assert s.lemma_reputation_credibility_exponent == 1.0
+    assert judge_profile_dict(s)["scoring_policy"]["lemma_reputation_credibility_exponent"] == 1.0
+
+
 def test_judge_profile_hash_changes_when_scoring_policy_changes() -> None:
     a = LemmaSettings(lemma_score_proof_weight=0.35)
     b = LemmaSettings(lemma_score_proof_weight=0.5)

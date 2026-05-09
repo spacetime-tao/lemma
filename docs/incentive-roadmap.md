@@ -29,7 +29,7 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 ### Scoring & objective
 
 - [x] **Proof intrinsic (partial)** — Lean `--` / `/- … -/` stripped before the heuristic (`LEMMA_PROOF_INTRINSIC_STRIP_COMMENTS`, default on). Default **`LEMMA_SCORE_PROOF_WEIGHT=0.10`** keeps the text heuristic low-weight. Decision note: [proof-intrinsic-decision.md](proof-intrinsic-decision.md). Compare-only Lean probe: `LEMMA_LEAN_PROOF_METRICS=1` adds `proof_metrics` to `VerifyResult`; initial calibration is recorded. **Still open:** validate a Lean/elaborator-backed replacement before any scoring change; do not add more regex padding checks.
-- [x] **Credibility multiplier** — Per-UID verify-pass EMA persisted in reputation JSON; score uses `(credibility ** LEMMA_REPUTATION_CREDIBILITY_EXPONENT)` after EMA smoothing (`LEMMA_REPUTATION_VERIFY_CREDIBILITY_ALPHA`, default 0.08; set to **0** to freeze credibility updates).
+- [x] **Credibility multiplier** — Per-UID verify-pass EMA persisted in reputation JSON; score uses `(credibility ** LEMMA_REPUTATION_CREDIBILITY_EXPONENT)` after EMA smoothing (`LEMMA_REPUTATION_VERIFY_CREDIBILITY_ALPHA`, default 0.08; set alpha to **0** to freeze credibility updates). Default exponent remains **1.0** until calibrated; the KB `2.5` target is documented as a policy candidate in [credibility-exponent-decision.md](credibility-exponent-decision.md).
 - [x] **Training export** — Documented gaming/leakage ([training_export.md](training_export.md)); **`LEMMA_TRAINING_EXPORT_PROFILE=reasoning_only`** omits proof, proof metrics, judge rubric, and Pareto weights (`lemma/validator/training_export.py`).
 
 ### Problem supply & predictability
@@ -74,5 +74,6 @@ Track in issues or refactors as capacity allows: consolidate CLI dry-run paths, 
 - Full external-audit remediation checklist (prioritized): [audit-remediation.md](audit-remediation.md)
 - Implementation map: [incentive_migration.md](incentive_migration.md)
 - Proof intrinsic scoring decision: [proof-intrinsic-decision.md](proof-intrinsic-decision.md)
+- Credibility exponent decision: [credibility-exponent-decision.md](credibility-exponent-decision.md)
 - Scoring entrypoint: `lemma/scoring/rewards.py`, `lemma/scoring/proof_intrinsic.py`
 - Epoch loop: `lemma/validator/epoch.py`
