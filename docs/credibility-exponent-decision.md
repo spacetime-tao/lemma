@@ -20,6 +20,11 @@ That means the credibility multiplier is linear. Setting the exponent to `0`
 disables the multiplier. Operators can explicitly set `2.5`, but it is not the
 live default.
 
+Credibility is a reliability signal, not a proof-quality score. It should fall
+when validator Lean verification fails and rise when it passes. It should not try
+to detect Lean-valid padding; that belongs to the proof-side scoring work in
+[proof-intrinsic-decision.md](proof-intrinsic-decision.md).
+
 ## Why not default to 2.5 yet?
 
 The knowledge base mentions `credibility^2.5` as a mechanism target. That is a
@@ -49,3 +54,6 @@ Before changing the default, do all of the following in one intentional release:
 - Call out the reward impact in release notes so validators know their
   `judge_profile_sha256` will change.
 
+Do not use an exponent change as a substitute for a better proof-quality metric.
+It can make failed verification more expensive, but it cannot distinguish a clean
+Lean proof from a padded Lean proof once both pass.
