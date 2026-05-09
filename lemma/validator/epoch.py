@@ -322,7 +322,9 @@ async def run_epoch(
             else:
                 synapse = LemmaChallenge(**base_syn, commit_reveal_phase="off")
                 responses = await dendrite(axons, synapse, timeout=forward_wait_s, run_async=True)
-            block_after_query = int(subtensor.get_current_block())
+            # Dendrite returns a batch, not a trusted per-response receipt block. Enforce the response deadline
+            # conservatively at the block observed after the batch returns.
+            batch_block_after_query = int(subtensor.get_current_block())
 
             candidates: list[tuple[int, LemmaChallenge]] = []
             for uid, resp in zip(uids, responses, strict=True):
@@ -350,11 +352,11 @@ async def run_epoch(
                     challenge_rejects += 1
                     continue
                 db = resp.deadline_block
-                if db is not None and block_after_query >= int(db):
+                if db is not None and batch_block_after_query >= int(db):
                     logger.warning(
                         "uid={} dropping response: chain block {} >= deadline_block {} (late)",
                         uid,
-                        block_after_query,
+                        batch_block_after_query,
                         db,
                     )
                     deadline_rejects += 1

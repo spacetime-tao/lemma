@@ -62,10 +62,10 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 |----|--------|----------|----------|------------------------|---------------------------|
 | **I1** | `synapse_miner_response_integrity_ok` returns **True** when `computed_body_hash` is missing → middleboxes can strip headers; combined with attest/trace concerns | R3 §3.1, §6 | P1 | **Done:** miner responses fail closed when `computed_body_hash` is missing or mismatched. | `lemma/protocol.py`, `tests/test_protocol.py` |
 | **I2** | `deadline_block is None` may bypass deadline path if fields stripped | R3 §6 | P1 | **Done:** the same integrity gate rejects miner responses without `deadline_block`. | `lemma/protocol.py`, `tests/test_protocol.py`, `lemma/validator/epoch.py` |
-| **I3** | Single `block_after_query` for batch — timing games | R3 §6 | P2 | Per-response block or documented acceptance | `epoch.py` |
+| **I3** | Single `block_after_query` for batch — timing games | R3 §6 | P2 | **Done/documented acceptance:** Dendrite exposes a batch result, not a trusted per-response receipt block; validator enforces deadline at the post-batch chain head. | `epoch.py` |
 | **I4** | Synapse transport deprecated in KB vs Epistula | R3 §5.15, §11 | P4 | Track `knowledge/` transport migration; out of scope for “quick fix” | `protocol.py`, `knowledge/` |
 
-**2026-05 progress:** I1/I2 patched in `synapse_miner_response_integrity_ok`: validator responses now fail closed when `computed_body_hash` is missing, mismatched, or when `deadline_block` is missing from the miner response.
+**2026-05 progress:** I1/I2/I3 patched or bounded. `synapse_miner_response_integrity_ok` now fails closed when `computed_body_hash` is missing, mismatched, or when `deadline_block` is missing from the miner response. Deadline enforcement uses the post-batch chain head because Dendrite does not expose a trusted per-response receipt block.
 
 ---
 
