@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from lemma.common.config import LemmaSettings
-from lemma.miner.prover import _normalize_prover_payload
+from lemma.miner.prover import _normalize_prover_payload, _stub
+from lemma.protocol import LemmaChallenge
 
 
 def test_reasoning_steps_ok() -> None:
@@ -89,3 +90,19 @@ def test_min_proof_script_chars_enforced_when_configured() -> None:
     assert steps is None
     assert "MIN_PROOF_SCRIPT_CHARS" in trace
     assert "prover policy" in proof
+
+
+def test_missing_key_stub_does_not_solve_demo_theorem() -> None:
+    synapse = LemmaChallenge(
+        theorem_id="demo/two_plus_two",
+        theorem_statement="theorem two_plus_two_eq_four : (2 : Nat) + 2 = 4 := by\n  sorry\n",
+        lean_toolchain="lean4",
+        mathlib_rev="mathlib",
+        deadline_unix=1,
+        metronome_id="m1",
+    )
+    trace, proof, steps = _stub(synapse)
+
+    assert trace == "stub: no PROVER API key configured"
+    assert proof == synapse.theorem_statement
+    assert steps is not None and steps[0].text == trace

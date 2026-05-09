@@ -306,18 +306,4 @@ def _normalize_prover_payload(
 def _stub(synapse: LemmaChallenge) -> tuple[str, str, list[ReasoningStep] | None]:
     trace = "stub: no PROVER API key configured"
     stub_steps = [ReasoningStep(title="Setup", text=trace)]
-    if "two_plus_two_eq_four" in synapse.theorem_statement:
-        proof = """import Mathlib
-
-namespace Submission
-
-theorem two_plus_two_eq_four : (2 : Nat) + 2 = 4 := by rfl
-
-end Submission
-"""
-        steps = [
-            ReasoningStep(title="Observation", text="Goal is equality of natural numbers."),
-            ReasoningStep(title="Formal proof", text="Close by reflexivity (rfl)."),
-        ]
-        return format_reasoning_steps(steps), proof, steps
     return trace, synapse.theorem_statement, stub_steps
