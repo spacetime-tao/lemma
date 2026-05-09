@@ -124,9 +124,9 @@ Good prototype shape:
 
 Current prototype: set `LEMMA_LEAN_PROOF_METRICS=1` to attach compare-only
 `proof_metrics` to `VerifyResult`. The probe asks Lean to `#print` the verified
-`Submission.<theorem>` declaration with `pp.all` enabled, then records only the
-printed byte count, line count, and probe exit code. Rewards and weights ignore
-this field.
+`Submission.<theorem>` declaration with `pp.all` enabled, then records byte
+count, line count, delimiter count, max delimiter depth, and probe exit code.
+Rewards and weights ignore this field.
 
 The opt-in Docker and host Lean golden tests assert that the probe returns
 metrics on a real passing proof when those suites are enabled.
