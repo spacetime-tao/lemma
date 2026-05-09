@@ -38,6 +38,8 @@ New generated builders should enter the live registry only after they pass the s
 6. `docs/generated-problems.md` and operator release notes describe the changed mix.
 7. Operators publish the new `generated_registry_sha256` and cutover release together.
 
+The local/CI gate is [`scripts/ci_verify_generated_templates.py`](../scripts/ci_verify_generated_templates.py). It always checks that every builder is reachable and has coherent registry metadata. With `RUN_DOCKER_LEAN_TEMPLATES=1`, it also materializes all generated templates into a Lean workspace and runs `lake build`.
+
 Do not add low-value templates merely to increase the builder count. A small set of honest, varied templates is better than a large set of brittle near-duplicates.
 
 ## Frozen and curated lanes
