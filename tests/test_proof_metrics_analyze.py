@@ -70,6 +70,8 @@ def test_load_report_summarizes_metric_rows(tmp_path) -> None:
     assert "gate_verdict=research_only" in rendered
     assert "failed_proof_metric_probes" in rendered
     assert "padding_outliers" in rendered
+    assert "metric_delimiters: n=0" in rendered
+    assert "metric_max_depth: n=0" in rendered
     assert "corr(metric_bytes, proof_len_chars)=" in rendered
     assert "padding_outliers_by_proof_len_minus_metric_bytes:" in rendered
     assert "low_judge_high_metric_candidates:" in rendered
@@ -145,6 +147,9 @@ def test_validation_fixture_separates_padding_from_failed_probes() -> None:
     assert "rows_with_failed_proof_metrics=1" in rendered
     assert "gate_verdict=research_only" in rendered
     assert "gate_reasons=failed_proof_metric_probes,padding_outliers,low_judge_high_metric_candidates" in rendered
+    assert "metric_delimiters: n=6" in rendered
+    assert "metric_max_depth: n=6" in rendered
+    assert "corr(metric_delimiters, judge_composite)=" in rendered
     assert "theorem=comment-padding" in rendered
     assert "theorem=string-padding" in rendered
     assert "theorem=unused-have-padding" in rendered

@@ -23,6 +23,8 @@ class MetricRow:
     judge_composite: float | None
     proof_metric_bytes: int
     proof_metric_lines: int
+    proof_metric_delimiters: int | None
+    proof_metric_max_depth: int | None
     probe_exit_code: int
 
 
@@ -77,19 +79,34 @@ def render_report(report: MetricsReport, *, outlier_limit: int = 8) -> str:
 
     bytes_v = [r.proof_metric_bytes for r in ok_rows]
     lines_v = [r.proof_metric_lines for r in ok_rows]
+    delimiters_v = [r.proof_metric_delimiters for r in ok_rows if r.proof_metric_delimiters is not None]
+    depth_v = [r.proof_metric_max_depth for r in ok_rows if r.proof_metric_max_depth is not None]
     proof_len_v = [r.proof_len for r in ok_rows]
     intrinsic_v = [r.proof_intrinsic for r in ok_rows]
     judged = [(r.proof_metric_bytes, r.judge_composite) for r in ok_rows if r.judge_composite is not None]
+    judged_delimiters = [
+        (r.proof_metric_delimiters, r.judge_composite)
+        for r in ok_rows
+        if r.proof_metric_delimiters is not None and r.judge_composite is not None
+    ]
 
     lines.extend(
         [
             _stats_line("metric_bytes", bytes_v),
             _stats_line("metric_lines", lines_v),
+            _stats_line("metric_delimiters", delimiters_v) if delimiters_v else "metric_delimiters: n=0",
+            _stats_line("metric_max_depth", depth_v) if depth_v else "metric_max_depth: n=0",
             _stats_line("proof_len_chars", proof_len_v),
             f"corr(metric_bytes, proof_len_chars)={_format_corr(_pearson(bytes_v, proof_len_v))}",
             f"corr(metric_bytes, proof_intrinsic)={_format_corr(_pearson(bytes_v, intrinsic_v))}",
             "corr(metric_bytes, judge_composite)="
             + _format_corr(_pearson([x for x, _ in judged], [y for _, y in judged]) if judged else None),
+            "corr(metric_delimiters, judge_composite)="
+            + _format_corr(
+                _pearson([x for x, _ in judged_delimiters], [y for _, y in judged_delimiters])
+                if judged_delimiters
+                else None,
+            ),
         ],
     )
 
@@ -195,6 +212,8 @@ def _metric_row(obj: Any, line_no: int) -> MetricRow | None:
     metric_lines = _as_int(metrics.get("proof_declaration_lines"))
     if metric_bytes is None or metric_lines is None:
         return None
+    metric_delimiters = _as_int(metrics.get("proof_declaration_delimiters"))
+    metric_max_depth = _as_int(metrics.get("proof_declaration_max_depth"))
     proof = obj.get("proof_script") if isinstance(obj.get("proof_script"), str) else ""
     rubric = obj.get("rubric")
     judge = _as_float(rubric.get("composite")) if isinstance(rubric, dict) else None
@@ -209,6 +228,8 @@ def _metric_row(obj: Any, line_no: int) -> MetricRow | None:
         judge_composite=judge,
         proof_metric_bytes=metric_bytes,
         proof_metric_lines=metric_lines,
+        proof_metric_delimiters=metric_delimiters,
+        proof_metric_max_depth=metric_max_depth,
         probe_exit_code=exit_code if exit_code is not None else 0,
     )
 

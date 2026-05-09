@@ -29,6 +29,8 @@ def test_training_record_roundtrip_fields(tmp_path: Path) -> None:
         proof_declaration_bytes=538,
         proof_declaration_lines=9,
         probe_exit_code=0,
+        proof_declaration_delimiters=21,
+        proof_declaration_max_depth=5,
     )
     row = training_record(
         block=42,
@@ -47,6 +49,8 @@ def test_training_record_roundtrip_fields(tmp_path: Path) -> None:
     assert row["proof_metrics"]["proof_declaration_bytes"] == 538
     assert row["proof_metrics"]["proof_declaration_lines"] == 9
     assert row["proof_metrics"]["probe_exit_code"] == 0
+    assert row["proof_metrics"]["proof_declaration_delimiters"] == 21
+    assert row["proof_metrics"]["proof_declaration_max_depth"] == 5
     assert "demo" in (row.get("model_card") or "")
 
     out = tmp_path / "train.jsonl"

@@ -81,7 +81,7 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 
 ## 5. `proof_intrinsic` — residual gaming
 
-**Decision note:** [proof-intrinsic-decision.md](proof-intrinsic-decision.md) records the current stance: keep the heuristic only as a low-weight bootstrap signal, do not raise its default weight, and do not add more regex padding detectors as the main fix. Default `LEMMA_SCORE_PROOF_WEIGHT` is now `0.10`; comment-only / blank-line padding is normalized out; `LEMMA_LEAN_PROOF_METRICS=1` enables a compare-only Lean probe in `VerifyResult`. The analyzer now surfaces low-judge / high-metric candidates and an explicit conservative gate verdict before any scoring change.
+**Decision note:** [proof-intrinsic-decision.md](proof-intrinsic-decision.md) records the current stance: keep the heuristic only as a low-weight bootstrap signal, do not raise its default weight, and do not add more regex padding detectors as the main fix. Default `LEMMA_SCORE_PROOF_WEIGHT` is now `0.10`; comment-only / blank-line padding is normalized out; `LEMMA_LEAN_PROOF_METRICS=1` enables a compare-only Lean probe in `VerifyResult` with byte/line and delimiter-shape metrics. The analyzer now surfaces low-judge / high-metric candidates and an explicit conservative gate verdict before any scoring change.
 
 | ID | Issue | Source § | Priority | Remediation direction | Key refs |
 |----|--------|----------|----------|------------------------|----------|
