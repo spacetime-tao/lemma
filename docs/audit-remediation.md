@@ -225,6 +225,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **`protocol_commit_reveal`**: duplicate strip/length pattern consolidated into shared hex helpers; commit and reveal paths accept optional `0x` consistently.
 - **`epoch._verify_one`**: verify batch now uses `return_exceptions=True`; one UID verifier exception drops that UID instead of the whole batch. Defaulted kwargs remain as local task captures.
 - **`validator/protocol_migration.py`** no-op removed; validator startup now checks live settings directly.
+- **`validator-check` vs `ValidatorService` startup gates** now share one readiness helper for Docker mode, judge stack policy, judge key, pins, generated registry hash, frozen-source gate, and judge-profile peer attest.
 - **`validator/query.py`** thin wrapper removed; epoch calls `bt.Dendrite` directly.
 - **`reputation.apply_ema_to_entries`**: third return element discarded; removed from API.
 - **`scoring/dedup.py`**: parallel `dedup_identical` / `dedup_coldkeys` now share one internal best-by-key helper.

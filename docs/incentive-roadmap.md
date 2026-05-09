@@ -72,7 +72,7 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 
 ## Plumbing / cleanup (lower urgency than mechanism gaps)
 
-Track in issues or refactors as capacity allows: consolidate CLI dry-run paths, thin `validator/query.py`, merge duplicate startup checks (`validator_check` vs `service`), single Lake-cache policy env, optional catalog split (`lemma/catalog/` dev vs runtime), etc.
+Track in issues or refactors as capacity allows: consolidate CLI dry-run paths, single Lake-cache policy env, remaining human-friendly CLI wrappers, etc. Recent cleanup removed `validator/query.py`, split catalog dev helpers out of runtime, and merged validator startup gates shared by `validator-check` and `service`.
 
 ---
 
