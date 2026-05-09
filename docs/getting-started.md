@@ -9,7 +9,7 @@ End-to-end: **uv** + repo → **keys** → **`lemma-cli setup`** → **miner or 
 
 ## Paths at a glance
 
-**Miner (most common first path):** `uv sync` → keys (`uv run btcli`) → `lemma-cli setup` → fund wallet → `uv run btcli subnet register --netuid 467 --network test …` → `uv run lemma miner dry-run` → **`lemma-cli rehearsal`** (optional: live theorem → prover → Lean → judge preview) → open `AXON_PORT` → `uv run lemma miner start`. Details: [miner.md](miner.md).
+**Miner (most common first path):** `uv sync --extra btcli` → keys (`uv run btcli`) → `lemma-cli setup` → fund wallet → `uv run btcli subnet register --netuid 467 --network test …` → `uv run lemma miner dry-run` → **`lemma-cli rehearsal`** (optional: live theorem → prover → Lean → judge preview) → open `AXON_PORT` → `uv run lemma miner start`. Details: [miner.md](miner.md).
 
 **Validator:** same env/keys/setup as above, then **`bash scripts/prebuild_lean_image.sh`** (first build is large) → **`lemma-cli rehearsal`** (recommended preview) → `uv run lemma validator-check` → `uv run lemma validator start`. Prefer explicit `uv run lemma validator start` / `uv run lemma validator dry-run` over ad-hoc Python entrypoints. Details: [validator.md](validator.md).
 
@@ -24,10 +24,11 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 ```bash
 git clone https://github.com/spacetime-tao/lemma.git
 cd lemma
-uv sync --extra dev
+uv sync --extra btcli
+# For development/testing too: uv sync --extra dev --extra btcli
 ```
 
-`uv sync` installs from **PyPI**: this repo depends on **`bittensor`** (SDK) and on **`bittensor[cli]`**, which pulls in the official **[bittensor-cli](https://pypi.org/project/bittensor-cli/)** package. **`btcli`** is only the **command name** those packages put on your `PATH`—there is no legitimate PyPI package you should install called `btcli`; typosquat packages have existed, so always use **`bittensor`**, **`bittensor-cli`**, or **`bittensor[cli]`** from PyPI.
+Default `uv sync` installs from **PyPI** and keeps only the **`bittensor`** SDK needed by Lemma itself. Add `--extra btcli` when you want repo-local wallet/register commands: it pulls in the official **[bittensor-cli](https://pypi.org/project/bittensor-cli/)** package through **`bittensor[cli]`**. **`btcli`** is only the **command name** those packages put on your `PATH`—there is no legitimate PyPI package you should install called `btcli`; typosquat packages have existed, so always use **`bittensor`**, **`bittensor-cli`**, or **`bittensor[cli]`** from PyPI.
 
 ## Run Local Commands
 
@@ -36,7 +37,7 @@ uv run lemma --help
 uv run btcli --help
 ```
 
-Run these from the repo root. If you activate `.venv`, you can omit `uv run`.
+Run these from the repo root. `uv run btcli` requires `uv sync --extra btcli`. If you activate `.venv`, you can omit `uv run`.
 
 ## Keys (Bittensor CLI: `btcli`)
 
@@ -103,7 +104,7 @@ More tuning: `.env.example` and `lemma-cli configure` where possible.
 
 | Step | Command / action |
 | ---- | ---------------- |
-| Deps | `uv sync --extra dev` |
+| Deps | `uv sync --extra btcli` (`--extra dev` too if developing) |
 | Keys | `uv run btcli` coldkey + hotkey |
 | Env | `lemma-cli setup` |
 | Chain | Fund + `uv run btcli subnet register` |

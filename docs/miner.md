@@ -1,6 +1,6 @@
 # Miner
 
-Walkthrough: [getting-started.md](getting-started.md) — **`uv run btcli`** (Bittensor CLI), `lemma-cli setup`, then `uv run lemma …` from the repo root. Prefer prompts over hand-editing `.env` (`lemma-cli configure chain`, `configure prover`, `configure axon`).
+Walkthrough: [getting-started.md](getting-started.md) — **`uv sync --extra btcli`** if you need repo-local **`uv run btcli`** (Bittensor CLI), `lemma-cli setup`, then `uv run lemma …` from the repo root. Prefer prompts over hand-editing `.env` (`lemma-cli configure chain`, `configure prover`, `configure axon`).
 
 **Short checklist:** `lemma-cli setup` → coldkey funded → `uv run btcli subnet register` on the same network/netuid as `.env` → `uv run lemma miner dry-run` → **`lemma-cli rehearsal`** (see prover + Lean + judge on the live theorem) → fix axon IP/port if needed → `uv run lemma miner start`. Run `uv run lemma` for core command help; run `lemma-cli` for the friendly operator screen.
 

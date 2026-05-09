@@ -7,7 +7,7 @@ requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Lemma subnet contributors" }]
 dependencies = [
-    "bittensor[cli]==10.3.0",
+    "bittensor==10.3.0",
     "pydantic>=2.8,<3",
     "pydantic-settings>=2.4,<3",
     "loguru>=0.7,<1",
@@ -21,6 +21,9 @@ dependencies = [
 [project.optional-dependencies]
 anthropic = [
     "anthropic>=0.34,<1",
+]
+btcli = [
+    "bittensor[cli]==10.3.0",
 ]
 catalog = [
     "datasets>=2.14,<4",

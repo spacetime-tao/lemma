@@ -246,7 +246,7 @@ Logs: `lemma_epoch_summary`; optional JSONL. No built-in dashboard ([production.
 
 ## Testnet checklist
 
-1. `uv sync`; `.env` with test endpoint, `NETUID`, wallets.
+1. `uv sync --extra btcli`; `.env` with test endpoint, `NETUID`, wallets.
 2. Register (`btcli`).
 3. Miner: reachable axon; prover keys.
 4. Validator: Lean image; `uv run lemma meta`; smoke-test judge on files with `lemma judge --trace …`; full rehearsal without weights: `lemma validator dry-run` (FakeJudge by default; `LEMMA_DRY_RUN_REAL_JUDGE=1` for live judge); `LEMMA_FAKE_JUDGE=1` only for fully local stubs.
