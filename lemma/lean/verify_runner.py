@@ -37,17 +37,16 @@ def run_lean_verify(
     problem: Problem,
     proof_script: str,
 ) -> VerifyResult:
-    """Cheat scan locally, then either POST to ``LEMMA_LEAN_VERIFY_REMOTE_URL`` or local ``LeanSandbox``."""
-    cheat = scan_submission_for_cheats(proof_script)
-    if not cheat.ok:
-        return VerifyResult(
-            passed=False,
-            reason="cheat_token",
-            stderr_tail=cheat_scan_stderr_tail(cheat),
-        )
-
+    """Verify locally or via worker; the remote path pre-scans before POST."""
     base = (settings.lean_verify_remote_url or "").strip()
     if base:
+        cheat = scan_submission_for_cheats(proof_script)
+        if not cheat.ok:
+            return VerifyResult(
+                passed=False,
+                reason="cheat_token",
+                stderr_tail=cheat_scan_stderr_tail(cheat),
+            )
         return _verify_via_http(settings, verify_timeout_s, problem, proof_script, base.rstrip("/"))
 
     sb = lean_sandbox_from_settings(settings, verify_timeout_s)

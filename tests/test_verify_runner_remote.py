@@ -78,6 +78,21 @@ def test_remote_verify_transport_error(monkeypatch: pytest.MonkeyPatch, tiny_pro
     assert vr.reason == "remote_error"
 
 
+def test_remote_verify_cheat_scan_happens_before_http(
+    monkeypatch: pytest.MonkeyPatch,
+    tiny_problem: Problem,
+) -> None:
+    def _client(**kwargs: object) -> httpx.Client:  # noqa: ARG001
+        raise AssertionError("remote HTTP should not run for rejected proof text")
+
+    monkeypatch.setattr("lemma.lean.verify_runner.httpx.Client", _client)
+
+    s = LemmaSettings().model_copy(update={"lean_verify_remote_url": "http://127.0.0.1:8787"})
+    vr = run_lean_verify(s, verify_timeout_s=60, problem=tiny_problem, proof_script="theorem p : True := by sorry")
+    assert vr.passed is False
+    assert vr.reason == "cheat_token"
+
+
 def test_remote_verify_skipped_when_url_unset(tiny_problem: Problem, monkeypatch: pytest.MonkeyPatch) -> None:
     """Without remote URL, run_lean_verify uses LeanSandbox — stub verify to avoid lake."""
 
@@ -96,6 +111,30 @@ def test_remote_verify_skipped_when_url_unset(tiny_problem: Problem, monkeypatch
     )
     vr = run_lean_verify(s, verify_timeout_s=300, problem=tiny_problem, proof_script="theorem p : True := rfl")
     assert vr.passed is True
+
+
+def test_local_verify_delegates_cheat_scan_to_sandbox(
+    tiny_problem: Problem,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_verify(self: object, problem: Problem, submission_src: str):  # noqa: ARG001
+        from lemma.lean.sandbox import VerifyResult
+
+        assert "sorry" in submission_src
+        return VerifyResult(passed=False, reason="cheat_token", stderr_tail="sandbox scan")
+
+    monkeypatch.setattr("lemma.lean.verify_runner.LeanSandbox.verify", fake_verify)
+
+    s = LemmaSettings().model_copy(
+        update={
+            "lean_verify_remote_url": None,
+            "lean_use_docker": False,
+        },
+    )
+    vr = run_lean_verify(s, verify_timeout_s=300, problem=tiny_problem, proof_script="theorem p : True := by sorry")
+    assert vr.passed is False
+    assert vr.reason == "cheat_token"
+    assert vr.stderr_tail == "sandbox scan"
 
 
 def test_local_verify_passes_proof_metrics_flag(tiny_problem: Problem, monkeypatch: pytest.MonkeyPatch) -> None:
