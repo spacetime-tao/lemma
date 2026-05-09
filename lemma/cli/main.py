@@ -1592,18 +1592,3 @@ def problems_show(problem_id: str | None, current: bool, block: int | None) -> N
     echo_problem_card(p, heading="Theorem")
     echo_challenge_separator()
     click.echo(p.challenge_source())
-
-
-@main.command("local-loop")
-def local_loop_cmd() -> None:
-    """Run one dry-run scoring epoch (no chain writes)."""
-    from lemma.validator import epoch as ep
-
-    settings = LemmaSettings()
-    setup_logging(settings.log_level)
-    src = get_problem_source(settings)
-    os.environ["LEMMA_FAKE_JUDGE"] = "1"
-    weights = asyncio.run(
-        ep.run_epoch(settings.model_copy(update={"lean_use_docker": False}), src, dry_run=True),
-    )
-    click.echo(weights)
