@@ -164,7 +164,6 @@ class LemmaSettings(BaseSettings):
         default=None,
         validation_alias=AliasChoices(
             "BT_VALIDATOR_WALLET_COLD",
-            "LEMMA_VALIDATOR_WALLET_COLD",
             "validator_wallet_cold",
         ),
         description="If set, `lemma validator` / `validator-check` use this coldkey instead of BT_WALLET_COLD.",
@@ -173,7 +172,6 @@ class LemmaSettings(BaseSettings):
         default=None,
         validation_alias=AliasChoices(
             "BT_VALIDATOR_WALLET_HOT",
-            "LEMMA_VALIDATOR_WALLET_HOT",
             "validator_wallet_hot",
         ),
         description="If set, validator uses this hotkey name instead of BT_WALLET_HOT.",

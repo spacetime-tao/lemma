@@ -265,7 +265,8 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - Resolver collapse opportunities (`anthropic` vs OpenAI keys) — validator pre-flight now follows the single
   Chutes-compatible key path; OpenAI-compatible judge/prover key resolvers trim consistently.
 - **`validator_judge_stack_strict`** vs unreachable Anthropic judge branch on validator — Anthropic branch removed from validator epoch builder; local one-shot judge tooling remains.
-- Six env names for two wallet values.
+- Six env names for two wallet values — validator wallet overrides now keep the documented
+  `BT_VALIDATOR_WALLET_COLD` / `BT_VALIDATOR_WALLET_HOT` env names and drop the unused `LEMMA_*` aliases.
 - Reserved protocol toggles default **False** but many Fields persist.
 - Timeout-split / prover self-rejection knobs — validator-side usefulness questioned in audit.
 
