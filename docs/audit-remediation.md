@@ -165,7 +165,7 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 | ID | Issue | Source § | Priority | Remediation direction |
 |----|--------|----------|----------|------------------------|
 | **D1** | Coldkey dedup ≠ sybil resistance per KB | R3 §8 | P4 | Document; economic mitigations outside code |
-| **D2** | Identical dedup bypass via whitespace / comments / trace | R3 §8 | P2 | Normalize proof bytes if desired; tradeoffs with honest variance |
+| **D2** | Identical dedup bypass via whitespace / comments / trace | R3 §8 | P2 | **Partial:** fingerprint now strips proof comments and collapses whitespace in theorem/proof/trace. Semantic trace rewrites remain a design/economics issue. |
 
 ---
 

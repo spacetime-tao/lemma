@@ -8,7 +8,7 @@ Canonical machine-readable notes: [`knowledge/sybil.realities.yaml`](../knowledg
 
 | Mechanism | Env | Purpose |
 | --- | --- | --- |
-| **Identical submission dedup** | `LEMMA_SCORING_DEDUP_IDENTICAL` (default on) | Same `(theorem_statement, proof_script, reasoning trace)` fingerprint → keep **best** `reasoning_score` only ([`dedup.py`](../lemma/scoring/dedup.py)). Reduces copy-paste clutter in one epoch. |
+| **Identical submission dedup** | `LEMMA_SCORING_DEDUP_IDENTICAL` (default on) | Same normalized `(theorem_statement, proof_script, reasoning trace)` fingerprint → keep **best** `reasoning_score` only ([`dedup.py`](../lemma/scoring/dedup.py)). Proof comments are stripped and whitespace is collapsed. Reduces copy-paste clutter in one epoch. |
 | **Coldkey dedup** | `LEMMA_SCORING_COLDKEY_DEDUP` (default on) | Among UIDs on the metagraph, **one entry per coldkey string** — keep best score ([`dedup_coldkeys`](../lemma/scoring/dedup.py)). Reduces **same-coldkey multi-hotkey** farming in a round. |
 
 Neither mechanism limits how many **distinct coldkeys** an attacker can register. Creating another coldkey is cheap relative to sybil resistance expectations.

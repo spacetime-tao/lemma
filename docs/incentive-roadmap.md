@@ -10,7 +10,7 @@ This doc is for **operators and contributors** planning work—not step-by-step 
 
 - [x] Strict single-object JSON rubric parse (`judge/json_util.py`) — rejects multi-rubric games
 - [x] Fenced miner content + judge prompt treating trace as untrusted data
-- [x] Identical-submission dedup (same theorem + proof + trace fingerprint)
+- [x] Identical-submission dedup (same normalized theorem + proof + trace fingerprint)
 - [x] Coldkey dedup (best hotkey per coldkey on metagraph)
 - [x] EMA smoothing of reasoning/composite scores (on-disk state)
 - [x] Optional multi-theorem epochs (`LEMMA_EPOCH_PROBLEM_COUNT`, default 1)

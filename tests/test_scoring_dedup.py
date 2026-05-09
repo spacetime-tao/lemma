@@ -9,6 +9,16 @@ def test_submission_fingerprint_stable() -> None:
     assert submission_fingerprint("t1", "p1", "r2") != a
 
 
+def test_submission_fingerprint_normalizes_comments_and_whitespace() -> None:
+    theorem = "theorem t : True := by\n  trivial\n"
+    proof_a = "namespace Submission\n-- copied padding\n theorem t : True := by\n  trivial\nend Submission\n"
+    proof_b = "namespace Submission\n\ntheorem t : True := by trivial\n\nend Submission\n"
+    trace_a = "Goal first.\n\nThen close it."
+    trace_b = "Goal first. Then close it."
+
+    assert submission_fingerprint(theorem, proof_a, trace_a) == submission_fingerprint(theorem, proof_b, trace_b)
+
+
 def test_dedup_identical_keeps_best_score() -> None:
     e1 = ScoredEntry(uid=1, reasoning_score=0.5, tokens=10, submission_fp="x")
     e2 = ScoredEntry(uid=2, reasoning_score=0.9, tokens=10, submission_fp="x")
