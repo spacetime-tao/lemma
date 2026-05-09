@@ -756,10 +756,7 @@ class LemmaSettings(BaseSettings):
     )
     lemma_commit_reveal_enabled: bool = Field(
         default=False,
-        validation_alias=AliasChoices(
-            "LEMMA_COMMIT_REVEAL_ENABLED",
-            "lemma_commit_reveal_enabled",
-        ),
+        validation_alias="LEMMA_COMMIT_REVEAL_ENABLED",
         description=(
             "Two-phase challenge: validator queries commit (hash) then reveal (proof + nonce). "
             "See docs/commit-reveal.md and lemma/protocol_commit_reveal.py."
@@ -767,10 +764,7 @@ class LemmaSettings(BaseSettings):
     )
     lemma_miner_verify_attest_enabled: bool = Field(
         default=False,
-        validation_alias=AliasChoices(
-            "LEMMA_MINER_VERIFY_ATTEST_ENABLED",
-            "lemma_miner_verify_attest_enabled",
-        ),
+        validation_alias="LEMMA_MINER_VERIFY_ATTEST_ENABLED",
         description=(
             "Validators require Sr25519 attest signatures on miner responses; miners must run "
             "`LEMMA_MINER_LOCAL_VERIFY=1` and sign after local PASS. See docs/miner-verify-attest.md."
@@ -780,10 +774,7 @@ class LemmaSettings(BaseSettings):
         default=1.0,
         ge=0.0,
         le=1.0,
-        validation_alias=AliasChoices(
-            "LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION",
-            "lemma_miner_verify_attest_spot_verify_fraction",
-        ),
+        validation_alias="LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION",
         description=(
             "Deterministic fraction of miner responses that still run full validator Lean verify "
             "(rest trusted via attest only). 1.0 = always verify (default); 0.15 ≈ 15% heavy verify."
@@ -791,10 +782,7 @@ class LemmaSettings(BaseSettings):
     )
     lemma_miner_verify_attest_spot_verify_salt: str = Field(
         default="",
-        validation_alias=AliasChoices(
-            "LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_SALT",
-            "lemma_miner_verify_attest_spot_verify_salt",
-        ),
+        validation_alias="LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_SALT",
         description=(
             "Optional validator/operator salt mixed into attest spot-verify selection. Keep non-empty salts "
             "out of public docs; lemma meta exposes only a SHA256 fingerprint."
@@ -802,10 +790,7 @@ class LemmaSettings(BaseSettings):
     )
     lemma_judge_profile_attest_enabled: bool = Field(
         default=False,
-        validation_alias=AliasChoices(
-            "LEMMA_JUDGE_PROFILE_ATTEST_ENABLED",
-            "lemma_judge_profile_attest_enabled",
-        ),
+        validation_alias="LEMMA_JUDGE_PROFILE_ATTEST_ENABLED",
         description=(
             "Optional HTTP peer quorum: each URL must return this validator's judge_profile_sha256. "
             "See LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS, LEMMA_JUDGE_PROFILE_ATTEST_SKIP, "
@@ -814,10 +799,7 @@ class LemmaSettings(BaseSettings):
     )
     lemma_judge_profile_attest_peer_urls: str = Field(
         default="",
-        validation_alias=AliasChoices(
-            "LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS",
-            "lemma_judge_profile_attest_peer_urls",
-        ),
+        validation_alias="LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS",
         description=(
             "Comma-separated GET URLs probed when LEMMA_JUDGE_PROFILE_ATTEST_ENABLED=1 (plaintext hex or JSON "
             "with judge_profile_sha256)."
@@ -825,10 +807,7 @@ class LemmaSettings(BaseSettings):
     )
     lemma_judge_profile_attest_allow_skip: bool = Field(
         default=False,
-        validation_alias=AliasChoices(
-            "LEMMA_JUDGE_PROFILE_ATTEST_SKIP",
-            "lemma_judge_profile_attest_allow_skip",
-        ),
+        validation_alias="LEMMA_JUDGE_PROFILE_ATTEST_SKIP",
         description=(
             "When attest is enabled, skip peer HTTP (solo / dev only). Logs as WARN at validator startup — "
             "not for production multi-validator alignment."
@@ -838,10 +817,7 @@ class LemmaSettings(BaseSettings):
         default=15.0,
         ge=1.0,
         le=300.0,
-        validation_alias=AliasChoices(
-            "LEMMA_JUDGE_PROFILE_ATTEST_HTTP_TIMEOUT_S",
-            "lemma_judge_profile_attest_http_timeout_s",
-        ),
+        validation_alias="LEMMA_JUDGE_PROFILE_ATTEST_HTTP_TIMEOUT_S",
         description="Per-URL HTTP timeout when LEMMA_JUDGE_PROFILE_ATTEST_ENABLED=1.",
     )
 

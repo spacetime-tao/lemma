@@ -267,7 +267,8 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **`validator_judge_stack_strict`** vs unreachable Anthropic judge branch on validator — Anthropic branch removed from validator epoch builder; local one-shot judge tooling remains.
 - Six env names for two wallet values — validator wallet overrides now keep the documented
   `BT_VALIDATOR_WALLET_COLD` / `BT_VALIDATOR_WALLET_HOT` env names and drop the unused `LEMMA_*` aliases.
-- Reserved protocol toggles default **False** but many Fields persist.
+- Reserved protocol toggles default **False** but many Fields persist — documented `LEMMA_*` env names remain;
+  undocumented lowercase env aliases were removed from the commit-reveal, miner-attest, and judge-attest switches.
 - Timeout-split / prover self-rejection knobs — validator-side usefulness questioned in audit.
 
 ### 13.7 Tests (coverage imbalance)
