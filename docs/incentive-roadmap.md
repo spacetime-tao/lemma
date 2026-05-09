@@ -17,7 +17,7 @@ This doc is for **operators and contributors** planning work—not step-by-step 
 - [x] Empty-epoch uniform weights exclude own validator UID when possible
 - [x] Canonical judge stack pin at validator startup (operator-aligned)
 - [x] Generated template registry SHA pin at startup
-- [x] Synapse body-hash integrity check when `computed_body_hash` is present
+- [x] Synapse body-hash integrity fails closed when `computed_body_hash` is missing/mismatched or `deadline_block` is missing
 - [x] `LEMMA_JUDGE_PROFILE_ATTEST_ENABLED` — HTTP peer quorum vs local `judge_profile_sha256` (`LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS`, optional `LEMMA_JUDGE_PROFILE_ATTEST_SKIP`); `lemma validator judge-attest-serve`
 
 ---

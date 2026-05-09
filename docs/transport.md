@@ -19,7 +19,7 @@ This is the **shipping** stack in this repository. It is **not** replaced here b
 Effects:
 
 - **`computed_body_hash`** on the wire is derived from that canonical hash (see Bittensor synapse docs / implementation).
-- **`synapse_miner_response_integrity_ok`** recomputes **`body_hash`** and compares it to **`computed_body_hash`** when present; **mismatch ⇒ drop** (tampering, proxy rewriting, or client skew).
+- **`synapse_miner_response_integrity_ok`** recomputes **`body_hash`** and compares it to **`computed_body_hash`**; **missing hash, missing `deadline_block`, or mismatch => drop** (tampering, proxy rewriting, or client skew).
 
 **Not** included in `required_hash_fields` (see class doc / fields): e.g. **`miner_verify_attest_signature_hex`**, **`proof_commitment_hex`**, **`commit_reveal_nonce_hex`** — those use separate crypto or phases. Changing **`required_hash_fields`** requires **coordinated** miner + validator releases because both sides must agree on what gets hashed.
 
@@ -31,7 +31,7 @@ Effects:
 
 ## Practical operator notes
 
-- **Proxies / TLS termination:** Anything that rewrites JSON bodies can break **`computed_body_hash`** matching — treat hash failures as transport bugs or attacks.
+- **Proxies / TLS termination:** Anything that strips hash headers or rewrites JSON bodies can break **`computed_body_hash`** matching — treat hash failures as transport bugs or attacks.
 - **Version skew:** Miner and validator **Lemma** versions must agree on synapse fields and hashing rules.
 - **Forward wait:** Timeouts are chain-derived — see [validator_lean_load.md](validator_lean_load.md) and [validator.md](validator.md).
 
