@@ -23,6 +23,7 @@ def training_record(
     rubric: RubricScore,
     profile: TrainingExportProfile = "full",
     proof_metrics: LeanProofMetrics | None = None,
+    coldkey: str | None = None,
 ) -> dict[str, Any]:
     """One JSON-serializable row for dataset export.
 
@@ -53,6 +54,8 @@ def training_record(
         "proof_script": resp.proof_script or "",
         "rubric": rubric.model_dump(),
     }
+    if coldkey:
+        row["coldkey"] = coldkey
     if proof_metrics is not None:
         row["proof_metrics"] = proof_metrics.model_dump()
     return row

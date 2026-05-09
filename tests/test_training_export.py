@@ -39,9 +39,11 @@ def test_training_record_roundtrip_fields(tmp_path: Path) -> None:
         resp=resp,
         rubric=r,
         proof_metrics=proof_metrics,
+        coldkey="coldkey-public",
     )
     assert row["schema_version"] == 1
     assert row["uid"] == 7
+    assert row["coldkey"] == "coldkey-public"
     assert row["theorem_id"] == "tid"
     assert row["reasoning_steps"] is not None
     assert len(row["reasoning_steps"]) == 2
@@ -87,6 +89,7 @@ def test_training_record_reasoning_only_no_scores(tmp_path: Path) -> None:
     assert "proof_script" not in row
     assert "rubric" not in row
     assert "proof_metrics" not in row
+    assert "coldkey" not in row
 
     out = tmp_path / "r.jsonl"
     append_epoch_jsonl(out, [row], {3: 0.5}, include_pareto_weights=False)
