@@ -38,7 +38,7 @@ These stay in `spacetime-tao/lemma` because they affect scoring agreement.
 
 These stay in the core repo, but should be handled as product decisions, not tiny patches.
 
-1. Replace or reduce `proof_intrinsic_score`; length is a weak proxy for mathematical value. **Default weight lowered to `0.10`; comment-only / blank-line padding normalized; compare-only Lean probe added; decision note:** [proof-intrinsic-decision.md](proof-intrinsic-decision.md). Next behavior change should validate the probe against real submissions before any scoring use.
+1. Replace or reduce `proof_intrinsic_score`; length is a weak proxy for mathematical value. **Default weight lowered to `0.10`; comment-only / blank-line padding normalized; compare-only Lean probe added; decision note and go/no-go gate:** [proof-intrinsic-decision.md](proof-intrinsic-decision.md). Next behavior change must choose to replace, keep low, or remove/reduce the heuristic from real export data plus padding fixtures, in a separate scoring commit.
 2. Decide whether judged informal reasoning is part of the permanent incentive mechanism or a bootstrap aid.
 3. Keep Lean pass/fail as the objective floor.
 4. Avoid adding more scoring layers until the primary objective is one sentence.

@@ -73,6 +73,32 @@ Possible research directions include proof term size, elaborator trace summaries
 nontrivial goal transitions, tactic trace structure, and imported theorem usage.
 These are starting points, not approved designs.
 
+## Go/No-Go Validation Gate
+
+Do not change live rewards from this research path until the decision is backed
+by real export data and adversarial fixtures.
+
+Minimum gate for the next scoring decision:
+
+1. Collect a real validator `full` export with `LEMMA_LEAN_PROOF_METRICS=1`.
+   Use only rows where the proof-metric probe exits successfully.
+2. Run `tools.proof_metrics_analyze` and keep the report with the decision
+   notes. Failed probe rows are a reliability signal, not scoring evidence.
+3. Compare the candidate metric against honest short proofs, honest longer
+   proofs, and padding attempts: comments, long string literals, unused trivial
+   `have` blocks, long names, and extra lines.
+4. Make one explicit choice in a separate commit:
+   - **replace** `proof_intrinsic_score` with a Lean-backed metric,
+   - **keep** the current low-weight heuristic while collecting more data, or
+   - **remove/reduce** the proof-text component if no candidate clears the gate.
+
+The gate fails if the candidate mostly tracks raw proof text length, rewards
+obvious Lean-valid padding, has frequent probe failures, or adds enough runtime
+cost to make validator operation worse.
+
+Any accepted scoring change must update tests, operator docs, migration notes,
+and the validator scoring/profile pin. It must not be hidden inside cleanup.
+
 ## Prototype Boundary
 
 Do not wire a new proof-side metric into live scoring until it passes the gate
