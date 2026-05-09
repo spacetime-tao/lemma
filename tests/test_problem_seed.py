@@ -4,6 +4,7 @@ from lemma.common.problem_seed import (
     effective_chain_head_for_problem_seed,
     first_block_of_next_seed_window,
     format_next_theorem_countdown,
+    mix_sub_problem_seed,
     problem_sample_seed_block,
     resolve_problem_seed,
     subnet_epoch_index_seed,
@@ -14,6 +15,15 @@ def test_effective_chain_head_for_problem_seed() -> None:
     assert effective_chain_head_for_problem_seed(100, 0) == 100
     assert effective_chain_head_for_problem_seed(100, 1) == 99
     assert effective_chain_head_for_problem_seed(0, 5) == 0
+
+
+def test_mix_sub_problem_seed_is_deterministic_and_distinct() -> None:
+    base = 12345
+
+    seeds = [mix_sub_problem_seed(base, i) for i in range(4)]
+
+    assert seeds == [12345, 1012348, 2012351, 3012354]
+    assert len(set(seeds)) == len(seeds)
 
 
 def test_slack_aligns_quantize_straddlers() -> None:
