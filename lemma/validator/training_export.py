@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Literal
 
@@ -24,6 +25,7 @@ def training_record(
     profile: TrainingExportProfile = "full",
     proof_metrics: LeanProofMetrics | None = None,
     coldkey: str | None = None,
+    export_context: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """One JSON-serializable row for dataset export.
 
@@ -38,14 +40,16 @@ def training_record(
         "block": block,
         "theorem_id": theorem_id,
         "uid": uid,
+        "export_profile": profile,
         "model_card": resp.model_card,
         "reasoning_steps": [s.model_dump() for s in steps] if steps else None,
         "reasoning_text": effective_reasoning_text(resp),
     }
+    if export_context:
+        common["export_context"] = dict(export_context)
     if profile == "reasoning_only":
         return {
             "schema_version": 2,
-            "export_profile": "reasoning_only",
             **common,
         }
     row = {

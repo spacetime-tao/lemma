@@ -26,6 +26,8 @@ class MetricRow:
     line_no: int
     theorem_id: str
     uid: int | None
+    judge_profile_sha256: str | None
+    generated_registry_sha256: str | None
     proof_len: int
     proof_intrinsic: float
     judge_composite: float | None
@@ -93,6 +95,11 @@ def render_report(report: MetricsReport, *, outlier_limit: int = 8) -> str:
         f"unique_uids={_unique_uid_count(ok_rows)} "
         f"judged_rows={len(judged_rows)} "
         f"comparison_theorems={_comparison_theorem_count(judged_rows)}",
+        "export_context="
+        f"rows_with_judge_profile={_context_row_count(ok_rows, lambda r: r.judge_profile_sha256)} "
+        f"unique_judge_profiles={len(_unique_context_values(ok_rows, lambda r: r.judge_profile_sha256))} "
+        f"rows_with_generated_registry={_context_row_count(ok_rows, lambda r: r.generated_registry_sha256)} "
+        f"unique_generated_registries={len(_unique_context_values(ok_rows, lambda r: r.generated_registry_sha256))}",
         "decision_data_blockers=" + (",".join(data_blockers) if data_blockers else "none"),
         "decision_data_warnings=" + (",".join(data_warnings) if data_warnings else "none"),
         f"decision_ready={'yes' if ready else 'no'}",
@@ -293,6 +300,15 @@ def decision_data_findings(ok_rows: list[MetricRow], *, failed_rows: int) -> tup
         blockers.append("no_judge_composite_rows")
     elif judged < len(ok_rows):
         warnings.append("partial_judge_composite_rows")
+    if _context_row_count(ok_rows, lambda r: r.judge_profile_sha256) < len(ok_rows):
+        blockers.append("missing_judge_profile_sha256")
+    if len(_unique_context_values(ok_rows, lambda r: r.judge_profile_sha256)) > 1:
+        blockers.append("mixed_judge_profiles")
+    generated_registry_rows = _context_row_count(ok_rows, lambda r: r.generated_registry_sha256)
+    if generated_registry_rows and generated_registry_rows < len(ok_rows):
+        warnings.append("partial_generated_registry_sha256")
+    if len(_unique_context_values(ok_rows, lambda r: r.generated_registry_sha256)) > 1:
+        blockers.append("mixed_generated_registries")
     if failed_rows:
         warnings.append("failed_proof_metric_probes")
     return blockers, warnings
@@ -359,6 +375,14 @@ def _comparison_groups(rows: list[MetricRow]) -> list[list[MetricRow]]:
         if len(group) >= MIN_DECISION_COMPARISON_ROWS_PER_THEOREM
         and len({r.uid for r in group if r.uid is not None}) >= MIN_DECISION_COMPARISON_UIDS_PER_THEOREM
     ]
+
+
+def _context_row_count(rows: list[MetricRow], field: Callable[[MetricRow], str | None]) -> int:
+    return sum(1 for r in rows if field(r))
+
+
+def _unique_context_values(rows: list[MetricRow], field: Callable[[MetricRow], str | None]) -> set[str]:
+    return {v for r in rows if (v := field(r))}
 
 
 def _within_theorem_centered_corr(
@@ -457,10 +481,13 @@ def _metric_row(obj: Any, line_no: int) -> MetricRow | None:
     judge = _as_float(rubric.get("composite")) if isinstance(rubric, dict) else None
     uid = _as_int(obj.get("uid"))
     exit_code = _as_int(metrics.get("probe_exit_code"))
+    export_context = obj.get("export_context")
     return MetricRow(
         line_no=line_no,
         theorem_id=str(obj.get("theorem_id") or ""),
         uid=uid,
+        judge_profile_sha256=_context_str(export_context, "judge_profile_sha256"),
+        generated_registry_sha256=_context_str(export_context, "generated_registry_sha256"),
         proof_len=len(proof),
         proof_intrinsic=proof_intrinsic_score(proof),
         judge_composite=judge,
@@ -488,6 +515,16 @@ def _as_float(value: Any) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def _context_str(export_context: Any, key: str) -> str | None:
+    if not isinstance(export_context, dict):
+        return None
+    value = export_context.get(key)
+    if not isinstance(value, str):
+        return None
+    stripped = value.strip().lower()
+    return stripped or None
 
 
 def _stats_line(name: str, values: list[int]) -> str:

@@ -14,6 +14,12 @@ from tools.proof_metrics_analyze import (
 )
 
 FIXTURE = Path(__file__).parent / "fixtures" / "proof_metrics_validation.jsonl"
+EXPORT_CONTEXT = {
+    "lemma_version": "0.1.0",
+    "judge_profile_sha256": "a" * 64,
+    "judge_rubric_sha256": "b" * 64,
+    "generated_registry_sha256": "c" * 64,
+}
 
 
 def test_load_report_summarizes_metric_rows(tmp_path) -> None:
@@ -24,6 +30,7 @@ def test_load_report_summarizes_metric_rows(tmp_path) -> None:
             "uid": 1,
             "proof_script": "theorem a : True := by trivial\n",
             "rubric": {"composite": 0.8},
+            "export_context": EXPORT_CONTEXT,
             "proof_metrics": {
                 "proof_declaration_bytes": 50,
                 "proof_declaration_lines": 3,
@@ -35,6 +42,7 @@ def test_load_report_summarizes_metric_rows(tmp_path) -> None:
             "uid": 4,
             "proof_script": "theorem f : True := by trivial\n" + "-- padding\n" * 200,
             "rubric": {"composite": 0.6},
+            "export_context": EXPORT_CONTEXT,
             "proof_metrics": {
                 "proof_declaration_bytes": 20,
                 "proof_declaration_lines": 1,
@@ -47,6 +55,7 @@ def test_load_report_summarizes_metric_rows(tmp_path) -> None:
             "uid": 3,
             "proof_script": "theorem p : True := by trivial\n" + "-- padding\n" * 100,
             "rubric": {"composite": 0.3},
+            "export_context": EXPORT_CONTEXT,
             "proof_metrics": {
                 "proof_declaration_bytes": 40,
                 "proof_declaration_lines": 2,
@@ -71,6 +80,10 @@ def test_load_report_summarizes_metric_rows(tmp_path) -> None:
     assert (
         "decision_data=successful_rows=2 unique_theorems=2 unique_uids=2 "
         "judged_rows=2 comparison_theorems=0"
+    ) in rendered
+    assert (
+        "export_context=rows_with_judge_profile=2 unique_judge_profiles=1 "
+        "rows_with_generated_registry=2 unique_generated_registries=1"
     ) in rendered
     assert (
         "decision_data_blockers="
@@ -140,6 +153,7 @@ def test_main_uses_env_path(tmp_path, monkeypatch, capsys) -> None:
                 "theorem_id": "a",
                 "uid": 1,
                 "proof_script": "theorem a : True := by trivial\n",
+                "export_context": EXPORT_CONTEXT,
                 "proof_metrics": {
                     "proof_declaration_bytes": 50,
                     "proof_declaration_lines": 3,
@@ -164,6 +178,42 @@ def test_main_uses_env_path(tmp_path, monkeypatch, capsys) -> None:
     assert "gate_reasons=none" in rendered
 
 
+def test_render_report_flags_mixed_export_context(tmp_path) -> None:
+    path = tmp_path / "mixed.jsonl"
+    other_context = {**EXPORT_CONTEXT, "judge_profile_sha256": "d" * 64}
+    rows = [
+        {
+            "theorem_id": "a",
+            "uid": 1,
+            "proof_script": "theorem a : True := by trivial\n",
+            "rubric": {"composite": 0.8},
+            "export_context": EXPORT_CONTEXT,
+            "proof_metrics": {
+                "proof_declaration_bytes": 50,
+                "proof_declaration_lines": 3,
+                "probe_exit_code": 0,
+            },
+        },
+        {
+            "theorem_id": "a",
+            "uid": 2,
+            "proof_script": "theorem b : True := by trivial\n",
+            "rubric": {"composite": 0.7},
+            "export_context": other_context,
+            "proof_metrics": {
+                "proof_declaration_bytes": 55,
+                "proof_declaration_lines": 3,
+                "probe_exit_code": 0,
+            },
+        },
+    ]
+    path.write_text("\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8")
+
+    rendered = render_report(load_report(path))
+    assert "unique_judge_profiles=2" in rendered
+    assert "mixed_judge_profiles" in rendered
+
+
 def test_validation_fixture_separates_padding_from_failed_probes() -> None:
     report = load_report(FIXTURE)
 
@@ -180,7 +230,7 @@ def test_validation_fixture_separates_padding_from_failed_probes() -> None:
     ) in rendered
     assert (
         "decision_data_blockers=fewer_than_50_successful_rows,"
-        "fewer_than_3_judged_theorems_with_2_rows_and_2_uids"
+        "fewer_than_3_judged_theorems_with_2_rows_and_2_uids,missing_judge_profile_sha256"
     ) in rendered
     assert "decision_data_warnings=failed_proof_metric_probes" in rendered
     assert "decision_ready=no" in rendered
@@ -223,6 +273,7 @@ def test_require_decision_ready_returns_nonzero_for_blocked_export(tmp_path, cap
                 "uid": 1,
                 "proof_script": "theorem a : True := by trivial\n",
                 "rubric": {"composite": 0.9},
+                "export_context": EXPORT_CONTEXT,
                 "proof_metrics": {
                     "proof_declaration_bytes": 100,
                     "proof_declaration_lines": 5,
@@ -251,6 +302,7 @@ def test_require_decision_ready_passes_for_ready_manual_review_export(tmp_path, 
                 "uid": i % 10,
                 "proof_script": f"theorem t_{i} : True := by trivial\n",
                 "rubric": {"composite": 0.6 + i * 0.001},
+                "export_context": EXPORT_CONTEXT,
                 "proof_metrics": {
                     "proof_declaration_bytes": 500 + i,
                     "proof_declaration_lines": 20,
@@ -284,6 +336,7 @@ def test_render_report_includes_within_theorem_centered_correlations(tmp_path, c
                     "uid": theorem_idx * 2,
                     "proof_script": f"theorem low_{theorem_idx} : True := by trivial\n",
                     "rubric": {"composite": 0.2},
+                    "export_context": EXPORT_CONTEXT,
                     "proof_metrics": {
                         "proof_declaration_bytes": 100,
                         "proof_declaration_lines": 10,
@@ -301,6 +354,7 @@ def test_render_report_includes_within_theorem_centered_correlations(tmp_path, c
                         "  exact h\n"
                     ),
                     "rubric": {"composite": 0.8},
+                    "export_context": EXPORT_CONTEXT,
                     "proof_metrics": {
                         "proof_declaration_bytes": 200,
                         "proof_declaration_lines": 20,
@@ -329,6 +383,7 @@ def test_render_report_flags_same_theorem_metric_judge_disagreements(tmp_path, c
             "uid": 1,
             "proof_script": "theorem low_metric : True := by trivial\n",
             "rubric": {"composite": 0.8},
+            "export_context": EXPORT_CONTEXT,
             "proof_metrics": {
                 "proof_declaration_bytes": 100,
                 "proof_declaration_lines": 10,
@@ -342,6 +397,7 @@ def test_render_report_flags_same_theorem_metric_judge_disagreements(tmp_path, c
             "uid": 2,
             "proof_script": "theorem high_metric : True := by\n  have h : True := by trivial\n  exact h\n",
             "rubric": {"composite": 0.7},
+            "export_context": EXPORT_CONTEXT,
             "proof_metrics": {
                 "proof_declaration_bytes": 300,
                 "proof_declaration_lines": 20,
@@ -375,6 +431,7 @@ def test_require_decision_ready_requires_same_theorem_comparisons(tmp_path, caps
                 "uid": i % 10,
                 "proof_script": f"theorem t_{i} : True := by trivial\n",
                 "rubric": {"composite": 0.9},
+                "export_context": EXPORT_CONTEXT,
                 "proof_metrics": {
                     "proof_declaration_bytes": 500 + i,
                     "proof_declaration_lines": 20,

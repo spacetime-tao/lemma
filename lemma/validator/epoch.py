@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 import bittensor as bt
 from loguru import logger
 
+from lemma import __version__
 from lemma.common.block_deadline import compute_forward_deadline_and_wait
 from lemma.common.problem_seed import (
     effective_chain_head_for_problem_seed,
@@ -23,9 +24,11 @@ from lemma.judge.base import Judge
 from lemma.judge.fake import FakeJudge
 from lemma.judge.fingerprint import rubric_sha256
 from lemma.judge.openai_judge import OpenAIJudge
+from lemma.judge.profile import judge_profile_sha256
 from lemma.lean.sandbox import VerifyResult
 from lemma.lean.verify_runner import run_lean_verify
 from lemma.problems.base import Problem, ProblemSource
+from lemma.problems.generated import generated_registry_sha256
 from lemma.protocol import LemmaChallenge, synapse_miner_response_integrity_ok
 from lemma.protocol_attest import (
     attest_spot_should_full_verify,
@@ -251,6 +254,16 @@ async def run_epoch(
     training_rows: list[dict[str, Any]] = []
     export_path = settings.training_export_jsonl
     export_profile = settings.lemma_training_export_profile
+    export_context = (
+        {
+            "lemma_version": __version__,
+            "judge_profile_sha256": judge_profile_sha256(settings),
+            "judge_rubric_sha256": rubric_sha256(),
+            "generated_registry_sha256": generated_registry_sha256(),
+        }
+        if export_path
+        else None
+    )
 
     total_verified = 0
     total_scored = 0
@@ -542,6 +555,7 @@ async def run_epoch(
                                 profile=export_profile,
                                 proof_metrics=vr_i.proof_metrics,
                                 coldkey=_coldkey_for_uid_or_none(metagraph, uid_i),
+                                export_context=export_context,
                             ),
                         )
                 ent = entry_from_scores(
