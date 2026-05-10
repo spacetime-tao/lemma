@@ -187,7 +187,7 @@ Current snapshot uses `wc -l` over Python files, except `docs/` which counts Mar
 
 | Layer | Round 3 cited LoC | 2026-05 current `wc -l` | Delta |
 |-------|-------------------|-------------------------|-------|
-| `lemma/cli/` | 5 398 (16 files) | 904 (4 files) | -4 494 |
+| `lemma/cli/` | 5 398 (16 files) | 885 (4 files) | -4 513 |
 | `lemma/validator/` | 875 | 1 160 | +285 |
 | `lemma/scoring/` | 282 | 305 | +23 |
 | `lemma/judge/` | 543 | 568 | +25 |
@@ -196,9 +196,9 @@ Current snapshot uses `wc -l` over Python files, except `docs/` which counts Mar
 | `lemma/problems/` | 784 | 1 004 | +220 |
 | `lemma/protocol*` | 290 | 331 | +41 |
 | `lemma/common/` | 1 110 | 1 218 | +108 |
-| `lemma/` total | **12 630** | **7 861** (63 files) | **-4 769** |
+| `lemma/` total | **12 630** | **7 842** (63 files) | **-4 788** |
 | `tests/` | 2 330 | 4 137 (58 files) | +1 807 |
-| `docs/` markdown | 1 355 | 3 092 (30 files) | +1 737 |
+| `docs/` markdown | 1 355 | 3 093 (30 files) | +1 738 |
 
 CLI alone was cited as **43 %** of `lemma/`; it is now about **11 %** by this simple line-count snapshot. The core shrank substantially, while tests/docs grew because safety gates, replay guards, and decision records were added.
 
@@ -211,7 +211,7 @@ CLI alone was cited as **43 %** of `lemma/`; it is now about **11 %** by this si
 - **`_looks_like_shell_step`** frozenset — partial shell interception.
 - **`leaderboard_cmd`** wrapped metagraph display already available through `btcli subnet show`; removed from core. **`miner_menu` / `validator_menu`** duplicated subcommands and were removed in the first CLI extraction trim.
 - **`docs/` opener** + `_DOCS_BY_SLUG` hardcoded tuple moved to `lemma-cli`; core keeps a redirect only.
-- **`configure` ×8** near-identical subcommands moved to `lemma-cli`; core keeps redirect shims only.
+- **`configure` ×8** near-identical subcommands moved to `lemma-cli`; core keeps one passthrough redirect only.
 - **`try_prover.py`** (~677 LoC) local operator preview moved to `lemma-cli`; core keeps redirects only.
 - **`start_screen.py`** (~569 LoC) single mega-menu; removed in the first CLI extraction trim.
 - **`glossary.py`** moved to `lemma-cli`; core keeps a redirect only.
@@ -397,5 +397,6 @@ Examples called out in Round 3: judge model/URL, Anthropic default model age, Le
 | 2026-05 | Bounded the bundled reference miner as Axon compatibility only |
 | 2026-05 | Refreshed line-count snapshots after decision-boundary docs |
 | 2026-05 | Moved `.env` merge helper to `lemma-cli` and refreshed line counts |
+| 2026-05 | Collapsed configure redirects to one passthrough shim |
 
 **Maintainers:** bump §17 when you materially change scope or close a whole section.
