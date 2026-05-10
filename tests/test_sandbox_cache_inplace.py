@@ -1,5 +1,7 @@
 """Workspace cache publishes and reuses in-place slots."""
 
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -76,6 +78,47 @@ end Submission
     assert not seen[0].exists()
     assert (slot / ".lake" / "marker").read_text(encoding="utf-8") == "primed"
     assert (slot / "Submission.lean").exists()
+
+
+def test_cold_cache_singleflight_warms_once_for_concurrent_template(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    p = _minimal_problem()
+    sub_a = """import Mathlib
+namespace Submission
+theorem t_test : True := by trivial
+end Submission
+"""
+    sub_b = """import Mathlib
+namespace Submission
+theorem t_test : True := by
+  trivial
+end Submission
+"""
+    cache = tmp_path / "ws_cache"
+    key = workspace_verify_cache_key(p, sub_a, include_submission_fingerprint=False)
+    slot = cache / key
+    seen: list[Path] = []
+
+    def fake_host(self: LeanSandbox, work: Path) -> VerifyResult:  # noqa: ARG001
+        seen.append(work.resolve())
+        if work != slot:
+            time.sleep(0.05)
+            (work / ".lake").mkdir()
+            (work / ".lake" / "marker").write_text("primed", encoding="utf-8")
+        return VerifyResult(passed=True, reason="ok")
+
+    monkeypatch.setattr(LeanSandbox, "_verify_host", fake_host)
+    sb = LeanSandbox(use_docker=False, timeout_s=30, workspace_cache_dir=cache)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(lambda sub: sb.verify(p, sub), [sub_a, sub_b]))
+
+    assert [r.passed for r in results] == [True, True]
+    assert len(seen) == 2
+    assert seen[0] != slot.resolve()
+    assert seen[1] == slot.resolve()
+    assert (slot / ".lake" / "marker").read_text(encoding="utf-8") == "primed"
 
 
 def test_proof_metrics_probe_materialized_in_warm_slot(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

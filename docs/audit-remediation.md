@@ -257,6 +257,8 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **`_clone_dot_lake`** removed; first passing verify publishes the whole workspace by same-directory rename.
 - **`_template_slot_lock`** LRU in-process only.
 - **`_publish_workspace_cache`** simplified to one locked same-directory rename into an empty cache slot.
+- Cold template warmup now singleflights per cache slot: concurrent proofs for the same cold template wait for
+  the first passing verify to publish `.lake`, then reuse that warm slot.
 - Warm Lake-cache behavior now has one override: `LEMMA_LEAN_ALWAYS_CACHE_GET=1` forces `lake exe cache get`; otherwise warm `.lake/packages/mathlib` workspaces skip it.
 - **HTTP worker** subsystem optional (~250 LoC) — topology docs “advanced.”
 - Duplicate `r.returncode` branches in `_verify_host` removed; local double cheat scan removed (remote pre-scan retained before POST).
