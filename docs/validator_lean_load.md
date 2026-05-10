@@ -9,7 +9,7 @@ Subnet design context: [`knowledge/subnet.invariants.yaml`](../knowledge/subnet.
 | Env | Role |
 | --- | --- |
 | **`LEMMA_LEAN_VERIFY_MAX_CONCURRENT`** | Max concurrent Lean verify jobs per epoch (each may use Docker). Raises throughput when many miners return proofs; lower if RAM/CPU or Docker stalls. |
-| **`LEMMA_JUDGE_MAX_CONCURRENT`** | Max concurrent judge HTTP calls after Lean passes. Tune against provider rate limits (e.g. Chutes). |
+| **`LEMMA_LEAN_VERIFY_REMOTE_URL`** | Optional remote Lean worker URL; moves verifier CPU off the validator host when operators need more throughput. |
 
 Epoch logs include the caps in use (see `lemma_epoch_summary` / debug lines in [`epoch.py`](../lemma/validator/epoch.py)).
 
@@ -41,6 +41,15 @@ Cold-cache measurements should not be used as the steady-state validator budget,
 but they matter operationally: after a release, a new template, a new image, or a
 new cache directory, the first passing proof can pay the warmup cost.
 
+**2026-05 testnet note:** a 4 vCPU / 8 GB shared Linux worker using a
+long-lived Docker worker and persistent workspace cache verified a simple
+generated proof in about **292 s cold** (Mathlib cache download/decompress) and
+about **25 s warm** on repeated runs. That is compatible with shorter theorem
+windows for small miner counts, but hundreds of miners require concurrency,
+dedup, attest/spot policy, and likely a worker pool rather than one small box.
+On the same host, baking the full Mathlib cache into one huge Docker layer was
+brittle; the lighter Lean image plus persistent cache was the reliable path.
+
 When several proofs for the same cold template arrive together, the validator now
 uses a per-template singleflight: one proof pays the cold warmup and publishes the
 warm slot; the waiting proofs then reuse that slot. This reduces duplicate
@@ -51,7 +60,7 @@ being checked.
 Validators also reuse Lean verification results for identical proof payloads in
 one batch. If several miners submit the same theorem/proof script, the validator
 checks that Lean payload once and applies the pass/fail result to each matching
-miner response before judging their reasoning separately. This helps with
+miner response before proof-side scoring. This helps with
 same-model clones and early testnet data collection, but it is not a substitute
 for more verifier capacity when many miners submit genuinely different proofs.
 
@@ -76,7 +85,7 @@ Attest **disabled**: spot fraction is ignored (full verify path uses normal Lean
 Shorter generated windows, such as 25 blocks (~5 minutes at the 12 s estimate)
 or 50 blocks (~10 minutes), are possible policy choices, not free defaults.
 They should be adopted only after operators measure warm-cache verification,
-judge throughput, and miner response latency on production-like Linux hosts.
+remote worker throughput, and miner response latency on production-like Linux hosts.
 
 Also distinguish two clocks:
 
@@ -88,8 +97,8 @@ Also distinguish two clocks:
 Reducing theorem windows from 100 blocks to 50 or 25 blocks increases theorem
 variety and shortens miner response budgets, but it does not by itself make the
 validator write weights more often. If governance wants 5- or 10-minute scored
-rounds, the full validator cadence, weight-setting policy, forward wait, judge
-throughput, and warm-cache Lean timing need to be reviewed together.
+rounds, the full validator cadence, weight-setting policy, forward wait,
+proof-scoring cost, and warm-cache Lean timing need to be reviewed together.
 
 Miner verify attest can reduce validator Lean load, but only after miners run
 `LEMMA_MINER_LOCAL_VERIFY=1`, attest signatures validate, and validators keep a

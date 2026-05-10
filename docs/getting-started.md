@@ -9,7 +9,7 @@ End-to-end: **uv** + repo → **keys** → **`lemma-cli setup`** → **miner or 
 
 ## Paths at a glance
 
-**Miner (most common first path):** `uv sync --extra btcli` → keys (`uv run btcli`) → `lemma-cli setup` → fund wallet → `uv run btcli subnet register --netuid 467 --network test …` → `uv run lemma miner dry-run` → **`lemma-cli rehearsal`** (optional: live theorem → prover → Lean → judge preview) → open `AXON_PORT` → `uv run lemma miner start`. Details: [miner.md](miner.md).
+**Miner (most common first path):** `uv sync --extra btcli` → keys (`uv run btcli`) → `lemma-cli setup` → fund wallet → `uv run btcli subnet register --netuid 467 --network test …` → `uv run lemma miner dry-run` → **`lemma-cli rehearsal`** (optional: live theorem → prover → Lean preview) → open `AXON_PORT` → `uv run lemma miner start`. Details: [miner.md](miner.md).
 
 **Validator:** same env/keys/setup as above, then **`bash scripts/prebuild_lean_image.sh`** (first build is large) → **`lemma-cli rehearsal`** (recommended preview) → `uv run lemma validator-check` → `uv run lemma validator start`. Prefer explicit `uv run lemma validator start` / `uv run lemma validator dry-run` over ad-hoc Python entrypoints. Details: [validator.md](validator.md).
 
@@ -53,13 +53,13 @@ Registration and stake: [Bittensor CLI](https://docs.learnbittensor.org/).
 
 ## Configure (`lemma-cli setup`)
 
-**Chain:** the wizard only sets **Bittensor testnet** and writes **`NETUID=467`** (no separate netuid question). Then: wallet names, API keys, axon port, judge, and (for validators) Lean image. **Finney (mainnet) is TBD** for `lemma-cli configure chain` — hand-edit `.env` if Lemma later registers on mainnet; see comments in `.env.example`. Seeds from `.env.example` if `.env` is missing.
+**Chain:** the wizard only sets **Bittensor testnet** and writes **`NETUID=467`** (no separate netuid question). Then: wallet names, prover API keys, axon port, and (for validators) Lean image. **Finney (mainnet) is TBD** for `lemma-cli configure chain` — hand-edit `.env` if Lemma later registers on mainnet; see comments in `.env.example`. Seeds from `.env.example` if `.env` is missing.
 
 ```bash
 lemma-cli setup
 ```
 
-Incremental: `lemma-cli configure chain`, `configure prover`, `configure judge`, `configure axon`, `configure lean-image`.
+Incremental: `lemma-cli configure chain`, `configure prover`, `configure axon`, `configure lean-image`.
 
 ## Register on-chain
 

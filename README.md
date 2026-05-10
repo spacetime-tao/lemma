@@ -1,6 +1,6 @@
 # Lemma
 
-> **Lemma: incentivized theorem proving for mathematics on [Bittensor](https://docs.learnbittensor.org/).** Miners submit Lean proof scripts for published theorem statements. Validators mechanically verify those proofs; the current default also judges the informal reasoning trace of Lean-valid submissions as a bootstrap ranking signal.
+> **Lemma: incentivized theorem proving for mathematics on [Bittensor](https://docs.learnbittensor.org/).** Miners submit Lean proof scripts for published theorem statements. Validators mechanically verify those proofs and reward valid, efficient formal proofs.
 
 A **theorem** is the precise claim to establish; a **proof** is the formal, machine-checkable argument that shows it. **Lean** is a proof assistant (and language): it checks those proofs mechanically, line by line. Validators run that check in **Docker** (lean-sandbox image).
 
@@ -42,12 +42,12 @@ lemma --help
 | Problem supply policy | [problem-supply-policy.md](docs/problem-supply-policy.md) |
 | Catalog sources | [catalog-sources.md](docs/catalog-sources.md) |
 | Objective decision | [objective-decision.md](docs/objective-decision.md) |
+| Proof-only incentive design | [proof-only-incentives.md](docs/proof-only-incentives.md) |
 | Proof intrinsic scoring | [proof-intrinsic-decision.md](docs/proof-intrinsic-decision.md) |
-| Judge incentive role | [judge-incentive-decision.md](docs/judge-incentive-decision.md) |
 | Credibility exponent policy | [credibility-exponent-decision.md](docs/credibility-exponent-decision.md) |
 | Commit-reveal threat model | [commit-reveal.md](docs/commit-reveal.md) |
 | Miner verify attest threat model | [miner-verify-attest.md](docs/miner-verify-attest.md) |
-| Judge profile peer attest threat model | [judge-profile-attest.md](docs/judge-profile-attest.md) |
+| Validator profile peer attest threat model | [judge-profile-attest.md](docs/judge-profile-attest.md) |
 | System requirements | [system-requirements.md](docs/system-requirements.md) |
 
 ## References

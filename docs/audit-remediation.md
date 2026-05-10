@@ -1,6 +1,6 @@
 # Lemma — consolidated audit remediation tracker
 
-**Purpose:** Single place to track **everything called out** in external reviews (notably **Round 3**, Maciej / Spacetime, post attest + commit-reveal + judge-profile quorum) plus adjacent items from `knowledge/` alignment checks. This is a **backlog and decision log**, not a promise that every line will ship.
+**Purpose:** Single place to track **everything called out** in external reviews (notably **Round 3**, Maciej / Spacetime, post attest + commit-reveal + validator-profile quorum) plus adjacent items from `knowledge/` alignment checks. This is a **backlog and decision log**, not a promise that every line will ship.
 
 **Source text:** The tracker below synthesizes the **full** Round 3 audit (Part 1 incentive layer + Part 2 bloat + §17 KB scorecard + §18 structural redesign + §19 closing). Keep a PDF/markdown copy of the original alongside internal reviews if you need verbatim `file:line` citations (line numbers drift with commits).
 
@@ -18,7 +18,7 @@
 
 | Bucket | Nature | Examples |
 |--------|--------|----------|
-| **A. Objective / economics** | Redesign or explicit acceptance | LLM judge vs kernel ground truth; sybil vs coldkey dedup; Pareto + dedup evasion |
+| **A. Objective / economics** | Redesign or explicit acceptance | prose scoring vs kernel ground truth; sybil vs coldkey dedup; Pareto + dedup evasion |
 | **B. Consensus & integrity** | Engineering + policy | Body-hash fail-open; deadline `None`; template/registry drift |
 | **C. Protocol layers** | Fix bugs vs delete feature | Attest binding; spot-verify predictability; commit-reveal semantics + cache; judge-profile quorum trust model |
 | **D. Scoring heuristics** | Iterate under constraint | `proof_intrinsic` padding; comment strip limits; FakeJudge leak |
@@ -52,7 +52,7 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 7. Drop **`LEMMA_PROBLEM_SOURCE=frozen`** / bundled JSON if policy allows (large policy decision). **Partial:** direct frozen use is dev-gated.
 8. **Aggressively cut CLI / wizard / `main.py` surface** (Part 2 scale stats). **Mostly done:** friendly UX moved to `lemma-cli`, core keeps shims/minimal commands.
 9. Move **`lemma/catalog/`** dev tooling to `tools/` (audit flagged twice). **Done.**
-10. **Plan structural redesign** — container-based miner artifact + kernel-only scoring (see §12); drops judge stack.
+10. **Plan structural redesign** — container-based miner artifact + proof-only scoring (see §12); keeps prose tooling outside rewards.
 
 ---
 
@@ -73,19 +73,19 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 
 | ID | Issue | Source § | Priority | Remediation direction |
 |----|--------|----------|----------|------------------------|
-| **O1** | Rank mixes kernel-verifiable proof with **LLM judge** on miner prose; lowering proof weight to default `w=0.10` reduces text-heuristic padding risk but leaves judge dominance explicit | R3 §2, §11 | P4 / product | **Decision boundary documented:** judge is bootstrap by default unless governance chooses permanent explanation-quality incentives; next scoring change must choose permanent judge, capped/bootstrap judge, or judge-free mode using the decision-record template ([judge-incentive-decision.md](judge-incentive-decision.md)). |
-| **O2** | `primary_design_axis` / one-sentence rule in KB violated by current honest description | R3 §2.3 | P4 | **Done/bounded:** current objective pinned as Lean-valid theorem proving; judged reasoning documented as a bootstrap ranking layer, not the default identity of the subnet ([objective-decision.md](objective-decision.md)). |
+| **O1** | Reward objective must stay tied to kernel-verifiable proof rather than miner prose | R3 §2, §11 | P4 / product | **Target chosen:** long-term rewards are proof-only: Lean pass plus deterministic proof-efficiency signals. See [proof-only-incentives.md](proof-only-incentives.md). |
+| **O2** | `primary_design_axis` / one-sentence rule in KB violated by current honest description | R3 §2.3 | P4 | **Done/bounded:** objective pinned as valid, efficient Lean proofs; proof-only reward target documented in [proof-only-incentives.md](proof-only-incentives.md). |
 | **O3** | Pareto + coldkey dedup + identical dedup still allow sybil farming per R3 math | R3 §2.2, §8, §12 | P2/P4 | **Needs-design:** economic modeling; not fixable by parser alone. [sybil_economics.md](sybil_economics.md) records the minimum replay/economics gate plus the keep / cap / stronger-mechanism / no-change rubric; `tools/sybil_replay_analyze.py` provides offline replay summaries and concrete readiness gaps from private full exports. |
 
 ---
 
 ## 5. `proof_intrinsic` — residual gaming
 
-**Decision note:** [proof-intrinsic-decision.md](proof-intrinsic-decision.md) records the current stance: keep the heuristic only as a low-weight bootstrap signal, do not raise its default weight, and do not add more regex padding detectors as the main fix. Default `LEMMA_SCORE_PROOF_WEIGHT` is now `0.10`; comment-only / blank-line padding is normalized out; `LEMMA_LEAN_PROOF_METRICS=1` enables a compare-only Lean probe in `VerifyResult` with byte/line and delimiter-shape metrics. Training exports now carry non-secret profile/registry provenance for later auditability. The analyzer now surfaces low-judge / high-metric candidates, data-readiness blockers including same-theorem comparison coverage and mixed profile hashes, concrete collection gaps, within-theorem centered correlations, same-theorem disagreement candidates, and an explicit conservative gate verdict before any scoring change.
+**Decision note:** [proof-intrinsic-decision.md](proof-intrinsic-decision.md) records the current stance: keep the heuristic only as a conservative bootstrap signal, do not raise its influence, and do not add more regex padding detectors as the main fix. Comment-only / blank-line padding is normalized out; `LEMMA_LEAN_PROOF_METRICS=1` enables a compare-only Lean probe in `VerifyResult` with byte/line and delimiter-shape metrics. Training exports now carry non-secret profile/registry provenance for later auditability. The analyzer surfaces low-quality / high-metric candidates, data-readiness blockers including same-theorem comparison coverage and mixed profile hashes, concrete collection gaps, within-theorem centered correlations, same-theorem disagreement candidates, and an explicit conservative gate verdict before any scoring change.
 
 | ID | Issue | Source § | Priority | Remediation direction | Key refs |
 |----|--------|----------|----------|------------------------|----------|
-| **P1** | Comment stripping defeats **one** padding class; **string literals**, trivial `have … by trivial`, long names still inflate | R3 §2.1 | P2 | Default weight lowered; comment-only / blank-line padding normalized; compare-only Lean probe + v2 calibration added; exports now carry profile/registry provenance; analyzer flags low-judge / high-metric candidates, same-theorem comparison readiness, mixed profile hashes, concrete data gaps, within-theorem correlations, same-theorem disagreements, and prints a conservative gate verdict. Next real fix must pass the replace / keep-low / reduce-remove decision rubric before scoring use. | `lemma/scoring/proof_intrinsic.py`, `config.py`, `docs/proof-intrinsic-decision.md` |
+| **P1** | Comment stripping defeats **one** padding class; **string literals**, trivial `have … by trivial`, long names still inflate | R3 §2.1 | P2 | Comment-only / blank-line padding normalized; compare-only Lean probe + v2 calibration added; exports now carry profile/registry provenance; analyzer flags low-quality / high-metric candidates, same-theorem comparison readiness, mixed profile hashes, concrete data gaps, within-theorem correlations, same-theorem disagreements, and prints a conservative gate verdict. Next real fix must pass the replace / keep-low / reduce-remove decision rubric before scoring use. | `lemma/scoring/proof_intrinsic.py`, `config.py`, `docs/proof-intrinsic-decision.md` |
 | **P2** | Default credibility exponent `1.0` vs KB mention of `2.5` | R3 §7 | P3 | **Done:** documented divergence; keep `1.0` default until calibrated/governed. Operators can explicitly set `2.5`. | `config.py`, `scoring/reputation.py`, `docs/credibility-exponent-decision.md` |
 | **P3** | Credibility rises on Lean pass; padding that passes Lean **does not** get penalized by cred | R3 §7 | P2 | **Done:** accepted as policy boundary. Credibility is Lean pass/fail reliability; padding research stays in compare-only proof metrics until a proof-side scoring replacement is calibrated. | `docs/proof-intrinsic-decision.md`, `docs/credibility-exponent-decision.md` |
 | **P4** | Spot-verify skip returns pass → cred EMA increases without verify | R3 §3.2, §7 | P1 | **Done:** attest-trusted skips remain scoreable but no longer improve verify credibility. | `lemma/validator/epoch.py`, `lemma/protocol_attest.py`, `tests/test_reputation.py` |
@@ -171,7 +171,7 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 
 ## 12. Structural options (not a single ticket)
 
-Round 3 §11 and §18 propose a **minimum-viable direction** under `knowledge/`: hybrid **`container_execution` + `adversarial_red_blue`**, Docker image commitment on-chain, Lean kernel as sole rubric, ε-Pareto over `(passed, latency, proof bytes)` across environment subsets, **no LLM judge**. That implies deleting large swaths of today’s stack (`lemma/miner/` reference path, judge, much protocol glue) — **program-level fork**, not a sprint. The current bundled miner is kept as a minimal Axon compatibility path, not as an endorsement of growing miner strategy inside core ([miner.md](miner.md)).
+Round 3 §11 and §18 point toward a **minimum-viable direction** under `knowledge/`: hybrid **`container_execution` + `adversarial_red_blue`**, Docker image commitment on-chain, Lean kernel as the eligibility gate, and ε-Pareto over proof-side costs across environment subsets. That keeps prose tooling outside rewards. The current bundled miner is kept as a minimal Axon compatibility path, not as an endorsement of growing miner strategy inside core ([miner.md](miner.md)).
 
 Track exploration separately from **incremental** rows in §3–§11.
 
@@ -359,7 +359,7 @@ Abbreviated; see `knowledge/` for full YAML. Status reflects the current remedia
 
 Use as **release audit**: each row is “pin or document why not pinned.” No code changes required in this doc—track in issues when flipping defaults.
 
-Examples called out in Round 3: judge model/URL, Anthropic default model age, Lean/Mathlib pins, sandbox image tag, `RNG_MIX_TAG`, magic bytes, spot hash width, quorum strictness, proof weight, EMA alphas, forward timeout, **slack blocks**, etc.
+Examples called out in Round 3: prose-evaluator model/URL if enabled, Anthropic default model age, Lean/Mathlib pins, sandbox image tag, `RNG_MIX_TAG`, magic bytes, spot hash width, quorum strictness, proof weight, EMA alphas, forward timeout, **slack blocks**, etc.
 
 ---
 

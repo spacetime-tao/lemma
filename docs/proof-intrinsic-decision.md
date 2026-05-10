@@ -5,18 +5,17 @@ regex-shaped judge. Treat every line of scoring code as a liability: if the
 signal is weak, do not patch it with more small guards unless the underlying
 incentive becomes clearer.
 
-## Current Behavior
+## Current Boundary
 
-Validator scoring only reaches this layer after a proof passes Lean verification.
-The final score blends two signals:
+Validator proof scoring only reaches this layer after a proof passes Lean
+verification. `proof_intrinsic_score` is a deterministic text-shape heuristic: it
+strips Lean comments by default, then scores proof text length, `by` frequency,
+and non-empty line count.
 
-1. `proof_intrinsic_score`, controlled by `LEMMA_SCORE_PROOF_WEIGHT`.
-2. The judged informal reasoning rubric.
-
-The default is `LEMMA_SCORE_PROOF_WEIGHT=0.10`, meaning the heuristic contributes
-10 percent of the blend and the judge contributes 90 percent. The heuristic is
-deterministic and local: it strips Lean comments by default, then scores proof
-text length, `by` frequency, and non-empty line count.
+The long-term reward design is proof-only. See
+[proof-only-incentives.md](proof-only-incentives.md). That means this heuristic
+should either become a small, well-tested proof-side cost signal or be replaced
+by a stronger Lean-backed metric.
 
 ## Problem
 
@@ -29,22 +28,18 @@ bulk more than proof quality:
 - Comment stripping removed the easiest padding path, but it did not solve the
   general problem.
 
-Removing the heuristic without another decision would make the judge even more
-dominant. Raising the heuristic weight would reward padding. Both are bad default
-moves.
+Raising this heuristic without a better foundation would reward padding. Removing
+it without a replacement would leave fewer proof-side tie-breakers. Both are bad
+default moves.
 
 ## Decision
 
 Keep Lean pass/fail as the objective floor.
 
-Keep the current proof intrinsic heuristic only as a low-weight bootstrap signal.
-Do not raise its default weight. Do not add more regex padding detectors as the
-main fix. If the subnet needs a stronger proof-side score, it should come from a
-Lean-backed or elaborator-backed signal, not from more text-shape guesses.
-
-The judge should also be treated as a bootstrap signal unless the project makes
-an explicit product decision that informal reasoning quality is permanently part
-of the incentive mechanism. See [judge-incentive-decision.md](judge-incentive-decision.md).
+Keep the current proof intrinsic heuristic only as a conservative bootstrap
+signal. Do not add more regex padding detectors as the main fix. If the subnet
+needs a stronger proof-side score, it should come from a Lean-backed or
+elaborator-backed signal, not from more text-shape guesses.
 
 ## Acceptable Next Code Changes
 
@@ -83,9 +78,9 @@ Minimum gate for the next scoring decision:
 1. Collect a real validator `full` export with `LEMMA_LEAN_PROOF_METRICS=1`
    ([training_export.md](training_export.md)). Use only rows where the
    proof-metric probe exits successfully. The export must include same-theorem
-   comparisons: several theorem ids should have multiple judged successful
-   submissions from multiple UIDs, otherwise metric size mostly measures theorem
-   size rather than proof quality. Successful rows must also come from one
+   comparisons: several theorem ids should have multiple successful submissions
+   from multiple UIDs, otherwise metric size mostly measures theorem size rather
+   than proof quality. Successful rows must also come from one
    consistent `judge_profile_sha256`; mixed validator profiles are not decision
    evidence.
 2. Run `tools.proof_metrics_analyze` and keep the report with the decision
@@ -104,7 +99,7 @@ cost to make validator operation worse.
 
 The synthetic fixture at `tests/fixtures/proof_metrics_validation.jsonl` exists
 only to keep the analyzer honest around this gate: successful padding-like rows
-should be visible as outliers or low-judge / high-metric candidates. It covers
+should be visible as outliers or low-quality / high-metric candidates. It covers
 comments, strings, unused trivial `have` blocks, and long names. Failed probe
 rows should be counted but not used as calibration evidence. It is not a
 substitute for real validator export data.
@@ -122,9 +117,9 @@ choices. Treat this as a governance / scoring decision, not an analyzer result.
 Replace `proof_intrinsic_score` only if the candidate Lean-backed metric is
 useful inside same-theorem comparisons:
 
-- `corr_within_theorem(candidate, judge_composite)` is positive enough to matter
+- `corr_within_theorem(candidate, quality_label)` is positive enough to matter
   across multiple theorem ids, not just globally correlated with theorem size.
-- `same_theorem_metric_judge_disagreements(candidate)` is sparse and explainable
+- same-theorem metric/label disagreement examples are sparse and explainable
   under manual review.
 - Padding fixtures and real rows do not show the candidate repeatedly rewarding
   comments, strings, unused trivial `have` blocks, long names, or extra lines.
@@ -138,8 +133,8 @@ not actively harmful:
 
 - Lean-backed candidates are noisy, saturated, or theorem-size dependent.
 - Same-theorem disagreement examples exist but do not clearly favor padding.
-- The current `proof_intrinsic_score` remains low-weight and does not dominate
-  judge or Lean pass/fail behavior.
+- The current `proof_intrinsic_score` remains low influence and does not dominate
+  Lean pass/fail behavior.
 - More export data would plausibly change the conclusion.
 
 ### Reduce Or Remove
@@ -147,8 +142,8 @@ not actively harmful:
 Reduce or remove the proof-text component when the evidence shows it is mostly a
 liability:
 
-- `same_theorem_metric_judge_disagreements(proof_intrinsic)` repeatedly shows
-  the text heuristic preferring worse judged proofs.
+- same-theorem disagreement examples repeatedly show the text heuristic
+  preferring worse proofs.
 - The heuristic mostly tracks proof length or syntactic bulk after comment
   stripping.
 - No candidate Lean-backed metric clears the replacement gate.
@@ -157,7 +152,7 @@ liability:
 ### No Decision
 
 Do not change scoring when the export fails readiness, lacks same-theorem
-comparisons, lacks judge labels, has frequent probe failures, or depends on one
+comparisons, lacks quality labels, has frequent probe failures, or depends on one
 small hand-picked theorem family. In that case, collect more data or keep the
 current low default.
 
@@ -165,7 +160,7 @@ current low default.
 
 Keep the private JSONL export private. A public issue, PR, or governance note can
 quote the analyzer summary lines and human review notes without publishing proof
-scripts, traces, judge labels, or per-miner rows.
+scripts, traces, labels, or per-miner rows.
 
 Copy these lines into the decision record:
 
@@ -173,11 +168,11 @@ Copy these lines into the decision record:
 | --- | --- |
 | `rows_total`, `rows_with_proof_metrics`, `rows_with_successful_proof_metrics`, `rows_with_failed_proof_metrics`, `invalid_json_lines` | Shows whether the export is complete enough and whether the Lean probe is reliable. |
 | `decision_data`, `decision_data_blockers`, `decision_data_warnings`, `decision_data_gaps`, `decision_ready` | Separates "collect more data" from "ready for review." |
-| `export_context` | Shows whether successful rows came from one judge profile and one generated registry. |
+| `export_context` | Shows whether successful rows came from one validator profile and one generated registry. |
 | `gate_verdict`, `gate_reasons` | Records the analyzer's conservative stop/go signal. |
-| `corr_within_theorem(metric_bytes, judge_composite)`, `corr_within_theorem(metric_delimiters, judge_composite)`, `corr_within_theorem(proof_intrinsic, judge_composite)` | Measures proof-side signals inside same-theorem comparisons rather than mostly measuring theorem size. |
-| `padding_outliers_by_proof_len_minus_metric_bytes`, `low_judge_high_metric_candidates` | Keeps obvious padding and low-judge / high-metric cases visible. |
-| `same_theorem_metric_judge_disagreements(...)` | Lists examples that need human review before replacing, keeping, or reducing the heuristic. |
+| `corr_within_theorem(...)` | Measures proof-side signals inside same-theorem comparisons rather than mostly measuring theorem size. |
+| `padding_outliers_by_proof_len_minus_metric_bytes`, low-quality / high-metric candidates | Keeps obvious padding and suspicious metric inflation visible. |
+| Same-theorem disagreement examples | Lists examples that need human review before replacing, keeping, or reducing the heuristic. |
 
 Decision-record template:
 
@@ -240,7 +235,7 @@ The opt-in Docker and host Lean golden tests assert that the probe returns
 metrics on a real passing proof when those suites are enabled.
 
 When `LEMMA_TRAINING_EXPORT_JSONL` is set, the `full` export profile includes
-`proof_metrics` for successfully judged rows. `reasoning_only` intentionally
+`proof_metrics` for successful rows. `reasoning_only` intentionally
 omits it because the field is proof-derived research data.
 
 The operator checklist for collecting real proof-metrics rows lives in
@@ -248,34 +243,34 @@ The operator checklist for collecting real proof-metrics rows lives in
 
 Use `uv run python -m tools.proof_metrics_analyze <train.jsonl>` to compare
 exported proof metrics against proof text length, current `proof_intrinsic_score`,
-and judge composite before considering any scoring change. The analyzer counts
+and any available quality labels before considering any scoring change. The analyzer counts
 failed proof-metric probes separately and excludes them from correlations and
 diagnostic candidate lists; failed probe output is not proof-term evidence. It
-also reports low-judge / high-metric candidates so term-size inflation from
+also reports low-quality / high-metric candidates so term-size inflation from
 strings, unused trivial `have` blocks, or long names stays visible when the Lean
 probe rises with the padding. Its `gate_verdict` is intentionally conservative:
 `research_only` means do not wire the metric into rewards, `insufficient_data`
 means collect a usable export first, and `manual_review_required` still does not
 mean automatic approval. Its `decision_data_blockers` line is separate from the
-metric verdict: blockers mean the export is too small or missing judge labels to
+metric verdict: blockers mean the export is too small or missing quality labels to
 support a scoring decision, even if the metric gate itself has no obvious
 padding finding. The readiness check also requires same-theorem comparison sets
 so wide one-row-per-theorem exports cannot approve a proof-side scoring change.
 For exports that include those comparison sets, `corr_within_theorem(...)`
-subtracts each theorem's baseline before comparing metric movement to judge
+subtracts each theorem's baseline before comparing metric movement to label
 movement; treat those lines as more relevant than global correlations when
 judging whether a proof-side metric is measuring proof quality rather than
-theorem size. The report also prints `same_theorem_metric_judge_disagreements`
-for pairs where metric bytes, delimiter count, or the current text heuristic is
-higher but the judge score is equal or lower; those examples should be
-inspected before any replace / keep-low / remove decision.
+theorem size. The report also prints same-theorem disagreement examples for
+pairs where metric bytes, delimiter count, or the current text heuristic is
+higher but the available quality label is equal or lower; those examples should
+be inspected before any replace / keep-low / remove decision.
 `--require-decision-ready` is available for release checklists: it exits nonzero
 unless the export clears readiness blockers and reaches the manual-review gate.
 Passing that flag is not approval to change rewards; it only means there is
 enough data to start the human decision. Modern exports include an
 `export_context` block with non-secret profile and registry hashes; the analyzer
-reports those counts and blocks decision readiness when successful rows mix judge
-profiles or generated-registry hashes. It also prints `decision_data_gaps`,
+reports those counts and blocks decision readiness when successful rows mix
+validator profiles or generated-registry hashes. It also prints `decision_data_gaps`,
 which is the practical collection target list for the next export run.
 
 ## Credibility Boundary

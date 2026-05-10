@@ -21,10 +21,10 @@ light validator because Docker + Mathlib caches become part of the hot path.
 | Resource | Notes |
 | -------- | ----- |
 | CPU | 2+ cores. |
-| RAM | **≥ 16 GB** recommended: Docker sandbox + Lake/Mathlib workspace caches, plus OS headroom. The **judge** calls a remote OpenAI-compatible API (default **Chutes**); validators do not load judge weights locally. |
+| RAM | **≥ 16 GB** recommended: Docker sandbox + Lake/Mathlib workspace caches, plus OS headroom. Validators verify Lean locally or through a remote Lean worker; they do not need local inference weights for proof scoring. |
 | Disk | ≥ 20 GB for images and caches. |
 | Docker | **Required** for production: host Docker daemon plus lean-sandbox image. The Lemma runtime image uses the host socket through the Python Docker SDK and does not bundle a Docker daemon. `LEMMA_USE_DOCKER=false` is for **local debugging only**, not a supported production mode. |
-| Judge | Pinned **Chutes** stack per subnet policy — see [models.md](models.md). |
+| Profile | Pinned verifier/scoring profile per subnet policy — see [models.md](models.md). |
 
 Cheap 4 GB VPS instances are useful for miner tests, but they are not a good
 validator target once Lean verification is in the loop. Use production-like

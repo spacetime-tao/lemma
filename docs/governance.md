@@ -1,6 +1,6 @@
 # Governance and upgrades
 
-Lean verification is objective; LLM judging is subjective. Coordinate visible behavior off-chain.
+Lean verification is objective; validator scoring must stay deterministic and coordinated. Coordinate visible behavior off-chain.
 
 ## Generated templates (`LEMMA_PROBLEM_SOURCE=generated`)
 
@@ -22,18 +22,17 @@ Requires **`LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`** (public eval catalog — 
 3. Rebuild sandbox image if toolchain pins change.
 4. Tag releases and announce cutover blocks.
 
-## Judge and rubric
+## Validator scoring profile
 
-Rubric: [`lemma/judge/prompts.py`](../lemma/judge/prompts.py).
+The validator profile covers problem cadence, verification policy, proof-side scoring, dedup, reputation, and response-acceptance hooks.
 
 ```bash
 uv run lemma meta
 ```
 
-- `judge_rubric_sha256`: prompts only.
-- `judge_profile_sha256`: validator scoring profile: judge rubric/stack plus problem cadence, verification policy, scoring blend, dedup, reputation, and response-acceptance hooks.
+- `judge_profile_sha256`: current profile hash name for validator scoring policy.
 
-Production: one pinned stack; `JUDGE_PROFILE_SHA256_EXPECTED`. Dev may use multiple backends.
+Production: one pinned validator profile; `JUDGE_PROFILE_SHA256_EXPECTED`. The hash name may be renamed in a later cleanup, but the rule is simple: validators should share the same reward-relevant config.
 
 ## Sybil and multi-account incentives
 
@@ -45,7 +44,7 @@ Validator→miner calls use Bittensor Dendrite/Axon today; synapse **`body_hash`
 
 ## Shared validator settings
 
-The **subnet operator** publishes one configuration for the subnet: timeouts, seeds, judge, and sandbox image. Validators are expected to deploy **that** template so scores stay comparable. Document and distribute: `LEMMA_BLOCK_TIME_SEC_ESTIMATE`, `LEMMA_FORWARD_WAIT_MIN_S`, `LEMMA_FORWARD_WAIT_MAX_S`, `LEAN_VERIFY_TIMEOUT_S`, `LEMMA_TIMEOUT_SCALE_BY_SPLIT` / `LEMMA_TIMEOUT_SPLIT_*_MULT` (only if the operator’s policy includes them), `LEMMA_PROBLEM_SEED_MODE`, `LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`, `EMPTY_EPOCH_WEIGHTS_POLICY`, `LEAN_SANDBOX_*`, `JUDGE_*`, `OPENAI_MODEL` (subnet canonical judge id on Chutes), and `OPENAI_BASE_URL`. The main scoring/cadence/verification fields are pinned by `judge_profile_sha256`. Nothing here is “per-validator preference.” On-chain code does not enforce equality — parity relies on the published policy ([faq.md](faq.md)).
+The **subnet operator** publishes one configuration for the subnet: timeouts, seeds, proof-side scoring, and sandbox image. Validators are expected to deploy **that** template so scores stay comparable. Document and distribute: `LEMMA_BLOCK_TIME_SEC_ESTIMATE`, `LEMMA_FORWARD_WAIT_MIN_S`, `LEMMA_FORWARD_WAIT_MAX_S`, `LEAN_VERIFY_TIMEOUT_S`, `LEMMA_TIMEOUT_SCALE_BY_SPLIT` / `LEMMA_TIMEOUT_SPLIT_*_MULT` (only if the operator’s policy includes them), `LEMMA_PROBLEM_SEED_MODE`, `LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`, `EMPTY_EPOCH_WEIGHTS_POLICY`, `LEAN_SANDBOX_*`, and proof-scoring fields. The main scoring/cadence/verification fields are pinned by `judge_profile_sha256`. Nothing here is “per-validator preference.” On-chain code does not enforce equality — parity relies on the published policy ([faq.md](faq.md)).
 
 ### Parity checklist
 

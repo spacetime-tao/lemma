@@ -28,7 +28,7 @@ These stay in `spacetime-tao/lemma` because they affect scoring agreement.
 2. Reject missing `deadline_block` on responses that were sent with a deadline. **Done.**
 3. Make generated registry hashes cover the real template body and RNG version tag, not only names/order. **Done.**
 4. Fix generated problem documentation so the builder count matches code. **Done.**
-5. Expand the validator scoring/profile pin to cover subnet-critical settings beyond the judge prompt/model. **Done.**
+5. Expand the validator scoring/profile pin to cover subnet-critical settings beyond optional prose-evaluator settings. **Done.**
 6. Make FakeJudge impossible in live validator mode unless an explicit local-only flag is active. **Done.**
 7. Document production Lean/toolchain image pinning so local `latest` stays a dev-only convenience. **Done:** [toolchain-image-policy.md](toolchain-image-policy.md).
 8. Document the public deterministic problem-supply boundary and builder promotion checklist. **Done:** [problem-supply-policy.md](problem-supply-policy.md).
@@ -46,9 +46,9 @@ These are product and governance tracks, not v0 launch blockers.
 
 These stay in the core repo, but should be handled as product decisions, not tiny patches.
 
-1. Replace or reduce `proof_intrinsic_score`; length is a weak proxy for mathematical value. **Default weight lowered to `0.10`; comment-only / blank-line padding normalized; compare-only Lean probe added; decision note, go/no-go gate, replace / keep-low / reduce-remove rubric, export provenance hashes, analyzer readiness blockers and concrete collection gaps including same-theorem comparison coverage and mixed profile detection, within-theorem centered correlations, same-theorem disagreement candidates, and collection runbook:** [proof-intrinsic-decision.md](proof-intrinsic-decision.md), [training_export.md](training_export.md). Next behavior change must choose to replace, keep low, or remove/reduce the heuristic from real export data plus padding fixtures, in a separate scoring commit.
-2. Decide whether judged informal reasoning is part of the permanent incentive mechanism or a bootstrap aid. **Current stance documented:** [judge-incentive-decision.md](judge-incentive-decision.md) treats the judge as a bootstrap signal unless governance explicitly chooses it as a permanent product objective.
-3. Keep Lean pass/fail as the objective floor. **Done:** [objective-decision.md](objective-decision.md) pins the current one-sentence objective as Lean-valid theorem proving, with judged reasoning documented as a bootstrap ranking layer.
+1. Make the long-term reward path proof-only. **Decision recorded:** [proof-only-incentives.md](proof-only-incentives.md) defines the target as Lean-valid proof plus deterministic proof-efficiency signals; informal reasoning is optional metadata, not a reward axis.
+2. Replace `proof_intrinsic_score`; length is a weak proxy for mathematical value and the current version rewards bulk. Use a conservative proof-efficiency scorer that prefers lower stripped proof cost and Lean-backed proof-shape metrics after Lean pass. Keep proof-metric runtime cost visible.
+3. Keep Lean pass/fail as the objective floor. **Done:** [objective-decision.md](objective-decision.md) pins the objective as valid, efficient Lean proofs.
 4. Sybil/Pareto reward changes need evidence first. **Tooling ready:** private full exports now carry enough public challenge/coldkey context for `tools/sybil_replay_analyze.py` to compare dedup modes and K-miner clone pressure, report concrete `decision_data_gaps`, and [sybil_economics.md](sybil_economics.md) now includes the policy rubric for interpreting that replay. **Still open:** collect real exports and choose a policy before changing live rewards.
 5. Avoid adding more scoring layers until the primary objective is one sentence.
 
@@ -58,7 +58,7 @@ These should be either hardened or removed from the default mental model.
 
 1. Miner verify attest: keep full validator Lean verify as default; do not let attest-only paths inflate credibility. **Done for optional usable path: verify batch isolates per-UID verifier exceptions; attest-trusted responses must still match current challenge fields; v2 signatures bind validator hotkey; docs state this is not hardware remote attestation.**
 2. Commit-reveal: keep active, with bounded cache, validator identity binding, shared commitment hex normalization, and an explicit same-round threat model. **Done for optional usable path; stronger public fairness would be a separate design.**
-3. Judge peer attest: treat as operator coordination, not strong security. **Done: threat model documents all-of-N HTTP limits and skip as solo/dev only.**
+3. Validator profile peer attest: treat as operator coordination, not strong security. **Done: threat model documents all-of-N HTTP limits and skip as solo/dev only.**
 4. Wire transport: keep current Dendrite/Axon path until a major-release HTTP + Epistula migration is explicitly chosen. **Bounded:** [transport.md](transport.md) now records the migration gate and decision template.
 5. Reference miner: keep the bundled miner minimal and compatibility-focused while the shipping protocol remains Axon-based. **Bounded:** [miner.md](miner.md) records that richer miner UX belongs in `lemma-cli` and miner-artifact/container designs are separate protocol work.
 
@@ -70,7 +70,7 @@ are safe on every machine.
 
 1. Reuse identical Lean verification payloads within an epoch. **Done:** one
    Lean check is copied to miners that submitted the exact same theorem/proof
-   payload; reasoning is still judged separately.
+   payload before proof-side scoring.
 2. Avoid duplicate cold-cache warmups for the same template. **Done:** concurrent
    same-template proofs now singleflight through one cold warmup, then reuse the
    published warm workspace.
