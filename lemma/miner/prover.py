@@ -67,6 +67,7 @@ Lean contract:
   `symm` before `Nat.mul_assoc`.
 - For Real absolute-value triangle goals, `abs_add_le a b` or `dist_triangle` with `Real.dist_eq` is usually the
   right Mathlib route after rewriting the expression into the needed shape.
+- For integer absolute-value triangle goals like `|x + y| ≤ |x| + |y|`, use `abs_add_le x y`.
 """
 
 
