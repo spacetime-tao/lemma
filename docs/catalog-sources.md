@@ -6,7 +6,7 @@
 
 Template selection uses a **deterministic SHA256 mix** of that seed before `random.Random` (see [`generated.py`](../lemma/problems/generated.py)). That decorrelates **adjacent** chain seeds (same window still shares one `problem_seed` in quantize mode). It does **not** remove the public, deterministic map from seed → problem: anyone can still precompute. This is documented as an accepted supply boundary in [problem-supply-policy.md](problem-supply-policy.md). To match an **older** Lemma release’s expansion exactly, set **`LEMMA_GENERATED_LEGACY_PLAIN_RNG=1`** (rollback only).
 
-**RPC head slack:** Optional **`LEMMA_PROBLEM_SEED_CHAIN_HEAD_SLACK_BLOCKS`** (default **0**) subtracts that many blocks from the RPC head **before** `resolve_problem_seed` and forward HTTP deadline math (validators, `lemma status`, `lemma-cli try-prover`, `lemma problems show`). Setting **`1`** often removes **one-block** disagreements on `get_current_block()` at quantize boundaries (e.g. head **199** vs **200** with `quantize_blocks=100` can disagree without slack; both map to the same seed with slack **1**).
+**RPC head slack:** Optional **`LEMMA_PROBLEM_SEED_CHAIN_HEAD_SLACK_BLOCKS`** (default **0**) subtracts that many blocks from the RPC head **before** `resolve_problem_seed` and forward HTTP deadline math (validators, `lemma-cli status`, `lemma-cli try-prover`, `lemma-cli problems show`). Setting **`1`** often removes **one-block** disagreements on `get_current_block()` at quantize boundaries (e.g. head **199** vs **200** with `quantize_blocks=100` can disagree without slack; both map to the same seed with slack **1**).
 
 ## Frozen catalog (`frozen` mode)
 

@@ -4,7 +4,7 @@ End-to-end: **uv** + repo → **keys** → **`lemma-cli setup`** → **miner or 
 
 - Run `uv run lemma` for core command help (same as `uv run lemma --help`). The friendly operator screen lives in the separate [lemma-cli](https://github.com/spacetime-tao/lemma-cli) repo.
 - Inference defaults: [Chutes](https://chutes.ai) OpenAI-compatible `https://llm.chutes.ai/v1` (see `.env.example`). Other OpenAI-compatible stacks use the same env vars.
-- After setup: `uv run lemma status`, then `uv run lemma problems` (or `uv run lemma problems show --current`). Deep reference: [faq](faq.md).
+- After setup: `lemma-cli status`, then `lemma-cli problems` (or `lemma-cli problems show --current`). Deep reference: [faq](faq.md).
 - **On-chain try:** Lemma runs on **Bittensor testnet** (`--network test`), **netuid 467**. **Finney** is mainnet—do not confuse the two. The repo is still largely proof-of-concept; long-term direction is in [vision](vision.md).
 
 ## Paths at a glance

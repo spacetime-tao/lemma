@@ -3,7 +3,7 @@
 Two modes:
 
 - ``quantize`` (default): ``(chain_head // N) * N`` — fixed **N-block** windows (default N=100).
-  Everyone at the same chain height agrees on the theorem; ``lemma status`` surfaces **time left**
+  Everyone at the same chain height agrees on the theorem; ``lemma-cli status`` surfaces **time left**
   until the next window in wall-clock terms.
 
 - ``subnet_epoch``: integer bucket ``(chain_head + netuid + 1) // (tempo + 1)`` using the

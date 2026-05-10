@@ -72,7 +72,7 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 
 ## Plumbing / cleanup (lower urgency than mechanism gaps)
 
-Track in issues or refactors as capacity allows: remaining human-friendly CLI wrappers and other small runtime glue. Recent cleanup removed `validator/query.py`, split catalog dev helpers out of runtime, merged validator startup gates shared by `validator-check` and `service`, collapsed warm Lake-cache behavior to the single `LEMMA_LEAN_ALWAYS_CACHE_GET` override, inlined trace-length scoring, removed single-use miner/validator helpers, dropped an unused strict-judge assertion wrapper, and removed an unused problem-seed boundary-label helper.
+Track in issues or refactors as capacity allows: remaining human-friendly CLI wrappers and other small runtime glue. Recent cleanup removed `validator/query.py`, split catalog dev helpers out of runtime, merged validator startup gates shared by `validator-check` and `service`, collapsed warm Lake-cache behavior to the single `LEMMA_LEAN_ALWAYS_CACHE_GET` override, inlined trace-length scoring, removed single-use miner/validator helpers, dropped an unused strict-judge assertion wrapper, removed an unused problem-seed boundary-label helper, and moved theorem status/problem inspection to `lemma-cli`.
 
 ---
 
