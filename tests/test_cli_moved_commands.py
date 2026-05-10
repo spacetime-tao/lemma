@@ -58,3 +58,11 @@ def test_moved_judge_command_forwards_args_to_lemma_cli() -> None:
     assert result.exit_code == 0
     assert "Judge preview moved to lemma-cli." in result.output
     assert "Run `lemma-cli judge --trace trace.txt`." in result.output
+
+
+def test_moved_validator_config_command_points_to_lemma_cli() -> None:
+    result = CliRunner().invoke(main, ["validator", "config"])
+
+    assert result.exit_code == 0
+    assert "Validator config moved to lemma-cli." in result.output
+    assert "Run `lemma-cli validator-config`." in result.output
