@@ -85,7 +85,9 @@ Minimum gate for the next scoring decision:
    proof-metric probe exits successfully. The export must include same-theorem
    comparisons: several theorem ids should have multiple judged successful
    submissions from multiple UIDs, otherwise metric size mostly measures theorem
-   size rather than proof quality.
+   size rather than proof quality. Successful rows must also come from one
+   consistent `judge_profile_sha256`; mixed validator profiles are not decision
+   evidence.
 2. Run `tools.proof_metrics_analyze` and keep the report with the decision
    notes. Failed probe rows are a reliability signal, not scoring evidence.
 3. Compare the candidate metric against honest short proofs, honest longer
@@ -216,7 +218,10 @@ inspected before any replace / keep-low / remove decision.
 `--require-decision-ready` is available for release checklists: it exits nonzero
 unless the export clears readiness blockers and reaches the manual-review gate.
 Passing that flag is not approval to change rewards; it only means there is
-enough data to start the human decision.
+enough data to start the human decision. Modern exports include an
+`export_context` block with non-secret profile and registry hashes; the analyzer
+reports those counts and blocks decision readiness when successful rows mix judge
+profiles or generated-registry hashes.
 
 ## Credibility Boundary
 

@@ -6,8 +6,8 @@ Validators optionally append one JSON object per **successfully judged** miner r
 
 | Profile | Schema | Contents | Use when |
 | --- | --- | --- | --- |
-| **`full`** (default) | `schema_version` **1** | `reasoning_*`, `theorem_statement`, `proof_script`, public `coldkey` when available from the metagraph, `rubric` (coherence / exploration / clarity / composite), optional `proof_metrics` when `LEMMA_LEAN_PROOF_METRICS=1`, plus **`pareto_weight`** after weights are computed | Internal research, calibration, full offline replay |
-| **`reasoning_only`** | `schema_version` **2** | Same reasoning fields + `block`, `theorem_id`, `uid`, `model_card`; **no** proof text, **no** rubric, **no** `proof_metrics`, **no** `pareto_weight` | Sharing datasets more broadly, PRM-style trace data with weaker direct judge/incentive labels |
+| **`full`** (default) | `schema_version` **1** | `reasoning_*`, `theorem_statement`, `proof_script`, public `coldkey` when available from the metagraph, `rubric` (coherence / exploration / clarity / composite), optional `proof_metrics` when `LEMMA_LEAN_PROOF_METRICS=1`, non-secret `export_context` hashes, plus **`pareto_weight`** after weights are computed | Internal research, calibration, full offline replay |
+| **`reasoning_only`** | `schema_version` **2** | Same reasoning fields + `block`, `theorem_id`, `uid`, `model_card`, non-secret `export_context` hashes; **no** proof text, **no** rubric, **no** `proof_metrics`, **no** `pareto_weight` | Sharing datasets more broadly, PRM-style trace data with weaker direct judge/incentive labels |
 
 Set in `.env`:
 
@@ -42,9 +42,11 @@ Operator checklist:
 2. Run with `LEMMA_TRAINING_EXPORT_PROFILE=full` and
    `LEMMA_LEAN_PROOF_METRICS=1` long enough to collect varied successful proofs,
    including multiple judged successful submissions on the same theorem ids.
-3. Keep a copy of the exact `.env` / validator settings used for the run,
-   especially the Lean image, problem registry/profile pins, judge profile, and
-   timeout settings.
+3. Keep a copy of the exact `.env` / validator settings used for the run.
+   Exports now include non-secret `export_context` hashes (`lemma_version`,
+   `judge_profile_sha256`, `judge_rubric_sha256`,
+   `generated_registry_sha256`), but those hashes are not a replacement for the
+   full private run notes.
 4. Run the analyzer below and save its text output beside the export.
 5. Treat `gate_verdict=research_only` as a hard stop for live rewards.
    `manual_review_required` still means review, not approval.
@@ -61,6 +63,8 @@ Keep the analyzer report with any scoring decision notes. Look first at:
 
 - `decision_data_blockers` and `decision_data_warnings`; blockers mean the
   export is not varied enough for a scoring decision yet,
+- `export_context`, which should show one judge profile and one generated
+  registry hash across successful rows,
 - `rows_with_successful_proof_metrics` vs failed probe rows,
 - correlations between metric bytes / delimiter-count shape data, proof text
   length, current `proof_intrinsic_score`, and judge composite,
@@ -86,9 +90,12 @@ analyzer reports failed proof-metric probes separately and excludes them from
 correlations/outlier lists, so calibration is based only on successful Lean
 probe rows. It also reports minimum data-readiness blockers using conservative
 defaults: at least 50 successful proof-metric rows, 5 theorem ids, 5 UIDs, and
-judge composite labels. It also requires at least 3 theorem ids with 2 or more
-judged successful rows from 2 or more UIDs, so wide one-row-per-theorem exports
-do not masquerade as proof-quality evidence. The report then prints centered
+judge composite labels. Successful rows must include one consistent
+`judge_profile_sha256`; mixed judge profiles block a scoring decision, and mixed
+generated-registry hashes do too. It also requires at least 3 theorem ids with 2
+or more judged successful rows from 2 or more UIDs, so wide
+one-row-per-theorem exports do not masquerade as proof-quality evidence. The
+report then prints centered
 within-theorem correlations for metric bytes, delimiter count, and the current
 text heuristic against judge composite, plus same-theorem disagreement
 candidates for human review.
@@ -140,6 +147,10 @@ Exports are **not** a neutral “public good.” Depending on fields, they can t
 
 ### `full` (`schema_version` 1)
 
+- **`export_profile`**: `"full"`.
+- **`export_context`**: non-secret provenance hashes for the validator run:
+  `lemma_version`, `judge_profile_sha256`, `judge_rubric_sha256`, and
+  `generated_registry_sha256`.
 - **`theorem_statement`**, **`proof_script`**, **`rubric`**: see [`training_export.py`](../lemma/validator/training_export.py).
 - **`coldkey`**: public metagraph coldkey when available; omitted if unavailable.
 - **`proof_metrics`**: optional compare-only Lean probe output when `LEMMA_LEAN_PROOF_METRICS=1`.
@@ -148,6 +159,7 @@ Exports are **not** a neutral “public good.” Depending on fields, they can t
 ### `reasoning_only` (`schema_version` 2)
 
 - **`export_profile`**: `"reasoning_only"`.
+- **`export_context`**: same non-secret provenance hashes as `full`.
 - No **`proof_script`**, **`rubric`**, **`proof_metrics`**, or **`pareto_weight`**.
 
 ## References

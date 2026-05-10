@@ -32,6 +32,12 @@ def test_training_record_roundtrip_fields(tmp_path: Path) -> None:
         proof_declaration_delimiters=21,
         proof_declaration_max_depth=5,
     )
+    export_context = {
+        "lemma_version": "0.1.0",
+        "judge_profile_sha256": "a" * 64,
+        "judge_rubric_sha256": "b" * 64,
+        "generated_registry_sha256": "c" * 64,
+    }
     row = training_record(
         block=42,
         theorem_id="tid",
@@ -40,10 +46,13 @@ def test_training_record_roundtrip_fields(tmp_path: Path) -> None:
         rubric=r,
         proof_metrics=proof_metrics,
         coldkey="coldkey-public",
+        export_context=export_context,
     )
     assert row["schema_version"] == 1
+    assert row["export_profile"] == "full"
     assert row["uid"] == 7
     assert row["coldkey"] == "coldkey-public"
+    assert row["export_context"] == export_context
     assert row["theorem_id"] == "tid"
     assert row["theorem_statement"] == "theorem p : True := by sorry"
     assert row["reasoning_steps"] is not None
@@ -84,9 +93,11 @@ def test_training_record_reasoning_only_no_scores(tmp_path: Path) -> None:
         resp=resp,
         rubric=r,
         profile="reasoning_only",
+        export_context={"lemma_version": "0.1.0"},
     )
     assert row["schema_version"] == 2
     assert row["export_profile"] == "reasoning_only"
+    assert row["export_context"] == {"lemma_version": "0.1.0"}
     assert "proof_script" not in row
     assert "theorem_statement" not in row
     assert "rubric" not in row
