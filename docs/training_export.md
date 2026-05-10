@@ -40,7 +40,8 @@ Operator checklist:
 1. Pick a private path for `LEMMA_TRAINING_EXPORT_JSONL`; do not commit or publish
    the export.
 2. Run with `LEMMA_TRAINING_EXPORT_PROFILE=full` and
-   `LEMMA_LEAN_PROOF_METRICS=1` long enough to collect varied successful proofs.
+   `LEMMA_LEAN_PROOF_METRICS=1` long enough to collect varied successful proofs,
+   including multiple judged successful submissions on the same theorem ids.
 3. Keep a copy of the exact `.env` / validator settings used for the run,
    especially the Lean image, problem registry/profile pins, judge profile, and
    timeout settings.
@@ -80,7 +81,9 @@ analyzer reports failed proof-metric probes separately and excludes them from
 correlations/outlier lists, so calibration is based only on successful Lean
 probe rows. It also reports minimum data-readiness blockers using conservative
 defaults: at least 50 successful proof-metric rows, 5 theorem ids, 5 UIDs, and
-judge composite labels.
+judge composite labels. It also requires at least 3 theorem ids with 2 or more
+judged successful rows from 2 or more UIDs, so wide one-row-per-theorem exports
+do not masquerade as proof-quality evidence.
 
 For release checklists, add `--require-decision-ready`. It exits nonzero unless
 `decision_ready=yes`. This is only a readiness guard: it still requires manual
