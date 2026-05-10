@@ -842,10 +842,3 @@ def validator_judge_stack_strict_issue(settings: LemmaSettings) -> str | None:
             f"(got {got_base!r})."
         )
     return None
-
-
-def assert_validator_judge_stack_strict(settings: LemmaSettings) -> None:
-    """Raise ``SystemExit`` if validator judge env is not the subnet Chutes DeepSeek stack."""
-    msg = validator_judge_stack_strict_issue(settings)
-    if msg:
-        raise SystemExit(msg)

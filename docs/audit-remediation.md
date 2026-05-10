@@ -195,10 +195,10 @@ Current snapshot uses `wc -l` over Python files, except `docs/` which counts Mar
 | `lemma/miner/` | 1 082 | 1 075 | -7 |
 | `lemma/problems/` | 784 | 1 004 | +220 |
 | `lemma/protocol*` | 290 | 331 | +41 |
-| `lemma/common/` | 1 110 | 1 285 | +175 |
-| `lemma/` total | **12 630** | **8 826** (66 files) | **-3 804** |
-| `tests/` | 2 330 | 3 859 (59 files) | +1 529 |
-| `docs/` markdown | 1 355 | 2 810 (30 files) | +1 455 |
+| `lemma/common/` | 1 110 | 1 278 | +168 |
+| `lemma/` total | **12 630** | **8 819** (66 files) | **-3 811** |
+| `tests/` | 2 330 | 3 849 (59 files) | +1 519 |
+| `docs/` markdown | 1 355 | 2 818 (30 files) | +1 463 |
 
 CLI alone was cited as **43 %** of `lemma/`; it is now about **21 %** by this simple line-count snapshot. The core shrank substantially, while tests/docs grew because safety gates, replay guards, and decision records were added.
 
@@ -294,6 +294,8 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
   env aliases were removed. Timeout-split stays validator policy; prover minimums stay miner-only retry policy.
 - Settings env aliases now accept documented uppercase names only; lowercase field-name env aliases were removed
   while Python constructor kwargs remain available through an init-time alias shim.
+- Removed the unused `assert_validator_judge_stack_strict` wrapper; live validator startup and tests use the
+  single `validator_judge_stack_strict_issue` policy function directly.
 
 ### 13.7 Tests (coverage imbalance)
 
@@ -370,5 +372,6 @@ Examples called out in Round 3: judge model/URL, Anthropic default model age, Le
 | 2026-05 | Merged **full** Round 3 Part 2 (§14–16), §17 KB scorecard, §18 pointer, §19 → §2a |
 | 2026-05 | Refreshed scorecard after CLI extraction, dedup normalization, and miner prompt trims |
 | 2026-05 | Refreshed §13.1 scale snapshot after CLI extraction and cleanup passes |
+| 2026-05 | Recorded config cleanup after removing an unused strict-judge assertion wrapper |
 
 **Maintainers:** bump §17 when you materially change scope or close a whole section.
