@@ -1,4 +1,4 @@
-"""JUDGE_OPENAI_API_KEY vs legacy OPENAI_API_KEY for the judge stack."""
+"""JUDGE_OPENAI_API_KEY vs legacy OPENAI_API_KEY for optional prose-judge tooling."""
 
 from __future__ import annotations
 

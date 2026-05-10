@@ -1,4 +1,4 @@
-"""Pre-flight checks before ``lemma validator`` (RPC, registration, judge, Lean image, pins)."""
+"""Pre-flight checks before ``lemma validator`` (RPC, registration, Lean image, pins)."""
 
 from __future__ import annotations
 
@@ -73,11 +73,10 @@ def run_validator_check(settings: LemmaSettings) -> int:
 
     click.echo(
         stylize(
-            f"INFO scoring  LEMMA_SCORE_PROOF_WEIGHT={settings.lemma_score_proof_weight}  "
+            "INFO scoring  proof_only=1  "
             f"LEMMA_REPUTATION_EMA_ALPHA={settings.lemma_reputation_ema_alpha}  "
             f"LEMMA_REPUTATION_VERIFY_CREDIBILITY_ALPHA={settings.lemma_reputation_verify_credibility_alpha}  "
             f"LEMMA_REPUTATION_CREDIBILITY_EXPONENT={settings.lemma_reputation_credibility_exponent}  "
-            f"LEMMA_PROOF_INTRINSIC_STRIP_COMMENTS={int(settings.lemma_proof_intrinsic_strip_comments)}  "
             f"LEMMA_EPOCH_PROBLEM_COUNT={settings.lemma_epoch_problem_count}  "
             f"LEMMA_MINER_VERIFY_ATTEST_ENABLED={int(settings.lemma_miner_verify_attest_enabled)}  "
             "LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION="
@@ -135,18 +134,18 @@ def run_validator_check(settings: LemmaSettings) -> int:
         if actual_j != exp_j:
             click.echo(
                 stylize(
-                    "FAIL judge pin  JUDGE_PROFILE_SHA256_EXPECTED mismatch vs live `lemma meta`",
+                    "FAIL profile pin  JUDGE_PROFILE_SHA256_EXPECTED mismatch vs live `lemma meta`",
                     fg="red",
                     bold=True,
                 ),
                 err=True,
             )
         else:
-            click.echo(stylize("OK judge pin   matches live judge_profile_sha256", fg="green"))
+            click.echo(stylize("OK profile pin matches live judge_profile_sha256", fg="green"))
     else:
         click.echo(
             stylize(
-                "FAIL judge pin  JUDGE_PROFILE_SHA256_EXPECTED required for validators",
+                "FAIL profile pin  JUDGE_PROFILE_SHA256_EXPECTED required for validators",
                 fg="red",
                 bold=True,
             ),

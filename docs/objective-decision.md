@@ -5,29 +5,28 @@ into rewarding whatever the latest scoring layer happens to measure.
 
 ## One-Sentence Objective
 
-Lemma rewards valid, efficient Lean proofs for published theorem statements.
+Lemma rewards Lean-valid proofs for published theorem statements.
 
 ## Incentive Boundary
 
-The permanent reward path should be proof-only:
+The reward path should be proof-only:
 
 - **Eligibility:** Lean accepts the submitted proof for the locked theorem.
-- **Ranking:** deterministic proof-side efficiency signals compare passing
-  proofs for the same challenge.
+- **Scoring:** an eligible proof receives a binary pass score; current live cost
+  is `0`.
 - **Out of band:** informal reasoning can help humans, datasets, and debugging,
-  but it is not a permanent reward axis.
+  but it is not a reward axis.
 
 See [proof-only-incentives.md](proof-only-incentives.md) for the concrete design.
 
 ## Why This Matters
 
-Lean verification is objective and reproducible. Proof-efficiency metrics are
-not perfect, but they are at least tied to the formal artifact validators can
-check. This keeps Lemma from becoming a prose-optimization game.
+Lean verification is objective and reproducible. Binary live scoring keeps the
+v0 game simple: publish work, verify work mechanically, pay for valid work.
 
-## Change Gate
+## Boundary Check
 
-Any future scoring change should answer this first:
+Every reward change should preserve this test:
 
 > Does this make Lean-valid theorem proving easier to measure, harder to game,
 > or more economically useful?

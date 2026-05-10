@@ -4,9 +4,12 @@
 
 ## Scoring
 
+Current live path:
+
 1. Lean must typecheck (kernel gate).
-2. Among passing proofs, deterministic proof-efficiency signals rank the formal artifact.
-3. Pareto weighting favors better proof-side scores and lower proof-side costs ([`pareto.py`](../lemma/scoring/pareto.py)).
+2. A passing proof enters scoring as a binary proof pass; optional prose is not scored.
+3. Identical-proof dedup, coldkey dedup, and reputation feed the final weight map.
+4. Pareto weighting still runs, but live proof cost is currently `0`, so it mostly behaves like score/reputation layering or an equal split among tied passers.
 
 ## Known gameability surfaces (plain language)
 
@@ -14,10 +17,9 @@ No subnet is perfectly ungameable; the goal is to make the easiest strategy also
 
 - **Predictable problem selection:** if the pool is tiny/static, miners can pre-solve. Mitigation: rotate/expand templates and keep registry upgrades coordinated ([problem-supply-policy.md](problem-supply-policy.md)).
 - **Latency and infra advantages:** warm caches and faster hardware can win ties. Mitigation: this is visible/expected operational competition, and correctness still requires Lean.
-- **Proof golf:** miners may optimize for tiny scripts instead of useful proof structure. Mitigation: score proof-side costs conservatively, compare within the same theorem, and keep problem supply healthy.
 - **Config drift across validators:** mismatched verifier/scoring config breaks fairness. Mitigation: publish one canonical validator profile and shared env template.
 
-One-line mental model: Lemma rewards valid, efficient Lean proofs.
+One-line mental model: Lemma rewards Lean-valid proofs.
 
 For the proof-only target design, see [proof-only-incentives.md](proof-only-incentives.md). For a **living checklist** of shipped items and known gaps, see [incentive-roadmap.md](incentive-roadmap.md). **Sybil / coldkey dedup** is *not* identity verification — see [sybil_economics.md](sybil_economics.md). **Dendrite/Axon + synapse body-hash** — see [transport.md](transport.md).
 
@@ -29,7 +31,7 @@ Each forward is its own response. **Rewards are not a lifetime XP total.** They 
 
 The miner’s LLM uses the **fixed in-repo** `PROVER_SYSTEM` in [`lemma/miner/prover.py`](../lemma/miner/prover.py) for every prover call (JSON shape and Lean contract). There is **no** env-based append — subnet answers are defined by that prompt plus the challenge text you receive from the protocol.
 
-**Proof first:** miner completions center on **`proof_script`**. The bundled prompt may also ask for **`reasoning_steps`** for debugging, operator review, or training exports, but reward design should not depend on prose. Operators can optionally set **`LEMMA_PROVER_MIN_PROOF_SCRIPT_CHARS`** (full `Submission.lean` length; default **off**) to reject overly short scripts — tune so trivial `rfl` goals still pass when unset or low.
+**Proof only:** miner completions center on **`proof_script`**. Informal reasoning is not part of the live protocol payload. Operators can optionally set **`LEMMA_PROVER_MIN_PROOF_SCRIPT_CHARS`** (full `Submission.lean` length; default **off**) to reject overly short scripts — tune so trivial `rfl` goals still pass when unset or low.
 
 ## `lemma-cli try-prover --verify` vs real validator scoring
 
@@ -47,7 +49,7 @@ To see what validators would sample, use **`lemma-cli status`** / **`lemma-cli p
 
 ## Validator pipeline (each round)
 
-1. Query miners (`proof_script` + reasoning).
+1. Query miners (`proof_script`).
 2. Docker sandbox: `lake build`, axiom policy.
 3. If Lean passes: deterministic scoring and weighting.
 
@@ -67,21 +69,18 @@ Default is **4** tries per prover call (exponential backoff on 429 / timeouts / 
 
 ## How much space does the prover get? What does it see?
 
-- **Completion budget:** `LEMMA_PROVER_MAX_TOKENS` caps one JSON response (informal reasoning + full `Submission.lean`). Default is **32,768** tokens (raise in `.env` if models allow it and your forward HTTP window can tolerate long generations).
+- **Completion budget:** `LEMMA_PROVER_MAX_TOKENS` caps one JSON response containing the full `Submission.lean`. Default is **32,768** tokens (raise in `.env` if models allow it and your forward HTTP window can tolerate long generations).
 - **Prompt contents:** the **user** message to the prover is literally two blocks: a line `Imports hint:` followed by the challenge’s import list (e.g. `["Mathlib"]`), then `Theorem block:` and the full Lean `theorem_statement` string. The **system** message is Lemma’s fixed `PROVER_SYSTEM` (style + JSON contract). There are no other validator-supplied solution steps or hints.
 - **Anthropic path:** provider output may still be capped near **8192** tokens per their API for many Claude models even if `LEMMA_PROVER_MAX_TOKENS` is higher.
 
-Correctness of the Lean proof is decided by the **kernel** (sandbox). Passing proofs are then ranked by deterministic proof-side signals, so miners are rewarded for producing a valid proof and using the formal environment efficiently.
+Correctness of the Lean proof is decided by the **kernel** (sandbox). Passing proofs receive a binary live score.
 
-## `reasoning_steps` vs `reasoning_trace` (plain English)
+## Informal reasoning
 
-Think of **informal reasoning** as “explain your math before the Lean file.” It is useful metadata, not the permanent reward target. When present, deliver it in **one** structured form:
-
-- **`reasoning_steps`**: a JSON **array** of steps. Each step is one chunk of explanation — usually many entries so it reads step-by-step (induction base vs step, each `calc` line, etc.).
-
-**`reasoning_trace`** is a compact single-string form for local tools and exports. Do not ask miners to supply both forms when one structured payload is enough.
-
-**Fairness:** the reward path should depend on a real `proof_script` that passes Lean, not on whether a miner wrote a better-sounding explanation.
+Informal reasoning can still be shared off-protocol: writeups, forum posts,
+Mathlib PR notes, benchmark datasets, or human review. Live Lemma scoring does
+not ask validators to parse or grade it. The wire payload is the formal proof
+artifact.
 
 ## Problem modes
 
@@ -176,7 +175,7 @@ Roughly: (challenges answered) × ($/challenge). Measure from logs.
 - No central proof repository.
 - Validator responses are in-memory for the round unless exported.
 - Chain stores weights, not full proofs.
-- `LEMMA_TRAINING_EXPORT_JSONL`: optional local JSONL ([`training_export.py`](../lemma/validator/training_export.py)); **`LEMMA_TRAINING_EXPORT_PROFILE`** controls proof/rubric/weights ([training_export.md](training_export.md)).
+- `LEMMA_TRAINING_EXPORT_JSONL`: optional local JSONL ([`training_export.py`](../lemma/validator/training_export.py)); **`LEMMA_TRAINING_EXPORT_PROFILE`** controls proof, optional labels, and weights ([training_export.md](training_export.md)).
 
 ## Lean verification failures
 
@@ -212,13 +211,13 @@ Order matters:
 
 1. **Lean sandbox** — Validators run **`lake build`** on your **`proof_script`** (as `Submission.lean`) together with the challenge, then axiom checks.
 
-2. **Proof scoring** — Only responses that pass Lean are ranked by deterministic proof-side costs and proof metrics.
+2. **Proof scoring** — Only responses that pass Lean enter scoring. That live entry is a binary proof pass.
 
 So repeated “failures” while you believe the proof is right are usually **environment** (Mathlib fetch, Docker network, cold cache, timeout) or **layout/policy**. The proof has to pass Lean before any reward score exists.
 
 ## Optional prose tooling
 
-Prose evaluation tools may still help with debugging, research exports, or human review. Keep them outside the permanent reward path unless the subnet policy explicitly says otherwise.
+Prose evaluation tools may still help with debugging, research exports, or human review. Keep them outside the reward path.
 
 ## Miner provenance
 

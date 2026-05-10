@@ -17,7 +17,7 @@ Validator→miner transport uses Bittensor Dendrite/Axon and synapse body-hash i
 | Rehearse the **full validator** without `set_weights` | `uv run lemma validator dry-run` |
 | Only print validator-related env | `lemma-cli validator-config` (not a scoring run) |
 
-Optional prose-evaluation tools are for local research and debugging. The target reward path is Lean verification plus deterministic proof-side scoring.
+The live reward path is proof-only: Lean verification gives a binary pass.
 
 ## System requirements (Docker)
 

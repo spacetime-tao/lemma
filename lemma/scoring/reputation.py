@@ -75,7 +75,7 @@ def apply_ema_to_entries(
     prev_ema: dict[int, float],
     credibility_by_uid: dict[int, float] | None = None,
 ) -> tuple[list[ScoredEntry], dict[int, float]]:
-    """Return entries with ``reasoning_score`` replaced by EMA-smoothed values.
+    """Return entries with ``score`` replaced by EMA-smoothed values.
 
     ``credibility_by_uid`` holds per-UID verify-pass EMA in ``[0, 1]`` (default 1.0 if missing).
     Final score uses ``smoothed * (credibility ** credibility_exponent)``.
@@ -89,7 +89,7 @@ def apply_ema_to_entries(
 
     out: list[ScoredEntry] = []
     for e in entries:
-        r = float(e.reasoning_score)
+        r = float(e.score)
         old = new_ema.get(e.uid, r)
         if raw_alpha <= 0.0:
             smoothed = r
@@ -102,8 +102,8 @@ def apply_ema_to_entries(
         out.append(
             ScoredEntry(
                 uid=e.uid,
-                reasoning_score=final,
-                tokens=e.tokens,
+                score=final,
+                cost=e.cost,
                 submission_fp=e.submission_fp,
             ),
         )

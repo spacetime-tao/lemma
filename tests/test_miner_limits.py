@@ -31,7 +31,6 @@ def test_challenge_payload_check_skips_response_only_commit_fields() -> None:
         commit_reveal_phase="commit",
         proof_commitment_hex="not hex",
         proof_script="response field",
-        reasoning_trace="response field",
     )
 
     assert synapse_payload_error(synapse, settings, response=False) is None

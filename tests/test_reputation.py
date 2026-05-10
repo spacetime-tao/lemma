@@ -4,7 +4,7 @@ from lemma.scoring.reputation import ReputationStore, apply_ema_to_entries, load
 
 def test_apply_ema_smoothes() -> None:
     entries = [
-        ScoredEntry(uid=1, reasoning_score=1.0, tokens=10, submission_fp=""),
+        ScoredEntry(uid=1, score=1.0, cost=10, submission_fp=""),
     ]
     out, ema = apply_ema_to_entries(
         entries,
@@ -12,19 +12,19 @@ def test_apply_ema_smoothes() -> None:
         credibility_exponent=1.0,
         prev_ema={1: 0.0},
     )
-    assert abs(out[0].reasoning_score - 0.5) < 1e-9
+    assert abs(out[0].score - 0.5) < 1e-9
     assert abs(ema[1] - 0.5) < 1e-9
 
 
 def test_apply_ema_alpha_zero_no_smoothing() -> None:
-    entries = [ScoredEntry(uid=1, reasoning_score=0.7, tokens=3, submission_fp="")]
+    entries = [ScoredEntry(uid=1, score=0.7, cost=3, submission_fp="")]
     out, ema = apply_ema_to_entries(
         entries,
         alpha=0.0,
         credibility_exponent=1.0,
         prev_ema={1: 0.2},
     )
-    assert abs(out[0].reasoning_score - 0.7) < 1e-9
+    assert abs(out[0].score - 0.7) < 1e-9
     assert abs(ema[1] - 0.7) < 1e-9
 
 
@@ -40,7 +40,7 @@ def test_reputation_roundtrip(tmp_path) -> None:
 
 def test_apply_ema_credibility_multiplier() -> None:
     entries = [
-        ScoredEntry(uid=2, reasoning_score=1.0, tokens=3, submission_fp=""),
+        ScoredEntry(uid=2, score=1.0, cost=3, submission_fp=""),
     ]
     out, ema = apply_ema_to_entries(
         entries,
@@ -49,5 +49,5 @@ def test_apply_ema_credibility_multiplier() -> None:
         prev_ema={},
         credibility_by_uid={2: 0.5},
     )
-    assert abs(out[0].reasoning_score - 0.25) < 1e-9  # 1.0 * 0.5**2
+    assert abs(out[0].score - 0.25) < 1e-9  # 1.0 * 0.5**2
     assert abs(ema[2] - 1.0) < 1e-9

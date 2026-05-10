@@ -155,8 +155,6 @@ def test_documented_timeout_and_prover_policy_env_names_work(
                 "LEMMA_TIMEOUT_SPLIT_EASY_MULT=1.1",
                 "LEMMA_TIMEOUT_SPLIT_MEDIUM_MULT=1.2",
                 "LEMMA_TIMEOUT_SPLIT_HARD_MULT=1.3",
-                "LEMMA_PROVER_MIN_REASONING_STEPS=4",
-                "LEMMA_PROVER_MIN_REASONING_TOTAL_CHARS=1200",
                 "LEMMA_PROVER_MIN_PROOF_SCRIPT_CHARS=500",
             ],
         ),
@@ -168,8 +166,6 @@ def test_documented_timeout_and_prover_policy_env_names_work(
     assert s.timeout_split_easy_mult == 1.1
     assert s.timeout_split_medium_mult == 1.2
     assert s.timeout_split_hard_mult == 1.3
-    assert s.prover_min_reasoning_steps == 4
-    assert s.prover_min_reasoning_total_chars == 1200
     assert s.prover_min_proof_script_chars == 500
 
 

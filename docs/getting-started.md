@@ -23,10 +23,16 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 ```bash
 git clone https://github.com/spacetime-tao/lemma.git
+git clone https://github.com/spacetime-tao/lemma-cli.git
 cd lemma
 uv sync --extra btcli
-# For development/testing too: uv sync --extra dev --extra btcli
+# For development/testing instead: uv sync --extra dev --extra btcli
+uv pip install -e ../lemma-cli
 ```
+
+Use one Python environment. The core `lemma` repo owns the subnet dependencies;
+`lemma-cli` is installed into the same `.venv` so setup, doctor, status, and
+preview commands see the same `.env`, packages, and `lemma` command.
 
 Default `uv sync` installs from **PyPI** and keeps only the **`bittensor`** SDK needed by Lemma itself. Add `--extra btcli` when you want repo-local wallet/register commands: it pulls in the official **[bittensor-cli](https://pypi.org/project/bittensor-cli/)** package through **`bittensor[cli]`**. **`btcli`** is only the **command name** those packages put on your `PATH`—there is no legitimate PyPI package you should install called `btcli`; typosquat packages have existed, so always use **`bittensor`**, **`bittensor-cli`**, or **`bittensor[cli]`** from PyPI.
 
@@ -35,9 +41,11 @@ Default `uv sync` installs from **PyPI** and keeps only the **`bittensor`** SDK 
 ```bash
 uv run lemma --help
 uv run btcli --help
+uv run lemma-cli --help
 ```
 
-Run these from the repo root. `uv run btcli` requires `uv sync --extra btcli`. If you activate `.venv`, you can omit `uv run`.
+Run these from the core `lemma` repo root. `uv run btcli` requires
+`uv sync --extra btcli`. If you activate `.venv`, you can omit `uv run`.
 
 ## Keys (Bittensor CLI: `btcli`)
 

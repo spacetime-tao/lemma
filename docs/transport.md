@@ -14,7 +14,7 @@ This is the **shipping** stack in this repository. It is **not** replaced here b
 
 ## Body hash and `required_hash_fields`
 
-`LemmaChallenge` sets **`required_hash_fields`** so Bittensor’s **`Synapse.body_hash`** covers the challenge fields **and** the miner-filled **`reasoning_*`** / **`proof_script`** payload.
+`LemmaChallenge` sets **`required_hash_fields`** so Bittensor’s **`Synapse.body_hash`** covers the challenge fields and the miner-filled **`proof_script`** payload.
 
 Effects:
 

@@ -39,16 +39,14 @@ local Lean-verification claim.
 
 It also does not:
 
-- bind the informal reasoning trace,
 - prove the miner did not copy a proof,
 - replace validator spot verification,
 - replace response body-hash integrity,
 - replace commit-reveal payload binding,
 - make a bad verifier environment trustworthy.
 
-Reasoning is intentionally outside this attest. The body hash and optional
-commit-reveal path bind the broader response payload. Attest stays focused on
-the Lean proof check.
+Informal reasoning is outside the live protocol. Attest stays focused on the
+Lean proof check.
 
 ## Operator Guidance
 
@@ -56,4 +54,3 @@ Keep `LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION=1.0` until miners reliably
 run local verification and signatures validate. If you lower the fraction, set a
 non-empty `LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_SALT`, monitor full-verify
 failures, and treat `0.0` as a high-trust mode.
-

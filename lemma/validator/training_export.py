@@ -1,4 +1,4 @@
-"""Append PRM-style training rows (JSONL) from validator epochs."""
+"""Append proof-side training rows (JSONL) from validator epochs."""
 
 from __future__ import annotations
 
@@ -10,9 +10,8 @@ from typing import Any, Literal
 from lemma.judge.base import RubricScore
 from lemma.lean.proof_metrics import LeanProofMetrics
 from lemma.protocol import LemmaChallenge
-from lemma.reasoning.format import effective_reasoning_text
 
-TrainingExportProfile = Literal["full", "reasoning_only"]
+TrainingExportProfile = Literal["full", "summary", "reasoning_only"]
 
 
 def training_record(
@@ -21,7 +20,7 @@ def training_record(
     theorem_id: str,
     uid: int,
     resp: LemmaChallenge,
-    rubric: RubricScore,
+    rubric: RubricScore | None = None,
     profile: TrainingExportProfile = "full",
     proof_metrics: LeanProofMetrics | None = None,
     coldkey: str | None = None,
@@ -29,25 +28,22 @@ def training_record(
 ) -> dict[str, Any]:
     """One JSON-serializable row for dataset export.
 
-    ``full`` (schema_version 1): proof, rubric, optional proof metrics, and later ``pareto_weight`` —
-    highest fidelity for offline analysis; also the strongest labels for reverse-engineering the judge.
+    ``full`` (schema_version 1): proof, optional labels, optional proof metrics, and later ``pareto_weight`` —
+    highest fidelity for offline analysis.
 
-    ``reasoning_only`` (schema_version 2): reasoning trace + identifiers only — omits proof text, judge
-    rubric, proof metrics, and incentive weights when appended (see ``append_epoch_jsonl``).
+    ``summary`` (schema_version 2): identifiers and provenance only — omits proof text,
+    labels, proof metrics, and incentive weights when appended (see ``append_epoch_jsonl``).
     """
-    steps = resp.reasoning_steps
     common = {
         "block": block,
         "theorem_id": theorem_id,
         "uid": uid,
-        "export_profile": profile,
+        "export_profile": "summary" if profile == "reasoning_only" else profile,
         "model_card": resp.model_card,
-        "reasoning_steps": [s.model_dump() for s in steps] if steps else None,
-        "reasoning_text": effective_reasoning_text(resp),
     }
     if export_context:
         common["export_context"] = dict(export_context)
-    if profile == "reasoning_only":
+    if profile in ("summary", "reasoning_only"):
         return {
             "schema_version": 2,
             **common,
@@ -57,8 +53,9 @@ def training_record(
         **common,
         "theorem_statement": resp.theorem_statement,
         "proof_script": resp.proof_script or "",
-        "rubric": rubric.model_dump(),
     }
+    if rubric is not None:
+        row["rubric"] = rubric.model_dump()
     if coldkey:
         row["coldkey"] = coldkey
     if proof_metrics is not None:

@@ -60,7 +60,7 @@ being checked.
 Validators also reuse Lean verification results for identical proof payloads in
 one batch. If several miners submit the same theorem/proof script, the validator
 checks that Lean payload once and applies the pass/fail result to each matching
-miner response before proof-side scoring. This helps with
+miner response before scoring. This helps with
 same-model clones and early testnet data collection, but it is not a substitute
 for more verifier capacity when many miners submit genuinely different proofs.
 

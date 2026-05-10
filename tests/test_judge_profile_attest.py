@@ -83,7 +83,7 @@ def test_attest_peer_mismatch_errors() -> None:
     with patch("lemma.validator.judge_profile_attest.httpx.Client", return_value=mock_client):
         errs = judge_profile_peer_check_errors(s)
     assert len(errs) == 1
-    assert "align judge stacks" in errs[0]
+    assert "align validator profiles" in errs[0]
 
 
 def test_attest_http_error() -> None:

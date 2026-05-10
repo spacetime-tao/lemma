@@ -1,4 +1,4 @@
-"""LLM prover: theorem -> reasoning trace + Submission.lean."""
+"""LLM prover: theorem -> Submission.lean."""
 
 from __future__ import annotations
 
@@ -16,8 +16,7 @@ from lemma.common.async_llm_retry import (
     async_llm_retry,
 )
 from lemma.common.config import LemmaSettings
-from lemma.protocol import LemmaChallenge, ReasoningStep
-from lemma.reasoning.format import format_reasoning_steps
+from lemma.protocol import LemmaChallenge
 
 T = TypeVar("T")
 
@@ -30,8 +29,8 @@ def _httpx_timeout(settings: LemmaSettings) -> httpx.Timeout:
 
 
 class Prover(Protocol):
-    async def solve(self, synapse: LemmaChallenge) -> tuple[str, str, list[ReasoningStep] | None]:
-        """Return (reasoning_trace, proof_script, optional structured steps)."""
+    async def solve(self, synapse: LemmaChallenge) -> str:
+        """Return complete ``Submission.lean`` source."""
 
 
 _STUDIO_CLIENT_SUBSTR = "gen-lang-client"
@@ -53,21 +52,13 @@ PROVER_SYSTEM = """You are an expert Lean 4 prover. The user message has only:
 
 Return ONLY a JSON object, with no markdown fences:
 {
-  "reasoning_steps": [{"title": "short optional label", "text": "plain English explanation"}],
   "proof_script": "complete Submission.lean contents"
 }
-
-Reasoning contract:
-- `reasoning_steps` is required. Legacy `reasoning_trace` is not accepted.
-- Explain the theorem as stated: quantifiers, types, operators, and the formal goal in plain English.
-- Give a real step-by-step mathematical walkthrough. Avoid filler, buzzword headings, analogies, LaTeX, and raw
-  Unicode math prose. Keep Lean names or tactic names in backticks when useful.
-- If the Lean proof uses a Mathlib lemma or tactic, explain what it proves and why it applies, including equality
-  direction when that matters. Do not replace mathematics with meta-commentary about using a library.
 
 Lean contract:
 - `proof_script` must be the complete `Submission.lean`: imports, `namespace Submission`, the theorem with the
   same name and statement as the challenge, and `end Submission`.
+- Prove the theorem as stated; do not change the statement or add assumptions.
 - This namespace is required because `Solution.lean` imports `Submission` and checks `Submission.<theorem_name>`.
 - Correctness comes first. Mathlib lemmas, `simp`, `rw`, `ring`, `linarith`, `exact`, `calc`, `cases`, and induction
   are all allowed when appropriate.
@@ -83,7 +74,7 @@ class LLMProver:
     def __init__(self, settings: LemmaSettings) -> None:
         self._settings = settings
 
-    async def solve(self, synapse: LemmaChallenge) -> tuple[str, str, list[ReasoningStep] | None]:
+    async def solve(self, synapse: LemmaChallenge) -> str:
         _raise_if_prover_model_is_studio_client_id(self._settings.prover_model)
         user = f"Imports hint: {synapse.imports}\n\nTheorem block:\n{synapse.theorem_statement}\n"
         text = await self._complete(user)
@@ -99,7 +90,7 @@ class LLMProver:
                 "prover JSON parse error; raw excerpt:\n{}",
                 text[:6000] if text else "<empty>",
             )
-            return ("parse_error", "-- prover JSON parse error\n", None)
+            return "-- prover JSON parse error\n"
         return _normalize_prover_payload(data, self._settings)
 
     async def _complete(self, user: str) -> str | None:
@@ -179,67 +170,13 @@ def _extract_json_obj(text: str) -> dict:
     return json.loads(text[start : end + 1])
 
 
-_POLICY_FAIL_TRACE = (
-    "prover policy violation: JSON must contain a non-empty reasoning_steps array "
-    "(at least one step with non-empty text). Legacy reasoning_trace alone is not accepted."
-)
-_POLICY_FAIL_PROOF = "-- prover policy: missing non-empty reasoning_steps\n"
-_POLICY_FAIL_MIN_STEPS = (
-    "prover policy violation: reasoning_steps has fewer entries than LEMMA_PROVER_MIN_REASONING_STEPS "
-    "(informal exposition required)."
-)
-_POLICY_FAIL_MIN_CHARS = (
-    "prover policy violation: total informal text is shorter than "
-    "LEMMA_PROVER_MIN_REASONING_TOTAL_CHARS."
-)
-_POLICY_FAIL_MIN_PROOF_CHARS = (
-    "prover policy violation: proof_script is shorter than LEMMA_PROVER_MIN_PROOF_SCRIPT_CHARS "
-    "(detailed Submission.lean required)."
-)
-
-
 def _normalize_prover_payload(
     data: dict,
     settings: LemmaSettings | None = None,
-) -> tuple[str, str, list[ReasoningStep] | None]:
-    """Require structured informal reasoning; discard model proof on policy failure so verify+judge fail closed."""
+) -> str:
+    """Normalize prover JSON to the proof artifact used by live scoring."""
     proof_in = str(data.get("proof_script", ""))
-    raw_steps = data.get("reasoning_steps")
-    if not isinstance(raw_steps, list) or not raw_steps:
-        logger.warning(
-            "prover JSON missing non-empty reasoning_steps (legacy reasoning_trace is ignored)"
-        )
-        return (_POLICY_FAIL_TRACE, _POLICY_FAIL_PROOF, None)
-
-    parsed: list[ReasoningStep] = []
-    for item in raw_steps:
-        if isinstance(item, dict):
-            parsed.append(ReasoningStep.model_validate(item))
-        else:
-            parsed.append(ReasoningStep(text=str(item)))
-    if not any(s.text.strip() for s in parsed):
-        logger.warning("prover reasoning_steps had no non-empty text fields")
-        return (_POLICY_FAIL_TRACE, _POLICY_FAIL_PROOF, None)
-
     if settings is not None:
-        min_steps = int(settings.prover_min_reasoning_steps or 0)
-        min_chars = int(settings.prover_min_reasoning_total_chars or 0)
-        total_chars = sum(len(s.text.strip()) for s in parsed)
-        if min_steps > 0 and len(parsed) < min_steps:
-            logger.warning(
-                "prover reasoning_steps count {} below LEMMA_PROVER_MIN_REASONING_STEPS={}",
-                len(parsed),
-                min_steps,
-            )
-            return (_POLICY_FAIL_MIN_STEPS, _POLICY_FAIL_PROOF, None)
-        if min_chars > 0 and total_chars < min_chars:
-            logger.warning(
-                "prover informal reasoning length {} below LEMMA_PROVER_MIN_REASONING_TOTAL_CHARS={}",
-                total_chars,
-                min_chars,
-            )
-            return (_POLICY_FAIL_MIN_CHARS, _POLICY_FAIL_PROOF, None)
-
         min_proof = int(settings.prover_min_proof_script_chars or 0)
         if min_proof > 0 and len(proof_in.strip()) < min_proof:
             logger.warning(
@@ -247,13 +184,10 @@ def _normalize_prover_payload(
                 len(proof_in.strip()),
                 min_proof,
             )
-            return (_POLICY_FAIL_MIN_PROOF_CHARS, _POLICY_FAIL_PROOF, None)
+            return "-- prover policy: proof_script below configured minimum\n"
 
-    trace = format_reasoning_steps(parsed)
-    return trace, proof_in, parsed
+    return proof_in
 
 
-def _stub(synapse: LemmaChallenge) -> tuple[str, str, list[ReasoningStep] | None]:
-    trace = "stub: no PROVER API key configured"
-    stub_steps = [ReasoningStep(title="Setup", text=trace)]
-    return trace, synapse.theorem_statement, stub_steps
+def _stub(synapse: LemmaChallenge) -> str:
+    return synapse.theorem_statement

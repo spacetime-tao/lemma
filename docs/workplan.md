@@ -29,7 +29,7 @@ These stay in `spacetime-tao/lemma` because they affect scoring agreement.
 3. Make generated registry hashes cover the real template body and RNG version tag, not only names/order. **Done.**
 4. Fix generated problem documentation so the builder count matches code. **Done.**
 5. Expand the validator scoring/profile pin to cover subnet-critical settings beyond optional prose-evaluator settings. **Done.**
-6. Make FakeJudge impossible in live validator mode unless an explicit local-only flag is active. **Done.**
+6. Remove FakeJudge from the live validator path. **Done:** live scoring is proof-only; FakeJudge remains only in optional one-shot prose tooling.
 7. Document production Lean/toolchain image pinning so local `latest` stays a dev-only convenience. **Done:** [toolchain-image-policy.md](toolchain-image-policy.md).
 8. Document the public deterministic problem-supply boundary and builder promotion checklist. **Done:** [problem-supply-policy.md](problem-supply-policy.md).
 9. Expand the generated template registry with a small non-arithmetic batch. **Done:** 40 builders total; list, set, order, logic, and finite-set templates added.
@@ -46,11 +46,11 @@ These are product and governance tracks, not v0 launch blockers.
 
 These stay in the core repo, but should be handled as product decisions, not tiny patches.
 
-1. Make the long-term reward path proof-only. **Decision recorded:** [proof-only-incentives.md](proof-only-incentives.md) defines the target as Lean-valid proof plus deterministic proof-efficiency signals; informal reasoning is optional metadata, not a reward axis.
-2. Replace `proof_intrinsic_score`; length is a weak proxy for mathematical value and the current version rewards bulk. Use a conservative proof-efficiency scorer that prefers lower stripped proof cost and Lean-backed proof-shape metrics after Lean pass. Keep proof-metric runtime cost visible.
-3. Keep Lean pass/fail as the objective floor. **Done:** [objective-decision.md](objective-decision.md) pins the objective as valid, efficient Lean proofs.
+1. Make the reward path proof-only. **Live default flipped:** a Lean-valid proof now enters scoring as a binary pass with live cost `0`.
+2. Keep `proof_intrinsic_score` out of live scoring. Length is a weak proxy for mathematical value and the current heuristic rewards bulk. Binary pass stays the v0 rule.
+3. Keep Lean pass/fail as the objective floor. **Done:** [objective-decision.md](objective-decision.md) pins the objective as Lean-valid proofs.
 4. Sybil/Pareto reward changes need evidence first. **Tooling ready:** private full exports now carry enough public challenge/coldkey context for `tools/sybil_replay_analyze.py` to compare dedup modes and K-miner clone pressure, report concrete `decision_data_gaps`, and [sybil_economics.md](sybil_economics.md) now includes the policy rubric for interpreting that replay. **Still open:** collect real exports and choose a policy before changing live rewards.
-5. Avoid adding more scoring layers until the primary objective is one sentence.
+5. Avoid adding more scoring layers until the primary objective stays one sentence in code and docs. The current product taste is intentionally Bitcoin-like: publish work, verify it mechanically, and pay for valid work.
 
 ### 5. Experimental Protocol Hooks
 
@@ -70,7 +70,7 @@ are safe on every machine.
 
 1. Reuse identical Lean verification payloads within an epoch. **Done:** one
    Lean check is copied to miners that submitted the exact same theorem/proof
-   payload before proof-side scoring.
+   payload before scoring.
 2. Avoid duplicate cold-cache warmups for the same template. **Done:** concurrent
    same-template proofs now singleflight through one cold warmup, then reuse the
    published warm workspace.
@@ -80,6 +80,13 @@ are safe on every machine.
    and validators keep a nonzero spot-check rate.
 5. Consider 50-block (~10 minute) windows before 25-block (~5 minute) windows
    unless real validator timing data clears the smaller budget.
+
+Proof-only changes the throughput plan by removing judge latency and API cost
+from rewards. It does not remove the Lean budget. The next experiments should
+therefore measure warm-cache Lean verification, remote worker throughput, miner
+LLM response time, and one-droplet-vs-many-droplet placement under the same
+published validator profile. Do not treat cold Mathlib startup as the steady
+state; measure persistent workspace cache plus a long-lived Docker worker first.
 
 ### 6. CLI Extraction
 
@@ -120,7 +127,7 @@ Current `wc -l` snapshot after cleanup: `lemma/` is **7 842** Python lines acros
 3. Move catalog-building helpers out of runtime package if only scripts/tests use them. **Done: builder/parser helpers moved to `tools/catalog`; runtime keeps `lemma/catalog/constants.py`.**
 4. Remove root stubs and unused assets once docs no longer point at them. **Root cleanup done: removed `validator.py`, `voibes.jpeg`, obsolete `env.example`, superseded `scripts/load_minif2f.py`, the old `scripts/lemma-run` wrapper, stale local-loop example, and legacy burn validator demo. Comparator docs now match default-off behavior; `tiktoken` was removed, `anthropic` and `btcli` are optional, and the runtime Docker image no longer installs the full Docker engine. Larger misc items remain.**
 5. Keep tests focused on proof acceptance, scoring, protocol integrity, and deterministic problem selection. **Ongoing:** added coverage for optional multi-theorem seed mixing; removed the low-value problem-view title-case test.
-6. Simplify small glue APIs when an audit item has a single unused path. **Ongoing:** removed the unused third return from `apply_ema_to_entries`; consolidated dedup best-by-key logic; removed unused scoring package re-exports; removed duplicate `ScoredEntry.composite`; inlined trace-length scoring; inlined miner default priority; removed the single-use validator UID helper; inlined the single-use split-timeout multiplier and topic-label formatter; kept package imports light by removing unused re-exports; removed unused strict-judge and problem-seed label helpers; moved `.env` merge helper to `lemma-cli`; added direct reward assembly coverage.
+6. Simplify small glue APIs when an audit item has a single unused path. **Ongoing:** removed the unused third return from `apply_ema_to_entries`; consolidated dedup best-by-key logic; removed unused scoring package re-exports; removed duplicate `ScoredEntry.composite`; removed stale trace-length scoring; removed the dead validator judge-concurrency knob; inlined miner default priority; removed the single-use validator UID helper; inlined the single-use split-timeout multiplier and topic-label formatter; kept package imports light by removing unused re-exports; removed unused strict-judge and problem-seed label helpers; moved `.env` merge helper to `lemma-cli`; added direct reward assembly coverage.
 
 ## First PR Sequence
 

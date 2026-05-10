@@ -1,8 +1,8 @@
 """Canonical validator scoring profile (subnet parity / anti-gaming).
 
-Hash includes rubric text, the active judge stack, and deterministic validator
-settings that affect scoring or response acceptance. It does not include secrets,
-local paths, logging, concurrency, or retry policy.
+Hash includes deterministic validator settings that affect proof scoring or
+response acceptance. It does not include secrets, local paths, logging,
+concurrency, retry policy, or optional prose-judge tooling.
 """
 
 from __future__ import annotations
@@ -10,45 +10,13 @@ from __future__ import annotations
 import hashlib
 import json
 
-from lemma.common.config import (
-    CANONICAL_JUDGE_OPENAI_BASE_URL,
-    CANONICAL_JUDGE_OPENAI_MODEL,
-    LemmaSettings,
-    normalized_judge_openai_base_url,
-)
-from lemma.judge.fingerprint import rubric_sha256
-
-
-def judge_provider_for_profile_hash(settings: LemmaSettings) -> str:
-    """Canonical ``judge_provider`` value stored in ``lemma meta`` / pin JSON.
-
-    Legacy ``JUDGE_PROVIDER=openai`` with the official Chutes + DeepSeek stack is normalized to
-    ``chutes`` so the fingerprint matches ``JUDGE_PROVIDER=chutes``.
-    """
-    p = (settings.judge_provider or "chutes").lower()
-    if p == "openai":
-        model_ok = (settings.openai_model or "").strip() == CANONICAL_JUDGE_OPENAI_MODEL
-        base_ok = (
-            normalized_judge_openai_base_url(settings).lower()
-            == CANONICAL_JUDGE_OPENAI_BASE_URL.strip().rstrip("/").lower()
-        )
-        if model_ok and base_ok:
-            return "chutes"
-        return "openai"
-    if p == "chutes":
-        return "chutes"
-    return p
+from lemma.common.config import LemmaSettings
 
 
 def judge_profile_dict(settings: LemmaSettings) -> dict[str, object]:
-    """Stable dict for hashing (no API keys). Active provider only for model fields."""
-    stored = judge_provider_for_profile_hash(settings)
+    """Stable dict for hashing proof-only validator policy (no API keys)."""
     out: dict[str, object] = {
-        "profile_schema": "lemma_validator_profile_v3",
-        "rubric_sha256": rubric_sha256(),
-        "judge_provider": stored,
-        "judge_temperature": float(settings.judge_temperature),
-        "judge_max_tokens": int(settings.judge_max_tokens),
+        "profile_schema": "lemma_validator_profile_v4",
         "problem_policy": {
             "problem_source": (settings.problem_source or "").strip().lower(),
             "problem_seed_mode": settings.problem_seed_mode,
@@ -68,8 +36,6 @@ def judge_profile_dict(settings: LemmaSettings) -> dict[str, object]:
             "timeout_split_hard_mult": float(settings.timeout_split_hard_mult),
         },
         "scoring_policy": {
-            "lemma_score_proof_weight": float(settings.lemma_score_proof_weight),
-            "lemma_proof_intrinsic_strip_comments": bool(settings.lemma_proof_intrinsic_strip_comments),
             "lemma_scoring_dedup_identical": bool(settings.lemma_scoring_dedup_identical),
             "lemma_scoring_coldkey_dedup": bool(settings.lemma_scoring_coldkey_dedup),
             "lemma_reputation_ema_alpha": float(settings.lemma_reputation_ema_alpha),
@@ -91,12 +57,6 @@ def judge_profile_dict(settings: LemmaSettings) -> dict[str, object]:
             else "",
         },
     }
-    if stored in ("openai", "chutes"):
-        base = (settings.openai_base_url or "").strip().rstrip("/")
-        out["openai_model"] = settings.openai_model
-        out["openai_base_url"] = base
-    else:
-        out["anthropic_model"] = settings.anthropic_model
     return out
 
 

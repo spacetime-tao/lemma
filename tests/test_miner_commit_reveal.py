@@ -8,16 +8,12 @@ from lemma.miner.forward import (
     _commit_reveal_cache_key,
     make_forward,
 )
-from lemma.protocol import LemmaChallenge, ReasoningStep, synapse_miner_response_integrity_ok
+from lemma.protocol import LemmaChallenge, synapse_miner_response_integrity_ok
 
 
 class _Prover:
-    async def solve(self, synapse: LemmaChallenge) -> tuple[str, str, list[ReasoningStep]]:
-        return (
-            "trace",
-            "namespace Submission\n theorem t : True := by trivial\n",
-            [ReasoningStep(title="Plan", text="Prove True directly.")],
-        )
+    async def solve(self, synapse: LemmaChallenge) -> str:
+        return "namespace Submission\n theorem t : True := by trivial\n"
 
 
 def _settings() -> LemmaSettings:
@@ -58,7 +54,7 @@ def test_commit_reveal_cache_entry_expires() -> None:
     cache = CommitRevealCache(ttl_s=1.0)
     key = ("validator-a", "gen/1", "m1")
 
-    cache.store(key, ("n", "proof", "trace", None), now=100.0)
+    cache.store(key, ("n", "proof"), now=100.0)
     assert cache.pop(key, now=102.0) is None
 
 

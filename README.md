@@ -1,6 +1,6 @@
 # Lemma
 
-> **Lemma: incentivized theorem proving for mathematics on [Bittensor](https://docs.learnbittensor.org/).** Miners submit Lean proof scripts for published theorem statements. Validators mechanically verify those proofs and reward valid, efficient formal proofs.
+> **Lemma: incentivized theorem proving for mathematics on [Bittensor](https://docs.learnbittensor.org/).** Miners submit Lean proof scripts for published theorem statements. Validators mechanically verify those proofs; live rewards are binary Lean pass/fail.
 
 A **theorem** is the precise claim to establish; a **proof** is the formal, machine-checkable argument that shows it. **Lean** is a proof assistant (and language): it checks those proofs mechanically, line by line. Validators run that check in **Docker** (lean-sandbox image).
 
@@ -13,13 +13,22 @@ A **theorem** is the precise claim to establish; a **proof** is the formal, mach
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 git clone https://github.com/spacetime-tao/lemma.git
+git clone https://github.com/spacetime-tao/lemma-cli.git
 cd lemma
 uv sync --extra dev
+uv pip install -e ../lemma-cli
 source .venv/bin/activate
 lemma --help
+lemma-cli --help
 ```
 
-`lemma` alone prints **command help** (like `btcli`). Use the separate **[lemma-cli](https://github.com/spacetime-tao/lemma-cli)** repo for the friendly operator screen (`setup`, `doctor`, `docs`, …). Create wallets with the **`btcli`** command from official **[bittensor-cli](https://pypi.org/project/bittensor-cli/)**; install it in this repo with `uv sync --extra btcli` (or `uv sync --extra dev --extra btcli` for development). See **getting-started** for PyPI package names vs the `btcli` executable.
+Use one environment: the core Lemma `.venv` owns the subnet dependencies, and
+`lemma-cli` is installed into that same env as the friendly operator surface
+(`setup`, `doctor`, `docs`, …). Create wallets with the **`btcli`** command from
+official **[bittensor-cli](https://pypi.org/project/bittensor-cli/)**; install
+it in this repo with `uv sync --extra btcli` (or
+`uv sync --extra dev --extra btcli` for development). See **getting-started** for
+PyPI package names vs the `btcli` executable.
 
 **Validator entrypoint:** use **`lemma validator start`** (or Docker `ENTRYPOINT ["lemma"]` / `CMD ["validator", "start"]`).
 

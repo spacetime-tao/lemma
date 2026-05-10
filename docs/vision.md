@@ -1,10 +1,13 @@
 # Vision & roadmap
 
-Lemma is an **incentivized theorem-proving subnet** for mathematics on **Bittensor**. Participants answer formal math challenges in **Lean 4** by submitting a **proof script**. Validators **verify proofs** in **Docker** (lean-sandbox image). **Weights on chain** should follow from Lean pass/fail plus deterministic proof-efficiency signals.
+Lemma is an **incentivized theorem-proving subnet** for mathematics on **Bittensor**. Participants answer formal math challenges in **Lean 4** by submitting a **proof script**. Validators **verify proofs** in **Docker** (lean-sandbox image). **Weights on chain** should center on Lean pass/fail.
 
-**One-sentence objective:** Lemma rewards valid, efficient Lean proofs for published theorem statements.
+**One-sentence objective:** Lemma rewards Lean-valid proofs for published theorem statements.
 
-Informal reasoning may exist as optional explanation, training data, or a human-readable artifact, but the permanent reward axis is proof-only. See [objective-decision.md](objective-decision.md) and [proof-only-incentives.md](proof-only-incentives.md).
+Informal reasoning belongs outside the live protocol: writeups, human review,
+benchmarks, or publication. The subnet reward axis is proof-only. See
+[objective-decision.md](objective-decision.md) and
+[proof-only-incentives.md](proof-only-incentives.md).
 
 **Important distinction:** what the subnet *must* check mechanically is the **proof script against the locked `theorem`**. *How* that script was produced—autonomous model, human mathematician, or a mixed team—is largely **out of band** for Lean. Today’s reference miner is LLM-driven. A planned **bounty / long-horizon lane** (opt-in, higher stakes, offline-friendly) is **not** required at launch—it fits **after** the base economy is healthy (see **Economics v0 → v1** below).
 
@@ -34,7 +37,9 @@ This lane is the **optional second track** described under **Economics v1**—ro
 
 - A person or team develops a proof using **their own editors, libraries, and CI**—the same way Mathlib contributors work today.
 - They **run Lean locally** (or in their own infra) until `lake build` succeeds and they are confident the proof matches the **published statement hash** they will be judged against.
-- When satisfied, they **submit** the `proof_script` (and whatever the protocol asks for alongside it, e.g. a trace) through the normal miner / challenge flow. **If verification passes, they earn the reward**; if not, they do not.
+- When satisfied, they **submit** the `proof_script` through the normal miner /
+  challenge flow. **If verification passes, they earn the reward**; if not, they
+  do not.
 
 Nothing in that story *requires* an LLM to be the author of the proof. Lemma’s role is to be the **trustless checkpoint**: fixed goal, reproducible verify, transparent payout rules. **Publicizing a major result** (paper, blog, Mathlib PR) is separate from verification but encouraged culturally—and large wins can still be shared *after* the on-chain check, the same way any open-source contribution is.
 
@@ -48,7 +53,7 @@ Phases below are **sequenced**, not mutually exclusive—some security and probl
 
 ### 1. Economics v0 (launch) → v1 (second lane)
 
-**v0 — bootstrapping:** Launch with **one steady, high-frequency lane**: predictable verify cost, automation-friendly, easy for miners to participate and **earn emissions** while the subnet economy kicks off. Prefer **simple rules** people can explain without heavy game theory—e.g. **static** emission per solved item or per epoch. **Goal:** validators and miners can describe payouts in **one page**.
+**v0 — bootstrapping:** Launch with **one steady, high-frequency lane**: predictable verify cost, automation-friendly, easy for miners to participate and **earn emissions** while the subnet economy kicks off. Keep it BTC-like in spirit: publish work, verify work mechanically, pay for valid work. Prefer **simple rules** people can explain without heavy game theory—e.g. **static** emission per solved item or per epoch. **Goal:** validators and miners can describe payouts in **one page**.
 
 **Not at launch:** the **second lane** (opt-in **bounty** / long-horizon tasks, **offline proving** then **submit when ready**, higher rewards, manual-scale work—see **Bounty lane** above). That is **v1-phase**: introduce it **after** the base economy is mature, so higher-stakes opt-in work does not compete with kicking off broad miner participation.
 
@@ -82,7 +87,7 @@ Under load: queueing, timeouts, verification cost, optional prose-evaluation cos
 
 ### 5. Advanced incentives (evidence-driven)
 
-After real traffic: consider **partial-progress** or **lemma-submission** tracks, anti-collusion tweaks, and richer proof-side scoring—**only** where the protocol can define rewards without breaking the Lean gate’s clarity.
+After real traffic: consider **partial-progress** or **lemma-submission** tracks and anti-collusion tweaks—**only** where the protocol can define rewards without breaking the Lean gate’s clarity.
 
 **Goal:** incentive changes follow **measured** miner behavior, not pre-launch theory alone.
 
@@ -90,7 +95,7 @@ After real traffic: consider **partial-progress** or **lemma-submission** tracks
 
 ## Through-line
 
-**Lemma's identity is incentivized theorem proving; Lean verification stays the objective floor.** Everything else—efficiency metrics, economics, problem supply, and operations—exists to make that floor **useful, fair, and sustainable** on a decentralized network.
+**Lemma's identity is incentivized theorem proving; Lean verification stays the objective floor.** Everything else—economics, problem supply, and operations—exists to make that floor **useful, fair, and sustainable** on a decentralized network.
 
 ---
 
