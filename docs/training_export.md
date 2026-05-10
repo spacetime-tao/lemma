@@ -96,7 +96,7 @@ correlations/outlier lists, so calibration is based only on successful Lean
 probe rows. It also reports minimum data-readiness blockers using conservative
 defaults: at least 50 successful proof-metric rows, 5 theorem ids, 5 UIDs, and
 quality labels. Successful rows must include one consistent
-`judge_profile_sha256`; mixed validator profiles block a scoring decision, and mixed
+`judge_profile_sha256`; mixed validator profiles block a metric review, and mixed
 generated-registry hashes do too. It also requires at least 3 theorem ids with 2
 or more successful rows from 2 or more UIDs, so wide
 one-row-per-theorem exports do not masquerade as proof-quality evidence. The
@@ -137,9 +137,9 @@ The `decision_data_gaps` line is the shortest replay collection checklist, for
 example `replayable_rows+47`, `epochs+4`, or `coldkey_rows+3`.
 For release checklists, add `--require-decision-ready`. It exits nonzero unless
 the export has enough clean rows, epochs, UIDs, theorem ids, and coldkey coverage
-for a governance decision. Like the proof-metrics guard, this is not approval for
-a reward change. Copy the summary lines, not the private JSONL, into the
-decision record in [sybil_economics.md](sybil_economics.md).
+for a release decision. Like the proof-metrics guard, this is not approval for a
+reward change. Copy the summary lines, not the private JSONL, into the decision
+record in [sybil_economics.md](sybil_economics.md).
 
 ## Gaming and leakage (why `summary` exists)
 

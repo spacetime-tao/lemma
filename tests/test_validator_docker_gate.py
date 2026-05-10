@@ -48,7 +48,7 @@ def test_validator_startup_issues_reject_bad_pins(monkeypatch: pytest.MonkeyPatc
     monkeypatch.delenv("LEMMA_FAKE_JUDGE", raising=False)
     s = _ready_settings(judge_profile_expected_sha256="0" * 64)
     fatal, _ = validator_startup_issues(s, dry_run=False)
-    assert any("judge profile mismatch" in msg for msg in fatal)
+    assert any("validator profile mismatch" in msg for msg in fatal)
 
 
 def test_validator_startup_issues_live_key_not_required(monkeypatch: pytest.MonkeyPatch) -> None:

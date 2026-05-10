@@ -21,7 +21,7 @@ No subnet is perfectly ungameable; the goal is to make the easiest strategy also
 
 One-line mental model: Lemma rewards Lean-valid proofs.
 
-For the proof-only target design, see [proof-only-incentives.md](proof-only-incentives.md). For a **living checklist** of shipped items and known gaps, see [incentive-roadmap.md](incentive-roadmap.md). **Sybil / coldkey dedup** is *not* identity verification — see [sybil_economics.md](sybil_economics.md). **Dendrite/Axon + synapse body-hash** — see [transport.md](transport.md).
+For the binary proof-pass design, see [proof-only-incentives.md](proof-only-incentives.md). For a **living checklist** of shipped items and known gaps, see [incentive-roadmap.md](incentive-roadmap.md). **Sybil / coldkey dedup** is *not* identity verification — see [sybil_economics.md](sybil_economics.md). **Dendrite/Axon + synapse body-hash** — see [transport.md](transport.md).
 
 ## Validators querying your axon many times
 
@@ -215,9 +215,9 @@ Order matters:
 
 So repeated “failures” while you believe the proof is right are usually **environment** (Mathlib fetch, Docker network, cold cache, timeout) or **layout/policy**. The proof has to pass Lean before any reward score exists.
 
-## Optional prose tooling
+## Local prose tooling
 
-Prose evaluation tools may still help with debugging, research exports, or human review. Keep them outside the reward path.
+Prose evaluation tools may help with debugging, research exports, or human review. Live scoring remains binary Lean pass/fail.
 
 ## Miner provenance
 

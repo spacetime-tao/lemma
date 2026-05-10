@@ -37,7 +37,7 @@ sybil deterrent    ≈ cost_of_N_slots > reward_from_running_N_parallel_miners
 3. **Prefer** mechanism design where **running K independent miners** is **not** ~K× as attractive as one good miner (e.g. diminishing returns, uncopyable work, rate limits via economics rather than identity).
 4. **Optional policy knobs** (not enforced by this doc — subnet governance): tie-break rules when scores tie, registration burns, emissions caps per coldkey family, off-chain KYC — those are **outside** Lemma’s default codebase unless you add them explicitly.
 
-## Decision gate before changing rewards
+## Decision gate before Sybil/Pareto scoring changes
 
 Do not add another sybil/Pareto scoring layer until the subnet has answered this gate. The default code should stay simple until there is evidence that a specific policy beats the current anti-clutter dedup rules.
 
@@ -69,7 +69,7 @@ Policy choices to make:
 
 ## Decision rubric
 
-Use this rubric after a private `full` export clears `--require-decision-ready`. If the export does not clear the readiness gate, record **no decision** and collect the fields named in `decision_data_gaps` instead of changing live rewards.
+Use this rubric after a private `full` export clears `--require-decision-ready`. If the export does not clear the readiness gate, record **no decision** and collect the fields named in `decision_data_gaps` instead of changing Sybil/Pareto defaults.
 
 | Decision | Evidence that supports it |
 | --- | --- |
@@ -77,7 +77,7 @@ Use this rubric after a private `full` export clears `--require-decision-ready`.
 | **Cap / dampen near-duplicate reward** | Rewritten clones gain material extra share across several epochs; examples are copied proofs, lightly edited traces, or same-theorem variants; the proposed similarity rule can be replayed before activation. |
 | **Move to winners-take-most / stronger subset rewards** | K coordinated miners stay close to Kx group share after current dedup; Pareto ranking keeps many near-copy entries; a stronger policy can be simulated on the same export before activation. |
 | **Invest in uncopyable work / problem supply first** | Replay shows copied outputs are naturally competitive and no simple similarity rule is robust enough; the fix belongs in task design rather than another scoring check. |
-| **No reward-code change** | Coldkeys are missing, the export is too small, UID cost/reward context is unknown, or the finding depends on one hand-picked epoch. |
+| **No scoring-code change** | Coldkeys are missing, the export is too small, UID cost/reward context is unknown, or the finding depends on one hand-picked epoch. |
 
 ## Replay summary to preserve
 
@@ -96,7 +96,7 @@ Decision-record template:
 
 ```text
 Sybil / Pareto economics decision:
-Chosen policy: keep current dedup | cap/dampen near duplicates | winners-take-most | uncopyable-work first | no reward-code change
+Chosen policy: keep current dedup | cap/dampen near duplicates | winners-take-most | uncopyable-work first | no scoring-code change
 Decision ready: yes | no
 Reason:
 

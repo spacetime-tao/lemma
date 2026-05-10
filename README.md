@@ -24,7 +24,9 @@ lemma-cli --help
 
 Use one environment: the core Lemma `.venv` owns the subnet dependencies, and
 `lemma-cli` is installed into that same env as the friendly operator surface
-(`setup`, `doctor`, `docs`, …). Create wallets with the **`btcli`** command from
+(`setup`, `doctor`, `docs`, …). `uv pip install -e ../lemma-cli` is still a
+`uv` command; it installs the sibling CLI into this env instead of creating a
+second dependency path. Create wallets with the **`btcli`** command from
 official **[bittensor-cli](https://pypi.org/project/bittensor-cli/)**; install
 it in this repo with `uv sync --extra btcli` (or
 `uv sync --extra dev --extra btcli` for development). See **getting-started** for

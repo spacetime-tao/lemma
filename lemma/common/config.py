@@ -309,8 +309,8 @@ class LemmaSettings(BaseSettings):
         default=None,
         validation_alias="JUDGE_PROFILE_SHA256_EXPECTED",
         description=(
-            "Validators must set this; startup fails unless it matches live judge_profile_sha256 "
-            "(`lemma meta`)."
+            "Compatibility env name for the validator profile pin. Validators must set this; startup fails "
+            "unless it matches live `lemma meta`."
         ),
     )
     prover_provider: str = Field(
@@ -631,8 +631,8 @@ class LemmaSettings(BaseSettings):
         default=False,
         validation_alias="LEMMA_JUDGE_PROFILE_ATTEST_ENABLED",
         description=(
-            "Optional HTTP peer quorum: each URL must return this validator's judge_profile_sha256. "
-            "See LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS, LEMMA_JUDGE_PROFILE_ATTEST_SKIP, "
+            "Optional validator-profile peer check. Compatibility env/endpoint names use judge_profile; "
+            "see LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS, LEMMA_JUDGE_PROFILE_ATTEST_SKIP, "
             "`lemma validator judge-attest-serve`, docs/judge-profile-attest.md."
         ),
     )

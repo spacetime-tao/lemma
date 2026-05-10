@@ -49,7 +49,7 @@ def validator_startup_issues(settings: LemmaSettings, *, dry_run: bool) -> tuple
         actual_judge = judge_profile_sha256(settings).strip().lower()
         if actual_judge != expected_raw.lower():
             fatal.append(
-                f"judge profile mismatch: expected JUDGE_PROFILE_SHA256_EXPECTED={expected_raw!r} "
+                f"validator profile mismatch: expected JUDGE_PROFILE_SHA256_EXPECTED={expected_raw!r} "
                 f"but current config hashes to {actual_judge!r}.\n"
                 "Align validator profile env with the subnet, then run `lemma-cli configure subnet-pins` "
                 "(or set the pin to match `lemma meta` / `lemma meta --raw` manually).",
@@ -80,7 +80,7 @@ def validator_startup_issues(settings: LemmaSettings, *, dry_run: bool) -> tuple
 
     if settings.lemma_judge_profile_attest_enabled and settings.lemma_judge_profile_attest_allow_skip:
         warn.append(
-            "LEMMA_JUDGE_PROFILE_ATTEST_SKIP=1 — peer judge profile HTTP checks skipped "
+            "LEMMA_JUDGE_PROFILE_ATTEST_SKIP=1 — peer validator profile HTTP checks skipped "
             "(solo / dev only; not production alignment)",
         )
     fatal.extend(judge_profile_peer_check_errors(settings))

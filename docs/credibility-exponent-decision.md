@@ -27,10 +27,9 @@ to detect Lean-valid padding; that belongs to offline proof-metric research in
 
 ## Why not default to 2.5 yet?
 
-The knowledge base mentions `credibility^2.5` as a mechanism target. That is a
-useful candidate, but raising the live default from `1.0` to `2.5` is a material
-reward change, not a cleanup patch. It would make lower credibility much more
-punitive:
+The knowledge base mentions `credibility^2.5` as an alternative policy. Raising
+the live default from `1.0` to `2.5` is a material reward change, not a cleanup
+patch. It would make lower credibility much more punitive:
 
 | Credibility | Exponent 1.0 | Exponent 2.5 |
 |-------------|--------------|--------------|
@@ -49,7 +48,7 @@ miner before the subnet has measured real distributions.
 Before changing the default, do all of the following in one intentional release:
 
 - Measure credibility distributions over live or dry-run epochs.
-- Decide the governance target for how sharply failures should compound.
+- Decide how sharply failures should compound.
 - Update `.env.example`, `LemmaSettings`, profile-hash tests, and operator docs.
 - Call out the reward impact in release notes so validators know their
   `judge_profile_sha256` will change.
