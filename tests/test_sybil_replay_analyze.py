@@ -4,7 +4,15 @@ import json
 from pathlib import Path
 
 import pytest
-from tools.sybil_replay_analyze import clone_pressure, decision_ready, load_report, main, render_report, replay_epoch
+from tools.sybil_replay_analyze import (
+    clone_pressure,
+    decision_data_gaps,
+    decision_ready,
+    load_report,
+    main,
+    render_report,
+    replay_epoch,
+)
 
 
 def _row(
@@ -89,6 +97,10 @@ def test_replay_compares_dedup_modes_and_clone_pressure(tmp_path) -> None:
     assert "Sybil/Pareto replay analysis" in rendered
     assert "rows_replayable=3" in rendered
     assert "coldkey_note=no coldkeys in export" in rendered
+    assert (
+        "decision_data_gaps=invalid_json_lines=1,replayable_rows+47,epochs+4,uids+2,"
+        "theorems+4,coldkey_rows+3"
+    ) in rendered
     assert "decision_ready=no" in rendered
     assert "clone_k=2" in rendered
     assert "summary_exact_clone_extra_share: n=1 max=0.0000 mean=0.0000" in rendered
@@ -156,6 +168,7 @@ def test_require_decision_ready_returns_nonzero_for_blocked_export(tmp_path, cap
     rendered = capsys.readouterr().out
     assert "decision_ready=no" in rendered
     assert "replayable_rows<50" in rendered
+    assert "decision_data_gaps=replayable_rows+49,epochs+4,uids+4,theorems+4,coldkey_rows+1" in rendered
 
 
 def test_require_decision_ready_passes_for_ready_export(tmp_path, capsys) -> None:
@@ -179,4 +192,28 @@ def test_require_decision_ready_passes_for_ready_export(tmp_path, capsys) -> Non
     assert main([str(path), "--require-decision-ready", "--proof-weight", "0"]) == 0
     rendered = capsys.readouterr().out
     assert "decision_data_blockers=none" in rendered
+    assert "decision_data_gaps=none" in rendered
     assert "decision_ready=yes" in rendered
+
+
+def test_decision_data_gaps_counts_missing_replay_targets(tmp_path) -> None:
+    path = tmp_path / "train.jsonl"
+    _write_jsonl(
+        path,
+        [
+            _row(block=100, theorem_id="a", uid=1, composite=0.9, coldkey="cold-1"),
+            _row(block=100, theorem_id="b", uid=2, composite=0.8),
+            _row(block=101, theorem_id="b", uid=2, composite=0.7),
+        ],
+        bad_json=True,
+    )
+
+    report = load_report(path, proof_weight=0.0)
+    assert decision_data_gaps(report) == [
+        "invalid_json_lines=1",
+        "replayable_rows+47",
+        "epochs+3",
+        "uids+3",
+        "theorems+3",
+        "coldkey_rows+2",
+    ]

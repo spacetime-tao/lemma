@@ -49,6 +49,10 @@ Minimum evidence:
 4. **Accepted bypasses** — explicitly name which attacks remain acceptable for now: distinct coldkeys, semantic trace rewrites, copied proofs with rewritten explanations, or tied scores.
 5. **Rollback plan** — any scoring change must be profile-pinned, env-gated for rollout, and easy to disable without changing consensus code.
 
+Read `decision_data_gaps` before arguing policy. If it lists missing replayable
+rows, epochs, UIDs, theorem ids, or coldkeys, the right answer is more data, not
+a reward change.
+
 Policy choices to make:
 
 | Choice | When it fits | Cost |
@@ -61,7 +65,7 @@ Policy choices to make:
 
 ## Decision rubric
 
-Use this rubric after a private `full` export clears `--require-decision-ready`. If the export does not clear the readiness gate, record **no decision** and collect better data instead of changing live rewards.
+Use this rubric after a private `full` export clears `--require-decision-ready`. If the export does not clear the readiness gate, record **no decision** and collect the fields named in `decision_data_gaps` instead of changing live rewards.
 
 | Decision | Evidence that supports it |
 | --- | --- |

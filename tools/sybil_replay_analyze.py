@@ -89,6 +89,7 @@ def render_report(report: ReplayReport, *, clone_k: int = 5, epoch_limit: int = 
     rows = report.replay_rows
     coldkey_rows = sum(1 for r in rows if r.coldkey)
     blockers = decision_data_blockers(report)
+    gaps = decision_data_gaps(report)
     lines = [
         "Sybil/Pareto replay analysis",
         f"rows_total={report.total_rows}",
@@ -96,6 +97,7 @@ def render_report(report: ReplayReport, *, clone_k: int = 5, epoch_limit: int = 
         f"rows_with_coldkey={coldkey_rows}",
         f"invalid_json_lines={report.invalid_json_lines}",
         f"decision_data_blockers={','.join(blockers) if blockers else 'none'}",
+        f"decision_data_gaps={','.join(gaps) if gaps else 'none'}",
         f"decision_ready={'no' if blockers else 'yes'}",
     ]
     if not rows:
@@ -217,6 +219,26 @@ def clone_pressure(rows: list[ReplayRow], *, clone_k: int, rewrite: bool) -> Clo
 
 def decision_ready(report: ReplayReport) -> bool:
     return not decision_data_blockers(report)
+
+
+def decision_data_gaps(report: ReplayReport) -> list[str]:
+    rows = report.replay_rows
+    epochs = _epochs(rows)
+    gaps: list[str] = []
+    if report.invalid_json_lines:
+        gaps.append(f"invalid_json_lines={report.invalid_json_lines}")
+    if missing := max(0, MIN_DECISION_REPLAYABLE_ROWS - len(rows)):
+        gaps.append(f"replayable_rows+{missing}")
+    if missing := max(0, MIN_DECISION_EPOCHS - len(epochs)):
+        gaps.append(f"epochs+{missing}")
+    if missing := max(0, MIN_DECISION_UIDS - len({r.uid for r in rows})):
+        gaps.append(f"uids+{missing}")
+    if missing := max(0, MIN_DECISION_THEOREMS - len({r.theorem_id for r in rows})):
+        gaps.append(f"theorems+{missing}")
+    coldkey_rows = sum(1 for r in rows if r.coldkey)
+    if missing := len(rows) - coldkey_rows:
+        gaps.append(f"coldkey_rows+{missing}")
+    return gaps
 
 
 def decision_data_blockers(report: ReplayReport) -> list[str]:
