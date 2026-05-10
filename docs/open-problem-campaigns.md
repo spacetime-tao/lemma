@@ -80,7 +80,7 @@ and clear reward policy.
 ## Candidate Source Pools
 
 Useful v1 sources should be treated as inputs for review, not copied directly
-into live rewards.
+into scored theorem campaigns.
 
 | Source type | Why it is useful | Caution |
 | --- | --- | --- |

@@ -1,6 +1,6 @@
 # Vision & roadmap
 
-Lemma is an **incentivized theorem-proving subnet** for mathematics on **Bittensor**. Participants answer formal math challenges in **Lean 4** by submitting a **proof script**. Validators **verify proofs** in **Docker** (lean-sandbox image). **Weights on chain** should center on Lean pass/fail.
+Lemma is an **incentivized theorem-proving subnet** for mathematics on **Bittensor**. Participants answer formal math challenges in **Lean 4** by submitting a **proof script**. Validators **verify proofs** in **Docker** (lean-sandbox image). **Weights on chain** should center on Lean-verified proofs.
 
 **One-sentence objective:** Lemma rewards Lean-valid proofs for published theorem statements.
 

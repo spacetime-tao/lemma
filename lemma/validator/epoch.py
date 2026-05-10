@@ -615,7 +615,7 @@ async def run_epoch(
         "challenge_rejects={} "
         "attest_rejects={} commit_reveal_rejects={} "
         "skip_set_weights={} seconds={:.2f}  "
-        "[verified=Lean proof OK; scored=binary proof pass then optional EMA/dedup; pareto_entries=weight rows]",
+        "[verified=Lean proof OK; scored=verified proof rows after filters; pareto_entries=weight rows]",
         cur_block,
         seed_head,
         slack_b,

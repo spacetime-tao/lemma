@@ -52,7 +52,7 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 7. Drop **`LEMMA_PROBLEM_SOURCE=frozen`** / bundled JSON if policy allows (large policy decision). **Partial:** direct frozen use is dev-gated.
 8. **Aggressively cut CLI / wizard / `main.py` surface** (Part 2 scale stats). **Mostly done:** friendly UX moved to `lemma-cli`, core keeps shims/minimal commands.
 9. Move **`lemma/catalog/`** dev tooling to `tools/` (audit flagged twice). **Done.**
-10. **Plan structural redesign** — container-based miner artifact + binary Lean pass/fail rewards (see §12).
+10. **Plan structural redesign** — container-based miner artifact + proof-verification rewards (see §12).
 
 ---
 
@@ -73,8 +73,8 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 
 | ID | Issue | Source § | Priority | Remediation direction |
 |----|--------|----------|----------|------------------------|
-| **O1** | Reward objective must stay tied to kernel-verifiable proof | R3 §2, §11 | P4 / product | **Target chosen:** rewards are proof-only and binary: Lean pass/fail. See [proof-only-incentives.md](proof-only-incentives.md). |
-| **O2** | `primary_design_axis` / one-sentence rule in KB violated by current honest description | R3 §2.3 | P4 | **Done/bounded:** objective pinned as Lean-valid proofs; binary proof-pass design documented in [proof-only-incentives.md](proof-only-incentives.md). |
+| **O1** | Reward objective must stay tied to kernel-verifiable proof | R3 §2, §11 | P4 / product | **Target chosen:** rewards are proof-only: a submitted proof must pass Lean verification for the published theorem. See [proof-only-incentives.md](proof-only-incentives.md). |
+| **O2** | `primary_design_axis` / one-sentence rule in KB violated by current honest description | R3 §2.3 | P4 | **Done/bounded:** objective pinned as Lean-valid proofs; proof-verification design documented in [proof-only-incentives.md](proof-only-incentives.md). |
 | **O3** | Pareto + coldkey dedup + identical dedup still allow sybil farming per R3 math | R3 §2.2, §8, §12 | P2/P4 | **Needs-design:** economic modeling; not fixable by parser alone. [sybil_economics.md](sybil_economics.md) records the minimum replay/economics gate plus the keep / cap / stronger-mechanism / no-change rubric; `tools/sybil_replay_analyze.py` provides offline replay summaries and concrete readiness gaps from private full exports. |
 
 ---
@@ -87,7 +87,7 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 |----|--------|----------|----------|------------------------|----------|
 | **P1** | Comment stripping defeats **one** padding class; **string literals**, trivial `have … by trivial`, long names still inflate | R3 §2.1 | P2 | Comment-only / blank-line padding normalized; compare-only Lean probe + v2 calibration added; exports now carry profile/registry provenance; analyzer flags low-quality / high-metric candidates, same-theorem comparison readiness, mixed profile hashes, concrete data gaps, within-theorem correlations, same-theorem disagreements, and prints a conservative gate verdict for offline analysis. | `lemma/scoring/proof_intrinsic.py`, `config.py`, `docs/proof-intrinsic-decision.md` |
 | **P2** | Default credibility exponent `1.0` vs KB mention of `2.5` | R3 §7 | P3 | **Done:** documented divergence; `1.0` is the default. Operators can explicitly set `2.5`. | `config.py`, `scoring/reputation.py`, `docs/credibility-exponent-decision.md` |
-| **P3** | Credibility rises on Lean pass; padding that passes Lean **does not** get penalized by cred | R3 §7 | P2 | **Done:** accepted as policy boundary. Credibility is Lean pass/fail reliability; padding research stays in compare-only proof metrics. | `docs/proof-intrinsic-decision.md`, `docs/credibility-exponent-decision.md` |
+| **P3** | Credibility rises on Lean pass; padding that passes Lean **does not** get penalized by cred | R3 §7 | P2 | **Done:** accepted as policy boundary. Credibility tracks verifier reliability; padding research stays in compare-only proof metrics. | `docs/proof-intrinsic-decision.md`, `docs/credibility-exponent-decision.md` |
 | **P4** | Spot-verify skip returns pass → cred EMA increases without verify | R3 §3.2, §7 | P1 | **Done:** attest-trusted skips remain scoreable but no longer improve verify credibility. | `lemma/validator/epoch.py`, `lemma/protocol_attest.py`, `tests/test_reputation.py` |
 
 ---
@@ -140,9 +140,9 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 | **G1** | **Dedupe** of identical dicts across parse passes → **echo** rubric may collapse to one valid score | R3 §10.1 | P2 | **Done:** parser now rejects repeated valid rubric occurrences even when values are identical; tests cover echoed fenced rubric + final rubric. | `lemma/judge/json_util.py`, `tests/test_judge_json.py` |
 | **G2** | Two **distinct** valid rubrics in trace → parse fails → miner dropped | R3 §10.1 | P2 | **Done:** fail-closed policy pinned; exactly one valid rubric object is required, while wrong-shaped junk JSON can be skipped before a later valid rubric. | `lemma/judge/json_util.py`, `tests/test_judge_json.py` |
 | **G3** | Sanitizer only escapes ``` ; many other injection channels | R3 §10.2–10.3 | P2 | **Done/partial:** prompt fences miner text, breaks triple-backtick fence escapes, and tells judge to ignore instructions/JSON inside fences; determined model-side injection remains model-dependent. | `lemma/judge/prompt_sanitize.py`, `lemma/judge/prompts.py`, `tests/test_prompt_sanitize.py` |
-| **G4** | **FakeJudge** length curve; missing API key falls back with log only | R3 §10.4 | P1 | **Superseded:** validator scoring is binary Lean pass/fail, so FakeJudge is no longer in the validator hot path. One-shot judge tooling remains local. | `lemma/validator/epoch.py`, `lemma/judge/one_shot.py` |
+| **G4** | **FakeJudge** length curve; missing API key falls back with log only | R3 §10.4 | P1 | **Superseded:** validator scoring uses Lean verification of the submitted proof, so FakeJudge is no longer in the validator hot path. One-shot judge tooling remains local. | `lemma/validator/epoch.py`, `lemma/judge/one_shot.py` |
 
-**2026-05 progress:** G1/G2/G3 patched/documented for local prose tooling. Judge parsing is fail-closed around valid rubric multiplicity, including identical repeated rubric objects; invalid dict-shaped junk can be skipped so a later single valid rubric can win. Miner-controlled theorem, trace, and proof are fenced before judge calls, triple-backtick escapes are broken, and the prompt tells the model to ignore instructions/JSON inside those fences. The live validator path now records binary Lean pass/fail.
+**2026-05 progress:** G1/G2/G3 patched/documented for local prose tooling. Judge parsing is fail-closed around valid rubric multiplicity, including identical repeated rubric objects; invalid dict-shaped junk can be skipped so a later single valid rubric can win. Miner-controlled theorem, trace, and proof are fenced before judge calls, triple-backtick escapes are broken, and the prompt tells the model to ignore instructions/JSON inside those fences. The live validator path now records whether the submitted proof passed Lean verification.
 
 ---
 
@@ -247,7 +247,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **`scoring/__init__.py`**: unused convenience re-exports removed; callers import concrete scoring modules directly.
 - **Style proliferation:** mixed dataclass / pydantic / hand JSON (`ScoredEntry`, `RubricScore`, …).
 - **`ScoredEntry.composite` / `reasoning_score` naming:** duplicate and stale judge-era names removed; `ScoredEntry` keeps `score` plus optional `cost`.
-- **`tokens.py` / tiktoken:** removed; live proof-only rewards use binary proof-pass entries with `cost=0`.
+- **`tokens.py` / tiktoken:** removed; live proof-only rewards use Lean-verified proof entries with `cost=0`.
 - **`mix_sub_problem_seed` multi-round path:** kept intentionally for optional `LEMMA_EPOCH_PROBLEM_COUNT` > 1; config is bounded, profile-pinned, documented, and covered by a deterministic seed test.
 
 ### 13.4 Lean sandbox
@@ -292,7 +292,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **`allow_noncanonical_judge_model`** — removed; it was an ignored compatibility knob and no longer belongs in live validator policy.
 - Resolver collapse opportunities (`anthropic` vs OpenAI keys) — validator pre-flight now follows the single
   Chutes-compatible key path; OpenAI-compatible judge/prover key resolvers trim consistently.
-- **validator prose-judge stack policy** — removed from the live validator path after binary proof-pass scoring; local one-shot judge tooling remains.
+- **validator prose-judge stack policy** — removed from the live validator path after proof-verification scoring; local one-shot judge tooling remains.
 - Six env names for two wallet values — validator wallet overrides now keep the documented
   `BT_VALIDATOR_WALLET_COLD` / `BT_VALIDATOR_WALLET_HOT` env names and drop the unused `LEMMA_*` aliases.
 - **`common/env_file.py`** moved to `lemma-cli`; `.env` merging is operator setup UX, not core consensus logic.
@@ -302,7 +302,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
   env aliases were removed. Timeout-split stays validator policy; the proof-script minimum stays a miner-only retry policy.
 - Settings env aliases now accept documented uppercase names only; lowercase field-name env aliases were removed
   while Python constructor kwargs remain available through an init-time alias shim.
-- Removed live validator prose-judge startup checks after binary proof-pass scoring made them irrelevant.
+- Removed live validator prose-judge startup checks after proof-verification scoring made them irrelevant.
 
 ### 13.7 Tests (coverage imbalance)
 

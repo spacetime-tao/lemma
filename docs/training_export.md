@@ -48,7 +48,7 @@ Operator checklist:
    `generated_registry_sha256`), but those hashes are not a replacement for the
    full private run notes.
 4. Run the analyzer below and save its text output beside the export.
-5. Treat `gate_verdict=research_only` as a hard stop for live rewards.
+5. Treat `gate_verdict=research_only` as a hard stop for scoring changes.
    `manual_review_required` still means review, not approval.
 6. Make any future scoring-default change in a separate commit with docs,
    migration notes, and the scoring/profile pin updated.
@@ -78,8 +78,8 @@ Keep the analyzer report with any scoring decision notes. Look first at:
   the quality label is equal or lower on the same theorem,
 - padding-looking outliers and the conservative `gate_verdict`.
 
-Proof metrics in exports are analysis fields. Live scoring is binary Lean
-pass/fail. The checklist in
+Proof metrics in exports are analysis fields. Live scoring uses Lean
+verification of the submitted proof for the published theorem. The checklist in
 [proof-intrinsic-decision.md](proof-intrinsic-decision.md) requires real export
 data plus adversarial padding fixtures before publishing metric claims. Copy the
 analyzer summary lines, not the private JSONL, into that decision record.

@@ -8,12 +8,12 @@ This document tracks **post-audit** mechanism changes in Lemma: proof-centric sc
 
 | Mechanism | Env / behavior |
 |-----------|----------------|
-| Proof-only target | Rewards are binary Lean pass/fail for published theorem statements. See [proof-only-incentives.md](proof-only-incentives.md). |
+| Proof-only target | A submitted proof must pass Lean verification for the published theorem before it can receive score. See [proof-only-incentives.md](proof-only-incentives.md). |
 | Identical submission dedup | `LEMMA_SCORING_DEDUP_IDENTICAL=1` — same normalized `(theorem, proof)` keeps one score; proof comments are stripped and whitespace is collapsed before fingerprinting. |
 | Coldkey dedup | `LEMMA_SCORING_COLDKEY_DEDUP=1` — one hotkey per coldkey (metagraph). |
 | EMA reputation | `LEMMA_REPUTATION_EMA_ALPHA` (default **0.08**); state file `LEMMA_REPUTATION_STATE_PATH` or `~/.lemma/validator_reputation.json`. |
 | Verify credibility | `LEMMA_REPUTATION_VERIFY_CREDIBILITY_ALPHA` (default **0.08**) — EMA toward 1.0 on Lean verify pass, 0.0 on fail; persisted with reputation JSON. Applied as `(credibility ** LEMMA_REPUTATION_CREDIBILITY_EXPONENT)` after EMA smoothing. The default exponent is **1.0**; exponent **0** disables the multiplier. See [credibility-exponent-decision.md](credibility-exponent-decision.md). |
-| Proof-only live score | A Lean-verified proof enters scoring as a binary pass. |
+| Proof-only live score | A Lean-verified proof enters scoring; a failed proof does not. |
 | Multi-theorem epochs | `LEMMA_EPOCH_PROBLEM_COUNT` (default **1**) — sequential challenges per epoch. |
 | Judge hardening | Fenced miner blocks + strict single-object JSON rubric parse (anchored rubric spans + skip-invalid candidates when multiple `{...}` fragments appear; repeated valid rubric occurrences fail closed even when identical). |
 | Empty-epoch uniform | Validator UID excluded from uniform weights when possible. |

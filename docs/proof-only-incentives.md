@@ -19,15 +19,15 @@ accepts the proof or rejects it.
    Mathlib revision, sandbox policy, theorem binding checks, and cheat scans.
 2. **Equivalence:** identical normalized proof payloads are grouped so duplicate
    submissions do not create extra proof work for validators.
-3. **Binary score:** each eligible proof group receives the same proof-pass
-   score before dedup, reputation, and subnet weight policy are applied.
+3. **Proof score:** each eligible proof group receives the same score before
+   dedup, reputation, and subnet weight policy are applied.
 4. **Weights:** group-level weights are mapped back to eligible miners after
    coldkey / sybil policy is applied.
 
 ## Current Live Rollout
 
-The live validator path is intentionally simple: a Lean-verified proof enters
-scoring as a binary pass.
+The live validator path is intentionally simple: a submitted proof either passes
+Lean verification for the published theorem and enters scoring, or it does not.
 
 ## What Not To Reward
 
@@ -40,7 +40,7 @@ scoring as a binary pass.
 
 ## Cadence Implications
 
-Binary proof-pass scoring keeps the hot path focused on the verifier. Miner
+Proof-verification scoring keeps the hot path focused on the verifier. Miner
 responses can be small because a proof script is enough for scoring.
 
 That makes 50-block or 25-block theorem windows more plausible, but Lean
@@ -54,7 +54,7 @@ verification can still consume most of a 5-minute window.
 
 ## Implementation Sequence
 
-1. Keep binary proof-pass reward assembly pinned by tests. **Done.**
+1. Keep proof-verification reward assembly pinned by tests. **Done.**
 2. Keep the live miner payload centered on `proof_script`. **Done.**
 3. Keep validator readiness tied to the verifier and subnet pins. **Done.**
 
@@ -62,4 +62,4 @@ verification can still consume most of a 5-minute window.
 
 | Date | Decision |
 | --- | --- |
-| 2026-05 | Live rewards should be proof-only and binary: Lean-valid proof passes, invalid proof fails. |
+| 2026-05 | Live rewards should be proof-only: Lean-valid proofs can enter scoring; invalid proofs cannot. |
