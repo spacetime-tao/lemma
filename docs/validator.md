@@ -18,7 +18,7 @@ Judge: Chutes is the live validator path. Anthropic is only for local/experiment
 | Exercise **prover** only | `lemma-cli try-prover` (add `--verify` for local Lean) |
 | Exercise **judge** alone on text files you saved | `lemma-cli judge --trace reasoning.txt` (optional `--theorem` / `--proof` paths) |
 | Rehearse the **full validator** without `set_weights` | `uv run lemma validator dry-run` — rubric step uses **FakeJudge** by default; set **`LEMMA_DRY_RUN_REAL_JUDGE=1`** to bill the real judge during dry-run |
-| Only print validator-related env | `uv run lemma validator config` (not a scoring run) |
+| Only print validator-related env | `lemma-cli validator-config` (not a scoring run) |
 
 `LEMMA_FAKE_JUDGE=1` is accepted only for validator dry-runs; live `uv run lemma validator start` refuses FakeJudge because the subnet expects a real Chutes judge.
 

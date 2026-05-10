@@ -65,7 +65,7 @@ def run_validator_check(settings: LemmaSettings) -> int:
     """Print checklist; return 0 if OK to start, 1 if blocking issues."""
     click.echo(stylize("Validator pre-flight", fg="cyan", bold=True))
     click.echo(
-        stylize("(run before `lemma validator start` — not the same as `lemma validator config`)\n", dim=True),
+        stylize("(run before `lemma validator start` — not the same as `lemma-cli validator-config`)\n", dim=True),
         nl=False,
     )
     fatal, warn = validator_startup_issues(settings, dry_run=False)
