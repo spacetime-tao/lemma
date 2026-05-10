@@ -51,7 +51,7 @@ class LemmaSettings(BaseSettings):
     ) -> tuple[PydanticBaseSettingsSource, ...]:
         """Prefer ``.env`` over process environment for the same variable name.
 
-        Default pydantic-settings order lets exported shell variables beat ``merge_dotenv`` / ``lemma-cli setup``.
+        Default pydantic-settings order lets exported shell variables beat values written by ``lemma-cli setup``.
         Explicit constructor kwargs still win (handled first). Set ``LEMMA_PREFER_PROCESS_ENV=1`` to restore
         the library default (environment overrides ``.env``) for CI/containers that rely on it.
         """

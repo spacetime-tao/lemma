@@ -134,7 +134,7 @@ So: Lean can usually check a correct, modest submission quickly; the risky cases
 
 ## Why doesn’t my judge model match what `lemma-cli setup` wrote?
 
-Lemma’s settings intentionally load **`.env` after process environment**, so values written by `lemma-cli configure` / `merge_dotenv` override stray `export OPENAI_MODEL=...` in your shell. To restore standard pydantic behavior (environment beats `.env`), set `LEMMA_PREFER_PROCESS_ENV=1` (for CI or containers that inject secrets via env only).
+Lemma’s settings intentionally load **`.env` after process environment**, so values written by `lemma-cli configure` override stray `export OPENAI_MODEL=...` in your shell. To restore standard pydantic behavior (environment beats `.env`), set `LEMMA_PREFER_PROCESS_ENV=1` (for CI or containers that inject secrets via env only).
 
 ## Which math areas tend to strain a tight miner deadline?
 
