@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import os
 import time
 from collections import defaultdict
@@ -190,22 +191,61 @@ def _update_verify_credibility(
 VerifyItem = tuple[int, LemmaChallenge, VerifyResult]
 
 
+def _lean_verify_equivalence_key(resp: LemmaChallenge) -> str:
+    """Hash fields that determine Lean verification for one already-bound challenge response."""
+    h = hashlib.sha256()
+    for part in (
+        resp.theorem_id or "",
+        resp.theorem_statement or "",
+        "\n".join(resp.imports or []),
+        resp.lean_toolchain or "",
+        resp.mathlib_rev or "",
+        resp.proof_script or "",
+    ):
+        h.update(part.encode("utf-8"))
+        h.update(b"\x1e")
+    return h.hexdigest()
+
+
 async def _run_verify_batch(
     candidates: list[tuple[int, LemmaChallenge]],
     verify_one: Callable[[int, LemmaChallenge], Awaitable[VerifyItem | None]],
+    *,
+    key_fn: Callable[[int, LemmaChallenge], str] | None = None,
 ) -> list[VerifyItem]:
     """Run verifier tasks while isolating unexpected per-miner failures."""
+    verify_inputs = candidates
+    groups: list[list[tuple[int, LemmaChallenge]]] | None = None
+    if key_fn is not None and len(candidates) > 1:
+        grouped: dict[str, list[tuple[int, LemmaChallenge]]] = {}
+        for uid, resp in candidates:
+            grouped.setdefault(key_fn(uid, resp), []).append((uid, resp))
+        if len(grouped) < len(candidates):
+            groups = list(grouped.values())
+            verify_inputs = [g[0] for g in groups]
+            logger.debug(
+                "lean verify dedup: candidates={} unique_payloads={} reused_results={}",
+                len(candidates),
+                len(verify_inputs),
+                len(candidates) - len(verify_inputs),
+            )
+
     results = await asyncio.gather(
-        *(verify_one(uid, resp) for uid, resp in candidates),
+        *(verify_one(uid, resp) for uid, resp in verify_inputs),
         return_exceptions=True,
     )
     verified: list[VerifyItem] = []
-    for (uid, _resp), result in zip(candidates, results, strict=True):
+    for idx, ((uid, _resp), result) in enumerate(zip(verify_inputs, results, strict=True)):
         if isinstance(result, Exception):
             logger.warning("uid={} verify task failed: {}", uid, result)
             continue
         if result is not None:
-            verified.append(result)
+            if groups is None:
+                verified.append(result)
+                continue
+            _src_uid, _src_resp, vr = result
+            for group_uid, group_resp in groups[idx]:
+                verified.append((group_uid, group_resp, vr.model_copy()))
     return verified
 
 
@@ -508,7 +548,10 @@ async def run_epoch(
                     return None
                 return (uid, resp, vr)
 
-            verified = await _run_verify_batch(candidates, _verify_one)
+            verify_key_fn = None
+            if not settings.lemma_miner_verify_attest_enabled:
+                verify_key_fn = lambda _uid, resp: _lean_verify_equivalence_key(resp)
+            verified = await _run_verify_batch(candidates, _verify_one, key_fn=verify_key_fn)
             total_verified += len(verified)
 
             vca = float(settings.lemma_reputation_verify_credibility_alpha)

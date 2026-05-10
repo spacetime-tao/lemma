@@ -38,6 +38,13 @@ Cold-cache measurements should not be used as the steady-state validator budget,
 but they matter operationally: after a release, a new template, a new image, or a
 new cache directory, the first passing proof can pay the warmup cost.
 
+Validators also reuse Lean verification results for identical proof payloads in
+one batch. If several miners submit the same theorem/proof script, the validator
+checks that Lean payload once and applies the pass/fail result to each matching
+miner response before judging their reasoning separately. This helps with
+same-model clones and early testnet data collection, but it is not a substitute
+for more verifier capacity when many miners submit genuinely different proofs.
+
 ## Miner verify attest + spot full-verify
 
 Requires **`LEMMA_MINER_VERIFY_ATTEST_ENABLED=1`**. Miners must run local Lean PASS and sign [`miner_verify_attest_message`](../lemma/protocol_attest.py), which binds the validator hotkey; validators verify Sr25519 against the metagraph hotkey. Threat model: [miner-verify-attest.md](miner-verify-attest.md).

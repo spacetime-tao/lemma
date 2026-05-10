@@ -7,7 +7,7 @@ from lemma.protocol import LemmaChallenge
 from lemma.validator.epoch import _run_verify_batch, _update_verify_credibility
 
 
-def _resp() -> LemmaChallenge:
+def _resp(*, proof_script: str = "namespace Submission\n") -> LemmaChallenge:
     return LemmaChallenge(
         theorem_id="gen/1",
         theorem_statement="theorem t : True := by sorry",
@@ -16,7 +16,7 @@ def _resp() -> LemmaChallenge:
         deadline_unix=1,
         deadline_block=10,
         metronome_id="m1",
-        proof_script="namespace Submission\n",
+        proof_script=proof_script,
     )
 
 
@@ -74,3 +74,47 @@ async def test_verify_batch_keeps_other_results_when_one_task_raises() -> None:
     assert len(verified) == 1
     assert verified[0][0] == 2
     assert verified[0][1] is good
+
+
+async def test_verify_batch_reuses_identical_payload_result() -> None:
+    first = _resp()
+    second = _resp()
+    calls: list[int] = []
+
+    async def verify_one(
+        uid: int,
+        resp: LemmaChallenge,
+    ) -> tuple[int, LemmaChallenge, VerifyResult] | None:
+        calls.append(uid)
+        return uid, resp, VerifyResult(passed=True, reason="ok")
+
+    verified = await _run_verify_batch(
+        [(1, first), (2, second)],
+        verify_one,
+        key_fn=lambda _uid, resp: resp.proof_script or "",
+    )
+
+    assert calls == [1]
+    assert [(uid, resp) for uid, resp, _vr in verified] == [(1, first), (2, second)]
+
+
+async def test_verify_batch_keeps_distinct_payloads_separate() -> None:
+    first = _resp(proof_script="exact trivial\n")
+    second = _resp(proof_script="by trivial\n")
+    calls: list[int] = []
+
+    async def verify_one(
+        uid: int,
+        resp: LemmaChallenge,
+    ) -> tuple[int, LemmaChallenge, VerifyResult] | None:
+        calls.append(uid)
+        return uid, resp, VerifyResult(passed=True, reason="ok")
+
+    verified = await _run_verify_batch(
+        [(1, first), (2, second)],
+        verify_one,
+        key_fn=lambda _uid, resp: resp.proof_script or "",
+    )
+
+    assert calls == [1, 2]
+    assert [(uid, resp) for uid, resp, _vr in verified] == [(1, first), (2, second)]
