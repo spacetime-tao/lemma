@@ -6,7 +6,6 @@ Top-level imports stay light: the console script is named ``lemma``, and importi
 
 from __future__ import annotations
 
-import asyncio
 import os
 import sys
 from pathlib import Path
@@ -478,6 +477,7 @@ MOVED_MAIN_COMMANDS = (
     ("docs", "Docs helper moved to lemma-cli."),
     ("status", "Status view moved to lemma-cli."),
     ("problems", "Problem inspector moved to lemma-cli."),
+    ("judge", "Judge preview moved to lemma-cli."),
     ("try-prover", "Try-prover moved to lemma-cli."),
     ("rehearsal", "Rehearsal moved to lemma-cli."),
     ("setup", "Interactive setup moved to lemma-cli."),
@@ -550,7 +550,7 @@ def _validator_run_blocking(*, dry_run: bool) -> None:
     help=(
         "Validator — query miners, Lean verify, LLM judge, optional set_weights. "
         "Local scoring preview (no metagraph): lemma-cli rehearsal. "
-        "Judge-only on files: lemma judge --trace FILE. "
+        "Judge-only on files: lemma-cli judge --trace FILE. "
         "Typical path: bash scripts/prebuild_lean_image.sh → lemma validator-check → lemma validator start."
     ),
 )
@@ -577,7 +577,7 @@ def validator_start_cmd() -> None:
     help=(
         "Full scoring epochs without set_weights (chain + miners + Lean). "
         "Judge defaults to FakeJudge; set LEMMA_DRY_RUN_REAL_JUDGE=1 for live judge HTTP. "
-        "Judge-only smoke test: lemma judge --trace FILE."
+        "Judge-only smoke test: lemma-cli judge --trace FILE."
     ),
 )
 def validator_group_dry_run_cmd() -> None:
@@ -669,7 +669,7 @@ def validator_config_cmd() -> None:
     )
     click.echo(
         stylize(
-            "  • `lemma judge --trace FILE` — rubric only (you supply saved trace / proof files).\n",
+            "  • `lemma-cli judge --trace FILE` — rubric only (you supply saved trace / proof files).\n",
             dim=True,
         )
     )
@@ -846,85 +846,3 @@ def lean_worker_cmd(host: str, port: int) -> None:
 
     setup_logging(LemmaSettings().log_level)
     serve_forever(host, port)
-
-
-@main.command(
-    "judge",
-    context_settings={"max_content_width": 100},
-    epilog=(
-        "Mental model: like `lemma-cli try-prover` for miners (one-shot LLM check), but for the **validator judge** "
-        "only — no chain sampling step, no Lean verify.\n"
-        "\n"
-        "For **prover + Lean + judge** on the live subnet theorem in one command, prefer `lemma-cli rehearsal`.\n"
-        "For a full scoring rehearsal without writing weights, use `lemma validator dry-run` (Lean + pipeline; "
-        "judge defaults to FakeJudge — set LEMMA_DRY_RUN_REAL_JUDGE=1 to use your real judge there).\n"
-        "\n"
-        "Each flag is a path to a UTF-8 text file. Theorem and proof default to “(none)” in the rubric if omitted.\n"
-        "\n"
-        "Examples:\n"
-        "  lemma judge --trace reasoning.txt\n"
-        "  lemma judge --trace trace.txt --theorem Challenge.lean --proof Submission.lean\n"
-        "\n"
-        "Configure like a validator: lemma-cli configure judge (or lemma-cli setup). With "
-        "JUDGE_OPENAI_API_KEY (or legacy "
-        "OPENAI_API_KEY), the real model runs; otherwise FakeJudge (no HTTP). LEMMA_FAKE_JUDGE=1 forces FakeJudge "
-        "even with keys."
-    ),
-)
-@click.option(
-    "--theorem",
-    type=click.Path(exists=True, dir_okay=False, path_type=Path),
-    default=None,
-    help="Optional. Path to theorem / Challenge.lean text sent to the rubric as “Formal theorem”.",
-)
-@click.option(
-    "--trace",
-    "trace_path",
-    type=click.Path(exists=True, dir_okay=False, path_type=Path),
-    default=None,
-    help=(
-        "Required. Path to the informal reasoning trace (miner-style narrative or numbered steps) "
-        "the subnet judge scores."
-    ),
-)
-@click.option(
-    "--proof",
-    type=click.Path(exists=True, dir_okay=False, path_type=Path),
-    default=None,
-    help="Optional. Path to Submission.lean (or proof text) for the rubric’s proof section.",
-)
-def judge_cmd(
-    theorem: Path | None,
-    trace_path: Path | None,
-    proof: Path | None,
-) -> None:
-    """One-shot judge rubric on local files (validator judge only — no Lean / metagraph / set_weights).
-
-    For an end-to-end preview (prover → Lean → judge) on the live theorem, use ``lemma-cli rehearsal``.
-    For the full scoring loop without on-chain weights, use ``lemma validator dry-run``.
-    Pass ``--trace PATH`` to a UTF-8 file; it is not a flag-only switch.
-    """
-    if trace_path is None:
-        raise click.UsageError(
-            "Missing --trace PATH: PATH must be a file containing the informal reasoning trace "
-            "(plain UTF-8 text), e.g. a copy of what your miner logs as reasoning.\n\n"
-            "  lemma judge --trace ./my_trace.txt\n"
-            "  lemma judge --help   # full options and examples"
-        )
-
-    settings = LemmaSettings()
-    setup_logging(settings.log_level)
-    th = theorem.read_text(encoding="utf-8") if theorem else "(none)"
-    tr = trace_path.read_text(encoding="utf-8")
-    pr = proof.read_text(encoding="utf-8") if proof else "(none)"
-
-    from lemma.cli.judge_hints import echo_judge_http_failure_hints
-    from lemma.judge.one_shot import score_rubric
-
-    try:
-        score = asyncio.run(score_rubric(settings, th, tr, pr))
-    except Exception as e:  # noqa: BLE001
-        click.echo(stylize(f"Judge error: {e}", fg="red", bold=True), err=True)
-        echo_judge_http_failure_hints(e, settings)
-        raise SystemExit(1) from e
-    click.echo(score.model_dump_json(indent=2))

@@ -56,7 +56,7 @@ These should be either hardened or removed from the default mental model.
 
 This is the `lemma-cli` repo track.
 
-Status: `spacetime-tao/lemma-cli` exists as a thin public wrapper. The first core trim moved the guided `start` surface out of the subnet repo. Later trims moved the `.env` setup/configure wizard, docs/glossary helpers, local try-prover/rehearsal previews, and theorem status/problem inspection to `lemma-cli`, leaving redirect shims in core.
+Status: `spacetime-tao/lemma-cli` exists as a thin public wrapper. The first core trim moved the guided `start` surface out of the subnet repo. Later trims moved the `.env` setup/configure wizard, docs/glossary helpers, local try-prover/rehearsal previews, theorem status/problem inspection, and one-shot judge preview to `lemma-cli`, leaving redirect shims in core.
 
 Move first:
 
@@ -66,7 +66,8 @@ Move first:
 4. Shell activation helpers. **Removed from core; docs use standard `uv run` commands or explicit `.venv` activation.**
 5. Local try-prover/rehearsal wrappers. **Moved to `lemma-cli`; core has redirects only.**
 6. Theorem status/problem inspection. **Moved to `lemma-cli`; core has redirects only.**
-7. Human-friendly doctor/validator-check wrappers, once the core repo exposes stable machine-readable checks. **In progress:** `lemma-cli doctor` and `lemma-cli miner-observability` own the friendly views; moved-command redirects now share one small compatibility helper; core `validator-check` exits after READY / NOT READY and shares startup gates with `lemma validator start`; richer guided handoff belongs in `lemma-cli`.
+7. One-shot judge preview on saved files. **Moved to `lemma-cli`; core has redirects only.**
+8. Human-friendly doctor/validator-check wrappers, once the core repo exposes stable machine-readable checks. **In progress:** `lemma-cli doctor` and `lemma-cli miner-observability` own the friendly views; moved-command redirects now share one small compatibility helper; core `validator-check` exits after READY / NOT READY and shares startup gates with `lemma validator start`; richer guided handoff belongs in `lemma-cli`.
 
 Keep temporarily in core:
 
@@ -81,7 +82,7 @@ The split is safe if `lemma-cli` depends on `lemma` as a Python package instead 
 
 Once `lemma-cli` exists and can call core functions:
 
-Current `wc -l` snapshot after cleanup: `lemma/` is **8 400** Python lines across **65** files, down from the Round 3 cited **12 630**. `lemma/cli/` is **1 418** lines across **5** files, down from **5 398** lines across **16** files. Tests/docs grew because the remediation work added safety coverage, analyzer guards, and decision records.
+Current `wc -l` snapshot after cleanup: `lemma/` is **8 239** Python lines across **64** files, down from the Round 3 cited **12 630**. `lemma/cli/` is **1 257** lines across **4** files, down from **5 398** lines across **16** files. Tests/docs grew because the remediation work added safety coverage, analyzer guards, and decision records.
 
 1. Delete duplicate dry-run aliases. **Done: canonicalized to `miner dry-run`, `validator dry-run`, and `validator config`.**
 2. Thin or remove no-op glue like `validator/query.py` and `validator/protocol_migration.py`. **Done: removed both; epoch calls `bt.Dendrite` directly and no longer keeps a single-use UID helper.**

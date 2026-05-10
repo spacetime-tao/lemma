@@ -248,7 +248,7 @@ Logs: `lemma_epoch_summary`; optional JSONL. No built-in dashboard ([production.
 1. `uv sync --extra btcli`; `.env` with test endpoint, `NETUID`, wallets.
 2. Register (`btcli`).
 3. Miner: reachable axon; prover keys.
-4. Validator: Lean image; `uv run lemma meta`; smoke-test judge on files with `lemma judge --trace …`; full rehearsal without weights: `lemma validator dry-run` (FakeJudge by default; `LEMMA_DRY_RUN_REAL_JUDGE=1` for live judge); `LEMMA_FAKE_JUDGE=1` only for fully local stubs.
+4. Validator: Lean image; `uv run lemma meta`; smoke-test judge on files with `lemma-cli judge --trace …`; full rehearsal without weights: `lemma validator dry-run` (FakeJudge by default; `LEMMA_DRY_RUN_REAL_JUDGE=1` for live judge); `LEMMA_FAKE_JUDGE=1` only for fully local stubs.
 5. Confirm `set_weights` when ready.
 
 ## Throughput
