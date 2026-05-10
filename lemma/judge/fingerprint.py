@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 
-from lemma.judge import prompts
+import lemma.judge.prompts as prompts
 
 
 def rubric_sha256() -> str:
