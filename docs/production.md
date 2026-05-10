@@ -69,6 +69,26 @@ For production, prefer: coldkey private material offline/local, only hotkeys on
 servers, explicit `AXON_EXTERNAL_IP`, explicit firewall rules, systemd or another
 supervisor, and regular log review.
 
+## VPS baseline test sequence
+
+Use this sequence before adding more miner hotkeys or tuning validator shortcuts:
+
+1. Run one miner hotkey on one VPS and one validator on a separate VPS.
+2. Record host shape, commit SHA, `lemma meta`, `.env` pins, subnet/netuid, and
+   current `btcli subnet show` snapshot.
+3. Enable timing logs: `LEMMA_MINER_FORWARD_TIMELINE=1`,
+   `LEMMA_LEAN_VERIFY_TIMING=1`, persistent
+   `LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR`, and `LEMMA_LEAN_DOCKER_WORKER=1`.
+4. Capture cold and warm validator verify times for the same generated theorem.
+5. Capture miner forward latency, prover retries/timeouts, axon reachability, and
+   validator `lemma_epoch_summary` (`scored=N`, verify failures, set_weights).
+6. Add a second miner hotkey only after the single-hotkey path stays online and
+   answers inside the validator forward window.
+
+The practical target is not just a local `PASS`; it is miner forwards completing,
+validator Lean verification finishing, weights being set, and hotkeys earning
+alpha over repeated rounds.
+
 ## Multiple miner hotkeys on one host
 
 One machine can run several miner hotkeys if each service has its own wallet
