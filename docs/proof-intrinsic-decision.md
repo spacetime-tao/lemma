@@ -160,7 +160,10 @@ For exports that include those comparison sets, `corr_within_theorem(...)`
 subtracts each theorem's baseline before comparing metric movement to judge
 movement; treat those lines as more relevant than global correlations when
 judging whether a proof-side metric is measuring proof quality rather than
-theorem size.
+theorem size. The report also prints `same_theorem_metric_judge_disagreements`
+for pairs where a proof metric is higher but the judge score is equal or lower;
+those examples should be inspected before any replace / keep-low / remove
+decision.
 `--require-decision-ready` is available for release checklists: it exits nonzero
 unless the export clears readiness blockers and reaches the manual-review gate.
 Passing that flag is not approval to change rewards; it only means there is

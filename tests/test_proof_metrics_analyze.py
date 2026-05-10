@@ -250,7 +250,7 @@ def test_require_decision_ready_passes_for_ready_manual_review_export(tmp_path, 
                 "theorem_id": theorem_id,
                 "uid": i % 10,
                 "proof_script": f"theorem t_{i} : True := by trivial\n",
-                "rubric": {"composite": 0.9},
+                "rubric": {"composite": 0.6 + i * 0.001},
                 "proof_metrics": {
                     "proof_declaration_bytes": 500 + i,
                     "proof_declaration_lines": 20,
@@ -267,7 +267,7 @@ def test_require_decision_ready_passes_for_ready_manual_review_export(tmp_path, 
     assert "decision_data_blockers=none" in rendered
     assert "comparison_theorems=5" in rendered
     assert "within_theorem_comparisons=theorems=5 rows=50" in rendered
-    assert "corr_within_theorem(metric_bytes, judge_composite)=n/a" in rendered
+    assert "corr_within_theorem(metric_bytes, judge_composite)=1.0000" in rendered
     assert "decision_ready=yes" in rendered
     assert "gate_verdict=manual_review_required" in rendered
 
@@ -319,6 +319,49 @@ def test_render_report_includes_within_theorem_centered_correlations(tmp_path, c
     assert "within_theorem_comparisons=theorems=3 rows=6" in rendered
     assert "corr_within_theorem(metric_bytes, judge_composite)=1.0000" in rendered
     assert "corr_within_theorem(metric_delimiters, judge_composite)=1.0000" in rendered
+
+
+def test_render_report_flags_same_theorem_metric_judge_disagreements(tmp_path, capsys) -> None:
+    path = tmp_path / "disagreement.jsonl"
+    rows = [
+        {
+            "theorem_id": "same-theorem",
+            "uid": 1,
+            "proof_script": "theorem low_metric : True := by trivial\n",
+            "rubric": {"composite": 0.8},
+            "proof_metrics": {
+                "proof_declaration_bytes": 100,
+                "proof_declaration_lines": 10,
+                "proof_declaration_delimiters": 8,
+                "proof_declaration_max_depth": 3,
+                "probe_exit_code": 0,
+            },
+        },
+        {
+            "theorem_id": "same-theorem",
+            "uid": 2,
+            "proof_script": "theorem high_metric : True := by\n  have h : True := by trivial\n  exact h\n",
+            "rubric": {"composite": 0.7},
+            "proof_metrics": {
+                "proof_declaration_bytes": 300,
+                "proof_declaration_lines": 20,
+                "proof_declaration_delimiters": 18,
+                "proof_declaration_max_depth": 4,
+                "probe_exit_code": 0,
+            },
+        },
+    ]
+    path.write_text("\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8")
+
+    assert main([str(path)]) == 0
+    rendered = capsys.readouterr().out
+    assert "gate_verdict=research_only" in rendered
+    assert "same_theorem_metric_judge_disagreements" in rendered
+    assert "same_theorem_metric_judge_disagreements(metric_bytes):" in rendered
+    assert "theorem=same-theorem high_line=2 high_uid=2 high_metric=300 high_judge=0.7000" in rendered
+    assert "low_line=1 low_uid=1 low_metric=100 low_judge=0.8000" in rendered
+    assert "metric_delta=200.0000 judge_delta=-0.1000" in rendered
+    assert "same_theorem_metric_judge_disagreements(metric_delimiters):" in rendered
 
 
 def test_require_decision_ready_requires_same_theorem_comparisons(tmp_path, capsys) -> None:
