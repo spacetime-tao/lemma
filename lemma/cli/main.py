@@ -95,23 +95,15 @@ def meta_cmd(raw: bool) -> None:
     from lemma.problems.generated import generated_registry_canonical_dict, generated_registry_sha256
 
     s = LemmaSettings()
-    reg = generated_registry_canonical_dict()
     reg_sha = generated_registry_sha256()
     rub_sha = rubric_sha256()
     prof = judge_profile_dict(s)
     prof_sha = judge_profile_sha256(s)
+    rub_embed = str(prof.get("rubric_sha256", "")).strip().lower()
+    rub_ok = rub_embed == rub_sha.strip().lower()
 
     if raw:
-        click.echo(stylize("Subnet fingerprints (`lemma meta --raw`)", fg="cyan", bold=True))
-        click.echo(
-            stylize(
-                "Does not edit `.env`. To merge pins: ",
-                dim=True,
-            )
-            + stylize("lemma-cli configure subnet-pins\n", fg="green", bold=True)
-            + stylize("(publish hashes so every validator matches judge + templates)\n", dim=True),
-            nl=False,
-        )
+        reg = generated_registry_canonical_dict()
         click.echo(f"lemma_version={__version__}")
         click.echo(f"problem_source={s.problem_source}")
         click.echo(f"generated_registry_sha256={reg_sha}")
@@ -119,219 +111,41 @@ def meta_cmd(raw: bool) -> None:
         click.echo(f"judge_rubric_sha256={rub_sha}")
         click.echo(f"judge_profile_sha256={prof_sha}")
         click.echo("judge_profile_json=" + json.dumps(prof, sort_keys=True))
-        rub_embed = str(prof.get("rubric_sha256", "")).strip().lower()
-        rub_ok = rub_embed == rub_sha.strip().lower()
         click.echo(f"judge_profile_embedded_rubric_matches_code={'1' if rub_ok else '0'}")
         return
 
     click.echo(stylize("Subnet fingerprints", fg="cyan", bold=True))
     click.echo(
-        stylize(
-            "Why this exists: validators must agree on (1) which generated templates exist and "
-            "(2) how answers are scored and accepted — otherwise weights are meaningless. "
-            "Subnet operators publish these hashes so everyone runs the same stack.\n",
-            dim=True,
-        ),
-        nl=False,
-    )
-    click.echo(stylize("Update `.env` from this screen (validators)\n", fg="cyan"))
-    click.echo(
-        stylize("  This command only ", dim=True)
-        + stylize("prints", fg="yellow")
-        + stylize(" hashes. It does not edit files. To ", dim=True)
-        + stylize("merge", fg="green")
-        + stylize(" the current `judge_profile_sha256` and (if needed) generated-registry pin into ", dim=True)
-        + stylize("`.env`", fg="yellow")
-        + stylize(", run:\n", dim=True)
+        stylize("Prints canonical hashes only; it does not edit `.env`.\n", dim=True)
         + stylize("  lemma-cli configure subnet-pins\n", fg="green", bold=True)
-        + stylize(
-            "\n  That snapshots **today’s** `lemma meta` for your active env (match OPENAI_MODEL, Chutes URL, "
-            "JUDGE_PROVIDER, etc. to the subnet first — then re-run if you change them).\n"
-            "  Manual option: copy from ",
-            dim=True,
-        )
+        + stylize("  or copy values from ", dim=True)
         + stylize("lemma meta --raw", fg="green")
-        + stylize(" into `JUDGE_PROFILE_SHA256_EXPECTED` / `LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED`.\n", dim=True),
+        + stylize(".\n", dim=True),
         nl=False,
     )
-    click.echo(stylize("What you’re looking at\n", fg="cyan"))
-    click.echo(
-        stylize(
-            "  • ",
-            dim=True,
-        )
-        + stylize("generated_registry", fg="green")
-        + stylize(
-            " — catalog of theorem builders / splits for this repo version (changes when templates change).\n",
-            dim=True,
-        ),
-        nl=False,
-    )
-    click.echo(
-        stylize("  • ", dim=True)
-        + stylize("judge_rubric", fg="green")
-        + stylize(
-            " — fingerprint of the judge rubric text in this repo. Same for everyone on the same lemma "
-            "commit / release (unless you patch scoring locally).\n",
-            dim=True,
-        ),
-        nl=False,
-    )
-    click.echo(
-        stylize("  • ", dim=True)
-        + stylize("judge_profile", fg="green")
-        + stylize(
-            " — fingerprint of your active validator scoring profile (no API keys): judge stack, rubric, "
-            "problem cadence, verification timeouts, scoring blend, dedup, reputation, and protocol hooks "
-            "that affect accepted responses. Two validators only match if all pinned fields match.\n",
-            dim=True,
-        ),
-        nl=False,
-    )
-    click.echo(
-        stylize(
-            "Why yours may differ from someone else’s: different OPENAI_MODEL, JUDGE_TEMPERATURE, "
-            "OPENAI_BASE_URL text, scoring settings, problem cadence, verifier policy, or repo version. "
-            "That’s expected until you align env + git "
-            "with the subnet policy.\n",
-            dim=True,
-        ),
-        nl=False,
-    )
-    click.echo(
-        stylize(
-            "Important: ",
-            dim=True,
-        )
-        + stylize("judge_rubric_sha256", fg="yellow")
-        + stylize(
-            " and ",
-            dim=True,
-        )
-        + stylize("judge_profile_sha256", fg="yellow")
-        + stylize(
-            " are meant to differ. The rubric hash is only the scoring instructions in code. "
-            "The profile hash is the whole judge stack (model, URL, temps, …) and includes "
-            '`rubric_sha256` as one field — so it cannot equal the rubric hash alone.\n',
-            dim=True,
-        ),
-        nl=False,
-    )
-    click.echo(stylize("How to match other validators (same subnet policy)\n", fg="cyan"))
-    click.echo(
-        stylize(
-            "  1. Use the same lemma release (git tag / commit) the subnet operator publishes.\n"
-            "  2. Align judge env with the operator (OPENAI_MODEL, OPENAI_BASE_URL, JUDGE_PROVIDER, temps, …).\n"
-            "  3. Run ",
-            dim=True,
-        )
-        + stylize("lemma-cli configure subnet-pins", fg="green", bold=True)
-        + stylize(
-            " to write ",
-            dim=True,
-        )
-        + stylize("JUDGE_PROFILE_SHA256_EXPECTED", fg="yellow")
-        + stylize(" (and for generated problems ", dim=True)
-        + stylize("LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED", fg="yellow")
-        + stylize(") into `.env` from **this** checkout + env.\n", dim=True),
-        nl=False,
-    )
-    click.echo(
-        stylize(
-            "     Or copy manually from ",
-            dim=True,
-        )
-        + stylize("lemma meta --raw", fg="green")
-        + stylize(" if you prefer editing `.env` by hand.\n", dim=True),
-        nl=False,
-    )
-    click.echo(
-        stylize(
-            "  4. Validators refuse to start until pins match live `lemma meta` "
-            "(expected lines must equal the SHA256 blocks below).\n",
-            dim=True,
-        ),
-        nl=False,
-    )
-
     click.echo(stylize("\nRelease\n", fg="cyan"))
     click.echo(f"  lemma_version     {__version__}")
     click.echo(f"  problem_source    {s.problem_source}")
 
     click.echo(stylize("\nGenerated problem registry\n", fg="cyan"))
     click.echo(stylize(f"  SHA256  {reg_sha}", dim=False))
-    click.echo(stylize("  (canonical JSON below)\n", dim=True), nl=False)
-    for line in json.dumps(reg, indent=2, sort_keys=True).splitlines():
-        click.echo(stylize(line, dim=True))
 
     click.echo(stylize("\nJudge rubric (code fingerprint)\n", fg="cyan"))
     click.echo(f"  SHA256  {rub_sha}")
 
     click.echo(stylize("\nJudge profile (your environment)\n", fg="cyan"))
     click.echo(stylize(f"  SHA256  {prof_sha}", dim=False))
-    click.echo(
-        stylize(
-            "  → write this value into `.env`: ",
-            dim=True,
-        )
-        + stylize("lemma-cli configure subnet-pins", fg="green")
-        + stylize("   (or paste into ", dim=True)
-        + stylize("JUDGE_PROFILE_SHA256_EXPECTED", fg="yellow")
-        + stylize(" yourself)\n", dim=True),
-        nl=False,
-    )
-    click.echo(
-        stylize(
-            "  (compare this JSON to another validator — identical ⇒ same judge_profile_sha256.)\n",
-            dim=True,
-        ),
-        nl=False,
-    )
-    for line in json.dumps(prof, indent=2, sort_keys=True).splitlines():
-        click.echo(stylize(line, dim=True))
-
-    rub_embed = str(prof.get("rubric_sha256", "")).strip().lower()
-    rub_ok = rub_embed == rub_sha.strip().lower()
-    click.echo(stylize("\nRubric alignment (easy check)\n", fg="cyan"))
-    if rub_ok:
-        click.echo(
-            stylize("  ", dim=True)
-            + stylize("OK", fg="green", bold=True)
-            + stylize(
-                "  The `rubric_sha256` field inside the judge profile JSON matches the "
-                "“Judge rubric (code fingerprint)” "
-                f"line ({rub_sha[:12]}…).\n",
-                dim=True,
-            ),
-            nl=False,
-        )
+    click.echo(f"  embedded_rubric_matches_code  {'1' if rub_ok else '0'}")
+    if not rub_ok:
         click.echo(
             stylize(
-                "  You do not need the two top-level hashes (rubric-only vs full profile) to be equal — "
-                "the profile hash includes rubric + model + URL + sampling params.\n",
-                dim=True,
-            ),
-            nl=False,
-        )
-    else:
-        click.echo(
-            stylize(
-                "  MISMATCH — embedded rubric in profile JSON differs from `lemma.judge.fingerprint` "
-                "(report this; it should not happen on a clean install).\n",
+                "\nMISMATCH: judge_profile.rubric_sha256 differs from judge_rubric_sha256.",
                 fg="red",
                 bold=True,
             ),
             err=True,
         )
-
-    click.echo(
-        stylize("\nTip: ", dim=True)
-        + stylize("lemma-cli configure subnet-pins", fg="green", bold=True)
-        + stylize(" merges pins into `.env`; ", dim=True)
-        + stylize("lemma meta --raw", fg="green")
-        + stylize(" is compact copy/paste + one-line JSON.\n", dim=True),
-        nl=False,
-    )
+    click.echo(stylize("\nFull canonical JSON: lemma meta --raw", dim=True))
 
 
 def _miner_apply_daily_cap(max_forwards_per_day: int | None) -> None:

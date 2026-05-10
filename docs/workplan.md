@@ -56,7 +56,7 @@ These should be either hardened or removed from the default mental model.
 
 This is the `lemma-cli` repo track.
 
-Status: `spacetime-tao/lemma-cli` exists as a thin public wrapper. The first core trim moved the guided `start` surface out of the subnet repo. Later trims moved the `.env` setup/configure wizard, docs/glossary helpers, local try-prover/rehearsal previews, theorem status/problem inspection, one-shot judge preview, and validator config summary to `lemma-cli`, leaving redirect shims in core.
+Status: `spacetime-tao/lemma-cli` exists as a thin public wrapper. The first core trim moved the guided `start` surface out of the subnet repo. Later trims moved the `.env` setup/configure wizard, docs/glossary helpers, local try-prover/rehearsal previews, theorem status/problem inspection, one-shot judge preview, and validator config summary to `lemma-cli`, leaving redirect shims in core. The remaining core `lemma meta` command now prints concise hashes by default and keeps full canonical JSON in `--raw`.
 
 Move first:
 
@@ -75,7 +75,7 @@ Keep temporarily in core:
 1. Minimal `lemma validator start`.
 2. Minimal `lemma miner start`.
 3. Minimal `lemma verify`.
-4. Minimal `lemma meta`.
+4. Minimal `lemma meta` (hashes by default; full JSON via `--raw`).
 
 The split is safe if `lemma-cli` depends on `lemma` as a Python package instead of copying consensus code.
 
