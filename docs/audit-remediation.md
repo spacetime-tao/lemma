@@ -391,5 +391,6 @@ Examples called out in Round 3: judge model/URL, Anthropic default model age, Le
 | 2026-05 | Added training-export profile/registry provenance and analyzer mixed-profile readiness checks |
 | 2026-05 | Added sybil/Pareto replay readiness gap reporting |
 | 2026-05 | Expanded the sybil/Pareto decision record around replay summaries |
+| 2026-05 | Expanded the proof-intrinsic decision record around analyzer summaries |
 
 **Maintainers:** bump §17 when you materially change scope or close a whole section.
