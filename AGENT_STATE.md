@@ -131,6 +131,15 @@ Reason: the product center is simple, reproducible proof acceptance.
     `commit_reveal_weights_enabled=True`; UID `1` has a timelocked weight commit
     from block `7093234`, reveal period `1` epoch, and `revealed_uid1=None`.
     Check again after the next epoch/reveal window.
+- After the next epoch/reveal window, metagraph at block `7093921` showed miner
+  alpha moving:
+  - raw weights rows: UID `0 -> 1`, UID `1 -> 2`;
+  - validator UID `1`: `validator_trust=1.0`, `emission=148.01081848`,
+    `S=2528.13598633`;
+  - miner UID `2`: `consensus=1.0`, `incentive=1.0`,
+    `emission=148.01081848`, `S=148.01081848`;
+  - miner UIDs `3`-`6` remained at zero because the validator round deduped
+    identical proof submissions and kept UID `2`.
 
 ## Notes For Future Agents
 
