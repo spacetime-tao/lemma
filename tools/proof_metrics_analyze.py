@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 import statistics
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -109,6 +110,8 @@ def render_report(report: MetricsReport, *, outlier_limit: int = 8) -> str:
         for r in ok_rows
         if r.proof_metric_delimiters is not None and r.judge_composite is not None
     ]
+    comparison_groups = _comparison_groups(judged_rows)
+    comparison_row_count = sum(len(g) for g in comparison_groups)
 
     lines.extend(
         [
@@ -133,6 +136,13 @@ def render_report(report: MetricsReport, *, outlier_limit: int = 8) -> str:
                 if judged_delimiters
                 else None,
             ),
+            f"within_theorem_comparisons=theorems={len(comparison_groups)} rows={comparison_row_count}",
+            "corr_within_theorem(metric_bytes, judge_composite)="
+            + _format_corr(_within_theorem_centered_corr(comparison_groups, lambda r: r.proof_metric_bytes)),
+            "corr_within_theorem(metric_delimiters, judge_composite)="
+            + _format_corr(_within_theorem_centered_corr(comparison_groups, lambda r: r.proof_metric_delimiters)),
+            "corr_within_theorem(proof_intrinsic, judge_composite)="
+            + _format_corr(_within_theorem_centered_corr(comparison_groups, lambda r: r.proof_intrinsic)),
         ],
     )
 
@@ -246,20 +256,42 @@ def _unique_uid_count(rows: list[MetricRow]) -> int:
 
 
 def _comparison_theorem_count(rows: list[MetricRow]) -> int:
-    counts: dict[str, int] = {}
-    uids: dict[str, set[int]] = {}
+    return len(_comparison_groups(rows))
+
+
+def _comparison_groups(rows: list[MetricRow]) -> list[list[MetricRow]]:
+    by_theorem: dict[str, list[MetricRow]] = {}
     for r in rows:
-        if not r.theorem_id:
+        if r.theorem_id:
+            by_theorem.setdefault(r.theorem_id, []).append(r)
+    return [
+        group
+        for group in by_theorem.values()
+        if len(group) >= MIN_DECISION_COMPARISON_ROWS_PER_THEOREM
+        and len({r.uid for r in group if r.uid is not None}) >= MIN_DECISION_COMPARISON_UIDS_PER_THEOREM
+    ]
+
+
+def _within_theorem_centered_corr(
+    groups: list[list[MetricRow]],
+    metric: Callable[[MetricRow], float | int | None],
+) -> float | None:
+    xs: list[float] = []
+    ys: list[float] = []
+    for group in groups:
+        pairs = [
+            (float(value), float(r.judge_composite))
+            for r in group
+            if (value := metric(r)) is not None and r.judge_composite is not None
+        ]
+        if len(pairs) < 2:
             continue
-        counts[r.theorem_id] = counts.get(r.theorem_id, 0) + 1
-        if r.uid is not None:
-            uids.setdefault(r.theorem_id, set()).add(r.uid)
-    return sum(
-        1
-        for theorem_id, count in counts.items()
-        if count >= MIN_DECISION_COMPARISON_ROWS_PER_THEOREM
-        and len(uids.get(theorem_id, set())) >= MIN_DECISION_COMPARISON_UIDS_PER_THEOREM
-    )
+        mean_x = statistics.mean(x for x, _ in pairs)
+        mean_y = statistics.mean(y for _, y in pairs)
+        for x, y in pairs:
+            xs.append(x - mean_x)
+            ys.append(y - mean_y)
+    return _pearson(xs, ys)
 
 
 def main(argv: list[str] | None = None) -> int:
