@@ -171,7 +171,7 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 
 ## 12. Structural options (not a single ticket)
 
-Round 3 §11 and §18 propose a **minimum-viable direction** under `knowledge/`: hybrid **`container_execution` + `adversarial_red_blue`**, Docker image commitment on-chain, Lean kernel as sole rubric, ε-Pareto over `(passed, latency, proof bytes)` across environment subsets, **no LLM judge**. That implies deleting large swaths of today’s stack (`lemma/miner/` reference path, judge, much protocol glue) — **program-level fork**, not a sprint.
+Round 3 §11 and §18 propose a **minimum-viable direction** under `knowledge/`: hybrid **`container_execution` + `adversarial_red_blue`**, Docker image commitment on-chain, Lean kernel as sole rubric, ε-Pareto over `(passed, latency, proof bytes)` across environment subsets, **no LLM judge**. That implies deleting large swaths of today’s stack (`lemma/miner/` reference path, judge, much protocol glue) — **program-level fork**, not a sprint. The current bundled miner is kept as a minimal Axon compatibility path, not as an endorsement of growing miner strategy inside core ([miner.md](miner.md)).
 
 Track exploration separately from **incremental** rows in §3–§11.
 
@@ -333,7 +333,7 @@ Abbreviated; see `knowledge/` for full YAML. Status reflects the current remedia
 | Invariant | KB pointer | Current remediation status |
 |-----------|------------|----------------------|
 | One-sentence primary design axis | `subnet.invariants.yaml` | Current objective pinned in `docs/objective-decision.md`; judge layer bounded separately |
-| Validator-only development | `subnet.invariants.yaml#architecture.validator_only_development` | Still violated by bundled reference miner; `PROVER_SYSTEM` is slimmed but still present |
+| Validator-only development | `subnet.invariants.yaml#architecture.validator_only_development` | Still violated by bundled reference miner; boundary documented as minimal Axon compatibility, not a place for competitive strategy |
 | Single-file validator pattern | `validator.contract.yaml` | Still violated by package layout; root `validator.py` stub removed |
 | Push compute to miners | `subnet.invariants.yaml#compute_distribution` | Still violated |
 | EMA for stability | `validator.rules.yaml` | Honored |
@@ -393,5 +393,6 @@ Examples called out in Round 3: judge model/URL, Anthropic default model age, Le
 | 2026-05 | Expanded the sybil/Pareto decision record around replay summaries |
 | 2026-05 | Expanded the proof-intrinsic decision record around analyzer summaries |
 | 2026-05 | Bounded transport migration as a major-release HTTP + Epistula decision |
+| 2026-05 | Bounded the bundled reference miner as Axon compatibility only |
 
 **Maintainers:** bump §17 when you materially change scope or close a whole section.

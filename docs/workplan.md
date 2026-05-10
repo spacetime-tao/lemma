@@ -7,7 +7,7 @@ The rule of thumb is: keep the subnet repository focused on consensus-critical b
 
 | Repo | Owns | Does not own |
 | --- | --- | --- |
-| `spacetime-tao/lemma` | Protocol, problem selection, Lean verification, validator scoring, miner/validator services, tests for consensus behavior. | Guided setup screens, shell activation helpers, docs openers, colored menus, broad onboarding UX. |
+| `spacetime-tao/lemma` | Protocol, problem selection, Lean verification, validator scoring, minimal validator service, reference miner compatibility path, tests for consensus behavior. | Guided setup screens, shell activation helpers, docs openers, colored menus, broad onboarding UX, competitive miner strategy. |
 | `spacetime-tao/lemma-cli` | Human-friendly setup, doctor checks, guided miner/validator flows, docs shortcuts, local rehearsal wrappers. | Scoring rules, Bittensor weight logic, Lean proof acceptance policy, generated problem registry. |
 
 Splitting the CLI is possible, but it should be done in stages. The core repo currently exposes the `lemma` console command, and operators use it for both core actions and onboarding. A hard cut would break workflows; a staged cut keeps the subnet usable while the code gets leaner.
@@ -52,6 +52,7 @@ These should be either hardened or removed from the default mental model.
 2. Commit-reveal: keep active, with bounded cache, validator identity binding, shared commitment hex normalization, and an explicit same-round threat model. **Done for optional usable path; stronger public fairness would be a separate design.**
 3. Judge peer attest: treat as operator coordination, not strong security. **Done: threat model documents all-of-N HTTP limits and skip as solo/dev only.**
 4. Wire transport: keep current Dendrite/Axon path until a major-release HTTP + Epistula migration is explicitly chosen. **Bounded:** [transport.md](transport.md) now records the migration gate and decision template.
+5. Reference miner: keep the bundled miner minimal and compatibility-focused while the shipping protocol remains Axon-based. **Bounded:** [miner.md](miner.md) records that richer miner UX belongs in `lemma-cli` and miner-artifact/container designs are separate protocol work.
 
 ### 5. CLI Extraction
 
@@ -77,6 +78,7 @@ Keep temporarily in core:
 2. Minimal `lemma miner start`.
 3. Minimal `lemma verify`.
 4. Minimal `lemma meta` (hashes by default; full JSON via `--raw`).
+5. Reference miner internals required by the current Axon protocol path.
 
 The split is safe if `lemma-cli` depends on `lemma` as a Python package instead of copying consensus code.
 

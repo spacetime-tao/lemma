@@ -1,5 +1,18 @@
 # Miner
 
+## Reference miner boundary
+
+The bundled miner is a **reference Axon service** for the current Lemma subnet
+protocol. It keeps the repo runnable end to end, gives operators a standard
+prover path, and supports compatibility features such as local Lean verify,
+miner attest, and commit-reveal.
+
+It is not the long-term answer to the audit's "validator-only development" or
+"container execution" ideals. Do not grow this package with competitive solver
+strategy, broad onboarding UX, model experimentation dashboards, or alternate
+transport stacks. Friendly flows belong in `lemma-cli`; major miner-artifact or
+container-execution designs should be planned as separate protocol work.
+
 Walkthrough: [getting-started.md](getting-started.md) — **`uv sync --extra btcli`** if you need repo-local **`uv run btcli`** (Bittensor CLI), `lemma-cli setup`, then `uv run lemma …` from the repo root. Prefer prompts over hand-editing `.env` (`lemma-cli configure chain`, `configure prover`, `configure axon`).
 
 **Short checklist:** `lemma-cli setup` → coldkey funded → `uv run btcli subnet register` on the same network/netuid as `.env` → `uv run lemma miner dry-run` → **`lemma-cli rehearsal`** (see prover + Lean + judge on the live theorem) → fix axon IP/port if needed → `uv run lemma miner start`. Run `uv run lemma` for core command help; run `lemma-cli` for the friendly operator screen.
