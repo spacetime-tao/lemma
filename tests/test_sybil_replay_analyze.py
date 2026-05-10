@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
-from tools.sybil_replay_analyze import clone_pressure, load_report, main, render_report, replay_epoch
+from tools.sybil_replay_analyze import clone_pressure, decision_ready, load_report, main, render_report, replay_epoch
 
 
 def _row(
@@ -63,6 +63,7 @@ def test_replay_compares_dedup_modes_and_clone_pressure(tmp_path) -> None:
     assert report.total_rows == 5
     assert report.invalid_json_lines == 1
     assert len(report.replay_rows) == 3
+    assert decision_ready(report) is False
 
     base = replay_epoch(report.replay_rows, name="base", identical_dedup=True, coldkey_dedup=True)
     assert base.identical_dropped == 1
@@ -88,6 +89,7 @@ def test_replay_compares_dedup_modes_and_clone_pressure(tmp_path) -> None:
     assert "Sybil/Pareto replay analysis" in rendered
     assert "rows_replayable=3" in rendered
     assert "coldkey_note=no coldkeys in export" in rendered
+    assert "decision_ready=no" in rendered
     assert "clone_k=2" in rendered
     assert "summary_exact_clone_extra_share: n=1 max=0.0000 mean=0.0000" in rendered
     assert "summary_rewritten_clone_extra_share: n=1" in rendered
@@ -144,3 +146,37 @@ def test_main_uses_env_path(tmp_path, monkeypatch, capsys) -> None:
     rendered = capsys.readouterr().out
     assert "rows_replayable=1" in rendered
     assert "exact_clone_k=1:" in rendered
+
+
+def test_require_decision_ready_returns_nonzero_for_blocked_export(tmp_path, capsys) -> None:
+    path = tmp_path / "train.jsonl"
+    _write_jsonl(path, [_row(uid=1, composite=0.9)])
+
+    assert main([str(path), "--require-decision-ready"]) == 2
+    rendered = capsys.readouterr().out
+    assert "decision_ready=no" in rendered
+    assert "replayable_rows<50" in rendered
+
+
+def test_require_decision_ready_passes_for_ready_export(tmp_path, capsys) -> None:
+    path = tmp_path / "train.jsonl"
+    rows = [
+        _row(
+            block=100 + i // 10,
+            theorem_id=f"t{i % 5}",
+            uid=(i % 5) + 1,
+            composite=0.8 + (i % 5) / 100,
+            proof=f"theorem t{i} : True := by trivial\n",
+            trace=f"trace {i}",
+            coldkey=f"cold-{(i % 5) + 1}",
+        )
+        for i in range(50)
+    ]
+    _write_jsonl(path, rows)
+
+    report = load_report(path, proof_weight=0.0)
+    assert decision_ready(report) is True
+    assert main([str(path), "--require-decision-ready", "--proof-weight", "0"]) == 0
+    rendered = capsys.readouterr().out
+    assert "decision_data_blockers=none" in rendered
+    assert "decision_ready=yes" in rendered

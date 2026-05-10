@@ -109,6 +109,10 @@ dedup is sybil resistance.
 
 The report prints aggregate `summary_*` lines for exact-copy and rewritten-copy
 clone pressure across the sampled epochs, then the per-epoch replay details.
+For release checklists, add `--require-decision-ready`. It exits nonzero unless
+the export has enough clean rows, epochs, UIDs, theorem ids, and coldkey coverage
+for a governance decision. Like the proof-metrics guard, this is not approval for
+a reward change.
 
 ## Gaming and leakage (why `reasoning_only` exists)
 

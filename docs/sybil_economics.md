@@ -44,7 +44,7 @@ Do not add another sybil/Pareto scoring layer until the subnet has answered this
 Minimum evidence:
 
 1. **UID cost context** — current registration cost, expected reward per slot, and whether the subnet is under high or low UID pressure.
-2. **Replay data** — at least one offline reward replay with identical-submission dedup on/off and coldkey dedup on/off. Start with `uv run python -m tools.sybil_replay_analyze <full-training-export.jsonl>` on a private `full` export that includes theorem statements and coldkeys when available.
+2. **Replay data** — at least one offline reward replay with identical-submission dedup on/off and coldkey dedup on/off. Start with `uv run python -m tools.sybil_replay_analyze <full-training-export.jsonl> --require-decision-ready` on a private `full` export that includes theorem statements and coldkeys when available.
 3. **K-miner pressure** — compare one strong miner against K coordinated miners with copied, lightly rewritten, or complementary outputs.
 4. **Accepted bypasses** — explicitly name which attacks remain acceptable for now: distinct coldkeys, semantic trace rewrites, copied proofs with rewritten explanations, or tied scores.
 5. **Rollback plan** — any scoring change must be profile-pinned, env-gated for rollout, and easy to disable without changing consensus code.
