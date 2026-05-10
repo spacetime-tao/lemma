@@ -131,6 +131,8 @@ dedup is sybil resistance.
 
 The report prints aggregate `summary_*` lines for exact-copy and rewritten-copy
 clone pressure across the sampled epochs, then the per-epoch replay details.
+The `decision_data_gaps` line is the shortest replay collection checklist, for
+example `replayable_rows+47`, `epochs+4`, or `coldkey_rows+3`.
 For release checklists, add `--require-decision-ready`. It exits nonzero unless
 the export has enough clean rows, epochs, UIDs, theorem ids, and coldkey coverage
 for a governance decision. Like the proof-metrics guard, this is not approval for
