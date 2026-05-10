@@ -71,8 +71,8 @@ Reason: the product center is simple, reproducible proof acceptance.
 
 ## Latest Baseline Status
 
-- Core Lemma `main` pushed through `82a77c2`
-  (`Reward all verified proofs with coldkey partition`).
+- Core Lemma `main` pushed through `60af0e0`
+  (`Hint integer absolute value triangle proofs`).
 - `lemma-cli` `main` pushed through `022a779` (CLI proof-verification
   messaging).
 - Local verification before VPS testing:
@@ -87,17 +87,16 @@ Reason: the product center is simple, reproducible proof acceptance.
   - core `.venv/bin/ruff check lemma tests tools/sybil_replay_analyze.py`:
     passed.
 - Worker droplet `lemma-lean-worker-1` (`167.99.145.132`):
-  - repo `/opt/lemma` updated to `bd8f271`, `uv sync` run, service restarted;
+  - repo `/opt/lemma` updated to `60af0e0`;
   - `lemma-lean-worker-http.service` active;
   - worker listens on `127.0.0.1:8787`; remote external port refused, which is
     expected for the private worker;
   - local worker health on the droplet returned `{"status":"ok"}`.
 - Miner droplet `lemma-miner-1` (`161.35.50.115`):
-  - repo `/opt/lemma` updated to `bd8f271`, `uv sync --extra btcli` run;
+  - repo `/opt/lemma` updated to `60af0e0`, `uv sync --extra btcli` run;
   - active miner services on ports `8091`-`8095`, externally reachable;
   - UIDs `2`-`6` registered on testnet netuid `467` at that IP/port set;
-  - metagraph snapshot around block `7091614` still showed zero incentive,
-    consensus, and emission for UIDs `2`-`6`.
+  - services restarted active after the reward-partition and prover-hint deploy.
 - Direct validator dry-run through an SSH tunnel to the worker:
   - theorem `gen/7091600`;
   - all five miner responses verified; old reward logic kept one rewarded UID;
@@ -149,6 +148,20 @@ Reason: the product center is simple, reproducible proof acceptance.
 - Follow-up mechanism change: identical proof reward dedup should not be live.
   Current code keeps all verified miner entries and applies same-coldkey reward
   partitioning after weights are computed.
+- Post-change live test:
+  - first one-shot live epoch at theorem `gen/7094100` had `verified=0`
+    because the miner proof used the wrong absolute-value lemma;
+  - added prover hint for integer absolute-value triangle goals and redeployed
+    miners;
+  - next attempt in the same theorem window landed too near `deadline_block`
+    and correctly dropped five late responses;
+  - fresh-window one-shot at theorem `gen/7094200` succeeded:
+    `verified=5`, `scored=5`, `coldkey_partitioned=5`,
+    `set_weights success=True`, live weights `{2: 0.2, 3: 0.2, 4: 0.2,
+    5: 0.2, 6: 0.2}`;
+  - post-run chain query at block `7094268` still showed old revealed weights
+    `1 -> 2` plus a new timelocked commit from validator hotkey at block
+    `7094223`; commit-reveal had not yet exposed the new split weights.
 
 ## Notes For Future Agents
 
