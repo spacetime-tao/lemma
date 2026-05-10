@@ -118,6 +118,19 @@ Reason: the product center is simple, reproducible proof acceptance.
   block `7092853` showed validator UID `1` with `S=2277.37988281`, `active=1`,
   and `validator_permit=False`. A follow-up live epoch was started to see if the
   now-staked validator can write a visible weight row and move miner alpha.
+- Post-stake immediate live epoch:
+  - remote-worker attempt at theorem `gen/7093100` failed verification because
+    the local SSH tunnel to the worker reset; miners still answered in roughly
+    `21.9`-`34.7` seconds.
+  - local Docker-worker retry at theorem `gen/7093200` succeeded:
+    `verified=5`, `scored=5`, `dedup_dropped=4`, `seconds=258.73`,
+    live weights subset `{2: 1.0}`, `set_weights success=True`.
+  - metagraph at block `7093239` showed UID `1` with `validator_permit=True`,
+    `S=2297.36254883`, and validator emission `13.71050453`.
+  - miner UIDs `2`-`6` still showed zero immediate emission because subnet
+    `commit_reveal_weights_enabled=True`; UID `1` has a timelocked weight commit
+    from block `7093234`, reveal period `1` epoch, and `revealed_uid1=None`.
+    Check again after the next epoch/reveal window.
 
 ## Notes For Future Agents
 
