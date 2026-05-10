@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 from lemma.lean.sandbox import VerifyResult
 from lemma.protocol import LemmaChallenge
-from lemma.validator.epoch import _run_verify_batch, _update_verify_credibility
+from lemma.validator.epoch import _response_status_summary, _run_verify_batch, _update_verify_credibility
 
 
 def _resp(*, proof_script: str = "namespace Submission\n") -> LemmaChallenge:
@@ -55,6 +57,16 @@ def test_validator_lean_failure_lowers_credibility() -> None:
     _update_verify_credibility(cred, [(1, resp)], [], alpha=0.5)
 
     assert cred[1] == 0.5
+
+
+def test_response_status_summary_counts_transport_failures() -> None:
+    capped = SimpleNamespace(dendrite=SimpleNamespace(status_code=429, status_message="daily limit"), axon=None)
+    timeout = SimpleNamespace(dendrite=SimpleNamespace(status_code=408, status_message="timeout"), axon=None)
+
+    summary = _response_status_summary([capped, capped, timeout])
+
+    assert "2x 429 daily limit" in summary
+    assert "1x 408 timeout" in summary
 
 
 async def test_verify_batch_keeps_other_results_when_one_task_raises() -> None:

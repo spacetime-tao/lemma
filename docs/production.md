@@ -65,7 +65,9 @@ supervisor, and regular log review.
 One machine can run several miner hotkeys if each service has its own wallet
 hotkey, `AXON_PORT`, logs, and systemd unit. They can share the same checkout and
 prover API account, but API rate limits and spend caps should be set
-deliberately.
+deliberately. If several services run as the same OS user,
+`MINER_MAX_FORWARDS_PER_DAY` shares one counter under `~/.lemma/`; a low shared
+cap can make every hotkey return 429 for the rest of the UTC day.
 
 For testing, multiple hotkeys under one coldkey are useful for throughput and
 same-theorem comparison data. For rewards, Lemma's default coldkey dedup keeps
