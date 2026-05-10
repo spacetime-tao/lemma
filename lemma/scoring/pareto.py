@@ -11,7 +11,7 @@ class ScoredEntry:
     uid: int
     score: float
     cost: int
-    #: Fingerprint of the normalized theorem/proof payload for identical-output dedup.
+    #: Fingerprint of the normalized theorem/proof payload for offline analysis.
     submission_fp: str = ""
 
 

@@ -544,15 +544,10 @@ class LemmaSettings(BaseSettings):
     )
 
     # Scoring / incentive policy (validators)
-    lemma_scoring_dedup_identical: bool = Field(
+    lemma_scoring_coldkey_partition: bool = Field(
         default=True,
-        validation_alias="LEMMA_SCORING_DEDUP_IDENTICAL",
-        description="Collapse identical normalized theorem/proof submissions; keep one round score per cluster.",
-    )
-    lemma_scoring_coldkey_dedup: bool = Field(
-        default=True,
-        validation_alias="LEMMA_SCORING_COLDKEY_DEDUP",
-        description="Keep only the best-scoring hotkey per coldkey (metagraph.coldkeys) each epoch.",
+        validation_alias="LEMMA_SCORING_COLDKEY_PARTITION",
+        description="Cap same-coldkey hotkeys to one allocation and split it among those hotkeys.",
     )
     lemma_reputation_ema_alpha: float = Field(
         default=0.08,

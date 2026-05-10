@@ -8,8 +8,9 @@ Current live path:
 
 1. Lean must typecheck (kernel gate).
 2. A passing proof enters scoring; a failing proof does not.
-3. Identical-proof dedup, coldkey dedup, and reputation feed the final weight map.
+3. Reputation and Pareto weighting build the final weight map.
 4. Pareto weighting still runs, but live proof cost is currently `0`, so it mostly behaves like score/reputation layering or an equal split among tied passers.
+5. Same-coldkey hotkeys share that coldkey's allocation instead of multiplying it.
 
 ## Known gameability surfaces (plain language)
 
@@ -21,7 +22,7 @@ No subnet is perfectly ungameable; the goal is to make the easiest strategy also
 
 One-line mental model: Lemma rewards Lean-valid proofs.
 
-For the proof-verification design, see [proof-only-incentives.md](proof-only-incentives.md). For a **living checklist** of shipped items and known gaps, see [incentive-roadmap.md](incentive-roadmap.md). **Sybil / coldkey dedup** is *not* identity verification — see [sybil_economics.md](sybil_economics.md). **Dendrite/Axon + synapse body-hash** — see [transport.md](transport.md).
+For the proof-verification design, see [proof-only-incentives.md](proof-only-incentives.md). For a **living checklist** of shipped items and known gaps, see [incentive-roadmap.md](incentive-roadmap.md). **Same-coldkey partitioning** is *not* identity verification — see [sybil_economics.md](sybil_economics.md). **Dendrite/Axon + synapse body-hash** — see [transport.md](transport.md).
 
 ## Validators querying your axon many times
 

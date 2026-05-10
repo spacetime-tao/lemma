@@ -47,13 +47,14 @@ def test_judge_profile_includes_validator_scoring_policy() -> None:
     )
     d = judge_profile_dict(s)
 
-    assert d["profile_schema"] == "lemma_validator_profile_v4"
+    assert d["profile_schema"] == "lemma_validator_profile_v5"
     assert d["problem_policy"]["problem_seed_quantize_blocks"] == 55
     assert d["verification_policy"]["lean_sandbox_image"] == "lemma/lean-sandbox:latest"
     assert d["verification_policy"]["lean_verify_timeout_s"] == 123
     assert d["verification_policy"]["timeout_split_hard_mult"] == 1.3
     assert d["scoring_policy"]["lemma_reputation_credibility_exponent"] == 2.0
     assert d["scoring_policy"]["lemma_epoch_problem_count"] == 3
+    assert d["scoring_policy"]["lemma_scoring_coldkey_partition"] is True
     assert d["protocol_policy"]["lemma_commit_reveal_enabled"] is True
     assert d["protocol_policy"]["lemma_miner_verify_attest_spot_verify_fraction"] == 0.25
     salt_hash = d["protocol_policy"]["lemma_miner_verify_attest_spot_verify_salt_sha256"]
@@ -72,6 +73,12 @@ def test_default_reputation_credibility_exponent_is_linear_policy(monkeypatch) -
 def test_judge_profile_hash_changes_when_reputation_policy_changes() -> None:
     a = LemmaSettings(lemma_reputation_credibility_exponent=1.0)
     b = LemmaSettings(lemma_reputation_credibility_exponent=2.0)
+    assert judge_profile_sha256(a) != judge_profile_sha256(b)
+
+
+def test_judge_profile_hash_changes_when_coldkey_partition_changes() -> None:
+    a = LemmaSettings(lemma_scoring_coldkey_partition=True)
+    b = LemmaSettings(lemma_scoring_coldkey_partition=False)
     assert judge_profile_sha256(a) != judge_profile_sha256(b)
 
 

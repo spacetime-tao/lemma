@@ -118,8 +118,9 @@ exports for that.
 ## Collect sybil/Pareto replay data
 
 Use a private `full` export when evaluating sybil/Pareto reward changes. The
-replay helper compares the current dedup/Pareto behavior against dedup-off
-baselines and simulates exact-copy vs lightly rewritten K-miner pressure:
+replay helper compares the current same-coldkey partition behavior against
+no-partition and legacy identical-proof grouping baselines, then simulates
+exact-copy vs lightly rewritten K-miner pressure:
 
 ```bash
 uv run python -m tools.sybil_replay_analyze /var/lib/lemma/train.jsonl
@@ -128,8 +129,8 @@ uv run python -m tools.sybil_replay_analyze /var/lib/lemma/train.jsonl
 Current full exports include `theorem_statement` and public coldkeys when the
 validator metagraph provides them. If older exports do not include coldkeys, the
 coldkey replay assumes one coldkey per UID. That is still useful for
-identical-copy and rewritten-copy pressure, but it is not evidence that coldkey
-dedup is sybil resistance.
+identical-copy and rewritten-copy pressure, but it is not evidence that
+same-coldkey partitioning is sybil resistance.
 
 The report prints aggregate `summary_*` lines for exact-copy and rewritten-copy
 clone pressure across the sampled epochs, then the per-epoch replay details.
