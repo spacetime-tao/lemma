@@ -46,6 +46,7 @@ PyPI package names vs the `btcli` executable.
 | Validator | [validator.md](docs/validator.md) |
 | Models / APIs | [models.md](docs/models.md) |
 | Production / ops | [production.md](docs/production.md) |
+| VPS safety / key custody | [vps-safety.md](docs/vps-safety.md) |
 | Governance / pins | [governance.md](docs/governance.md) |
 | Toolchain / image pinning | [toolchain-image-policy.md](docs/toolchain-image-policy.md) |
 | Tests | [testing.md](docs/testing.md) |
