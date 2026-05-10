@@ -16,8 +16,9 @@ Prerequisites: [getting-started.md](getting-started.md).
 
 ## Scoring policy
 
-The live validator path is proof-only and binary: Lean-verified proofs enter
-scoring as a pass, then dedup/reputation/Pareto build the weight map.
+A proof must verify in Lean to enter live scoring. Reputation and Pareto
+weighting build the weight map, and same-coldkey hotkeys share that coldkey's
+allocation instead of multiplying it.
 
 ## Miner payloads
 
@@ -100,11 +101,10 @@ deliberately. If several services run as the same OS user,
 cap can make every hotkey return 429 for the rest of the UTC day.
 
 For testing, multiple hotkeys under one coldkey are useful for throughput and
-same-theorem comparison data. For rewards, Lemma's default coldkey dedup keeps
-only the best hotkey per coldkey in the final weight calculation, so same-coldkey
-hotkeys should not be treated as independent economic identities. Separate
-coldkeys are a sybil/economics experiment and should be labeled as such on
-testnet.
+same-theorem comparison data. For rewards, Lemma partitions one coldkey's
+allocation across its successful hotkeys, so same-coldkey hotkeys should not be
+treated as independent economic identities. Separate coldkeys are an independent
+economic-identity test and should be labeled as such on testnet.
 
 ## Remote Lean verify worker (`lemma lean-worker`)
 

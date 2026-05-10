@@ -18,7 +18,7 @@
 
 | Bucket | Nature | Examples |
 |--------|--------|----------|
-| **A. Objective / economics** | Redesign or explicit acceptance | prose scoring vs kernel ground truth; sybil vs coldkey dedup; Pareto + dedup evasion |
+| **A. Objective / economics** | Redesign or explicit acceptance | prose scoring vs kernel ground truth; sybil vs same-coldkey partitioning; Pareto/copy evasion |
 | **B. Consensus & integrity** | Engineering + policy | Body-hash fail-open; deadline `None`; template/registry drift |
 | **C. Protocol layers** | Fix bugs vs delete feature | Attest binding; spot-verify predictability; commit-reveal semantics + cache; judge-profile quorum trust model |
 | **D. Scoring heuristics** | Iterate under constraint | `proof_intrinsic` padding; comment strip limits; FakeJudge leak |
@@ -48,7 +48,7 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 3. **Expand `judge_profile_sha256`** (or sibling hash) to cover subnet-critical knobs currently outside the pin (~18 fields in Round 3). **Done.**
 4. **Fail closed** when `computed_body_hash` missing — remove fail-open in `synapse_miner_response_integrity_ok`; update/remove tests that codify bypass. **Done.**
 5. **Per-validator salt** in attest spot-verify selection hash (reduces predictable skip + UID grinding). **Done/partial:** salt shipped; residual UID-grinding economics remain design-level.
-6. **Sybil / Pareto:** move beyond coldkey dedup toward mechanism aligned with Affine-style winners-take-all-per-subset (needs design). **Bounded next step:** [sybil_economics.md](sybil_economics.md) now requires a replay/economics decision gate and policy rubric before scoring-code changes; replay tooling exists, but real export data is still required.
+6. **Sybil / Pareto:** same-coldkey partitioning limits one-coldkey multi-hotkey multiplication; distinct-coldkey economics still need replay data before adding another scoring layer. **Bounded next step:** [sybil_economics.md](sybil_economics.md) records the replay/economics evidence gate; replay tooling exists, but real export data is still required.
 7. Drop **`LEMMA_PROBLEM_SOURCE=frozen`** / bundled JSON if policy allows (large policy decision). **Partial:** direct frozen use is dev-gated.
 8. **Aggressively cut CLI / wizard / `main.py` surface** (Part 2 scale stats). **Mostly done:** friendly UX moved to `lemma-cli`, core keeps shims/minimal commands.
 9. Move **`lemma/catalog/`** dev tooling to `tools/` (audit flagged twice). **Done.**
@@ -75,7 +75,7 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 |----|--------|----------|----------|------------------------|
 | **O1** | Reward objective must stay tied to kernel-verifiable proof | R3 §2, §11 | P4 / product | **Target chosen:** rewards are proof-only: a submitted proof must pass Lean verification for the published theorem. See [proof-only-incentives.md](proof-only-incentives.md). |
 | **O2** | `primary_design_axis` / one-sentence rule in KB violated by current honest description | R3 §2.3 | P4 | **Done/bounded:** objective pinned as Lean-valid proofs; proof-verification design documented in [proof-only-incentives.md](proof-only-incentives.md). |
-| **O3** | Pareto + coldkey dedup + identical dedup still allow sybil farming per R3 math | R3 §2.2, §8, §12 | P2/P4 | **Needs-design:** economic modeling; not fixable by parser alone. [sybil_economics.md](sybil_economics.md) records the minimum replay/economics gate plus the keep / cap / stronger-mechanism / no-change rubric; `tools/sybil_replay_analyze.py` provides offline replay summaries and concrete readiness gaps from private full exports. |
+| **O3** | Pareto + same-coldkey partitioning still allow distinct-coldkey sybil farming per R3 math | R3 §2.2, §8, §12 | P2/P4 | **Needs-design:** economic modeling; not fixable by parser alone. [sybil_economics.md](sybil_economics.md) records the minimum replay/economics gate plus the keep / cap / stronger-mechanism / no-change rubric; `tools/sybil_replay_analyze.py` provides offline replay summaries and concrete readiness gaps from private full exports. |
 
 ---
 
@@ -129,7 +129,7 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 | **J3** | Hash omits many subnet-critical env vars | R3 §5.3 | P2 | **Done:** profile hash broadened into validator scoring profile. |
 | **J4** | `LEMMA_JUDGE_PROFILE_ATTEST_SKIP` foot-gun | R3 §5.1 | P3 | **Done:** docs and validator-check wording label skip as solo/dev only, not production alignment. |
 
-**2026-05 progress:** J1/J2/J3/J4 patched/documented. `judge_profile_sha256` is now a validator scoring profile covering deterministic problem cadence, verification timeout/image policy, binary scoring, dedup/reputation settings, and protocol hooks that affect response acceptance. [judge-profile-attest.md](judge-profile-attest.md) records the HTTP peer check as operator coordination, not Byzantine consensus or transport security.
+**2026-05 progress:** J1/J2/J3/J4 patched/documented. `judge_profile_sha256` is now a validator scoring profile covering deterministic problem cadence, verification timeout/image policy, proof scoring, same-coldkey partition/reputation settings, and protocol hooks that affect response acceptance. [judge-profile-attest.md](judge-profile-attest.md) records the HTTP peer check as operator coordination, not Byzantine consensus or transport security.
 
 ---
 
@@ -160,12 +160,12 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 
 ---
 
-## 11. Dedup & sybil
+## 11. Same-coldkey partition & sybil
 
 | ID | Issue | Source § | Priority | Remediation direction |
 |----|--------|----------|----------|------------------------|
-| **D1** | Coldkey dedup ≠ sybil resistance per KB | R3 §8 | P4 | **Done/bounded:** documented as anti-clutter only; economic mitigations stay outside default code until the decision gate passes. |
-| **D2** | Identical dedup bypass via whitespace / comments | R3 §8 | P2 | **Partial:** proof-only fingerprint now strips proof comments and collapses whitespace in theorem/proof. Semantic proof rewrites remain a design/economics issue. |
+| **D1** | Same-coldkey partitioning ≠ sybil resistance per KB | R3 §8 | P4 | **Done/bounded:** documented as one-coldkey reward partitioning only; distinct-coldkey economics still require replay evidence. |
+| **D2** | Identical-proof reward dedup over-penalizes honest same proofs | R3 §8 | P2 | **Done:** live rewards no longer drop identical verified proofs. The normalized proof fingerprint remains useful for verifier reuse and offline analysis. |
 
 ---
 
@@ -243,7 +243,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **`judge/__init__.py`** no longer re-exports judge classes on package import; callers import concrete modules.
 - **`lean/__init__.py` / `problems/__init__.py` / `reasoning/__init__.py`** no longer re-export internals on package import.
 - **`reputation.apply_ema_to_entries`**: third return element discarded; removed from API.
-- **`scoring/dedup.py`**: parallel `dedup_identical` / `dedup_coldkeys` now share one internal best-by-key helper.
+- **`scoring/dedup.py`**: live same-coldkey partitioning added; identical-proof grouping remains only an offline replay helper.
 - **`scoring/__init__.py`**: unused convenience re-exports removed; callers import concrete scoring modules directly.
 - **Style proliferation:** mixed dataclass / pydantic / hand JSON (`ScoredEntry`, `RubricScore`, …).
 - **`ScoredEntry.composite` / `reasoning_score` naming:** duplicate and stale judge-era names removed; `ScoredEntry` keeps `score` plus optional `cost`.
@@ -308,7 +308,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 
 - ~**20 %** mechanism math tests vs **~40 %** protocol vs **~42 %** glue vs **~7 %** pure CLI — author breakdown; periodically recompute.
 - Tests called out as low value: `uv_bootstrap` (removed), `try_prover` flag tables (moved to `lemma-cli`), `problem_views` title case (removed), `protocol_migration` no-op test (removed), body-hash fail-open expectations in `test_protocol.py` (replaced with fail-closed coverage), thin `prompt_sanitize` coverage.
-- **`tests/test_rewards.py`** pins binary verified-proof reward assembly.
+- **`tests/test_rewards.py`** pins verified-proof reward assembly.
 
 ### 13.8 Catalog (`lemma/catalog/`)
 
@@ -342,7 +342,7 @@ Abbreviated; see `knowledge/` for full YAML. Status reflects the current remedia
 | Credibility tracking tuning | `incentive.primitives.yaml` | Wired; default exponent divergence documented in `docs/credibility-exponent-decision.md` |
 | Secret eval sets | `validator.rules.yaml` | Still gated; not in judge pin |
 | N miners profitability | `sybil.realities.yaml` | Still violated; decision gate, policy rubric, offline replay helper, and concrete readiness gaps added; real replay data still pending before scoring-code changes |
-| Coldkey dedup ≠ sybil resistance | `sybil.realities.yaml` | Still violated by design; documented as anti-clutter only |
+| Same-coldkey partitioning ≠ sybil resistance | `sybil.realities.yaml` | Still true by design; documented as one-coldkey reward partitioning only |
 | Validators not individually trusted | `trust.assumptions.yaml` | Softer-trust model documented for Chutes + voluntary HTTP peer checks |
 | Synapse deprecated | `subnet.invariants.yaml` | Still shipping path; bounded by [transport.md](transport.md) as a major-release HTTP + Epistula migration gate |
 | Open-source / corpus | `subnet.invariants.yaml` | Partially mitigated (`summary` export) |

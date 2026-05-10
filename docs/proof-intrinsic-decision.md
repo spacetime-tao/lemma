@@ -27,7 +27,7 @@ bulk more than proof quality:
   general problem.
 
 Raising this heuristic without a better foundation would reward padding. The
-live path avoids that problem by keeping proof scoring binary.
+live path avoids that problem by scoring only Lean-verified proof acceptance.
 
 ## Decision
 

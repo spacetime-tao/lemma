@@ -1,4 +1,4 @@
-"""Replay exported rewards under dedup and simple sybil-copy probes."""
+"""Replay exported rewards under current partitioning and copy probes."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
-from lemma.scoring.dedup import dedup_coldkeys, dedup_identical_submissions, submission_fingerprint
+from lemma.scoring.dedup import dedup_identical_submissions, partition_same_coldkey_weights, submission_fingerprint
 from lemma.scoring.pareto import ScoredEntry, pareto_weights
 
 DEFAULT_PROOF_WEIGHT = 0.0
@@ -40,7 +40,7 @@ class ReplayOutcome:
     name: str
     entries_weighted: int
     identical_dropped: int
-    coldkey_dropped: int
+    coldkey_partitioned: int
     weights: dict[int, float]
 
     @property
@@ -104,7 +104,7 @@ def render_report(report: ReplayReport, *, clone_k: int = 5, epoch_limit: int = 
         lines.append("No replayable full-export rows found.")
         return "\n".join(lines)
     if coldkey_rows == 0:
-        lines.append("coldkey_note=no coldkeys in export; coldkey dedup assumes one coldkey per UID")
+        lines.append("coldkey_note=no coldkeys in export; replay assumes one coldkey per UID")
 
     epochs = _epochs(rows)
     selected = sorted(epochs.items())[-max(0, int(epoch_limit)) :]
@@ -113,12 +113,17 @@ def render_report(report: ReplayReport, *, clone_k: int = 5, epoch_limit: int = 
 
     epoch_results = []
     for block, epoch_rows in selected:
-        base = replay_epoch(epoch_rows, name="base", identical_dedup=True, coldkey_dedup=True)
+        base = replay_epoch(epoch_rows, name="base", identical_dedup=False, coldkey_partition=True)
         scenarios = [
             base,
-            replay_epoch(epoch_rows, name="no_identical_dedup", identical_dedup=False, coldkey_dedup=True),
-            replay_epoch(epoch_rows, name="no_coldkey_dedup", identical_dedup=True, coldkey_dedup=False),
-            replay_epoch(epoch_rows, name="no_dedup", identical_dedup=False, coldkey_dedup=False),
+            replay_epoch(epoch_rows, name="legacy_identical_dedup", identical_dedup=True, coldkey_partition=True),
+            replay_epoch(epoch_rows, name="no_coldkey_partition", identical_dedup=False, coldkey_partition=False),
+            replay_epoch(
+                epoch_rows,
+                name="legacy_identical_no_partition",
+                identical_dedup=True,
+                coldkey_partition=False,
+            ),
         ]
         exact = clone_pressure(epoch_rows, clone_k=clone_k, rewrite=False)
         rewritten = clone_pressure(epoch_rows, clone_k=clone_k, rewrite=True)
@@ -148,7 +153,7 @@ def replay_epoch(
     *,
     name: str,
     identical_dedup: bool,
-    coldkey_dedup: bool,
+    coldkey_partition: bool,
 ) -> ReplayOutcome:
     aggregate: dict[int, list[ScoredEntry]] = {}
     identical_dropped = 0
@@ -161,17 +166,20 @@ def replay_epoch(
             aggregate.setdefault(entry.uid, []).append(entry)
 
     scored = _merge_uid_entries(aggregate)
-    coldkey_dropped = 0
-    if coldkey_dedup and scored:
-        coldkeys = _coldkeys_by_uid(rows)
-        scored, coldkey_dropped = dedup_coldkeys(scored, lambda uid: coldkeys.get(uid, f"uid:{uid}"))
-
     weights = pareto_weights(scored)
+    coldkey_partitioned = 0
+    if coldkey_partition and weights:
+        coldkeys = _coldkeys_by_uid(rows)
+        weights, coldkey_partitioned = partition_same_coldkey_weights(
+            weights,
+            lambda uid: coldkeys.get(uid, f"uid:{uid}"),
+        )
+
     return ReplayOutcome(
         name=name,
         entries_weighted=len(weights),
         identical_dropped=identical_dropped,
-        coldkey_dropped=coldkey_dropped,
+        coldkey_partitioned=coldkey_partitioned,
         weights=weights,
     )
 
@@ -180,7 +188,7 @@ def clone_pressure(rows: list[ReplayRow], *, clone_k: int, rewrite: bool) -> Clo
     if clone_k <= 0 or not rows:
         return None
 
-    base = replay_epoch(rows, name="base", identical_dedup=True, coldkey_dedup=True)
+    base = replay_epoch(rows, name="base", identical_dedup=False, coldkey_partition=True)
     source_uid = base.top_uid
     if source_uid is None:
         return None
@@ -202,8 +210,8 @@ def clone_pressure(rows: list[ReplayRow], *, clone_k: int, rewrite: bool) -> Clo
     outcome = replay_epoch(
         [*rows, *clones],
         name="rewritten_clone" if rewrite else "exact_clone",
-        identical_dedup=True,
-        coldkey_dedup=True,
+        identical_dedup=False,
+        coldkey_partition=True,
     )
     group = (source_uid, *clone_uids)
     base_share = base.weights.get(source_uid, 0.0)
@@ -354,7 +362,7 @@ def _outcome_line(outcome: ReplayOutcome) -> str:
     return (
         f"{outcome.name}: weighted_uids={outcome.entries_weighted} top_uid={top_uid} "
         f"top_weight={outcome.top_weight:.4f} identical_dropped={outcome.identical_dropped} "
-        f"coldkey_dropped={outcome.coldkey_dropped}"
+        f"coldkey_partitioned={outcome.coldkey_partitioned}"
     )
 
 
@@ -363,7 +371,7 @@ def _clone_line(name: str, pressure: ClonePressure, *, clone_k: int) -> str:
         f"{name}_k={clone_k}: source_uid={pressure.source_uid} "
         f"base_share={pressure.base_share:.4f} group_share={pressure.group_share:.4f} "
         f"extra_share={pressure.extra_share:.4f} identical_dropped={pressure.outcome.identical_dropped} "
-        f"coldkey_dropped={pressure.outcome.coldkey_dropped}"
+        f"coldkey_partitioned={pressure.outcome.coldkey_partitioned}"
     )
 
 

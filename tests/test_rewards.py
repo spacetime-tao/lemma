@@ -4,7 +4,7 @@ from lemma.scoring.dedup import submission_fingerprint
 from lemma.scoring.rewards import entry_from_verified_proof
 
 
-def test_entry_from_verified_proof_is_binary_pass() -> None:
+def test_entry_from_verified_proof_scores_verified_proof() -> None:
     theorem = "theorem t : True := by sorry"
     proof = "theorem t : True := by trivial"
 

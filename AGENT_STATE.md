@@ -12,9 +12,9 @@ logic.
 
 ## Current Direction
 
-Lemma's live incentive mechanism should center on a binary outcome: a miner
-either submits a Lean proof for the theorem that passes verification, or it
-does not.
+Lemma's live incentive mechanism should center on Lean verification: a miner's
+proof either verifies for the published theorem and can enter scoring, or it
+does not verify and stays out of scoring.
 
 Reason: the product center is simple, reproducible proof acceptance.
 
@@ -44,7 +44,7 @@ Reason: the product center is simple, reproducible proof acceptance.
 
 ## Relevant Docs
 
-- Binary reward design: `docs/objective-decision.md`,
+- Proof-verification reward design: `docs/objective-decision.md`,
   `docs/proof-only-incentives.md`, `docs/faq.md`.
 - VPS/operator guidance: `docs/production.md`, `docs/system-requirements.md`,
   `docs/miner.md`, `docs/validator.md`.
@@ -58,6 +58,9 @@ Reason: the product center is simple, reproducible proof acceptance.
   path is stable.
 - Multiple miner hotkeys on one VPS need separate wallet hotkeys, axon ports,
   logs, and service units.
+- Multiple hotkeys under one coldkey are okay for testing. Current scoring
+  partitions one coldkey's allocation among its successful hotkeys instead of
+  multiplying the allocation.
 - Validator tests should compare cold verification against warmed verification;
   do not use the cold Mathlib path as the steady-state estimate.
 - Docker Desktop on a local Mac can mislead verification timing because bind
@@ -93,14 +96,13 @@ Reason: the product center is simple, reproducible proof acceptance.
     consensus, and emission for UIDs `2`-`6`.
 - Direct validator dry-run through an SSH tunnel to the worker:
   - theorem `gen/7091600`;
-  - `verified=5`, `scored=5`, `dedup_dropped=4`, `seconds=68.11`;
+  - all five miner responses verified; old reward logic kept one rewarded UID;
   - dry-run weights subset: `{2: 1.0}`;
   - all five miners solved the same theorem in roughly `13.6`-`16.1` seconds;
   - this did not set weights or earn alpha because it was a dry-run.
 - One live validator epoch ran locally through an SSH tunnel to the worker:
   - theorem `gen/7091700`;
-  - `verified=5`, `scored=5`, `dedup_dropped=3`, `coldkey_dropped=1`,
-    `seconds=309.83`;
+  - all five miner responses verified; old reward logic kept one rewarded UID;
   - live weights subset: `{2: 1.0}`;
   - `set_weights success=True message=Not waiting for finalization or inclusion`;
   - miner logs show UIDs `2`-`6` answered in roughly `13.6`-`19.0` seconds.
@@ -123,8 +125,8 @@ Reason: the product center is simple, reproducible proof acceptance.
     the local SSH tunnel to the worker reset; miners still answered in roughly
     `21.9`-`34.7` seconds.
   - local Docker-worker retry at theorem `gen/7093200` succeeded:
-    `verified=5`, `scored=5`, `dedup_dropped=4`, `seconds=258.73`,
-    live weights subset `{2: 1.0}`, `set_weights success=True`.
+    all five miner responses verified; old reward logic kept UID `2`; live
+    weights subset `{2: 1.0}`, `set_weights success=True`.
   - metagraph at block `7093239` showed UID `1` with `validator_permit=True`,
     `S=2297.36254883`, and validator emission `13.71050453`.
   - miner UIDs `2`-`6` still showed zero immediate emission because subnet
@@ -138,12 +140,15 @@ Reason: the product center is simple, reproducible proof acceptance.
     `S=2528.13598633`;
   - miner UID `2`: `consensus=1.0`, `incentive=1.0`,
     `emission=148.01081848`, `S=148.01081848`;
-  - miner UIDs `3`-`6` remained at zero because the validator round deduped
-    identical proof submissions and kept UID `2`.
+  - miner UIDs `3`-`6` remained at zero because the old validator reward path
+    grouped identical proof submissions and kept UID `2`.
+- Follow-up mechanism change: identical proof reward dedup should not be live.
+  Current code keeps all verified miner entries and applies same-coldkey reward
+  partitioning after weights are computed.
 
 ## Notes For Future Agents
 
 - Preserve proof-verification language.
-- Keep the reward story binary in docs, tests, and CLI copy.
+- Keep docs, tests, and CLI copy centered on Lean proof verification.
 - Avoid adding defensive complexity where the data model or call path can make
   invalid states impossible.

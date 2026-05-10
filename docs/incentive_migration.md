@@ -1,6 +1,6 @@
 # Incentive layer hard-migration
 
-This document tracks **post-audit** mechanism changes in Lemma: proof-centric scoring, deduplication, EMA reputation, expanded templates, and optional protocol hooks (env-gated).
+This document tracks **post-audit** mechanism changes in Lemma: proof-centric scoring, same-coldkey partitioning, EMA reputation, expanded templates, and optional protocol hooks (env-gated).
 
 **Checklist (done vs open):** [incentive-roadmap.md](incentive-roadmap.md).
 
@@ -9,8 +9,8 @@ This document tracks **post-audit** mechanism changes in Lemma: proof-centric sc
 | Mechanism | Env / behavior |
 |-----------|----------------|
 | Proof-only target | A submitted proof must pass Lean verification for the published theorem before it can receive score. See [proof-only-incentives.md](proof-only-incentives.md). |
-| Identical submission dedup | `LEMMA_SCORING_DEDUP_IDENTICAL=1` — same normalized `(theorem, proof)` keeps one score; proof comments are stripped and whitespace is collapsed before fingerprinting. |
-| Coldkey dedup | `LEMMA_SCORING_COLDKEY_DEDUP=1` — one hotkey per coldkey (metagraph). |
+| Identical-payload verify reuse | Same normalized proof payloads can reuse one Lean verification result inside an epoch. This saves validator CPU; it does not remove reward entries. |
+| Same-coldkey partition | `LEMMA_SCORING_COLDKEY_PARTITION=1` — after weights are computed, successful hotkeys under the same coldkey share one coldkey allocation. |
 | EMA reputation | `LEMMA_REPUTATION_EMA_ALPHA` (default **0.08**); state file `LEMMA_REPUTATION_STATE_PATH` or `~/.lemma/validator_reputation.json`. |
 | Verify credibility | `LEMMA_REPUTATION_VERIFY_CREDIBILITY_ALPHA` (default **0.08**) — EMA toward 1.0 on Lean verify pass, 0.0 on fail; persisted with reputation JSON. Applied as `(credibility ** LEMMA_REPUTATION_CREDIBILITY_EXPONENT)` after EMA smoothing. The default exponent is **1.0**; exponent **0** disables the multiplier. See [credibility-exponent-decision.md](credibility-exponent-decision.md). |
 | Proof-only live score | A Lean-verified proof enters scoring; a failed proof does not. |
@@ -27,7 +27,7 @@ This document tracks **post-audit** mechanism changes in Lemma: proof-centric sc
 | Problem seed RPC slack | **`LEMMA_PROBLEM_SEED_CHAIN_HEAD_SLACK_BLOCKS`** pulls chain head back before `resolve_problem_seed` and forward HTTP deadline math — reduces ±1 RPC skew at quantize edges (`lemma/common/problem_seed.py`). |
 | Lean workspace cache key | Default **template-only** slot under **`LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR`**; optional **`LEMMA_LEAN_WORKSPACE_CACHE_INCLUDE_SUBMISSION_HASH=1`** appends proof-body fingerprint (`workspace_verify_cache_key` in `lemma/lean/workspace.py`). |
 | Toolchain / image pins | Local `lemma/lean-sandbox:latest` is a dev build tag; production operators publish an immutable sandbox ref and set **`LEAN_SANDBOX_IMAGE`** consistently. See [toolchain-image-policy.md](toolchain-image-policy.md). |
-| Sybil / identity (documentation) | Coldkey dedup and identical-submission dedup are **not** sybil-proof — see [sybil_economics.md](sybil_economics.md) and [`knowledge/sybil.realities.yaml`](../knowledge/sybil.realities.yaml). |
+| Sybil / identity (documentation) | Same-coldkey partitioning is **not** sybil-proof — see [sybil_economics.md](sybil_economics.md) and [`knowledge/sybil.realities.yaml`](../knowledge/sybil.realities.yaml). |
 | Validator Lean load (documentation) | **`LEMMA_LEAN_VERIFY_MAX_CONCURRENT`**, optional **`LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION`** when attest on — see [validator_lean_load.md](validator_lean_load.md). |
 | Transport (documentation) | Dendrite/Axon + **`LemmaChallenge`** body-hash integrity vs **`computed_body_hash`**; miner responses fail closed when the hash header or deadline block is missing — see [transport.md](transport.md). [`knowledge/subnet.invariants.yaml`](../knowledge/subnet.invariants.yaml) deprecates Axon-first **new** designs in favor of HTTP + Epistula. |
 
@@ -41,7 +41,7 @@ Adding templates changes `generated_registry_sha256`. Operators must run `lemma-
 - Proof intrinsic decision: [proof-intrinsic-decision.md](proof-intrinsic-decision.md)
 - Proof-only incentive design: [proof-only-incentives.md](proof-only-incentives.md)
 - Credibility exponent decision: [credibility-exponent-decision.md](credibility-exponent-decision.md)
-- Dedup: `lemma/scoring/dedup.py`
+- Proof fingerprints / coldkey partition: `lemma/scoring/dedup.py`
 - Reputation: `lemma/scoring/reputation.py`
 - Problem mix: `lemma/problems/generated.py` (`expand_seed_for_problem_rng`), `lemma/common/problem_seed.py` (`mix_sub_problem_seed`)
 - Lean cache: `lemma/lean/workspace.py` (`workspace_verify_cache_key`), `lemma/lean/sandbox.py`

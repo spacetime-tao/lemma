@@ -95,20 +95,21 @@ Codex should not create, store, or custody coldkeys for an operator. It can help
 write commands, inspect public chain state, and configure services after the user
 creates keys and enters passwords locally.
 
-## Why Only One Hotkey Earned In The Test
+## Same Proofs And Same-Coldkey Hotkeys
 
-Two filters are active by default:
+Current Lemma rewards every miner entry whose proof verifies. If two miners
+submit the same proof for the same theorem and both proofs pass Lean, both can
+enter the weight map.
 
-1. **Identical proof dedup** applies to everyone. If several UIDs submit the
-   same normalized theorem/proof pair, Lemma keeps one scored entry for that
-   proof. This prevents exact-copy farming, but it also means simple generated
-   theorems with one obvious proof can collapse to one rewarded UID.
-2. **Coldkey dedup** applies after that. If several remaining entries share the
-   same coldkey, Lemma keeps one entry for that coldkey.
+For multiple hotkeys under one coldkey, Lemma partitions that coldkey's
+allocation across its successful hotkeys. The operator does not get multiplied
+emission by registering more hotkeys under the same coldkey; the allocation is
+spread among them.
 
-In the May 2026 VPS test, UIDs `2`-`6` all answered successfully, but their
-proofs collapsed under identical-proof dedup. UID `2` was the kept entry, so UID
-`2` earned alpha and UIDs `3`-`6` did not. The other UIDs did not fail Lean.
+The earlier May 2026 VPS test ran before this rule change. In that run, UIDs
+`2`-`6` all answered successfully, but the old reward dedup kept UID `2` and
+dropped the other identical proofs from the reward map. The other UIDs did not
+fail Lean.
 
 ## Practical Next Steps
 
@@ -117,7 +118,7 @@ For continued testing:
 1. Keep the current one-coldkey, multi-hotkey setup for uptime, latency, and
    observability tests.
 2. Add a separate coldkey only when testing independent economic identity.
-3. Improve prover diversity before expecting multiple hotkeys to earn on the
-   same simple theorem.
+3. Improve prover diversity for robustness and harder theorem coverage, not to
+   work around same-proof reward drops.
 4. Run a persistent validator only after the validator host has hotkey-only key
    custody, Docker worker/cache, and monitoring in place.

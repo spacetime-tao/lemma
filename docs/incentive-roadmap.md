@@ -10,8 +10,8 @@ This doc is for **operators and contributors** planning work—not step-by-step 
 
 - [x] Local prose-tooling hardening: strict single-object JSON rubric parse (`judge/json_util.py`) — rejects multi-rubric games
 - [x] Local prose-tooling hardening: fenced miner content + prompt treating trace as untrusted data
-- [x] Identical-submission dedup (same normalized theorem + proof fingerprint)
-- [x] Coldkey dedup (best hotkey per coldkey on metagraph)
+- [x] Identical-payload Lean verify reuse without reward drops
+- [x] Same-coldkey partitioning after weights are computed
 - [x] EMA smoothing / reputation state for reward weighting (on-disk state)
 - [x] Optional multi-theorem epochs (`LEMMA_EPOCH_PROBLEM_COUNT`, default 1)
 - [x] Empty-epoch uniform weights exclude own validator UID when possible
@@ -49,7 +49,7 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 
 ### Trust & sybil
 
-- [x] **Sybil economics** — Operator guide [sybil_economics.md](sybil_economics.md): Lemma dedup vs coldkey sybil realities, UID pressure, offline replay helper, the decision gate required before Sybil/Pareto scoring changes, the decision-record template, and the policy rubric for interpreting replay results. The replay analyzer now supports `--require-decision-ready` plus concrete `decision_data_gaps` for release checklists. **Still open:** run the replay on real private exports and record a release decision before changing Sybil/tie-break behavior ([`knowledge/sybil.realities.yaml`](../knowledge/sybil.realities.yaml)).
+- [x] **Sybil economics** — Operator guide [sybil_economics.md](sybil_economics.md): same-coldkey partitioning vs distinct-coldkey sybil realities, UID pressure, offline replay helper, the evidence gate required before Sybil/Pareto scoring changes, the decision-record template, and the policy rubric for interpreting replay results. The replay analyzer now supports `--require-decision-ready` plus concrete `decision_data_gaps` for release checklists. **Still open:** run the replay on real private exports before changing Sybil/tie-break behavior ([`knowledge/sybil.realities.yaml`](../knowledge/sybil.realities.yaml)).
 - [x] **Validator profile / infra trust** — HTTP peer check for **`judge_profile_sha256`** ships (`LEMMA_JUDGE_PROFILE_ATTEST_*`) and is documented as operator coordination, not Byzantine consensus or transport security. Signed/on-chain or k-of-n checks remain a separate design. See [judge-profile-attest.md](judge-profile-attest.md).
 
 ### Compute placement

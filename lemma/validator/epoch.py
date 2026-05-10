@@ -35,7 +35,7 @@ from lemma.protocol_commit_reveal import (
     normalize_commitment_hex,
     verify_reveal_against_commitment,
 )
-from lemma.scoring.dedup import dedup_coldkeys, dedup_identical_submissions
+from lemma.scoring.dedup import partition_same_coldkey_weights
 from lemma.scoring.pareto import ScoredEntry, pareto_weights
 from lemma.scoring.reputation import apply_ema_to_entries, load_reputation, save_reputation
 from lemma.scoring.rewards import entry_from_verified_proof
@@ -188,7 +188,7 @@ async def _run_verify_batch(
             groups = list(grouped.values())
             verify_inputs = [g[0] for g in groups]
             logger.debug(
-                "lean verify dedup: candidates={} unique_payloads={} reused_results={}",
+                "lean verify reuse: candidates={} unique_payloads={} reused_results={}",
                 len(candidates),
                 len(verify_inputs),
                 len(candidates) - len(verify_inputs),
@@ -267,8 +267,7 @@ async def run_epoch(
 
     total_verified = 0
     total_scored = 0
-    dedup_dropped = 0
-    coldkey_dropped = 0
+    coldkey_partitioned = 0
     deadline_rejects = 0
     challenge_rejects = 0
     attest_rejects = 0
@@ -548,18 +547,10 @@ async def run_epoch(
                 )
             total_scored += len(scored_sub)
 
-            if settings.lemma_scoring_dedup_identical and scored_sub:
-                scored_sub, ddrop = dedup_identical_submissions(scored_sub, lambda e: e.submission_fp)
-                dedup_dropped += ddrop
-
             for e in scored_sub:
                 aggregate[e.uid].append(e)
 
     scored = _merge_multi_round_entries(aggregate)
-
-    if settings.lemma_scoring_coldkey_dedup and scored:
-        scored, ckdrop = dedup_coldkeys(scored, lambda u: _coldkey_for_uid(metagraph, u))
-        coldkey_dropped += ckdrop
 
     alpha = float(settings.lemma_reputation_ema_alpha)
     cred_exp = float(settings.lemma_reputation_credibility_exponent)
@@ -577,6 +568,11 @@ async def run_epoch(
             logger.warning("could not save reputation state: {}", e)
 
     weights_by_uid = pareto_weights(scored)
+    if settings.lemma_scoring_coldkey_partition and weights_by_uid:
+        weights_by_uid, coldkey_partitioned = partition_same_coldkey_weights(
+            weights_by_uid,
+            lambda u: _coldkey_for_uid(metagraph, u),
+        )
 
     logger.debug(
         "epoch concurrency caps used: LEMMA_LEAN_VERIFY_MAX_CONCURRENT={} k_problems={}",
@@ -611,11 +607,11 @@ async def run_epoch(
         "lemma_epoch_summary chain_head_block={} problem_seed_chain_head={} problem_seed_slack_blocks={} "
         "problem_seed={} problem_seed_tag={} split={} "
         "theorem_id={} k_problems={} verified={} scored={} pareto_entries={} "
-        "dedup_dropped={} coldkey_dropped={} deadline_rejects={} "
+        "coldkey_partitioned={} deadline_rejects={} "
         "challenge_rejects={} "
         "attest_rejects={} commit_reveal_rejects={} "
         "skip_set_weights={} seconds={:.2f}  "
-        "[verified=Lean proof OK; scored=verified proof rows after filters; pareto_entries=weight rows]",
+        "[verified=Lean proof OK; scored=verified proof rows; pareto_entries=weight rows]",
         cur_block,
         seed_head,
         slack_b,
@@ -627,8 +623,7 @@ async def run_epoch(
         total_verified,
         total_scored,
         len(weights_by_uid),
-        dedup_dropped,
-        coldkey_dropped,
+        coldkey_partitioned,
         deadline_rejects,
         challenge_rejects,
         attest_rejects,

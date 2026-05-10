@@ -17,12 +17,13 @@ accepts the proof or rejects it.
 
 1. **Eligibility:** the submitted proof must pass the pinned Lean toolchain,
    Mathlib revision, sandbox policy, theorem binding checks, and cheat scans.
-2. **Equivalence:** identical normalized proof payloads are grouped so duplicate
-   submissions do not create extra proof work for validators.
-3. **Proof score:** each eligible proof group receives the same score before
-   dedup, reputation, and subnet weight policy are applied.
-4. **Weights:** group-level weights are mapped back to eligible miners after
-   coldkey / sybil policy is applied.
+2. **Proof score:** each eligible miner entry receives the same proof score
+   before reputation and subnet weight policy are applied.
+3. **Verifier reuse:** validators may reuse a Lean result for identical proof
+   payloads inside one epoch, but that does not remove a miner from rewards.
+4. **Weights:** reputation and Pareto weighting build the miner weight map. When
+   several hotkeys share one coldkey, that coldkey's allocation is partitioned
+   among those hotkeys instead of multiplied.
 
 ## Current Live Rollout
 
