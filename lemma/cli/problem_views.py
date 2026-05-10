@@ -7,17 +7,6 @@ from lemma.common.config import LemmaSettings
 from lemma.problems.base import Problem
 
 
-def human_topic_label(topic_raw: str) -> str:
-    """Readable label from catalog tag (e.g. ``logic.propositional`` → ``Logic · propositional``)."""
-    t = topic_raw.strip()
-    if not t:
-        return ""
-    parts = [seg.replace("_", " ") for seg in t.split(".")]
-    if len(parts) >= 2:
-        return f"{parts[-2].title()} · {parts[-1]}"
-    return parts[0].title() if parts else t
-
-
 def echo_problem_card(
     p: Problem,
     *,
@@ -38,7 +27,8 @@ def echo_problem_card(
     if isinstance(ex, dict):
         topic_raw = str(ex.get("topic") or "").strip()
     if topic_raw:
-        human = human_topic_label(topic_raw)
+        parts = [seg.replace("_", " ") for seg in topic_raw.split(".")]
+        human = f"{parts[-2].title()} · {parts[-1]}" if len(parts) >= 2 else parts[0].title()
         click.echo(
             stylize("  area         ", dim=True)
             + stylize(human, fg="yellow", bold=True)
