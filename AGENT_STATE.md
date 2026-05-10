@@ -68,8 +68,8 @@ Reason: the product center is simple, reproducible proof acceptance.
 
 ## Latest Baseline Status
 
-- Core Lemma `main` pushed through `a4e269a`
-  (`Clarify README proof verification wording`).
+- Core Lemma `main` pushed through `bd8f271`
+  (`Clarify proof-verification messaging`).
 - `lemma-cli` `main` pushed through `022a779` (CLI proof-verification
   messaging).
 - Local verification before VPS testing:
@@ -80,13 +80,13 @@ Reason: the product center is simple, reproducible proof acceptance.
   - `lemma-cli doctor`: passed;
   - `lemma validator-check`: printed READY after subnet pins refresh.
 - Worker droplet `lemma-lean-worker-1` (`167.99.145.132`):
-  - repo `/opt/lemma` updated to `a4e269a`, `uv sync` run, service restarted;
+  - repo `/opt/lemma` updated to `bd8f271`, `uv sync` run, service restarted;
   - `lemma-lean-worker-http.service` active;
   - worker listens on `127.0.0.1:8787`; remote external port refused, which is
     expected for the private worker;
   - local worker health on the droplet returned `{"status":"ok"}`.
 - Miner droplet `lemma-miner-1` (`161.35.50.115`):
-  - repo `/opt/lemma` updated to `a4e269a`, `uv sync --extra btcli` run;
+  - repo `/opt/lemma` updated to `bd8f271`, `uv sync --extra btcli` run;
   - active miner services on ports `8091`-`8095`, externally reachable;
   - UIDs `2`-`6` registered on testnet netuid `467` at that IP/port set;
   - metagraph snapshot around block `7091614` still showed zero incentive,
@@ -97,9 +97,18 @@ Reason: the product center is simple, reproducible proof acceptance.
   - dry-run weights subset: `{2: 1.0}`;
   - all five miners solved the same theorem in roughly `13.6`-`16.1` seconds;
   - this did not set weights or earn alpha because it was a dry-run.
-- No validator service is currently recorded as running persistently. Next live
-  alpha test needs a real validator run with `set_weights`, either local with
-  the remote worker tunnel or on a separate validator VPS.
+- One live validator epoch ran locally through an SSH tunnel to the worker:
+  - theorem `gen/7091700`;
+  - `verified=5`, `scored=5`, `dedup_dropped=3`, `coldkey_dropped=1`,
+    `seconds=309.83`;
+  - live weights subset: `{2: 1.0}`;
+  - `set_weights success=True message=Not waiting for finalization or inclusion`;
+  - miner logs show UIDs `2`-`6` answered in roughly `13.6`-`19.0` seconds.
+- Current alpha blocker: local validator UID `1` has `stake=0.0` and
+  `validator_permit=False`. Its `last_update` moved to block `7091764`, but raw
+  chain weights still only show UID `0` as a visible validator row. To make miner
+  hotkeys earn alpha from this validator, stake testnet TAO to the validator
+  hotkey and confirm it receives validator permit, then run another live epoch.
 
 ## Notes For Future Agents
 
