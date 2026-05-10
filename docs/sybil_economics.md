@@ -53,6 +53,10 @@ Read `decision_data_gaps` before arguing policy. If it lists missing replayable
 rows, epochs, UIDs, theorem ids, or coldkeys, the right answer is more data, not
 a reward change.
 
+Keep the private JSONL export private. The public record can quote the analyzer
+summary lines, the chosen policy, and the accepted bypasses without publishing
+proof scripts, traces, or per-miner training rows.
+
 Policy choices to make:
 
 | Choice | When it fits | Cost |
@@ -75,19 +79,43 @@ Use this rubric after a private `full` export clears `--require-decision-ready`.
 | **Invest in uncopyable work / problem supply first** | Replay shows copied outputs are naturally competitive and no simple similarity rule is robust enough; the fix belongs in task design rather than another scoring check. |
 | **No reward-code change** | Coldkeys are missing, the export is too small, UID cost/reward context is unknown, or the finding depends on one hand-picked epoch. |
 
+## Replay summary to preserve
+
+Copy these analyzer lines into the decision record. They are enough to review the
+decision later without publishing the private export:
+
+| Line | Why it matters |
+| --- | --- |
+| `rows_total`, `rows_replayable`, `rows_with_coldkey`, `invalid_json_lines` | Shows whether the export was clean and complete enough to study. |
+| `decision_data_blockers`, `decision_data_gaps`, `decision_ready` | Separates "collect more data" from "ready for governance review." |
+| `summary_exact_clone_extra_share` | Measures simple copy-paste pressure after identical dedup. |
+| `summary_rewritten_clone_extra_share`, `summary_rewritten_clone_group_share` | Measures lightly rewritten K-miner pressure, the main bypass of exact dedup. |
+| Per-epoch `base`, `no_identical_dedup`, `no_coldkey_dedup`, `no_dedup` lines | Shows whether one epoch is driving the conclusion. |
+
 Decision-record template:
 
 ```text
 Sybil / Pareto economics decision:
-Chosen policy:
+Chosen policy: keep current dedup | cap/dampen near duplicates | winners-take-most | uncopyable-work first | no reward-code change
+Decision ready: yes | no
 Reason:
 
 Evidence reviewed:
 - UID registration cost:
 - Expected reward per slot:
 - Offline replay dataset:
+- Analyzer command:
+- Export profile:
+- rows_total / rows_replayable / rows_with_coldkey:
+- decision_data_blockers:
+- decision_data_gaps:
+- summary_exact_clone_extra_share:
+- summary_rewritten_clone_extra_share:
+- summary_rewritten_clone_group_share:
+- Per-epoch notes:
 - K-miner result:
 - Known bypasses accepted:
+- Human review notes:
 
 Reward/profile changes:
 - Dedup defaults:
