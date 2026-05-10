@@ -362,6 +362,7 @@ def test_render_report_flags_same_theorem_metric_judge_disagreements(tmp_path, c
     assert "low_line=1 low_uid=1 low_metric=100 low_judge=0.8000" in rendered
     assert "metric_delta=200.0000 judge_delta=-0.1000" in rendered
     assert "same_theorem_metric_judge_disagreements(metric_delimiters):" in rendered
+    assert "same_theorem_metric_judge_disagreements(proof_intrinsic):" in rendered
 
 
 def test_require_decision_ready_requires_same_theorem_comparisons(tmp_path, capsys) -> None:

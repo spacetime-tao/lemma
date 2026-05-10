@@ -66,8 +66,9 @@ Keep the analyzer report with any scoring decision notes. Look first at:
   length, current `proof_intrinsic_score`, and judge composite,
 - `within_theorem_comparisons` and `corr_within_theorem(...)`, which subtract
   each theorem's baseline before comparing proof metrics to judge scores,
-- `same_theorem_metric_judge_disagreements(...)`, which points to pairs where a
-  metric is higher but the judge score is equal or lower on the same theorem,
+- `same_theorem_metric_judge_disagreements(...)`, which points to pairs where
+  metric bytes, delimiter count, or the current text heuristic is higher but
+  the judge score is equal or lower on the same theorem,
 - padding-looking outliers and the conservative `gate_verdict`.
 
 Do **not** change `LEMMA_SCORE_PROOF_WEIGHT` from one report alone. The proof-side

@@ -197,8 +197,8 @@ Current snapshot uses `wc -l` over Python files, except `docs/` which counts Mar
 | `lemma/protocol*` | 290 | 331 | +41 |
 | `lemma/common/` | 1 110 | 1 261 | +151 |
 | `lemma/` total | **12 630** | **8 802** (66 files) | **-3 828** |
-| `tests/` | 2 330 | 3 991 (59 files) | +1 661 |
-| `docs/` markdown | 1 355 | 2 845 (30 files) | +1 490 |
+| `tests/` | 2 330 | 3 992 (59 files) | +1 662 |
+| `docs/` markdown | 1 355 | 2 847 (30 files) | +1 492 |
 
 CLI alone was cited as **43 %** of `lemma/`; it is now about **21 %** by this simple line-count snapshot. The core shrank substantially, while tests/docs grew because safety gates, replay guards, and decision records were added.
 
@@ -377,5 +377,6 @@ Examples called out in Round 3: judge model/URL, Anthropic default model age, Le
 | 2026-05 | Recorded problem-seed helper cleanup and refreshed common/core line counts |
 | 2026-05 | Tightened proof-metrics readiness and added within-theorem correlations |
 | 2026-05 | Added same-theorem proof-metric disagreement candidates |
+| 2026-05 | Extended same-theorem disagreement reporting to the current text heuristic |
 
 **Maintainers:** bump §17 when you materially change scope or close a whole section.

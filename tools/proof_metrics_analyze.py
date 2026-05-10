@@ -131,6 +131,11 @@ def render_report(report: MetricsReport, *, outlier_limit: int = 8) -> str:
         metric=lambda r: r.proof_metric_delimiters,
         limit=outlier_limit,
     )
+    intrinsic_disagreements = same_theorem_metric_judge_disagreements(
+        comparison_groups,
+        metric=lambda r: r.proof_intrinsic,
+        limit=outlier_limit,
+    )
 
     lines.extend(
         [
@@ -200,6 +205,13 @@ def render_report(report: MetricsReport, *, outlier_limit: int = 8) -> str:
             "same_theorem_metric_judge_disagreements(metric_delimiters)",
             delimiter_disagreements,
             metric=lambda r: r.proof_metric_delimiters,
+        ),
+    )
+    lines.extend(
+        _render_disagreements(
+            "same_theorem_metric_judge_disagreements(proof_intrinsic)",
+            intrinsic_disagreements,
+            metric=lambda r: f"{r.proof_intrinsic:.4f}",
         ),
     )
     return "\n".join(lines)
