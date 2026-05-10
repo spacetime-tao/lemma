@@ -31,7 +31,10 @@ Best current practice:
    uses `docker exec` instead of creating a fresh container every proof.
 4. Leave `LEMMA_LEAN_ALWAYS_CACHE_GET` unset in normal operation; set it only when
    you intentionally want to refresh Lake caches.
-5. Measure with `LEMMA_LEAN_VERIFY_TIMING=1` on production-like hardware before
+5. Leave `LEMMA_LEAN_PROOF_METRICS` off for production-speed validation; enable
+   it only for calibration/export runs where the extra Lean probe is worth the
+   latency.
+6. Measure with `LEMMA_LEAN_VERIFY_TIMING=1` on production-like hardware before
    shortening theorem windows.
 
 Cold-cache measurements should not be used as the steady-state validator budget,
