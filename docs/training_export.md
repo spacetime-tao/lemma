@@ -81,6 +81,8 @@ Keep the analyzer report with any scoring decision notes. Look first at:
 Do **not** change `LEMMA_SCORE_PROOF_WEIGHT` from one report alone. The proof-side
 gate in [proof-intrinsic-decision.md](proof-intrinsic-decision.md) still requires
 real export data plus adversarial padding fixtures before live reward changes.
+Copy the analyzer summary lines, not the private JSONL, into that decision
+record.
 
 Analyze a local `full` export with proof metrics:
 

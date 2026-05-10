@@ -161,6 +161,60 @@ comparisons, lacks judge labels, has frequent probe failures, or depends on one
 small hand-picked theorem family. In that case, collect more data or keep the
 current low default.
 
+## Analyzer Summary to Preserve
+
+Keep the private JSONL export private. A public issue, PR, or governance note can
+quote the analyzer summary lines and human review notes without publishing proof
+scripts, traces, judge labels, or per-miner rows.
+
+Copy these lines into the decision record:
+
+| Line | Why it matters |
+| --- | --- |
+| `rows_total`, `rows_with_proof_metrics`, `rows_with_successful_proof_metrics`, `rows_with_failed_proof_metrics`, `invalid_json_lines` | Shows whether the export is complete enough and whether the Lean probe is reliable. |
+| `decision_data`, `decision_data_blockers`, `decision_data_warnings`, `decision_data_gaps`, `decision_ready` | Separates "collect more data" from "ready for review." |
+| `export_context` | Shows whether successful rows came from one judge profile and one generated registry. |
+| `gate_verdict`, `gate_reasons` | Records the analyzer's conservative stop/go signal. |
+| `corr_within_theorem(metric_bytes, judge_composite)`, `corr_within_theorem(metric_delimiters, judge_composite)`, `corr_within_theorem(proof_intrinsic, judge_composite)` | Measures proof-side signals inside same-theorem comparisons rather than mostly measuring theorem size. |
+| `padding_outliers_by_proof_len_minus_metric_bytes`, `low_judge_high_metric_candidates` | Keeps obvious padding and low-judge / high-metric cases visible. |
+| `same_theorem_metric_judge_disagreements(...)` | Lists examples that need human review before replacing, keeping, or reducing the heuristic. |
+
+Decision-record template:
+
+```text
+Proof intrinsic scoring decision:
+Chosen policy: replace | keep low | reduce/remove | no decision
+Decision ready: yes | no
+Reason:
+
+Evidence reviewed:
+- Export dataset:
+- Analyzer command:
+- Export profile:
+- rows_total / rows_with_successful_proof_metrics / rows_with_failed_proof_metrics:
+- decision_data_blockers:
+- decision_data_gaps:
+- export_context:
+- gate_verdict / gate_reasons:
+- within-theorem correlations:
+- padding/outlier notes:
+- same-theorem disagreement notes:
+- Adversarial fixture notes:
+- Human review notes:
+
+Reward/profile changes:
+- LEMMA_SCORE_PROOF_WEIGHT:
+- proof_intrinsic_score changes:
+- Replacement metric, if any:
+- Profile pin fields:
+- Migration notes:
+
+Rollback:
+- Env/config rollback:
+- Operator notice:
+- Follow-up review date:
+```
+
 ## Prototype Boundary
 
 Do not wire a new proof-side metric into live scoring until it passes the gate
