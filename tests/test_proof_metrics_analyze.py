@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from tools.proof_metrics_analyze import (
+    decision_data_gaps,
     decision_ready,
     load_report,
     low_judge_high_metric_candidates,
@@ -81,6 +82,7 @@ def test_load_report_summarizes_metric_rows(tmp_path) -> None:
         "decision_data=successful_rows=2 unique_theorems=2 unique_uids=2 "
         "judged_rows=2 comparison_theorems=0"
     ) in rendered
+    assert "decision_data_gaps=successful_rows+48,theorems+3,uids+3,comparison_theorems+3" in rendered
     assert (
         "export_context=rows_with_judge_profile=2 unique_judge_profiles=1 "
         "rows_with_generated_registry=2 unique_generated_registries=1"
@@ -134,6 +136,7 @@ def test_render_report_handles_only_failed_probe_rows(tmp_path) -> None:
         "decision_data=successful_rows=0 unique_theorems=0 unique_uids=0 "
         "judged_rows=0 comparison_theorems=0"
     ) in rendered
+    assert "decision_data_gaps=successful_rows+50,theorems+5,uids+5,failed_probe_rows=1" in rendered
     assert (
         "decision_data_blockers="
         "fewer_than_50_successful_rows,fewer_than_5_theorems,fewer_than_5_uids"
@@ -173,6 +176,10 @@ def test_main_uses_env_path(tmp_path, monkeypatch, capsys) -> None:
         "decision_data=successful_rows=1 unique_theorems=1 unique_uids=1 "
         "judged_rows=0 comparison_theorems=0"
     ) in rendered
+    assert (
+        "decision_data_gaps=successful_rows+49,theorems+4,uids+4,"
+        "judge_composite_rows+1"
+    ) in rendered
     assert "no_judge_composite_rows" in rendered
     assert "gate_verdict=manual_review_required" in rendered
     assert "gate_reasons=none" in rendered
@@ -209,9 +216,18 @@ def test_render_report_flags_mixed_export_context(tmp_path) -> None:
     ]
     path.write_text("\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8")
 
-    rendered = render_report(load_report(path))
+    report = load_report(path)
+    rendered = render_report(report)
     assert "unique_judge_profiles=2" in rendered
     assert "mixed_judge_profiles" in rendered
+    assert "single_judge_profile" in rendered
+    assert decision_data_gaps(report.metric_rows, failed_rows=0) == [
+        "successful_rows+48",
+        "theorems+4",
+        "uids+3",
+        "comparison_theorems+2",
+        "single_judge_profile",
+    ]
 
 
 def test_validation_fixture_separates_padding_from_failed_probes() -> None:
@@ -227,6 +243,10 @@ def test_validation_fixture_separates_padding_from_failed_probes() -> None:
     assert (
         "decision_data=successful_rows=6 unique_theorems=6 unique_uids=6 "
         "judged_rows=6 comparison_theorems=0"
+    ) in rendered
+    assert (
+        "decision_data_gaps=successful_rows+44,comparison_theorems+3,"
+        "judge_profile_sha256_rows+6,failed_probe_rows=1"
     ) in rendered
     assert (
         "decision_data_blockers=fewer_than_50_successful_rows,"
@@ -317,6 +337,7 @@ def test_require_decision_ready_passes_for_ready_manual_review_export(tmp_path, 
     assert main([str(path), "--require-decision-ready"]) == 0
     rendered = capsys.readouterr().out
     assert "decision_data_blockers=none" in rendered
+    assert "decision_data_gaps=none" in rendered
     assert "comparison_theorems=5" in rendered
     assert "within_theorem_comparisons=theorems=5 rows=50" in rendered
     assert "corr_within_theorem(metric_bytes, judge_composite)=1.0000" in rendered
@@ -446,5 +467,6 @@ def test_require_decision_ready_requires_same_theorem_comparisons(tmp_path, caps
     assert main([str(path), "--require-decision-ready"]) == 2
     rendered = capsys.readouterr().out
     assert "comparison_theorems=0" in rendered
+    assert "decision_data_gaps=comparison_theorems+3" in rendered
     assert "fewer_than_3_judged_theorems_with_2_rows_and_2_uids" in rendered
     assert "decision_ready=no" in rendered

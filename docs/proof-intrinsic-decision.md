@@ -221,7 +221,8 @@ Passing that flag is not approval to change rewards; it only means there is
 enough data to start the human decision. Modern exports include an
 `export_context` block with non-secret profile and registry hashes; the analyzer
 reports those counts and blocks decision readiness when successful rows mix judge
-profiles or generated-registry hashes.
+profiles or generated-registry hashes. It also prints `decision_data_gaps`,
+which is the practical collection target list for the next export run.
 
 ## Credibility Boundary
 

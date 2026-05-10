@@ -63,6 +63,9 @@ Keep the analyzer report with any scoring decision notes. Look first at:
 
 - `decision_data_blockers` and `decision_data_warnings`; blockers mean the
   export is not varied enough for a scoring decision yet,
+- `decision_data_gaps`, which turns the blockers into concrete collection
+  targets such as `successful_rows+44`, `comparison_theorems+3`, or
+  `judge_profile_sha256_rows+6`,
 - `export_context`, which should show one judge profile and one generated
   registry hash across successful rows,
 - `rows_with_successful_proof_metrics` vs failed probe rows,
@@ -95,7 +98,8 @@ judge composite labels. Successful rows must include one consistent
 generated-registry hashes do too. It also requires at least 3 theorem ids with 2
 or more judged successful rows from 2 or more UIDs, so wide
 one-row-per-theorem exports do not masquerade as proof-quality evidence. The
-report then prints centered
+`decision_data_gaps` line is the shortest collection checklist for what remains
+missing. The report then prints centered
 within-theorem correlations for metric bytes, delimiter count, and the current
 text heuristic against judge composite, plus same-theorem disagreement
 candidates for human review.

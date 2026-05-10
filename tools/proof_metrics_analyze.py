@@ -81,6 +81,7 @@ def render_report(report: MetricsReport, *, outlier_limit: int = 8) -> str:
     verdict, reasons = metric_gate(rows)
     judged_rows = [r for r in ok_rows if r.judge_composite is not None]
     data_blockers, data_warnings = decision_data_findings(ok_rows, failed_rows=failed_rows)
+    data_gaps = decision_data_gaps(ok_rows, failed_rows=failed_rows)
     ready = decision_ready(rows)
     lines = [
         "Proof metrics export analysis",
@@ -95,6 +96,7 @@ def render_report(report: MetricsReport, *, outlier_limit: int = 8) -> str:
         f"unique_uids={_unique_uid_count(ok_rows)} "
         f"judged_rows={len(judged_rows)} "
         f"comparison_theorems={_comparison_theorem_count(judged_rows)}",
+        "decision_data_gaps=" + (",".join(data_gaps) if data_gaps else "none"),
         "export_context="
         f"rows_with_judge_profile={_context_row_count(ok_rows, lambda r: r.judge_profile_sha256)} "
         f"unique_judge_profiles={len(_unique_context_values(ok_rows, lambda r: r.judge_profile_sha256))} "
@@ -276,6 +278,40 @@ def same_theorem_metric_judge_disagreements(
                         ),
                     )
     return sorted(candidates, key=lambda c: (-c.judge_delta, c.metric_delta), reverse=True)[:limit]
+
+
+def decision_data_gaps(ok_rows: list[MetricRow], *, failed_rows: int) -> list[str]:
+    gaps: list[str] = []
+    if missing := max(0, MIN_DECISION_SUCCESSFUL_ROWS - len(ok_rows)):
+        gaps.append(f"successful_rows+{missing}")
+    if missing := max(0, MIN_DECISION_THEOREMS - _unique_theorem_count(ok_rows)):
+        gaps.append(f"theorems+{missing}")
+    if missing := max(0, MIN_DECISION_UIDS - _unique_uid_count(ok_rows)):
+        gaps.append(f"uids+{missing}")
+
+    judged_rows = [r for r in ok_rows if r.judge_composite is not None]
+    judged = len(judged_rows)
+    if ok_rows and judged == 0:
+        gaps.append(f"judge_composite_rows+{len(ok_rows)}")
+    elif missing := len(ok_rows) - judged:
+        gaps.append(f"partial_judge_composite_rows_missing={missing}")
+    if judged and (missing := max(0, MIN_DECISION_COMPARISON_THEOREMS - _comparison_theorem_count(judged_rows))):
+        gaps.append(f"comparison_theorems+{missing}")
+
+    profile_rows = _context_row_count(ok_rows, lambda r: r.judge_profile_sha256)
+    if missing := len(ok_rows) - profile_rows:
+        gaps.append(f"judge_profile_sha256_rows+{missing}")
+    if len(_unique_context_values(ok_rows, lambda r: r.judge_profile_sha256)) > 1:
+        gaps.append("single_judge_profile")
+
+    registry_rows = _context_row_count(ok_rows, lambda r: r.generated_registry_sha256)
+    if registry_rows and (missing := len(ok_rows) - registry_rows):
+        gaps.append(f"generated_registry_sha256_rows+{missing}")
+    if len(_unique_context_values(ok_rows, lambda r: r.generated_registry_sha256)) > 1:
+        gaps.append("single_generated_registry")
+    if failed_rows:
+        gaps.append(f"failed_probe_rows={failed_rows}")
+    return gaps
 
 
 def decision_data_findings(ok_rows: list[MetricRow], *, failed_rows: int) -> tuple[list[str], list[str]]:
