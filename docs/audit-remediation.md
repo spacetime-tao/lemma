@@ -233,6 +233,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **`common/uids.py`** single-use axon-list wrapper removed; epoch reads metagraph axons directly.
 - **`common/split_timeout.py`** single-use split multiplier removed; epoch keeps the tiny mapping inline.
 - **`miner/__init__.py` / `validator/__init__.py`** no longer re-export service classes on package import.
+- **`judge/__init__.py`** no longer re-exports judge classes on package import; callers import concrete modules.
 - **`reputation.apply_ema_to_entries`**: third return element discarded; removed from API.
 - **`scoring/dedup.py`**: parallel `dedup_identical` / `dedup_coldkeys` now share one internal best-by-key helper.
 - **`scoring/__init__.py`**: unused convenience re-exports removed; callers import concrete scoring modules directly.
