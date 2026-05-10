@@ -38,6 +38,42 @@ No bundled dashboard. Typical: logs or JSONL to storage + BI ([faq.md](faq.md)).
 
 Document `EMPTY_EPOCH_WEIGHTS_POLICY`, `SET_WEIGHTS_*`, block-derived forward wait / LLM timeouts, registration rules. Watch `lemma_epoch_summary` and `judge_errors`.
 
+## Cloud / VPS hosts
+
+Running miners or validators on a VPS is allowed operationally, but it changes
+the risk profile.
+
+- **Miner on VPS:** common and usually simpler than home networking because the
+  axon has a stable public IP and port. Keep the hotkey encrypted, restrict SSH,
+  run a firewall, and avoid storing the coldkey private file on the server.
+- **Validator on VPS:** use a larger host than a cheap miner box. Validators need
+  Docker, Lean caches, and enough RAM/CPU for concurrent verification; a small
+  4 GB instance is usually miner-only or test-only.
+- **Local machine:** good for development and private keys, but inbound miner
+  ports require router/firewall setup and VPNs can hide or change the reachable
+  address.
+- **Shared host failure:** multiple services on one VPS can all fail together if
+  the host, firewall, Docker daemon, or API budget fails. This is fine for tests;
+  production operators should monitor and isolate roles as stakes rise.
+
+For production, prefer: coldkey private material offline/local, only hotkeys on
+servers, explicit `AXON_EXTERNAL_IP`, explicit firewall rules, systemd or another
+supervisor, and regular log review.
+
+## Multiple miner hotkeys on one host
+
+One machine can run several miner hotkeys if each service has its own wallet
+hotkey, `AXON_PORT`, logs, and systemd unit. They can share the same checkout and
+prover API account, but API rate limits and spend caps should be set
+deliberately.
+
+For testing, multiple hotkeys under one coldkey are useful for throughput and
+same-theorem comparison data. For rewards, Lemma's default coldkey dedup keeps
+only the best hotkey per coldkey in the final weight calculation, so same-coldkey
+hotkeys should not be treated as independent economic identities. Separate
+coldkeys are a sybil/economics experiment and should be labeled as such on
+testnet.
+
 ## Remote Lean verify worker (`lemma lean-worker`)
 
 When `LEMMA_LEAN_VERIFY_REMOTE_URL` points at an HTTP worker:
