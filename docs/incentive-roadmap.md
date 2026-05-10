@@ -57,7 +57,7 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 
 ### Transport (long-term)
 
-- [x] **Axon/Dendrite** — [transport.md](transport.md): current Dendrite/synapse + body-hash integrity; relation to `knowledge/subnet.invariants.yaml` deprecation for **new** designs vs Lemma’s shipping stack.
+- [x] **Axon/Dendrite** — [transport.md](transport.md): current Dendrite/synapse + body-hash integrity; relation to `knowledge/subnet.invariants.yaml` deprecation for **new** designs vs Lemma’s shipping stack; HTTP + Epistula recorded as a major-release migration gate, not a second default transport.
 
 ### Judge input robustness
 
