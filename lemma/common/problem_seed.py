@@ -106,23 +106,6 @@ def format_next_theorem_countdown(
     )
 
 
-def explain_boundary_label(
-    label: str,
-    *,
-    quantize_blocks: int,
-) -> str:
-    """Short technical note for logs (prefer :func:`format_next_theorem_countdown` in CLI)."""
-    t = (label or "").strip().lower()
-    if t == "subnet_epoch":
-        return (
-            "New-theorem cadence follows chain RPC `blocks_until_next_epoch` (subnet Tempo), "
-            "not a fixed `LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS` window."
-        )
-    if t == "quantize_window":
-        return f"New theorem every {quantize_blocks} blocks (`LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`)."
-    return "Tempo query failed; using quantize-style spacing (see LEMMA_PROBLEM_SEED_MODE)."
-
-
 def problem_sample_seed_block(chain_head_block: int, quantize_blocks: int) -> int:
     """Return ``(chain_head // q) * q`` with ``q = max(1, quantize_blocks)``."""
     q = max(1, int(quantize_blocks))

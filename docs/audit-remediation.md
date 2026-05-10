@@ -195,10 +195,10 @@ Current snapshot uses `wc -l` over Python files, except `docs/` which counts Mar
 | `lemma/miner/` | 1 082 | 1 075 | -7 |
 | `lemma/problems/` | 784 | 1 004 | +220 |
 | `lemma/protocol*` | 290 | 331 | +41 |
-| `lemma/common/` | 1 110 | 1 278 | +168 |
-| `lemma/` total | **12 630** | **8 819** (66 files) | **-3 811** |
+| `lemma/common/` | 1 110 | 1 261 | +151 |
+| `lemma/` total | **12 630** | **8 802** (66 files) | **-3 828** |
 | `tests/` | 2 330 | 3 849 (59 files) | +1 519 |
-| `docs/` markdown | 1 355 | 2 818 (30 files) | +1 463 |
+| `docs/` markdown | 1 355 | 2 820 (30 files) | +1 465 |
 
 CLI alone was cited as **43 %** of `lemma/`; it is now about **21 %** by this simple line-count snapshot. The core shrank substantially, while tests/docs grew because safety gates, replay guards, and decision records were added.
 
@@ -234,6 +234,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **`validator/query.py`** thin wrapper removed; epoch calls `bt.Dendrite` directly.
 - **`common/uids.py`** single-use axon-list wrapper removed; epoch reads metagraph axons directly.
 - **`common/split_timeout.py`** single-use split multiplier removed; epoch keeps the tiny mapping inline.
+- **`common/problem_seed.py`** unused boundary-label explainer removed; CLI paths use the countdown formatter directly.
 - **`miner/__init__.py` / `validator/__init__.py`** no longer re-export service classes on package import.
 - **`judge/__init__.py`** no longer re-exports judge classes on package import; callers import concrete modules.
 - **`lean/__init__.py` / `problems/__init__.py` / `reasoning/__init__.py`** no longer re-export internals on package import.
@@ -373,5 +374,6 @@ Examples called out in Round 3: judge model/URL, Anthropic default model age, Le
 | 2026-05 | Refreshed scorecard after CLI extraction, dedup normalization, and miner prompt trims |
 | 2026-05 | Refreshed §13.1 scale snapshot after CLI extraction and cleanup passes |
 | 2026-05 | Recorded config cleanup after removing an unused strict-judge assertion wrapper |
+| 2026-05 | Recorded problem-seed helper cleanup and refreshed common/core line counts |
 
 **Maintainers:** bump §17 when you materially change scope or close a whole section.
