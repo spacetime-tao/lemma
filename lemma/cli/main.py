@@ -297,16 +297,6 @@ MOVED_MAIN_COMMANDS = (
     ("setup", "Interactive setup moved to lemma-cli."),
     ("glossary", "Glossary moved to lemma-cli."),
 )
-MOVED_CONFIGURE_COMMANDS = (
-    "chain",
-    "axon",
-    "lean-image",
-    "judge",
-    "prover",
-    "prover-model",
-    "prover-retries",
-    "subnet-pins",
-)
 
 
 def _echo_moved_to_lemma_cli(
@@ -331,24 +321,15 @@ for _moved_command, _moved_heading in MOVED_MAIN_COMMANDS:
     _register_moved_main_command(_moved_command, _moved_heading)
 
 
-@main.group("configure", invoke_without_command=True)
-@click.pass_context
-def configure_grp(ctx: click.Context) -> None:
-    """Point interactive `.env` prompts to lemma-cli."""
-    if ctx.invoked_subcommand is None:
-        _echo_moved_to_lemma_cli(("configure",))
-        click.echo("Topics: " + ", ".join(MOVED_CONFIGURE_COMMANDS))
-
-
-def _register_moved_configure(command: str) -> None:
-    @configure_grp.command(command, context_settings=MOVED_COMMAND_CONTEXT, add_help_option=False)
-    @click.argument("args", nargs=-1, type=click.UNPROCESSED)
-    def moved_configure(args: tuple[str, ...], command: str = command) -> None:
-        _echo_moved_to_lemma_cli(("configure", command, *args))
-
-
-for _configure_command in MOVED_CONFIGURE_COMMANDS:
-    _register_moved_configure(_configure_command)
+@main.command(
+    "configure",
+    context_settings=MOVED_COMMAND_CONTEXT,
+    add_help_option=False,
+    help="Interactive `.env` prompts moved to lemma-cli.",
+)
+@click.argument("args", nargs=-1, type=click.UNPROCESSED)
+def configure_cmd(args: tuple[str, ...]) -> None:
+    _echo_moved_to_lemma_cli(("configure", *args))
 
 
 def _validator_run_blocking(*, dry_run: bool) -> None:

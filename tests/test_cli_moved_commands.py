@@ -25,7 +25,7 @@ def test_moved_configure_group_lists_topics() -> None:
 
     assert result.exit_code == 0
     assert "Run `lemma-cli configure`." in result.output
-    assert "subnet-pins" in result.output
+    assert "Core commands still live here" in result.output
 
 
 def test_moved_miner_observability_command_points_to_lemma_cli() -> None:
