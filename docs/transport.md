@@ -29,6 +29,38 @@ Effects:
 
 **Interpretation:** “Deprecated” here means **greenfield subnets** should not copy Axon-first patterns for new protocols; it does **not** imply Lemma will delete Dendrite support on a fixed date. A future migration would be a **major release** (HTTP endpoints, signing model, discovery), not a flag flip.
 
+## Migration gate
+
+Do not introduce a second validator→miner transport beside Dendrite/Axon as a
+partial default. Either keep the current path, or plan an HTTP + Epistula major
+release with both miner and validator support changing together.
+
+Minimum design record before migration:
+
+```text
+Transport migration decision:
+Chosen path: keep Dendrite/Axon | migrate to HTTP + Epistula
+Reason:
+
+Compatibility:
+- Miner discovery source:
+- Auth/signing scheme:
+- Request and response schema:
+- Body integrity fields:
+- Timeout/deadline semantics:
+- Cutover block or release tag:
+
+Rollout:
+- Dual-stack period, if any:
+- Validator fallback policy:
+- Miner operator notice:
+- Rollback path:
+```
+
+The migration should also update [`LemmaChallenge`](../lemma/protocol.py), miner
+serving docs, validator querying code, tests for signed request integrity, and
+the operator upgrade checklist in [governance.md](governance.md).
+
 ## Practical operator notes
 
 - **Proxies / TLS termination:** Anything that strips hash headers or rewrites JSON bodies can break **`computed_body_hash`** matching — treat hash failures as transport bugs or attacks.

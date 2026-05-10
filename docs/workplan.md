@@ -51,6 +51,7 @@ These should be either hardened or removed from the default mental model.
 1. Miner verify attest: keep full validator Lean verify as default; do not let attest-only paths inflate credibility. **Done for optional usable path: verify batch isolates per-UID verifier exceptions; attest-trusted responses must still match current challenge fields; v2 signatures bind validator hotkey; docs state this is not hardware remote attestation.**
 2. Commit-reveal: keep active, with bounded cache, validator identity binding, shared commitment hex normalization, and an explicit same-round threat model. **Done for optional usable path; stronger public fairness would be a separate design.**
 3. Judge peer attest: treat as operator coordination, not strong security. **Done: threat model documents all-of-N HTTP limits and skip as solo/dev only.**
+4. Wire transport: keep current Dendrite/Axon path until a major-release HTTP + Epistula migration is explicitly chosen. **Bounded:** [transport.md](transport.md) now records the migration gate and decision template.
 
 ### 5. CLI Extraction
 

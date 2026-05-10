@@ -63,9 +63,9 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 | **I1** | `synapse_miner_response_integrity_ok` returns **True** when `computed_body_hash` is missing → middleboxes can strip headers; combined with attest/trace concerns | R3 §3.1, §6 | P1 | **Done:** miner responses fail closed when `computed_body_hash` is missing or mismatched. | `lemma/protocol.py`, `tests/test_protocol.py` |
 | **I2** | `deadline_block is None` may bypass deadline path if fields stripped | R3 §6 | P1 | **Done:** the same integrity gate rejects miner responses without `deadline_block`. | `lemma/protocol.py`, `tests/test_protocol.py`, `lemma/validator/epoch.py` |
 | **I3** | Single `block_after_query` for batch — timing games | R3 §6 | P2 | **Done/documented acceptance:** Dendrite exposes a batch result, not a trusted per-response receipt block; validator enforces deadline at the post-batch chain head. | `epoch.py` |
-| **I4** | Synapse transport deprecated in KB vs Epistula | R3 §5.15, §11 | P4 | Track `knowledge/` transport migration; out of scope for “quick fix” | `protocol.py`, `knowledge/` |
+| **I4** | Synapse transport deprecated in KB vs Epistula | R3 §5.15, §11 | P4 | **Bounded:** [transport.md](transport.md) records Dendrite/Axon as the shipping path and HTTP + Epistula as a major-release migration gate, not a second default transport. | `protocol.py`, `docs/transport.md`, `knowledge/` |
 
-**2026-05 progress:** I1/I2/I3 patched or bounded. `synapse_miner_response_integrity_ok` now fails closed when `computed_body_hash` is missing, mismatched, or when `deadline_block` is missing from the miner response. Deadline enforcement uses the post-batch chain head because Dendrite does not expose a trusted per-response receipt block.
+**2026-05 progress:** I1/I2/I3 patched or bounded. `synapse_miner_response_integrity_ok` now fails closed when `computed_body_hash` is missing, mismatched, or when `deadline_block` is missing from the miner response. Deadline enforcement uses the post-batch chain head because Dendrite does not expose a trusted per-response receipt block. I4 is bounded as a major-release transport migration decision.
 
 ---
 
@@ -342,13 +342,13 @@ Abbreviated; see `knowledge/` for full YAML. Status reflects the current remedia
 | N miners profitability | `sybil.realities.yaml` | Still violated; decision gate, policy rubric, offline replay helper, and concrete readiness gaps added; real replay data/governance still pending before reward-code changes |
 | Coldkey dedup ≠ sybil resistance | `sybil.realities.yaml` | Still violated by design; documented as anti-clutter only |
 | Validators not individually trusted | `trust.assumptions.yaml` | Softer-trust model documented for Chutes + voluntary HTTP peer checks |
-| Synapse deprecated | `subnet.invariants.yaml` | Still violated |
+| Synapse deprecated | `subnet.invariants.yaml` | Still shipping path; bounded by [transport.md](transport.md) as a major-release HTTP + Epistula migration gate |
 | Open-source / corpus | `subnet.invariants.yaml` | Partially mitigated (`reasoning_only` export) |
 | Hardware attestation | `trust.assumptions.yaml` | Miner verify attest documented as non-TEE hotkey signature over local Lean claim |
 | Container / red-blue patterns | `container_execution.yaml`, `adversarial_red_blue.yaml` | Not adopted |
 | Commit-reveal when needed | `subnet.invariants.yaml#commit_reveal` | Optional same-round binding documented; not chain-anchored fairness |
 | Similarity detection | `validator.rules.yaml` | Partial: exact fingerprint strips proof comments and collapses whitespace; semantic rewrites remain |
-| HTTP + Epistula for miners | `miner.contract.yaml` | Not used |
+| HTTP + Epistula for miners | `miner.contract.yaml` | Not used in current shipping path; migration gate documented in [transport.md](transport.md) |
 
 ---
 
@@ -392,5 +392,6 @@ Examples called out in Round 3: judge model/URL, Anthropic default model age, Le
 | 2026-05 | Added sybil/Pareto replay readiness gap reporting |
 | 2026-05 | Expanded the sybil/Pareto decision record around replay summaries |
 | 2026-05 | Expanded the proof-intrinsic decision record around analyzer summaries |
+| 2026-05 | Bounded transport migration as a major-release HTTP + Epistula decision |
 
 **Maintainers:** bump §17 when you materially change scope or close a whole section.

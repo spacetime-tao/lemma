@@ -41,7 +41,7 @@ Coldkey dedup and identical-submission dedup reduce certain games but **do not**
 
 ## Wire transport
 
-Validator→miner calls use Bittensor Dendrite/Axon today; synapse **`body_hash`** vs **`computed_body_hash`** catches tampering — [transport.md](transport.md).
+Validator→miner calls use Bittensor Dendrite/Axon today; synapse **`body_hash`** vs **`computed_body_hash`** catches tampering — [transport.md](transport.md). HTTP + Epistula is a major-release migration gate, not a second default transport.
 
 ## Shared validator settings
 
