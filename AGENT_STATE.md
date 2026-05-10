@@ -113,6 +113,11 @@ Reason: the product center is simple, reproducible proof acceptance.
   prompt. No stake moved; wallet `lemma` remained at `2.272251606` free and
   `0.0` staked. User needs to run the stake command locally and enter the
   coldkey password outside chat.
+- User completed staking locally after increasing slippage tolerance. Wallet
+  `lemma` then showed `0.268630335` free and `2.214305457` staked; metagraph at
+  block `7092853` showed validator UID `1` with `S=2277.37988281`, `active=1`,
+  and `validator_permit=False`. A follow-up live epoch was started to see if the
+  now-staked validator can write a visible weight row and move miner alpha.
 
 ## Notes For Future Agents
 
