@@ -34,7 +34,15 @@ These stay in `spacetime-tao/lemma` because they affect scoring agreement.
 8. Document the public deterministic problem-supply boundary and builder promotion checklist. **Done:** [problem-supply-policy.md](problem-supply-policy.md).
 9. Expand the generated template registry with a small non-arithmetic batch. **Done:** 40 builders total; list, set, order, logic, and finite-set templates added.
 
-### 3. Scoring Simplification
+### 3. Future Problem Supply
+
+These are product and governance tracks, not v0 launch blockers.
+
+1. Keep generated easy / medium / hard traffic as the launch lane. It gives the network steady work, predictable verification cost, and simple operator expectations.
+2. Treat open-problem campaigns as a later campaign / bounty lane: reviewed Lean statements, faithfulness certificates, dependency graphs, and submit-when-ready proofs. **Tracked:** [open-problem-campaigns.md](open-problem-campaigns.md).
+3. Do not put large open-problem libraries in this core repo during v0. A future `LemmaOpenProblems`-style repo can own campaign Lean files, registries, faithfulness docs, and roadmaps; core should add protocol support only when the lane is ready.
+
+### 4. Scoring Simplification
 
 These stay in the core repo, but should be handled as product decisions, not tiny patches.
 
@@ -44,7 +52,7 @@ These stay in the core repo, but should be handled as product decisions, not tin
 4. Sybil/Pareto reward changes need evidence first. **Tooling ready:** private full exports now carry enough public challenge/coldkey context for `tools/sybil_replay_analyze.py` to compare dedup modes and K-miner clone pressure, report concrete `decision_data_gaps`, and [sybil_economics.md](sybil_economics.md) now includes the policy rubric for interpreting that replay. **Still open:** collect real exports and choose a policy before changing live rewards.
 5. Avoid adding more scoring layers until the primary objective is one sentence.
 
-### 4. Experimental Protocol Hooks
+### 5. Experimental Protocol Hooks
 
 These should be either hardened or removed from the default mental model.
 
@@ -54,7 +62,7 @@ These should be either hardened or removed from the default mental model.
 4. Wire transport: keep current Dendrite/Axon path until a major-release HTTP + Epistula migration is explicitly chosen. **Bounded:** [transport.md](transport.md) now records the migration gate and decision template.
 5. Reference miner: keep the bundled miner minimal and compatibility-focused while the shipping protocol remains Axon-based. **Bounded:** [miner.md](miner.md) records that richer miner UX belongs in `lemma-cli` and miner-artifact/container designs are separate protocol work.
 
-### 5. CLI Extraction
+### 6. CLI Extraction
 
 This is the `lemma-cli` repo track.
 
@@ -82,7 +90,7 @@ Keep temporarily in core:
 
 The split is safe if `lemma-cli` depends on `lemma` as a Python package instead of copying consensus code.
 
-### 6. Core Cleanup After CLI Split
+### 7. Core Cleanup After CLI Split
 
 Once `lemma-cli` exists and can call core functions:
 

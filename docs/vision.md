@@ -102,5 +102,6 @@ After real traffic: consider **partial-progress** or **lemma-submission** tracks
 | [Governance](governance.md) | Pins, meta, policy. |
 | [Objective decision](objective-decision.md) | One-sentence objective and scoring boundary. |
 | [Problem supply policy](problem-supply-policy.md) | Public generated supply boundary and builder promotion checklist. |
+| [Open problem campaigns](open-problem-campaigns.md) | v1+ campaign / bounty lane for faithful open-problem formalization and submit-when-ready proofs. |
 | [Getting started](getting-started.md) | Install and first commands. |
 | [Miner](miner.md) / [Validator](validator.md) | Operator detail. |

@@ -102,7 +102,7 @@ Rollback:
 
 `LEMMA_PROBLEM_SOURCE=frozen` is gated as a public eval catalog, not a hidden production source. Turning it on should be an operator decision with a release note, not a fallback path.
 
-A future curated or bounty lane can have different cadence and incentives, but it should still avoid validator-held secrets. Prefer public formalization tasks, explicit deadlines, rollover rules, and clear reward policy over secret test-set assumptions.
+A future curated, campaign, or bounty lane can have different cadence and incentives, but it should still avoid validator-held secrets. Prefer public formalization tasks, explicit deadlines, rollover rules, and clear reward policy over secret test-set assumptions. Longer-horizon open-problem work is tracked separately in [open-problem-campaigns.md](open-problem-campaigns.md).
 
 ## What remains open
 
