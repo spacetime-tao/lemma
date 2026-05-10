@@ -195,10 +195,10 @@ Current snapshot uses `wc -l` over Python files, except `docs/` which counts Mar
 | `lemma/miner/` | 1 082 | 1 075 | -7 |
 | `lemma/problems/` | 784 | 1 004 | +220 |
 | `lemma/protocol*` | 290 | 331 | +41 |
-| `lemma/common/` | 1 110 | 1 261 | +151 |
-| `lemma/` total | **12 630** | **7 904** (64 files) | **-4 726** |
-| `tests/` | 2 330 | 4 151 (59 files) | +1 821 |
-| `docs/` markdown | 1 355 | 3 089 (30 files) | +1 734 |
+| `lemma/common/` | 1 110 | 1 218 | +108 |
+| `lemma/` total | **12 630** | **7 861** (63 files) | **-4 769** |
+| `tests/` | 2 330 | 4 137 (58 files) | +1 807 |
+| `docs/` markdown | 1 355 | 3 092 (30 files) | +1 737 |
 
 CLI alone was cited as **43 %** of `lemma/`; it is now about **11 %** by this simple line-count snapshot. The core shrank substantially, while tests/docs grew because safety gates, replay guards, and decision records were added.
 
@@ -293,6 +293,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **`validator_judge_stack_strict`** vs unreachable Anthropic judge branch on validator — Anthropic branch removed from validator epoch builder; local one-shot judge tooling remains.
 - Six env names for two wallet values — validator wallet overrides now keep the documented
   `BT_VALIDATOR_WALLET_COLD` / `BT_VALIDATOR_WALLET_HOT` env names and drop the unused `LEMMA_*` aliases.
+- **`common/env_file.py`** moved to `lemma-cli`; `.env` merging is operator setup UX, not core consensus logic.
 - Reserved protocol toggles default **False** but many Fields persist — documented `LEMMA_*` env names remain;
   undocumented lowercase env aliases were removed from the commit-reveal, miner-attest, and judge-attest switches.
 - Timeout-split / prover self-rejection knobs — documented uppercase env names remain; undocumented lowercase
@@ -395,5 +396,6 @@ Examples called out in Round 3: judge model/URL, Anthropic default model age, Le
 | 2026-05 | Bounded transport migration as a major-release HTTP + Epistula decision |
 | 2026-05 | Bounded the bundled reference miner as Axon compatibility only |
 | 2026-05 | Refreshed line-count snapshots after decision-boundary docs |
+| 2026-05 | Moved `.env` merge helper to `lemma-cli` and refreshed line counts |
 
 **Maintainers:** bump §17 when you materially change scope or close a whole section.
