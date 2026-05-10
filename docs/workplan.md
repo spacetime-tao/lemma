@@ -62,6 +62,25 @@ These should be either hardened or removed from the default mental model.
 4. Wire transport: keep current Dendrite/Axon path until a major-release HTTP + Epistula migration is explicitly chosen. **Bounded:** [transport.md](transport.md) now records the migration gate and decision template.
 5. Reference miner: keep the bundled miner minimal and compatibility-focused while the shipping protocol remains Axon-based. **Bounded:** [miner.md](miner.md) records that richer miner UX belongs in `lemma-cli` and miner-artifact/container designs are separate protocol work.
 
+### 5a. Validator Throughput And Cadence
+
+This is the path toward shorter theorem windows without making validators fall
+behind. Treat each item as a measured step, not a promise that 5-minute windows
+are safe on every machine.
+
+1. Reuse identical Lean verification payloads within an epoch. **Done:** one
+   Lean check is copied to miners that submitted the exact same theorem/proof
+   payload; reasoning is still judged separately.
+2. Avoid duplicate cold-cache warmups for the same template. **Done:** concurrent
+   same-template proofs now singleflight through one cold warmup, then reuse the
+   published warm workspace.
+3. Measure a remote Lean worker pool on Linux hardware. **Next:** this should be
+   the first real scaling path before trusting 5-minute cadence assumptions.
+4. Revisit miner local-verify attest only after miners reliably run local Lean
+   and validators keep a nonzero spot-check rate.
+5. Consider 50-block (~10 minute) windows before 25-block (~5 minute) windows
+   unless real validator timing data clears the smaller budget.
+
 ### 6. CLI Extraction
 
 This is the `lemma-cli` repo track.

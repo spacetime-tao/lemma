@@ -167,73 +167,55 @@ class LeanSandbox:
                 stderr_tail=cheat_scan_stderr_tail(cheat),
             )
 
-        # Warm cache: if the template slot already has `.lake`, verify in that directory under a
-        # per-template lock. Cold path: fresh temp under the cache root and rename it into place
-        # after the first passing verify.
-        cache_key: str | None = None
-        slot: Path | None = None
-        work: Path | None = None
-        inplace = False
-        if self.workspace_cache_dir is not None:
-            self.workspace_cache_dir.mkdir(parents=True, exist_ok=True)
-            cache_key = workspace_verify_cache_key(
-                problem,
-                submission_src,
-                include_submission_fingerprint=self.workspace_cache_include_submission_hash,
-            )
-            slot = self.workspace_cache_dir / cache_key
-            if slot.is_dir() and (slot / ".lake").is_dir():
-                work = slot
-                inplace = True
-                logger.debug("lean workspace cache hit template={} mode=in_place", cache_key)
-            else:
-                work = Path(tempfile.mkdtemp(prefix="lemma-lean-", dir=str(self.workspace_cache_dir)))
-        else:
+        if self.workspace_cache_dir is None:
             work = Path(tempfile.mkdtemp(prefix="lemma-lean-"))
+            try:
+                materialize_workspace(
+                    work,
+                    problem,
+                    submission_src,
+                    preserve_lake=False,
+                    include_proof_metrics_probe=self.proof_metrics_enabled,
+                )
+                return self._verify_docker(work) if self.use_docker else self._verify_host(work)
+            finally:
+                shutil.rmtree(work, ignore_errors=True)
 
-        try:
-            if inplace:
-                assert cache_key is not None and slot is not None
-                with _template_slot_lock(cache_key):
-                    materialize_workspace(
-                        work,
-                        problem,
-                        submission_src,
-                        preserve_lake=True,
-                        include_proof_metrics_probe=self.proof_metrics_enabled,
-                    )
-                    if self.use_docker:
-                        vr = self._verify_docker(work)
-                    else:
-                        vr = self._verify_host(work)
-                    # Slot already owns `.lake`; no publish (would re-enter the same lock).
-                    return vr
+        # One template slot owns warmup and in-place reuse. Cold callers serialize
+        # until a passing proof publishes the warm `.lake`, then later proofs reuse it.
+        self.workspace_cache_dir.mkdir(parents=True, exist_ok=True)
+        cache_key = workspace_verify_cache_key(
+            problem,
+            submission_src,
+            include_submission_fingerprint=self.workspace_cache_include_submission_hash,
+        )
+        slot = self.workspace_cache_dir / cache_key
+        with _template_slot_lock(cache_key):
+            if slot.is_dir() and (slot / ".lake").is_dir():
+                logger.debug("lean workspace cache hit template={} mode=in_place", cache_key)
+                materialize_workspace(
+                    slot,
+                    problem,
+                    submission_src,
+                    preserve_lake=True,
+                    include_proof_metrics_probe=self.proof_metrics_enabled,
+                )
+                return self._verify_docker(slot) if self.use_docker else self._verify_host(slot)
 
-            materialize_workspace(
-                work,
-                problem,
-                submission_src,
-                preserve_lake=False,
-                include_proof_metrics_probe=self.proof_metrics_enabled,
-            )
-
-            if self.use_docker:
-                vr = self._verify_docker(work)
-            else:
-                vr = self._verify_host(work)
-
-            if (
-                vr.passed
-                and self.workspace_cache_dir is not None
-                and cache_key is not None
-                and slot is not None
-                and (work / ".lake").is_dir()
-            ):
-                self._publish_workspace_cache(slot, work, cache_key)
-
-            return vr
-        finally:
-            if not inplace and work is not None:
+            work = Path(tempfile.mkdtemp(prefix="lemma-lean-", dir=str(self.workspace_cache_dir)))
+            try:
+                materialize_workspace(
+                    work,
+                    problem,
+                    submission_src,
+                    preserve_lake=False,
+                    include_proof_metrics_probe=self.proof_metrics_enabled,
+                )
+                vr = self._verify_docker(work) if self.use_docker else self._verify_host(work)
+                if vr.passed and (work / ".lake").is_dir():
+                    self._publish_workspace_cache(slot, work, cache_key)
+                return vr
+            finally:
                 shutil.rmtree(work, ignore_errors=True)
 
     def _publish_workspace_cache(self, slot: Path, work: Path, key: str) -> None:

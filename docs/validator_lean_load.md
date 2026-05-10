@@ -38,6 +38,13 @@ Cold-cache measurements should not be used as the steady-state validator budget,
 but they matter operationally: after a release, a new template, a new image, or a
 new cache directory, the first passing proof can pay the warmup cost.
 
+When several proofs for the same cold template arrive together, the validator now
+uses a per-template singleflight: one proof pays the cold warmup and publishes the
+warm slot; the waiting proofs then reuse that slot. This reduces duplicate
+startup work inside one validator process. It does not remove the need for more
+Lean capacity when many distinct templates or genuinely different cold slots are
+being checked.
+
 Validators also reuse Lean verification results for identical proof payloads in
 one batch. If several miners submit the same theorem/proof script, the validator
 checks that Lean payload once and applies the pass/fail result to each matching

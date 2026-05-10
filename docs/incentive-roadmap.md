@@ -53,7 +53,7 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 
 ### Compute placement
 
-- [x] **Validator Lean load** — [validator_lean_load.md](validator_lean_load.md): concurrency caps, **`LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION`** trust vs CPU, remote verify worker; aligns with [`knowledge/subnet.invariants.yaml`](../knowledge/subnet.invariants.yaml) `compute_distribution`.
+- [x] **Validator Lean load** — [validator_lean_load.md](validator_lean_load.md): concurrency caps, identical-payload verify reuse, cold-cache singleflight, **`LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION`** trust vs CPU, remote verify worker; aligns with [`knowledge/subnet.invariants.yaml`](../knowledge/subnet.invariants.yaml) `compute_distribution`.
 - [x] **Reference miner boundary** — [miner.md](miner.md): bundled miner is a minimal Axon compatibility path, not the place for competitive solver strategy, broad operator UX, or container-execution redesign.
 
 ### Transport (long-term)
