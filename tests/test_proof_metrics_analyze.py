@@ -68,10 +68,14 @@ def test_load_report_summarizes_metric_rows(tmp_path) -> None:
     assert "rows_with_proof_metrics=3" in rendered
     assert "rows_with_successful_proof_metrics=2" in rendered
     assert "rows_with_failed_proof_metrics=1" in rendered
-    assert "decision_data=successful_rows=2 unique_theorems=2 unique_uids=2 judged_rows=2" in rendered
+    assert (
+        "decision_data=successful_rows=2 unique_theorems=2 unique_uids=2 "
+        "judged_rows=2 comparison_theorems=0"
+    ) in rendered
     assert (
         "decision_data_blockers="
-        "fewer_than_50_successful_rows,fewer_than_5_theorems,fewer_than_5_uids"
+        "fewer_than_50_successful_rows,fewer_than_5_theorems,fewer_than_5_uids,"
+        "fewer_than_3_judged_theorems_with_2_rows_and_2_uids"
     ) in rendered
     assert "decision_data_warnings=failed_proof_metric_probes" in rendered
     assert "gate_verdict=research_only" in rendered
@@ -111,7 +115,10 @@ def test_render_report_handles_only_failed_probe_rows(tmp_path) -> None:
     assert "rows_with_proof_metrics=1" in rendered
     assert "rows_with_successful_proof_metrics=0" in rendered
     assert "rows_with_failed_proof_metrics=1" in rendered
-    assert "decision_data=successful_rows=0 unique_theorems=0 unique_uids=0 judged_rows=0" in rendered
+    assert (
+        "decision_data=successful_rows=0 unique_theorems=0 unique_uids=0 "
+        "judged_rows=0 comparison_theorems=0"
+    ) in rendered
     assert (
         "decision_data_blockers="
         "fewer_than_50_successful_rows,fewer_than_5_theorems,fewer_than_5_uids"
@@ -146,7 +153,10 @@ def test_main_uses_env_path(tmp_path, monkeypatch, capsys) -> None:
     assert main(["--outliers", "0"]) == 0
     rendered = capsys.readouterr().out
     assert "rows_with_proof_metrics=1" in rendered
-    assert "decision_data=successful_rows=1 unique_theorems=1 unique_uids=1 judged_rows=0" in rendered
+    assert (
+        "decision_data=successful_rows=1 unique_theorems=1 unique_uids=1 "
+        "judged_rows=0 comparison_theorems=0"
+    ) in rendered
     assert "no_judge_composite_rows" in rendered
     assert "gate_verdict=manual_review_required" in rendered
     assert "gate_reasons=none" in rendered
@@ -162,8 +172,14 @@ def test_validation_fixture_separates_padding_from_failed_probes() -> None:
     rendered = render_report(report, outlier_limit=6)
     assert "rows_with_successful_proof_metrics=6" in rendered
     assert "rows_with_failed_proof_metrics=1" in rendered
-    assert "decision_data=successful_rows=6 unique_theorems=6 unique_uids=6 judged_rows=6" in rendered
-    assert "decision_data_blockers=fewer_than_50_successful_rows" in rendered
+    assert (
+        "decision_data=successful_rows=6 unique_theorems=6 unique_uids=6 "
+        "judged_rows=6 comparison_theorems=0"
+    ) in rendered
+    assert (
+        "decision_data_blockers=fewer_than_50_successful_rows,"
+        "fewer_than_3_judged_theorems_with_2_rows_and_2_uids"
+    ) in rendered
     assert "decision_data_warnings=failed_proof_metric_probes" in rendered
     assert "decision_ready=no" in rendered
     assert "gate_verdict=research_only" in rendered
@@ -229,7 +245,7 @@ def test_require_decision_ready_passes_for_ready_manual_review_export(tmp_path, 
         rows.append(
             {
                 "theorem_id": theorem_id,
-                "uid": i % 5,
+                "uid": i % 10,
                 "proof_script": f"theorem t_{i} : True := by trivial\n",
                 "rubric": {"composite": 0.9},
                 "proof_metrics": {
@@ -246,5 +262,34 @@ def test_require_decision_ready_passes_for_ready_manual_review_export(tmp_path, 
     assert main([str(path), "--require-decision-ready"]) == 0
     rendered = capsys.readouterr().out
     assert "decision_data_blockers=none" in rendered
+    assert "comparison_theorems=5" in rendered
     assert "decision_ready=yes" in rendered
     assert "gate_verdict=manual_review_required" in rendered
+
+
+def test_require_decision_ready_requires_same_theorem_comparisons(tmp_path, capsys) -> None:
+    path = tmp_path / "wide-only.jsonl"
+    rows = []
+    for i in range(50):
+        rows.append(
+            {
+                "theorem_id": f"theorem-{i}",
+                "uid": i % 10,
+                "proof_script": f"theorem t_{i} : True := by trivial\n",
+                "rubric": {"composite": 0.9},
+                "proof_metrics": {
+                    "proof_declaration_bytes": 500 + i,
+                    "proof_declaration_lines": 20,
+                    "proof_declaration_delimiters": 16,
+                    "proof_declaration_max_depth": 4,
+                    "probe_exit_code": 0,
+                },
+            },
+        )
+    path.write_text("\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8")
+
+    assert main([str(path), "--require-decision-ready"]) == 2
+    rendered = capsys.readouterr().out
+    assert "comparison_theorems=0" in rendered
+    assert "fewer_than_3_judged_theorems_with_2_rows_and_2_uids" in rendered
+    assert "decision_ready=no" in rendered

@@ -15,6 +15,9 @@ from lemma.scoring.proof_intrinsic import proof_intrinsic_score
 MIN_DECISION_SUCCESSFUL_ROWS = 50
 MIN_DECISION_THEOREMS = 5
 MIN_DECISION_UIDS = 5
+MIN_DECISION_COMPARISON_THEOREMS = 3
+MIN_DECISION_COMPARISON_ROWS_PER_THEOREM = 2
+MIN_DECISION_COMPARISON_UIDS_PER_THEOREM = 2
 
 
 @dataclass(frozen=True)
@@ -64,8 +67,8 @@ def render_report(report: MetricsReport, *, outlier_limit: int = 8) -> str:
     ok_rows = [r for r in rows if r.probe_exit_code == 0]
     failed_rows = len(rows) - len(ok_rows)
     verdict, reasons = metric_gate(rows)
-    data_blockers, data_warnings = decision_data_findings(ok_rows, failed_rows=failed_rows)
     judged_rows = [r for r in ok_rows if r.judge_composite is not None]
+    data_blockers, data_warnings = decision_data_findings(ok_rows, failed_rows=failed_rows)
     ready = decision_ready(rows)
     lines = [
         "Proof metrics export analysis",
@@ -78,7 +81,8 @@ def render_report(report: MetricsReport, *, outlier_limit: int = 8) -> str:
         f"successful_rows={len(ok_rows)} "
         f"unique_theorems={_unique_theorem_count(ok_rows)} "
         f"unique_uids={_unique_uid_count(ok_rows)} "
-        f"judged_rows={len(judged_rows)}",
+        f"judged_rows={len(judged_rows)} "
+        f"comparison_theorems={_comparison_theorem_count(judged_rows)}",
         "decision_data_blockers=" + (",".join(data_blockers) if data_blockers else "none"),
         "decision_data_warnings=" + (",".join(data_warnings) if data_warnings else "none"),
         f"decision_ready={'yes' if ready else 'no'}",
@@ -189,7 +193,14 @@ def decision_data_findings(ok_rows: list[MetricRow], *, failed_rows: int) -> tup
     if _unique_uid_count(ok_rows) < MIN_DECISION_UIDS:
         blockers.append(f"fewer_than_{MIN_DECISION_UIDS}_uids")
 
-    judged = sum(1 for r in ok_rows if r.judge_composite is not None)
+    judged_rows = [r for r in ok_rows if r.judge_composite is not None]
+    judged = len(judged_rows)
+    if judged and _comparison_theorem_count(judged_rows) < MIN_DECISION_COMPARISON_THEOREMS:
+        blockers.append(
+            f"fewer_than_{MIN_DECISION_COMPARISON_THEOREMS}_judged_theorems_with_"
+            f"{MIN_DECISION_COMPARISON_ROWS_PER_THEOREM}_rows_and_"
+            f"{MIN_DECISION_COMPARISON_UIDS_PER_THEOREM}_uids",
+        )
     if ok_rows and judged == 0:
         blockers.append("no_judge_composite_rows")
     elif judged < len(ok_rows):
@@ -232,6 +243,23 @@ def _unique_theorem_count(rows: list[MetricRow]) -> int:
 
 def _unique_uid_count(rows: list[MetricRow]) -> int:
     return len({r.uid for r in rows if r.uid is not None})
+
+
+def _comparison_theorem_count(rows: list[MetricRow]) -> int:
+    counts: dict[str, int] = {}
+    uids: dict[str, set[int]] = {}
+    for r in rows:
+        if not r.theorem_id:
+            continue
+        counts[r.theorem_id] = counts.get(r.theorem_id, 0) + 1
+        if r.uid is not None:
+            uids.setdefault(r.theorem_id, set()).add(r.uid)
+    return sum(
+        1
+        for theorem_id, count in counts.items()
+        if count >= MIN_DECISION_COMPARISON_ROWS_PER_THEOREM
+        and len(uids.get(theorem_id, set())) >= MIN_DECISION_COMPARISON_UIDS_PER_THEOREM
+    )
 
 
 def main(argv: list[str] | None = None) -> int:

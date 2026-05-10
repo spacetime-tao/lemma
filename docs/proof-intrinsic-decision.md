@@ -82,7 +82,10 @@ Minimum gate for the next scoring decision:
 
 1. Collect a real validator `full` export with `LEMMA_LEAN_PROOF_METRICS=1`
    ([training_export.md](training_export.md)). Use only rows where the
-   proof-metric probe exits successfully.
+   proof-metric probe exits successfully. The export must include same-theorem
+   comparisons: several theorem ids should have multiple judged successful
+   submissions from multiple UIDs, otherwise metric size mostly measures theorem
+   size rather than proof quality.
 2. Run `tools.proof_metrics_analyze` and keep the report with the decision
    notes. Failed probe rows are a reliability signal, not scoring evidence.
 3. Compare the candidate metric against honest short proofs, honest longer
@@ -151,10 +154,12 @@ means collect a usable export first, and `manual_review_required` still does not
 mean automatic approval. Its `decision_data_blockers` line is separate from the
 metric verdict: blockers mean the export is too small or missing judge labels to
 support a scoring decision, even if the metric gate itself has no obvious
-padding finding. `--require-decision-ready` is available for release checklists:
-it exits nonzero unless the export clears readiness blockers and reaches the
-manual-review gate. Passing that flag is not approval to change rewards; it only
-means there is enough data to start the human decision.
+padding finding. The readiness check also requires same-theorem comparison sets
+so wide one-row-per-theorem exports cannot approve a proof-side scoring change.
+`--require-decision-ready` is available for release checklists: it exits nonzero
+unless the export clears readiness blockers and reaches the manual-review gate.
+Passing that flag is not approval to change rewards; it only means there is
+enough data to start the human decision.
 
 ## Credibility Boundary
 
