@@ -14,6 +14,10 @@ from lemma.scoring.pareto import ScoredEntry, pareto_weights
 from lemma.scoring.proof_intrinsic import proof_intrinsic_score
 
 DEFAULT_PROOF_WEIGHT = 0.10
+MIN_DECISION_REPLAYABLE_ROWS = 50
+MIN_DECISION_EPOCHS = 5
+MIN_DECISION_UIDS = 5
+MIN_DECISION_THEOREMS = 5
 
 
 @dataclass(frozen=True)
@@ -84,12 +88,15 @@ def load_report(path: Path, *, proof_weight: float = DEFAULT_PROOF_WEIGHT) -> Re
 def render_report(report: ReplayReport, *, clone_k: int = 5, epoch_limit: int = 5) -> str:
     rows = report.replay_rows
     coldkey_rows = sum(1 for r in rows if r.coldkey)
+    blockers = decision_data_blockers(report)
     lines = [
         "Sybil/Pareto replay analysis",
         f"rows_total={report.total_rows}",
         f"rows_replayable={len(rows)}",
         f"rows_with_coldkey={coldkey_rows}",
         f"invalid_json_lines={report.invalid_json_lines}",
+        f"decision_data_blockers={','.join(blockers) if blockers else 'none'}",
+        f"decision_ready={'no' if blockers else 'yes'}",
     ]
     if not rows:
         lines.append("No replayable full-export rows found.")
@@ -208,6 +215,30 @@ def clone_pressure(rows: list[ReplayRow], *, clone_k: int, rewrite: bool) -> Clo
     )
 
 
+def decision_ready(report: ReplayReport) -> bool:
+    return not decision_data_blockers(report)
+
+
+def decision_data_blockers(report: ReplayReport) -> list[str]:
+    rows = report.replay_rows
+    epochs = _epochs(rows)
+    blockers: list[str] = []
+    if report.invalid_json_lines:
+        blockers.append(f"invalid_json_lines={report.invalid_json_lines}")
+    if len(rows) < MIN_DECISION_REPLAYABLE_ROWS:
+        blockers.append(f"replayable_rows<{MIN_DECISION_REPLAYABLE_ROWS}")
+    if len(epochs) < MIN_DECISION_EPOCHS:
+        blockers.append(f"epochs<{MIN_DECISION_EPOCHS}")
+    if len({r.uid for r in rows}) < MIN_DECISION_UIDS:
+        blockers.append(f"uids<{MIN_DECISION_UIDS}")
+    if len({r.theorem_id for r in rows}) < MIN_DECISION_THEOREMS:
+        blockers.append(f"theorems<{MIN_DECISION_THEOREMS}")
+    coldkey_rows = sum(1 for r in rows if r.coldkey)
+    if coldkey_rows < len(rows):
+        blockers.append("coldkey_coverage<100%")
+    return blockers
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -219,6 +250,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--clone-k", type=int, default=5, help="Number of coordinated clone UIDs to simulate.")
     parser.add_argument("--epochs", type=int, default=5, help="Number of latest block groups to print.")
     parser.add_argument("--proof-weight", type=float, default=DEFAULT_PROOF_WEIGHT)
+    parser.add_argument(
+        "--require-decision-ready",
+        action="store_true",
+        help="Exit 2 unless the export has enough clean replay data for a sybil/Pareto policy decision.",
+    )
     args = parser.parse_args(argv)
 
     path = args.jsonl or _env_export_path()
@@ -229,6 +265,8 @@ def main(argv: list[str] | None = None) -> int:
 
     report = load_report(path, proof_weight=args.proof_weight)
     print(render_report(report, clone_k=max(0, args.clone_k), epoch_limit=max(0, args.epochs)))
+    if args.require_decision_ready and not decision_ready(report):
+        return 2
     return 0
 
 
