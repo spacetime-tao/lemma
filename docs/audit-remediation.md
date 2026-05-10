@@ -188,7 +188,7 @@ Current snapshot uses `wc -l` over Python files, except `docs/` which counts Mar
 | Layer | Round 3 cited LoC | 2026-05 current `wc -l` | Delta |
 |-------|-------------------|-------------------------|-------|
 | `lemma/cli/` | 5 398 (16 files) | 904 (4 files) | -4 494 |
-| `lemma/validator/` | 875 | 1 142 | +267 |
+| `lemma/validator/` | 875 | 1 160 | +285 |
 | `lemma/scoring/` | 282 | 305 | +23 |
 | `lemma/judge/` | 543 | 568 | +25 |
 | `lemma/lean/` | 1 117 | 1 260 | +143 |
@@ -196,9 +196,9 @@ Current snapshot uses `wc -l` over Python files, except `docs/` which counts Mar
 | `lemma/problems/` | 784 | 1 004 | +220 |
 | `lemma/protocol*` | 290 | 331 | +41 |
 | `lemma/common/` | 1 110 | 1 261 | +151 |
-| `lemma/` total | **12 630** | **7 886** (64 files) | **-4 744** |
-| `tests/` | 2 330 | 4 024 (59 files) | +1 694 |
-| `docs/` markdown | 1 355 | 2 921 (30 files) | +1 566 |
+| `lemma/` total | **12 630** | **7 904** (64 files) | **-4 726** |
+| `tests/` | 2 330 | 4 151 (59 files) | +1 821 |
+| `docs/` markdown | 1 355 | 3 089 (30 files) | +1 734 |
 
 CLI alone was cited as **43 %** of `lemma/`; it is now about **11 %** by this simple line-count snapshot. The core shrank substantially, while tests/docs grew because safety gates, replay guards, and decision records were added.
 
@@ -394,5 +394,6 @@ Examples called out in Round 3: judge model/URL, Anthropic default model age, Le
 | 2026-05 | Expanded the proof-intrinsic decision record around analyzer summaries |
 | 2026-05 | Bounded transport migration as a major-release HTTP + Epistula decision |
 | 2026-05 | Bounded the bundled reference miner as Axon compatibility only |
+| 2026-05 | Refreshed line-count snapshots after decision-boundary docs |
 
 **Maintainers:** bump §17 when you materially change scope or close a whole section.
