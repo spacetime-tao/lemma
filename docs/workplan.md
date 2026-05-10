@@ -80,6 +80,8 @@ The split is safe if `lemma-cli` depends on `lemma` as a Python package instead 
 
 Once `lemma-cli` exists and can call core functions:
 
+Current `wc -l` snapshot after cleanup: `lemma/` is **8 826** Python lines across **66** files, down from the Round 3 cited **12 630**. `lemma/cli/` is **1 820** lines across **6** files, down from **5 398** lines across **16** files. Tests/docs grew because the remediation work added safety coverage, analyzer guards, and decision records.
+
 1. Delete duplicate dry-run aliases. **Done: canonicalized to `miner dry-run`, `validator dry-run`, and `validator config`.**
 2. Thin or remove no-op glue like `validator/query.py` and `validator/protocol_migration.py`. **Done: removed both; epoch calls `bt.Dendrite` directly and no longer keeps a single-use UID helper.**
 3. Move catalog-building helpers out of runtime package if only scripts/tests use them. **Done: builder/parser helpers moved to `tools/catalog`; runtime keeps `lemma/catalog/constants.py`.**
