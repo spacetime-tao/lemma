@@ -44,6 +44,10 @@ def _commit_reveal_cache_key(synapse: LemmaChallenge) -> _CommitRevealKey | None
     )
 
 
+def _with_computed_body_hash(synapse: LemmaChallenge) -> LemmaChallenge:
+    return synapse.model_copy(update={"computed_body_hash": synapse.body_hash})
+
+
 class CommitRevealCache:
     def __init__(
         self,
@@ -389,7 +393,7 @@ def make_forward(
                 synapse.metronome_id,
                 ch[:16],
             )
-            return synapse
+            return _with_computed_body_hash(synapse)
 
         synapse.reasoning_steps = steps
         synapse.reasoning_trace = trace
@@ -427,6 +431,6 @@ def make_forward(
             len(trace or ""),
             local_lean_status,
         )
-        return synapse
+        return _with_computed_body_hash(synapse)
 
     return forward

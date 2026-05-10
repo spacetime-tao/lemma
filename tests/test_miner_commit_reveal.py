@@ -8,7 +8,7 @@ from lemma.miner.forward import (
     _commit_reveal_cache_key,
     make_forward,
 )
-from lemma.protocol import LemmaChallenge, ReasoningStep
+from lemma.protocol import LemmaChallenge, ReasoningStep, synapse_miner_response_integrity_ok
 
 
 class _Prover:
@@ -78,6 +78,16 @@ async def test_miner_commit_reveal_cache_is_validator_bound() -> None:
     assert reveal.axon.status_code is None
     assert reveal.proof_script
     assert reveal.commit_reveal_nonce_hex
+    assert synapse_miner_response_integrity_ok(reveal)
+
+
+async def test_miner_response_sets_computed_body_hash() -> None:
+    forward = make_forward(_settings(), _Prover())
+
+    resp = await forward(_synapse("off", "validator-a"))
+
+    assert resp.proof_script
+    assert synapse_miner_response_integrity_ok(resp)
 
 
 async def test_miner_commit_reveal_cache_is_forward_instance_scoped() -> None:

@@ -11,7 +11,12 @@ from lemma.common.config import LemmaSettings
 from lemma.common.logging import setup_logging
 from lemma.common.subtensor import get_subtensor
 from lemma.miner.forward import make_forward
-from lemma.miner.gating import MetagraphCache, make_miner_blacklist, make_miner_priority
+from lemma.miner.gating import (
+    MetagraphCache,
+    make_miner_blacklist,
+    make_miner_priority,
+    zero_miner_priority,
+)
 from lemma.miner.prover import LLMProver
 from lemma.miner.public_ip import discover_public_ipv4
 
@@ -32,7 +37,7 @@ class MinerService:
             or s.miner_min_validator_stake > 0.0
             or s.miner_require_validator_permit
         )
-        priority_fn = make_miner_priority(cache) if use_stake_priority else (lambda _synapse: 0.0)
+        priority_fn = make_miner_priority(cache) if use_stake_priority else zero_miner_priority
 
         if s.lemma_miner_verify_attest_enabled and not s.miner_local_verify:
             raise SystemExit(

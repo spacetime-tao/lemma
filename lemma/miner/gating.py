@@ -111,6 +111,10 @@ def make_miner_blacklist(settings: LemmaSettings, cache: MetagraphCache):
     return blacklist
 
 
+def zero_miner_priority(synapse: LemmaChallenge) -> float:
+    return 0.0
+
+
 def make_miner_priority(cache: MetagraphCache):
     def priority(synapse: LemmaChallenge) -> float:
         if synapse.dendrite is None or not synapse.dendrite.hotkey:
