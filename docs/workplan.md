@@ -46,9 +46,9 @@ These are product and governance tracks, not v0 launch blockers.
 
 These stay in the core repo, but should be handled as product decisions, not tiny patches.
 
-1. Make the reward path proof-only. **Live default flipped:** a Lean-valid proof now enters scoring as a binary pass with live cost `0`.
-2. Keep `proof_intrinsic_score` out of live scoring. Length is a weak proxy for mathematical value and the current heuristic rewards bulk. Binary pass stays the v0 rule.
-3. Keep Lean pass/fail as the objective floor. **Done:** [objective-decision.md](objective-decision.md) pins the objective as Lean-valid proofs.
+1. Make the reward path proof-only. **Live default flipped:** a Lean-valid proof now enters scoring with live cost `0`.
+2. Keep `proof_intrinsic_score` out of live scoring. Length is a weak proxy for mathematical value and the current heuristic rewards bulk. Lean verification stays the v0 rule.
+3. Keep Lean verification as the objective floor. **Done:** [objective-decision.md](objective-decision.md) pins the objective as Lean-valid proofs.
 4. Sybil/Pareto scoring changes need evidence first. **Tooling ready:** private full exports now carry enough public challenge/coldkey context for `tools/sybil_replay_analyze.py` to compare dedup modes and K-miner clone pressure, report concrete `decision_data_gaps`, and [sybil_economics.md](sybil_economics.md) now includes the policy rubric for interpreting that replay. **Still open:** collect real exports and choose a policy before changing Sybil/Pareto defaults.
 5. Avoid adding more scoring layers until the primary objective stays one sentence in code and docs. The current product taste is intentionally Bitcoin-like: publish work, verify it mechanically, and pay for valid work.
 

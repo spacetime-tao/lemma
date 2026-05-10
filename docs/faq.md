@@ -7,7 +7,7 @@
 Current live path:
 
 1. Lean must typecheck (kernel gate).
-2. A passing proof enters scoring as a binary proof pass; optional prose is not scored.
+2. A passing proof enters scoring; a failing proof does not.
 3. Identical-proof dedup, coldkey dedup, and reputation feed the final weight map.
 4. Pareto weighting still runs, but live proof cost is currently `0`, so it mostly behaves like score/reputation layering or an equal split among tied passers.
 
@@ -21,7 +21,7 @@ No subnet is perfectly ungameable; the goal is to make the easiest strategy also
 
 One-line mental model: Lemma rewards Lean-valid proofs.
 
-For the binary proof-pass design, see [proof-only-incentives.md](proof-only-incentives.md). For a **living checklist** of shipped items and known gaps, see [incentive-roadmap.md](incentive-roadmap.md). **Sybil / coldkey dedup** is *not* identity verification — see [sybil_economics.md](sybil_economics.md). **Dendrite/Axon + synapse body-hash** — see [transport.md](transport.md).
+For the proof-verification design, see [proof-only-incentives.md](proof-only-incentives.md). For a **living checklist** of shipped items and known gaps, see [incentive-roadmap.md](incentive-roadmap.md). **Sybil / coldkey dedup** is *not* identity verification — see [sybil_economics.md](sybil_economics.md). **Dendrite/Axon + synapse body-hash** — see [transport.md](transport.md).
 
 ## Validators querying your axon many times
 
@@ -73,7 +73,8 @@ Default is **4** tries per prover call (exponential backoff on 429 / timeouts / 
 - **Prompt contents:** the **user** message to the prover is literally two blocks: a line `Imports hint:` followed by the challenge’s import list (e.g. `["Mathlib"]`), then `Theorem block:` and the full Lean `theorem_statement` string. The **system** message is Lemma’s fixed `PROVER_SYSTEM` (style + JSON contract). There are no other validator-supplied solution steps or hints.
 - **Anthropic path:** provider output may still be capped near **8192** tokens per their API for many Claude models even if `LEMMA_PROVER_MAX_TOKENS` is higher.
 
-Correctness of the Lean proof is decided by the **kernel** (sandbox). Passing proofs receive a binary live score.
+Correctness of the Lean proof is decided by the **kernel** (sandbox). Passing
+proofs can enter live scoring.
 
 ## Informal reasoning
 
@@ -211,13 +212,16 @@ Order matters:
 
 1. **Lean sandbox** — Validators run **`lake build`** on your **`proof_script`** (as `Submission.lean`) together with the challenge, then axiom checks.
 
-2. **Proof scoring** — Only responses that pass Lean enter scoring. That live entry is a binary proof pass.
+2. **Proof scoring** — Only responses that pass Lean enter scoring. A proof
+   that fails verification cannot receive a reward score.
 
 So repeated “failures” while you believe the proof is right are usually **environment** (Mathlib fetch, Docker network, cold cache, timeout) or **layout/policy**. The proof has to pass Lean before any reward score exists.
 
 ## Local prose tooling
 
-Prose evaluation tools may help with debugging, research exports, or human review. Live scoring remains binary Lean pass/fail.
+Prose evaluation tools may help with debugging, research exports, or human
+review. Subnet scoring uses Lean verification of the submitted proof for the
+published theorem.
 
 ## Miner provenance
 

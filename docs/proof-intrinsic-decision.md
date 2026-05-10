@@ -11,9 +11,9 @@ Live validator scoring does not call `proof_intrinsic_score`. The function is a
 research heuristic: it strips Lean comments by default, then scores proof text
 length, `by` frequency, and non-empty line count.
 
-The long-term reward design is proof-only. See
-[proof-only-incentives.md](proof-only-incentives.md). That means this heuristic
-stays out of live rewards and belongs only in offline analysis.
+The reward design is proof-only. See
+[proof-only-incentives.md](proof-only-incentives.md). A submitted proof must pass
+Lean verification for the published theorem before it can receive score.
 
 ## Problem
 
@@ -31,7 +31,7 @@ live path avoids that problem by keeping proof scoring binary.
 
 ## Decision
 
-Keep Lean pass/fail as the objective floor.
+Keep Lean verification as the objective floor.
 
 Keep the current proof intrinsic heuristic outside the live default path. Do not
 add more regex padding detectors as the main fix. If the subnet studies proof
@@ -44,7 +44,7 @@ guesses.
    reports, so accidental drift is visible.
 2. Prototype metrics outside the live default path, using signals
    that Lean or its elaborator can justify.
-3. Keep reward assembly tests pinned to binary proof-pass behavior.
+3. Keep reward assembly tests pinned to proof-verification behavior.
 
 ## Offline Metric Gate
 
@@ -207,7 +207,7 @@ Good prototype shape:
 - Add one extra Lean probe file only in the prototype path.
 - Record candidate metrics beside the current score so they can be compared on
   real submissions before any public metric claims.
-- Keep live binary proof-pass reward behavior pinned by tests while the
+- Keep live proof-verification reward behavior pinned by tests while the
   metric is evaluated.
 
 Current prototype: set `LEMMA_LEAN_PROOF_METRICS=1` to attach compare-only

@@ -46,7 +46,7 @@ Validator→miner calls use Bittensor Dendrite/Axon today; synapse **`body_hash`
 ## Shared validator settings
 
 The **subnet operator** publishes one configuration for the subnet: timeouts,
-seeds, binary proof scoring policy, dedup/reputation policy, and sandbox image.
+seeds, proof-verification scoring policy, dedup/reputation policy, and sandbox image.
 Validators are expected to deploy **that** template so scores stay comparable.
 Document and distribute: `LEMMA_BLOCK_TIME_SEC_ESTIMATE`,
 `LEMMA_FORWARD_WAIT_MIN_S`, `LEMMA_FORWARD_WAIT_MAX_S`,

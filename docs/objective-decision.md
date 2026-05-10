@@ -12,8 +12,7 @@ Lemma rewards Lean-valid proofs for published theorem statements.
 The reward path should be proof-only:
 
 - **Eligibility:** Lean accepts the submitted proof for the locked theorem.
-- **Scoring:** an eligible proof receives a binary pass score; current live cost
-  is `0`.
+- **Scoring:** an eligible proof enters scoring with live cost `0`.
 - **Out of band:** informal reasoning can help humans, datasets, and debugging,
   but it is not a reward axis.
 
@@ -21,7 +20,7 @@ See [proof-only-incentives.md](proof-only-incentives.md) for the concrete design
 
 ## Why This Matters
 
-Lean verification is objective and reproducible. Binary live scoring keeps the
+Lean verification is objective and reproducible. The live scoring path keeps the
 v0 game simple: publish work, verify work mechanically, pay for valid work.
 
 ## Boundary Check

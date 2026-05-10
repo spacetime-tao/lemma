@@ -41,4 +41,5 @@ Only prover-preview commands such as **`lemma-cli rehearsal`** /
 **`lemma-cli try-prover`** need inference keys.
 
 `lemma-cli rehearsal` runs **prover + Lean** on the current subnet theorem
-(chain RPC required). Live rewards remain binary Lean pass/fail.
+(chain RPC required). Live scoring accepts only proofs that pass Lean
+verification for that theorem.

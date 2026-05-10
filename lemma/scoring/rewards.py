@@ -12,7 +12,7 @@ def entry_from_verified_proof(
     theorem_statement: str,
     proof_script: str,
 ) -> ScoredEntry:
-    """Return one binary reward entry for a proof that already passed Lean."""
+    """Return one reward entry for a proof that already passed Lean."""
     fp = submission_fingerprint(theorem_statement, proof_script)
     return ScoredEntry(
         uid=uid,
