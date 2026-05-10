@@ -34,3 +34,19 @@ def test_moved_miner_observability_command_points_to_lemma_cli() -> None:
     assert result.exit_code == 0
     assert "Miner observability moved to lemma-cli." in result.output
     assert "Run `lemma-cli miner-observability`." in result.output
+
+
+def test_moved_status_command_points_to_lemma_cli() -> None:
+    result = CliRunner().invoke(main, ["status"])
+
+    assert result.exit_code == 0
+    assert "Status view moved to lemma-cli." in result.output
+    assert "Run `lemma-cli status`." in result.output
+
+
+def test_moved_problems_command_forwards_args_to_lemma_cli() -> None:
+    result = CliRunner().invoke(main, ["problems", "show", "--current"])
+
+    assert result.exit_code == 0
+    assert "Problem inspector moved to lemma-cli." in result.output
+    assert "Run `lemma-cli problems show --current`." in result.output

@@ -44,7 +44,7 @@ The miner’s LLM uses the **fixed in-repo** `PROVER_SYSTEM` in [`lemma/miner/pr
 - **`lemma-cli try-prover --verify`:** Defaults to the **same Docker sandbox** as validators when **`LEMMA_USE_DOCKER=true`**. Host `lake` is opt-in: **`--host-lean`** or **`LEMMA_TRY_PROVER_HOST_VERIFY=1`**, and only if **`LEMMA_ALLOW_HOST_LEAN=1`** in **`.env`**.
 - **`lemma verify --host-lean`:** Host `lake` only with **`LEMMA_ALLOW_HOST_LEAN=1`**. Otherwise use Docker (default). Still **local**, not on-chain scoring.
 
-To see what validators would sample, use **`lemma status`** / **`lemma problems`**; actual rewards come only when a validator **forwards** to your axon and runs the full round (Lean + judge), not from `lemma-cli try-prover` or `lemma-cli rehearsal`.
+To see what validators would sample, use **`lemma-cli status`** / **`lemma-cli problems`**; actual rewards come only when a validator **forwards** to your axon and runs the full round (Lean + judge), not from `lemma-cli try-prover` or `lemma-cli rehearsal`.
 
 ## Validator pipeline (each round)
 
@@ -162,11 +162,11 @@ Within one validator, a round finishes before the code waits for the **next subn
 
 | Command | Purpose |
 | ------- | ------- |
-| `lemma status` | Head, seed mode, resolved seed, theorem id. |
-| `lemma problems` (or `… show --current`) | `Challenge.lean` for **live** chain head — same rotation as validators. |
-| `lemma problems show --block N` | **What-if:** pretend head is `N` (countdown/seed as if at height `N`). |
+| `lemma-cli status` | Head, seed mode, resolved seed, theorem id. |
+| `lemma-cli problems` (or `… show --current`) | `Challenge.lean` for **live** chain head — same rotation as validators. |
+| `lemma-cli problems show --block N` | **What-if:** pretend head is `N` (countdown/seed as if at height `N`). |
 | `lemma meta` | Judge + registry hashes. |
-| `lemma problems list` | Frozen catalog only. |
+| `lemma-cli problems list` | Frozen catalog only. |
 
 ## Chutes and billing
 
