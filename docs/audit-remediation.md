@@ -187,7 +187,7 @@ Current snapshot uses `wc -l` over Python files, except `docs/` which counts Mar
 
 | Layer | Round 3 cited LoC | 2026-05 current `wc -l` | Delta |
 |-------|-------------------|-------------------------|-------|
-| `lemma/cli/` | 5 398 (16 files) | 1 090 (4 files) | -4 308 |
+| `lemma/cli/` | 5 398 (16 files) | 904 (4 files) | -4 494 |
 | `lemma/validator/` | 875 | 1 142 | +267 |
 | `lemma/scoring/` | 282 | 305 | +23 |
 | `lemma/judge/` | 543 | 568 | +25 |
@@ -196,11 +196,11 @@ Current snapshot uses `wc -l` over Python files, except `docs/` which counts Mar
 | `lemma/problems/` | 784 | 1 004 | +220 |
 | `lemma/protocol*` | 290 | 331 | +41 |
 | `lemma/common/` | 1 110 | 1 261 | +151 |
-| `lemma/` total | **12 630** | **8 072** (64 files) | **-4 558** |
+| `lemma/` total | **12 630** | **7 886** (64 files) | **-4 744** |
 | `tests/` | 2 330 | 4 024 (59 files) | +1 694 |
-| `docs/` markdown | 1 355 | 2 919 (30 files) | +1 564 |
+| `docs/` markdown | 1 355 | 2 921 (30 files) | +1 566 |
 
-CLI alone was cited as **43 %** of `lemma/`; it is now about **13 %** by this simple line-count snapshot. The core shrank substantially, while tests/docs grew because safety gates, replay guards, and decision records were added.
+CLI alone was cited as **43 %** of `lemma/`; it is now about **11 %** by this simple line-count snapshot. The core shrank substantially, while tests/docs grew because safety gates, replay guards, and decision records were added.
 
 ### 13.2 CLI / click surface (§15–16)
 
@@ -224,6 +224,7 @@ CLI alone was cited as **43 %** of `lemma/`; it is now about **13 %** by this si
 - **`validator-check` interactive start prompt** removed; core pre-flight now exits after READY / NOT READY, while guided handoff belongs in `lemma-cli`.
 - **`local-loop`** undocumented FakeJudge + host-Lean dev shortcut removed; use explicit `lemma validator dry-run` or `lemma-cli rehearsal` instead.
 - **Moved-command redirects** now share one tiny registration helper instead of one wrapper function per friendly command.
+- **`lemma meta`** now prints concise hashes by default and reserves full canonical JSON for `lemma meta --raw`; explanatory operator guidance lives in docs / `lemma-cli`.
 
 Extraction note: `lemma-cli` now owns the friendly `start` surface; the core repo keeps only a small compatibility hint and explicit miner/validator subcommands.
 
@@ -386,5 +387,6 @@ Examples called out in Round 3: judge model/URL, Anthropic default model age, Le
 | 2026-05 | Moved theorem status/problem inspection to `lemma-cli` and refreshed CLI line counts |
 | 2026-05 | Moved one-shot judge preview to `lemma-cli` and refreshed CLI line counts |
 | 2026-05 | Moved validator config summary to `lemma-cli` and refreshed CLI line counts |
+| 2026-05 | Trimmed `lemma meta` default output and refreshed CLI line counts |
 
 **Maintainers:** bump §17 when you materially change scope or close a whole section.
