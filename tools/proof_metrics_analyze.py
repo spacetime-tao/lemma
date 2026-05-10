@@ -43,6 +43,15 @@ class MetricsReport:
     metric_rows: list[MetricRow]
 
 
+@dataclass(frozen=True)
+class MetricJudgeDisagreement:
+    theorem_id: str
+    high_metric_row: MetricRow
+    low_metric_row: MetricRow
+    metric_delta: float
+    judge_delta: float
+
+
 def load_report(path: Path) -> MetricsReport:
     total = 0
     invalid = 0
@@ -112,6 +121,16 @@ def render_report(report: MetricsReport, *, outlier_limit: int = 8) -> str:
     ]
     comparison_groups = _comparison_groups(judged_rows)
     comparison_row_count = sum(len(g) for g in comparison_groups)
+    byte_disagreements = same_theorem_metric_judge_disagreements(
+        comparison_groups,
+        metric=lambda r: r.proof_metric_bytes,
+        limit=outlier_limit,
+    )
+    delimiter_disagreements = same_theorem_metric_judge_disagreements(
+        comparison_groups,
+        metric=lambda r: r.proof_metric_delimiters,
+        limit=outlier_limit,
+    )
 
     lines.extend(
         [
@@ -158,7 +177,6 @@ def render_report(report: MetricsReport, *, outlier_limit: int = 8) -> str:
             )
     else:
         lines.append("padding_outliers_by_proof_len_minus_metric_bytes: none")
-
     candidates = low_judge_high_metric_candidates(ok_rows, limit=outlier_limit)
     if candidates:
         lines.append("low_judge_high_metric_candidates:")
@@ -170,6 +188,20 @@ def render_report(report: MetricsReport, *, outlier_limit: int = 8) -> str:
             )
     else:
         lines.append("low_judge_high_metric_candidates: none")
+    lines.extend(
+        _render_disagreements(
+            "same_theorem_metric_judge_disagreements(metric_bytes)",
+            byte_disagreements,
+            metric=lambda r: r.proof_metric_bytes,
+        ),
+    )
+    lines.extend(
+        _render_disagreements(
+            "same_theorem_metric_judge_disagreements(metric_delimiters)",
+            delimiter_disagreements,
+            metric=lambda r: r.proof_metric_delimiters,
+        ),
+    )
     return "\n".join(lines)
 
 
@@ -191,6 +223,40 @@ def low_judge_high_metric_candidates(rows: list[MetricRow], *, limit: int, max_j
     return sorted(candidates, key=lambda r: (r.proof_metric_bytes, r.proof_intrinsic, r.proof_len), reverse=True)[
         :limit
     ]
+
+
+def same_theorem_metric_judge_disagreements(
+    groups: list[list[MetricRow]],
+    *,
+    metric: Callable[[MetricRow], float | int | None],
+    limit: int,
+) -> list[MetricJudgeDisagreement]:
+    candidates: list[MetricJudgeDisagreement] = []
+    for group in groups:
+        for high in group:
+            high_value = metric(high)
+            if high_value is None or high.judge_composite is None:
+                continue
+            for low in group:
+                if high is low or low.judge_composite is None:
+                    continue
+                if high.uid is not None and high.uid == low.uid:
+                    continue
+                low_value = metric(low)
+                if low_value is None or float(high_value) <= float(low_value):
+                    continue
+                judge_delta = float(high.judge_composite) - float(low.judge_composite)
+                if judge_delta <= 0.0:
+                    candidates.append(
+                        MetricJudgeDisagreement(
+                            theorem_id=high.theorem_id,
+                            high_metric_row=high,
+                            low_metric_row=low,
+                            metric_delta=float(high_value) - float(low_value),
+                            judge_delta=judge_delta,
+                        ),
+                    )
+    return sorted(candidates, key=lambda c: (-c.judge_delta, c.metric_delta), reverse=True)[:limit]
 
 
 def decision_data_findings(ok_rows: list[MetricRow], *, failed_rows: int) -> tuple[list[str], list[str]]:
@@ -242,6 +308,17 @@ def metric_gate(rows: list[MetricRow]) -> tuple[str, list[str]]:
         reasons.append("padding_outliers")
     if low_judge_high_metric_candidates(ok_rows, limit=1):
         reasons.append("low_judge_high_metric_candidates")
+    comparison_groups = _comparison_groups([r for r in ok_rows if r.judge_composite is not None])
+    if same_theorem_metric_judge_disagreements(
+        comparison_groups,
+        metric=lambda r: r.proof_metric_bytes,
+        limit=1,
+    ) or same_theorem_metric_judge_disagreements(
+        comparison_groups,
+        metric=lambda r: r.proof_metric_delimiters,
+        limit=1,
+    ):
+        reasons.append("same_theorem_metric_judge_disagreements")
     if reasons:
         return "research_only", reasons
     return "manual_review_required", []
@@ -292,6 +369,29 @@ def _within_theorem_centered_corr(
             xs.append(x - mean_x)
             ys.append(y - mean_y)
     return _pearson(xs, ys)
+
+
+def _render_disagreements(
+    heading: str,
+    disagreements: list[MetricJudgeDisagreement],
+    *,
+    metric: Callable[[MetricRow], float | int | None],
+) -> list[str]:
+    if not disagreements:
+        return [f"{heading}: none"]
+    lines = [f"{heading}:"]
+    for c in disagreements:
+        high = c.high_metric_row
+        low = c.low_metric_row
+        lines.append(
+            f"  theorem={c.theorem_id} "
+            f"high_line={high.line_no} high_uid={high.uid} high_metric={metric(high)} "
+            f"high_judge={high.judge_composite:.4f} "
+            f"low_line={low.line_no} low_uid={low.uid} low_metric={metric(low)} "
+            f"low_judge={low.judge_composite:.4f} "
+            f"metric_delta={c.metric_delta:.4f} judge_delta={c.judge_delta:.4f}",
+        )
+    return lines
 
 
 def main(argv: list[str] | None = None) -> int:
