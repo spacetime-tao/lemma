@@ -109,6 +109,10 @@ Reason: the product center is simple, reproducible proof acceptance.
   chain weights still only show UID `0` as a visible validator row. To make miner
   hotkeys earn alpha from this validator, stake testnet TAO to the validator
   hotkey and confirm it receives validator permit, then run another live epoch.
+- Staking attempt from Codex was blocked by the encrypted coldkey password
+  prompt. No stake moved; wallet `lemma` remained at `2.272251606` free and
+  `0.0` staked. User needs to run the stake command locally and enter the
+  coldkey password outside chat.
 
 ## Notes For Future Agents
 
