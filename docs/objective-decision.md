@@ -5,7 +5,7 @@ into rewarding whatever the latest scoring layer happens to measure.
 
 ## One-Sentence Objective
 
-Lemma measures miners' ability to produce Lean-valid mathematical proofs for
+Lemma incentivizes miners to produce Lean-valid mathematical proofs for
 published theorem statements.
 
 ## Current Incentive Layer

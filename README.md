@@ -1,6 +1,6 @@
 # Lemma
 
-> **Lemma: verified theorem proving for mathematics on [Bittensor](https://docs.learnbittensor.org/).** Miners submit Lean proof scripts for published theorem statements. Validators first check the proof mechanically; the current default also judges the informal reasoning trace of Lean-valid submissions as a bootstrap ranking signal.
+> **Lemma: incentivized theorem proving for mathematics on [Bittensor](https://docs.learnbittensor.org/).** Miners submit Lean proof scripts for published theorem statements. Validators mechanically verify those proofs; the current default also judges the informal reasoning trace of Lean-valid submissions as a bootstrap ranking signal.
 
 A **theorem** is the precise claim to establish; a **proof** is the formal, machine-checkable argument that shows it. **Lean** is a proof assistant (and language): it checks those proofs mechanically, line by line. Validators run that check in **Docker** (lean-sandbox image).
 

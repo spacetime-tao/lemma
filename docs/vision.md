@@ -1,8 +1,8 @@
 # Vision & roadmap
 
-Lemma is a **Bittensor subnet** where participants answer formal math challenges in **Lean 4**: they submit a **proof script** (and, on the default path, a **reasoning trace**). Validators **verify proofs** in **Docker** (lean-sandbox image). An **LLM judge** currently scores how well the trace explains the work after Lean passes. **Weights on chain** follow from that pipeline.
+Lemma is an **incentivized theorem-proving subnet** for mathematics on **Bittensor**. Participants answer formal math challenges in **Lean 4** by submitting a **proof script** (and, on the default path, a **reasoning trace**). Validators **verify proofs** in **Docker** (lean-sandbox image). An **LLM judge** currently scores how well the trace explains the work after Lean passes. **Weights on chain** follow from that pipeline.
 
-**One-sentence objective:** Lemma measures miners' ability to produce Lean-valid mathematical proofs for published theorem statements.
+**One-sentence objective:** Lemma incentivizes miners to produce Lean-valid mathematical proofs for published theorem statements.
 
 The informal-reasoning judge is a current bootstrap ranking signal for submissions that already pass Lean, not the default long-term identity of the subnet. See [objective-decision.md](objective-decision.md) and [judge-incentive-decision.md](judge-incentive-decision.md).
 
@@ -90,7 +90,7 @@ After real traffic: consider **partial-progress** or **lemma-submission** tracks
 
 ## Through-line
 
-**Lean verification stays the objective floor.** Everything else—judges, traces, economics—exists to make that floor **useful, fair, and sustainable** on a decentralized network.
+**Lemma's identity is incentivized theorem proving; Lean verification stays the objective floor.** Everything else—judges, traces, economics—exists to make that floor **useful, fair, and sustainable** on a decentralized network.
 
 ---
 
