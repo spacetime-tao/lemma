@@ -7,7 +7,7 @@
 | [`lemma/lean/`](../lemma/lean/) | Workspace materialization; `LeanSandbox` runs `lake build` + axiom driver. |
 | [`lemma/judge/`](../lemma/judge/) | OpenAI-compatible validator judge; Anthropic and `FakeJudge` remain local/dry-run helpers. |
 | [`lemma/scoring/`](../lemma/scoring/) | Token counts + Pareto → weights. |
-| [`lemma/miner/`](../lemma/miner/) | Axon + `LLMProver`. |
+| [`lemma/miner/`](../lemma/miner/) | Reference Axon service + `LLMProver` compatibility path; keep competitive strategy and friendly UX out of core ([miner.md](miner.md)). |
 | [`lemma/validator/`](../lemma/validator/) | Dendrite broadcast → verify → judge → `set_weights`. |
 
 [governance.md](governance.md).
