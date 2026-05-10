@@ -11,9 +11,8 @@ from typing import Any
 
 from lemma.scoring.dedup import dedup_coldkeys, dedup_identical_submissions, submission_fingerprint
 from lemma.scoring.pareto import ScoredEntry, pareto_weights
-from lemma.scoring.proof_intrinsic import proof_intrinsic_score
 
-DEFAULT_PROOF_WEIGHT = 0.10
+DEFAULT_PROOF_WEIGHT = 0.0
 MIN_DECISION_REPLAYABLE_ROWS = 50
 MIN_DECISION_EPOCHS = 5
 MIN_DECISION_UIDS = 5
@@ -66,6 +65,7 @@ class ClonePressure:
 
 
 def load_report(path: Path, *, proof_weight: float = DEFAULT_PROOF_WEIGHT) -> ReplayReport:
+    _ = proof_weight
     total = 0
     invalid = 0
     rows: list[ReplayRow] = []
@@ -79,7 +79,7 @@ def load_report(path: Path, *, proof_weight: float = DEFAULT_PROOF_WEIGHT) -> Re
             except json.JSONDecodeError:
                 invalid += 1
                 continue
-            row = _replay_row(obj, proof_weight=proof_weight)
+            row = _replay_row(obj)
             if row is not None:
                 rows.append(row)
     return ReplayReport(total_rows=total, invalid_json_lines=invalid, replay_rows=rows)
@@ -271,7 +271,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--clone-k", type=int, default=5, help="Number of coordinated clone UIDs to simulate.")
     parser.add_argument("--epochs", type=int, default=5, help="Number of latest block groups to print.")
-    parser.add_argument("--proof-weight", type=float, default=DEFAULT_PROOF_WEIGHT)
+    parser.add_argument("--proof-weight", type=float, default=DEFAULT_PROOF_WEIGHT, help="Legacy; ignored.")
     parser.add_argument(
         "--require-decision-ready",
         action="store_true",
@@ -292,29 +292,24 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def _replay_row(obj: Any, *, proof_weight: float) -> ReplayRow | None:
+def _replay_row(obj: Any) -> ReplayRow | None:
     if not isinstance(obj, dict):
         return None
     uid = _as_int(obj.get("uid"))
     block = _as_int(obj.get("block"))
     theorem_id = str(obj.get("theorem_id") or "")
     proof = obj.get("proof_script")
-    rubric = obj.get("rubric")
-    composite = _as_float(rubric.get("composite")) if isinstance(rubric, dict) else None
-    if uid is None or block is None or not theorem_id or not isinstance(proof, str) or composite is None:
+    if uid is None or block is None or not theorem_id or not isinstance(proof, str):
         return None
 
-    trace = _trace_text(obj)
     theorem_key = str(obj.get("theorem_statement") or theorem_id)
-    w = max(0.0, min(1.0, float(proof_weight)))
-    score = w * proof_intrinsic_score(proof) + (1.0 - w) * composite
-    fp = submission_fingerprint(theorem_key, proof, trace)
+    fp = submission_fingerprint(theorem_key, proof)
     return ReplayRow(
         block=block,
         theorem_id=theorem_id,
         uid=uid,
         coldkey=_optional_str(obj.get("coldkey") or obj.get("coldkey_ss58")),
-        entry=ScoredEntry(uid=uid, reasoning_score=score, tokens=len(trace or ""), submission_fp=fp),
+        entry=ScoredEntry(uid=uid, score=1.0, cost=0, submission_fp=fp),
     )
 
 
@@ -324,9 +319,9 @@ def _merge_uid_entries(uid_groups: dict[int, list[ScoredEntry]]) -> list[ScoredE
         if len(entries) == 1:
             merged.append(entries[0])
             continue
-        score = sum(e.reasoning_score for e in entries) / len(entries)
-        tokens = int(round(sum(e.tokens for e in entries) / len(entries)))
-        merged.append(ScoredEntry(uid=uid, reasoning_score=score, tokens=tokens))
+        score = sum(e.score for e in entries) / len(entries)
+        cost = int(round(sum(e.cost for e in entries) / len(entries)))
+        merged.append(ScoredEntry(uid=uid, score=score, cost=cost))
     return merged
 
 
@@ -352,20 +347,6 @@ def _coldkeys_by_uid(rows: list[ReplayRow]) -> dict[int, str]:
         else:
             coldkeys.setdefault(row.uid, f"uid:{row.uid}")
     return coldkeys
-
-
-def _trace_text(obj: dict[str, Any]) -> str:
-    text = obj.get("reasoning_text")
-    if isinstance(text, str):
-        return text
-    steps = obj.get("reasoning_steps")
-    if not isinstance(steps, list):
-        return ""
-    chunks: list[str] = []
-    for step in steps:
-        if isinstance(step, dict):
-            chunks.extend(str(v) for v in step.values() if isinstance(v, str))
-    return "\n".join(chunks)
 
 
 def _outcome_line(outcome: ReplayOutcome) -> str:

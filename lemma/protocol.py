@@ -5,29 +5,16 @@ from __future__ import annotations
 from typing import ClassVar
 
 import bittensor as bt
-from pydantic import BaseModel, ConfigDict, Field
-
-
-class ReasoningStep(BaseModel):
-    """One step in an informal solution narrative (PRM / process supervision)."""
-
-    model_config = ConfigDict(extra="ignore")
-
-    text: str = Field(..., description="Narrative content for this step.")
-    title: str | None = Field(
-        default=None,
-        max_length=240,
-        description="Optional short label (e.g. 'Factor the quadratic').",
-    )
+from pydantic import Field
 
 
 class LemmaChallenge(bt.Synapse):
     """
-    Validator broadcasts a formal theorem; miner returns a reasoning trace and Lean proof.
+    Validator broadcasts a formal theorem; miner returns a Lean proof.
 
     ``required_hash_fields`` drive :func:`bittensor.core.synapse.Synapse.body_hash`. That hash becomes
     ``computed_body_hash`` in HTTP headers on both the validator→miner request and the miner→validator response.
-    Including miner-filled fields binds the **proof and reasoning** to the hash so a middle party cannot silently
+    Including the miner-filled proof binds the response to the hash so a middle party cannot silently
     swap bytes after the miner signs (coordinated miner + validator release required when this list changes).
     """
 
@@ -38,8 +25,6 @@ class LemmaChallenge(bt.Synapse):
         "lean_toolchain",
         "mathlib_rev",
         "deadline_block",
-        "reasoning_trace",
-        "reasoning_steps",
         "proof_script",
     )
 
@@ -81,17 +66,6 @@ class LemmaChallenge(bt.Synapse):
     )
 
     # --- Miner-filled (response) ---
-    reasoning_trace: str | None = Field(
-        default=None,
-        description=(
-            "Flattened informal narrative — populated when routing structured steps to text for hashing/size; "
-            "miners must supply reasoning_steps from the prover JSON (legacy reasoning_trace-only payloads fail)."
-        ),
-    )
-    reasoning_steps: list[ReasoningStep] | None = Field(
-        default=None,
-        description="Structured informal reasoning (required from miner JSON); judge scores primarily from here.",
-    )
     proof_script: str | None = Field(
         default=None,
         description="Full Lean 4 source for Submission.lean (namespace Submission, theorem name fixed).",

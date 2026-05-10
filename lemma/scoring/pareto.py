@@ -1,4 +1,4 @@
-"""Pareto frontier over reasoning quality vs trace length."""
+"""Pareto frontier over score vs optional proof-side cost."""
 
 from __future__ import annotations
 
@@ -9,18 +9,18 @@ from dataclasses import dataclass
 @dataclass
 class ScoredEntry:
     uid: int
-    reasoning_score: float
-    tokens: int
-    #: Fingerprint of (theorem, proof, trace) for identical-output dedup (optional).
+    score: float
+    cost: int
+    #: Fingerprint of the normalized theorem/proof payload for identical-output dedup.
     submission_fp: str = ""
 
 
 def _dominates(a: ScoredEntry, b: ScoredEntry) -> bool:
-    """True iff ``a`` Pareto-dominates ``b`` (maximize score, minimize tokens)."""
-    better_or_eq_score = a.reasoning_score >= b.reasoning_score
-    better_or_eq_tokens = a.tokens <= b.tokens
-    strictly_better = (a.reasoning_score > b.reasoning_score) or (a.tokens < b.tokens)
-    return better_or_eq_score and better_or_eq_tokens and strictly_better
+    """True iff ``a`` Pareto-dominates ``b`` (maximize score, minimize cost)."""
+    better_or_eq_score = a.score >= b.score
+    better_or_eq_cost = a.cost <= b.cost
+    strictly_better = (a.score > b.score) or (a.cost < b.cost)
+    return better_or_eq_score and better_or_eq_cost and strictly_better
 
 
 def _pareto_frontier(pool: list[ScoredEntry]) -> list[ScoredEntry]:
@@ -45,7 +45,7 @@ def pareto_weights(entries: list[ScoredEntry]) -> dict[int, float]:
     """
     Map miner UID -> normalized weight.
 
-    Layer ``k`` receives discount ``0.5 ** k`` applied to ``reasoning_score``.
+    Layer ``k`` receives discount ``0.5 ** k`` applied to ``score``.
     """
     if not entries:
         return {}
@@ -54,7 +54,7 @@ def pareto_weights(entries: list[ScoredEntry]) -> dict[int, float]:
     for k, layer in enumerate(layers):
         discount = 0.5**k
         for e in layer:
-            raw[e.uid] = max(e.reasoning_score, 1e-9) * discount
+            raw[e.uid] = max(e.score, 1e-9) * discount
     total = sum(raw.values())
     if total <= 0:
         return {uid: 1.0 / len(raw) for uid in raw}

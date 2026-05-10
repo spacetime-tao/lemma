@@ -23,11 +23,11 @@ from lemma.problems.factory import resolve_problem
 @click.pass_context
 @click.version_option(version=__version__)
 def main(ctx: click.Context) -> None:
-    """Lemma subnet — Lean proofs + reasoning traces (Bittensor).
+    """Lemma subnet — Lean proofs (Bittensor).
 
     \b
     Common commands:
-      lemma-cli rehearsal  Live theorem → prover → Lean → judge (scoring preview)
+      lemma-cli rehearsal  Live theorem → prover → Lean preview
       lemma-cli doctor     Config + keys + chain sanity
       lemma-cli        Friendly operator setup/help wrapper
       lemma --help     Full command list
@@ -74,7 +74,7 @@ def main(ctx: click.Context) -> None:
             + stylize("Preview", fg="yellow", bold=True)
             + stylize("  ", dim=True)
             + stylize("lemma-cli rehearsal", fg="green")
-            + stylize(" — prover + Lean + judge on the live theorem (costs APIs)", dim=True),
+            + stylize(" — prover + Lean on the live theorem (costs APIs)", dim=True),
         )
         click.echo(stylize("  Docs: docs/getting-started.md · docs/miner.md · docs/validator.md\n", dim=True))
         return
@@ -90,17 +90,13 @@ def meta_cmd(raw: bool) -> None:
     """Canonical fingerprints: generated templates + validator scoring profile."""
     import json
 
-    from lemma.judge.fingerprint import rubric_sha256
     from lemma.judge.profile import judge_profile_dict, judge_profile_sha256
     from lemma.problems.generated import generated_registry_canonical_dict, generated_registry_sha256
 
     s = LemmaSettings()
     reg_sha = generated_registry_sha256()
-    rub_sha = rubric_sha256()
     prof = judge_profile_dict(s)
     prof_sha = judge_profile_sha256(s)
-    rub_embed = str(prof.get("rubric_sha256", "")).strip().lower()
-    rub_ok = rub_embed == rub_sha.strip().lower()
 
     if raw:
         reg = generated_registry_canonical_dict()
@@ -108,10 +104,8 @@ def meta_cmd(raw: bool) -> None:
         click.echo(f"problem_source={s.problem_source}")
         click.echo(f"generated_registry_sha256={reg_sha}")
         click.echo("generated_registry_json=" + json.dumps(reg, sort_keys=True))
-        click.echo(f"judge_rubric_sha256={rub_sha}")
         click.echo(f"judge_profile_sha256={prof_sha}")
         click.echo("judge_profile_json=" + json.dumps(prof, sort_keys=True))
-        click.echo(f"judge_profile_embedded_rubric_matches_code={'1' if rub_ok else '0'}")
         return
 
     click.echo(stylize("Subnet fingerprints", fg="cyan", bold=True))
@@ -130,21 +124,8 @@ def meta_cmd(raw: bool) -> None:
     click.echo(stylize("\nGenerated problem registry\n", fg="cyan"))
     click.echo(stylize(f"  SHA256  {reg_sha}", dim=False))
 
-    click.echo(stylize("\nJudge rubric (code fingerprint)\n", fg="cyan"))
-    click.echo(f"  SHA256  {rub_sha}")
-
-    click.echo(stylize("\nJudge profile (your environment)\n", fg="cyan"))
+    click.echo(stylize("\nValidator scoring profile (your environment)\n", fg="cyan"))
     click.echo(stylize(f"  SHA256  {prof_sha}", dim=False))
-    click.echo(f"  embedded_rubric_matches_code  {'1' if rub_ok else '0'}")
-    if not rub_ok:
-        click.echo(
-            stylize(
-                "\nMISMATCH: judge_profile.rubric_sha256 differs from judge_rubric_sha256.",
-                fg="red",
-                bold=True,
-            ),
-            err=True,
-        )
     click.echo(stylize("\nFull canonical JSON: lemma meta --raw", dim=True))
 
 
@@ -192,7 +173,7 @@ def _miner_emit_dry_run_summary() -> None:
     click.echo(
         stylize(
             "When the real miner runs: LEMMA_MINER_FORWARD_SUMMARY=1 (default) logs one line per forward + "
-            "session totals; LEMMA_MINER_LOG_FORWARDS=1 includes reasoning/proof excerpts; "
+            "session totals; LEMMA_MINER_LOG_FORWARDS=1 includes proof excerpts; "
             "LEMMA_MINER_LOCAL_VERIFY=1 optional local Lean check.",
             dim=True,
         ),
@@ -275,7 +256,7 @@ def miner_group_dry_run_cmd() -> None:
 
 @miner_group.command(
     "observability",
-    help="Explain how to see forwards in logs vs on-chain incentives (judge scores are not returned to the axon).",
+    help="Explain how to see forwards in logs vs on-chain incentives (proof scores are not returned to the axon).",
 )
 def miner_observability_cmd() -> None:
     _echo_moved_to_lemma_cli(("miner-observability",), heading="Miner observability moved to lemma-cli.")
@@ -343,7 +324,7 @@ def _validator_run_blocking(*, dry_run: bool) -> None:
     "validator",
     invoke_without_command=True,
     help=(
-        "Validator — query miners, Lean verify, LLM judge, optional set_weights. "
+        "Validator — query miners, Lean verify, proof-score, optional set_weights. "
         "Local scoring preview (no metagraph): lemma-cli rehearsal. "
         "Judge-only on files: lemma-cli judge --trace FILE. "
         "Typical path: bash scripts/prebuild_lean_image.sh → lemma validator-check → lemma validator start."
@@ -370,8 +351,7 @@ def validator_start_cmd() -> None:
 @validator_group.command(
     "dry-run",
     help=(
-        "Full scoring epochs without set_weights (chain + miners + Lean). "
-        "Judge defaults to FakeJudge; set LEMMA_DRY_RUN_REAL_JUDGE=1 for live judge HTTP. "
+        "Full proof-only scoring epochs without set_weights (chain + miners + Lean). "
         "Judge-only smoke test: lemma-cli judge --trace FILE."
     ),
 )
@@ -411,7 +391,7 @@ def validator_config_cmd(args: tuple[str, ...]) -> None:
 
 @main.command(
     "validator-check",
-    help="Pre-flight: chain, wallet UID, judge pins, Lean image (before `lemma validator start`).",
+    help="Pre-flight: chain, wallet UID, profile pins, Lean image (before `lemma validator start`).",
 )
 def validator_check_cmd() -> None:
     """RPC + registration + pins + Docker — see NOT READY / READY at end."""

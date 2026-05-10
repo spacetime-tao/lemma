@@ -38,14 +38,14 @@ Daily forward cap: `MINER_MAX_FORWARDS_PER_DAY` or `uv run lemma miner start --m
 
 Validators decide whether your proof typechecks; the miner process does not receive scores back on the axon path.
 
-- `lemma-cli try-prover` runs the **prover once** on whatever theorem `lemma-cli status` would sample right now, then prints informal reasoning and `proof_script` (uses your prover API). Add `--verify` to run the Lean check after (default: Docker, same as validators).
+- `lemma-cli try-prover` runs the **prover once** on whatever theorem `lemma-cli status` would sample right now, then prints `proof_script` (uses your prover API). Add `--verify` to run the Lean check after (default: Docker, same as validators).
 
 - When a validator forward starts, logs include **`my_uid`** and **`my_incentive`** from the **chain metagraph** (same kind of aggregate view as `uv run btcli subnet show --netuid 467 --network test`) — a snapshot of subnet incentive for your hotkey, not a grade on this theorem.
 - At **INFO** you get **`miner answered`** when the reply is ready; **`local_lean=`** is `PASS` / `FAIL` / … only if **`LEMMA_MINER_LOCAL_VERIFY=1`**. That flag is **optional**: validators always run Lean on your submission — enable local verify only if you want early PASS/FAIL on your machine (costs Docker CPU per forward while debugging). **`miner_forward_summary`** (default on) adds session rollups.
 
 - Set `LEMMA_MINER_FORWARD_TIMELINE=1` for **three INFO lines per forward**: **`miner timeline 1 RECEIVE`** (theorem, `deadline_block` vs current head, HTTP/wall time budgets, short statement preview), **`miner timeline 2 SOLVED`** (prover wall time, sizes), **`miner timeline 3 OUTCOME`** (`local_lean` if `LEMMA_MINER_LOCAL_VERIFY=1`, else a hint). Then **`miner answered`** as today. Final validator weights are not returned on the axon — only optional **local Lean** mirrors validator proof-checking on your machine.
 
-- Set `LEMMA_MINER_LOG_FORWARDS=1` to log each forward: reasoning excerpt and `proof_script` excerpt at INFO; raw model output is logged at DEBUG (enable e.g. `LOG_LEVEL=DEBUG` to see it).
+- Set `LEMMA_MINER_LOG_FORWARDS=1` to log each forward: `proof_script` excerpt at INFO; raw model output is logged at DEBUG (enable e.g. `LOG_LEVEL=DEBUG` to see it).
 - Set `LEMMA_MINER_LOCAL_VERIFY=1` to run the same sandbox `lake build` as validators after the prover returns (requires Docker and `LEAN_SANDBOX_IMAGE` / timeouts aligned with your subnet). Logs `miner local verify OK` or `FAIL` with reason.
 
 For frozen catalog problems, `LEMMA_MINER_LOCAL_VERIFY` needs the same `LEMMA_MINIF2F_CATALOG_PATH` as validators so `theorem_id` resolves.

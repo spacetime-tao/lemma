@@ -10,7 +10,7 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic_settings.sources import PydanticBaseSettingsSource
 
-# Subnet judge (validators only): DeepSeek on Chutes — see ``validator_judge_stack_strict_issue``.
+# Defaults for optional one-shot prose-judge tooling.
 CANONICAL_JUDGE_OPENAI_MODEL = "deepseek-ai/DeepSeek-V3.2-TEE"
 CANONICAL_JUDGE_OPENAI_BASE_URL = "https://llm.chutes.ai/v1"
 
@@ -230,11 +230,9 @@ class LemmaSettings(BaseSettings):
         default="chutes",
         validation_alias="JUDGE_PROVIDER",
         description=(
-            "``chutes`` = subnet judge via OpenAI-compatible HTTP to Chutes "
-            "(same stack as ``lemma-cli configure judge`` "
-            f"→ Chutes). Legacy alias: ``openai``. Anthropic is local judge tooling only. "
-            "Validators must use ``chutes`` with "
-            f"OPENAI_MODEL={CANONICAL_JUDGE_OPENAI_MODEL!r} and OPENAI_BASE_URL={CANONICAL_JUDGE_OPENAI_BASE_URL!r}."
+            "Optional prose-judge provider for one-shot research tooling. ``chutes`` and legacy ``openai`` "
+            "use OpenAI-compatible HTTP; Anthropic is local judge tooling only. Live validator scoring is "
+            "proof-only and does not read this field."
         ),
     )
     anthropic_api_key: str | None = Field(
@@ -249,32 +247,32 @@ class LemmaSettings(BaseSettings):
         default=None,
         validation_alias="OPENAI_API_KEY",
         description=(
-            "Legacy shared fallback for the judge and OpenAI-compatible prover. Prefer JUDGE_OPENAI_API_KEY "
-            "and PROVER_OPENAI_API_KEY so those keys stay separate."
+            "Legacy shared fallback for optional prose-judge tooling and OpenAI-compatible provers. "
+            "Prefer JUDGE_OPENAI_API_KEY and PROVER_OPENAI_API_KEY so those keys stay separate."
         ),
     )
     judge_openai_api_key: str | None = Field(
         default=None,
         validation_alias="JUDGE_OPENAI_API_KEY",
         description=(
-            "Chutes/OpenAI-compatible API key used **only** by the judge (scores traces). "
-            "If unset, the judge falls back to OPENAI_API_KEY."
+            "Chutes/OpenAI-compatible API key used only by optional prose-judge tooling. "
+            "If unset, that tooling falls back to OPENAI_API_KEY."
         ),
     )
     openai_model: str = Field(
         default=CANONICAL_JUDGE_OPENAI_MODEL,
         validation_alias="OPENAI_MODEL",
         description=(
-            f"Judge model when JUDGE_PROVIDER is chutes or openai. Validators must use "
-            f"{CANONICAL_JUDGE_OPENAI_MODEL!r} (miners: use PROVER_MODEL for a different prover id)."
+            f"Optional prose-judge model when JUDGE_PROVIDER is chutes or openai. Default: "
+            f"{CANONICAL_JUDGE_OPENAI_MODEL!r}. Miners should use PROVER_MODEL for the prover id."
         ),
     )
     openai_base_url: str = Field(
         default=CANONICAL_JUDGE_OPENAI_BASE_URL,
         validation_alias="OPENAI_BASE_URL",
         description=(
-            f"Judge API base. Validators must use {CANONICAL_JUDGE_OPENAI_BASE_URL!r}; miners may point "
-            "`PROVER_OPENAI_BASE_URL` elsewhere."
+            f"Optional prose-judge API base. Default: {CANONICAL_JUDGE_OPENAI_BASE_URL!r}. "
+            "Miners may point `PROVER_OPENAI_BASE_URL` elsewhere."
         ),
     )
     judge_temperature: float = Field(
@@ -330,7 +328,7 @@ class LemmaSettings(BaseSettings):
         le=131_072,
         validation_alias="LEMMA_PROVER_MAX_TOKENS",
         description=(
-            "Max completion tokens for one prover call (reasoning JSON + Submission.lean). "
+            "Max completion tokens for one prover call (JSON with Submission.lean). "
             "OpenAI-compatible: sent as max_tokens. Anthropic: capped at 8192 (API limit for many models)."
         ),
     )
@@ -351,25 +349,6 @@ class LemmaSettings(BaseSettings):
         validation_alias="LEMMA_PROVER_TEMPERATURE",
         description="Sampling temperature for prover completions (OpenAI-compatible and Anthropic prover paths).",
     )
-    prover_min_reasoning_steps: int = Field(
-        default=0,
-        ge=0,
-        le=64,
-        validation_alias="LEMMA_PROVER_MIN_REASONING_STEPS",
-        description=(
-            "If > 0, reject prover JSON unless reasoning_steps has at least this many steps after parsing. "
-            "0 = no minimum (subnet default)."
-        ),
-    )
-    prover_min_reasoning_total_chars: int = Field(
-        default=0,
-        ge=0,
-        le=500_000,
-        validation_alias="LEMMA_PROVER_MIN_REASONING_TOTAL_CHARS",
-        description=(
-            "If > 0, reject unless the sum of trimmed reasoning step text lengths meets this minimum. 0 = off."
-        ),
-    )
     prover_min_proof_script_chars: int = Field(
         default=0,
         ge=0,
@@ -385,7 +364,7 @@ class LemmaSettings(BaseSettings):
         validation_alias="PROVER_OPENAI_BASE_URL",
         description=(
             "Miner-only: OpenAI-compatible API base for PROVER_PROVIDER=openai. "
-            "If unset, prover uses OPENAI_BASE_URL (validator judge is unchanged)."
+            "If unset, prover uses OPENAI_BASE_URL."
         ),
     )
     prover_openai_api_key: str | None = Field(
@@ -405,7 +384,7 @@ class LemmaSettings(BaseSettings):
         gt=30.0,
         validation_alias="LEMMA_LLM_HTTP_TIMEOUT_S",
         description=(
-            "HTTP read timeout for OpenAI-compatible + Anthropic LLM calls (prover + judge). "
+            "HTTP read timeout for OpenAI-compatible + Anthropic prover calls and optional prose-judge tooling. "
             "Should fit inside one round’s forward wait (blocks × LEMMA_BLOCK_TIME_SEC_ESTIMATE)."
         ),
     )
@@ -466,16 +445,6 @@ class LemmaSettings(BaseSettings):
         description=(
             "Max concurrent Lean sandbox.verify jobs per epoch (each may spawn Docker). "
             "Raise on large validators when many miners return proofs; lower if CPU/RAM or Docker struggles."
-        ),
-    )
-    lemma_judge_max_concurrent: int = Field(
-        default=8,
-        ge=1,
-        le=256,
-        validation_alias="LEMMA_JUDGE_MAX_CONCURRENT",
-        description=(
-            "Max concurrent judge LLM HTTP calls per epoch (after Lean passes). "
-            "Caps bursts against Chutes to reduce 429 rate limits when many miners verify."
         ),
     )
     lean_verify_workspace_cache_dir: Path | None = Field(
@@ -552,7 +521,7 @@ class LemmaSettings(BaseSettings):
     empty_epoch_weights_policy: Literal["skip", "uniform"] = Field(
         default="skip",
         validation_alias="EMPTY_EPOCH_WEIGHTS_POLICY",
-        description="If no miner passes verify+judge: skip set_weights, or emit uniform weights across all UIDs.",
+        description="If no miner passes verify: skip set_weights, or emit uniform weights across all UIDs.",
     )
     validator_abort_if_not_registered: bool = Field(
         default=False,
@@ -562,34 +531,23 @@ class LemmaSettings(BaseSettings):
     training_export_jsonl: Path | None = Field(
         default=None,
         validation_alias="LEMMA_TRAINING_EXPORT_JSONL",
-        description="Append one JSON object per scored miner per epoch (PRM dataset export).",
+        description="Append one JSON object per scored miner per epoch.",
     )
-    lemma_training_export_profile: Literal["full", "reasoning_only"] = Field(
+    lemma_training_export_profile: Literal["full", "summary", "reasoning_only"] = Field(
         default="full",
         validation_alias="LEMMA_TRAINING_EXPORT_PROFILE",
         description=(
-            "`full`: schema v1 includes proof_script, rubric, pareto_weight. "
-            "`reasoning_only`: schema v2 omits proof, judge labels, and weights — less useful for gaming "
-            "(see docs/training_export.md)."
+            "`full`: schema v1 includes proof_script, optional labels, pareto_weight. "
+            "`summary`: schema v2 omits proof, labels, metrics, and weights. "
+            "`reasoning_only` is accepted as a legacy alias for `summary`."
         ),
     )
 
-    # Scoring / incentive hard-migration (validators)
-    lemma_score_proof_weight: float = Field(
-        default=0.10,
-        ge=0.0,
-        le=1.0,
-        validation_alias="LEMMA_SCORE_PROOF_WEIGHT",
-        description=(
-            "Blend intrinsic proof-text heuristic with judge rubric: "
-            "round_score = w * proof_intrinsic + (1-w) * judge_composite. "
-            "Default keeps the text heuristic low-weight (see docs/proof-intrinsic-decision.md)."
-        ),
-    )
+    # Scoring / incentive policy (validators)
     lemma_scoring_dedup_identical: bool = Field(
         default=True,
         validation_alias="LEMMA_SCORING_DEDUP_IDENTICAL",
-        description="Collapse identical (theorem, proof, trace) submissions; keep best round score per cluster.",
+        description="Collapse identical normalized theorem/proof submissions; keep one round score per cluster.",
     )
     lemma_scoring_coldkey_dedup: bool = Field(
         default=True,
@@ -621,14 +579,6 @@ class LemmaSettings(BaseSettings):
         description=(
             "EMA alpha for per-UID verify credibility (1.0 = Lean verify passed, 0.0 = failed). "
             "0 disables updates; new UIDs start at credibility 1.0."
-        ),
-    )
-    lemma_proof_intrinsic_strip_comments: bool = Field(
-        default=True,
-        validation_alias="LEMMA_PROOF_INTRINSIC_STRIP_COMMENTS",
-        description=(
-            "Strip Lean line/block comments and empty lines before proof_intrinsic heuristic "
-            "(reduces comment-padding)."
         ),
     )
     lemma_reputation_state_path: Path | None = Field(
@@ -746,7 +696,7 @@ class LemmaSettings(BaseSettings):
     miner_log_forwards: bool = Field(
         default=False,
         validation_alias="LEMMA_MINER_LOG_FORWARDS",
-        description="Log reasoning trace and proof_script for each forward (excerpts at INFO).",
+        description="Log proof_script for each forward (excerpt at INFO).",
     )
     miner_forward_summary: bool = Field(
         default=True,
@@ -762,7 +712,7 @@ class LemmaSettings(BaseSettings):
         description=(
             "Per forward, log three INFO lines: (1) RECEIVE with deadline vs chain head, (2) SOLVED after prover, "
             "(3) OUTCOME with local_lean or hint to enable LEMMA_MINER_LOCAL_VERIFY. "
-            "Final validator Lean+judge is not returned on the axon."
+            "Final validator proof score is not returned on the axon."
         ),
     )
     miner_local_verify: bool = Field(
@@ -780,14 +730,8 @@ class LemmaSettings(BaseSettings):
         ge=1024,
         validation_alias="SYNAPSE_MAX_PROOF_CHARS",
     )
-    synapse_max_trace_chars: int = Field(
-        default=400_000,
-        ge=1024,
-        validation_alias="SYNAPSE_MAX_TRACE_CHARS",
-    )
-
     def prover_openai_base_url_resolved(self) -> str:
-        """OpenAI-compatible base URL for the miner prover; defaults to judge ``OPENAI_BASE_URL``."""
+        """OpenAI-compatible base URL for the miner prover; defaults to ``OPENAI_BASE_URL``."""
         p = (self.prover_openai_base_url or "").strip()
         return p if p else (self.openai_base_url or "").strip()
 
@@ -796,7 +740,7 @@ class LemmaSettings(BaseSettings):
         return _stripped_or_none(self.prover_openai_api_key) or _stripped_or_none(self.openai_api_key)
 
     def judge_openai_api_key_resolved(self) -> str | None:
-        """API key for judge when ``JUDGE_PROVIDER`` is chutes/openai; prefers ``JUDGE_OPENAI_API_KEY``."""
+        """API key for optional prose-judge tooling; prefers ``JUDGE_OPENAI_API_KEY``."""
         return _stripped_or_none(self.judge_openai_api_key) or _stripped_or_none(self.openai_api_key)
 
     def validator_wallet_names(self) -> tuple[str, str]:
@@ -804,41 +748,3 @@ class LemmaSettings(BaseSettings):
         c = (self.validator_wallet_cold or "").strip()
         h = (self.validator_wallet_hot or "").strip()
         return (c or self.wallet_cold, h or self.wallet_hot)
-
-
-def normalized_judge_openai_base_url(settings: LemmaSettings) -> str:
-    """Same normalization as ``judge_profile_dict`` for ``openai_base_url``."""
-    return (settings.openai_base_url or "").strip().rstrip("/")
-
-
-def validator_judge_stack_strict_issue(settings: LemmaSettings) -> str | None:
-    """Hard subnet policy for ``lemma validator``: DeepSeek V3.2 TEE on Chutes only.
-
-    Miners are unaffected (prover uses ``PROVER_*``); this gates scoring only.
-    """
-    if os.environ.get("LEMMA_FAKE_JUDGE", "").strip().lower() in ("1", "true", "yes"):
-        return (
-            "lemma validator requires the live Chutes judge — unset LEMMA_FAKE_JUDGE "
-            "(FakeJudge cannot score miners)."
-        )
-    prov = (settings.judge_provider or "chutes").lower()
-    if prov not in ("chutes", "openai"):
-        return (
-            "lemma validator requires JUDGE_PROVIDER=chutes (Chutes judge via OpenAI-compatible HTTP) with "
-            f"OPENAI_MODEL={CANONICAL_JUDGE_OPENAI_MODEL!r} at {CANONICAL_JUDGE_OPENAI_BASE_URL!r} "
-            f"(legacy alias openai allowed; got judge_provider={prov!r})."
-        )
-    got_model = (settings.openai_model or "").strip()
-    if got_model != CANONICAL_JUDGE_OPENAI_MODEL:
-        return (
-            f"lemma validator requires OPENAI_MODEL={CANONICAL_JUDGE_OPENAI_MODEL!r} on Chutes "
-            f"(got {got_model!r})."
-        )
-    got_base = normalized_judge_openai_base_url(settings)
-    canon = CANONICAL_JUDGE_OPENAI_BASE_URL.strip().rstrip("/").lower()
-    if got_base.lower() != canon:
-        return (
-            f"lemma validator requires OPENAI_BASE_URL={CANONICAL_JUDGE_OPENAI_BASE_URL!r} "
-            f"(got {got_base!r})."
-        )
-    return None

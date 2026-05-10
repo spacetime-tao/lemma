@@ -10,7 +10,7 @@ import bittensor as bt
 from loguru import logger
 
 import lemma.validator.epoch as ep
-from lemma.common.config import LemmaSettings, validator_judge_stack_strict_issue
+from lemma.common.config import LemmaSettings
 from lemma.common.logging import setup_logging
 from lemma.common.subtensor import get_subtensor
 from lemma.judge.profile import judge_profile_sha256
@@ -39,14 +39,6 @@ def validator_startup_issues(settings: LemmaSettings, *, dry_run: bool) -> tuple
     if not settings.lean_use_docker:
         fatal.append(_DOCKER_REQUIRED_ERROR)
 
-    judge_policy = validator_judge_stack_strict_issue(settings)
-    if judge_policy:
-        fatal.append(judge_policy)
-
-    dry_run_real_judge = dry_run and os.environ.get("LEMMA_DRY_RUN_REAL_JUDGE", "").strip() == "1"
-    if (not dry_run or dry_run_real_judge) and not (settings.judge_openai_api_key_resolved() or "").strip():
-        fatal.append("JUDGE_OPENAI_API_KEY / OPENAI_API_KEY missing; cannot score live validator epoch")
-
     if not (settings.judge_profile_expected_sha256 or "").strip():
         fatal.append(
             "lemma validator requires JUDGE_PROFILE_SHA256_EXPECTED in `.env` "
@@ -59,7 +51,7 @@ def validator_startup_issues(settings: LemmaSettings, *, dry_run: bool) -> tuple
             fatal.append(
                 f"judge profile mismatch: expected JUDGE_PROFILE_SHA256_EXPECTED={expected_raw!r} "
                 f"but current config hashes to {actual_judge!r}.\n"
-                "Align judge env with the subnet, then run `lemma-cli configure subnet-pins` "
+                "Align validator profile env with the subnet, then run `lemma-cli configure subnet-pins` "
                 "(or set the pin to match `lemma meta` / `lemma meta --raw` manually).",
             )
 

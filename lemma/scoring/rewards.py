@@ -1,31 +1,22 @@
-"""Combine objective pass with judge composite."""
+"""Assemble live reward entries from Lean-verified proofs."""
 
 from __future__ import annotations
 
-from lemma.judge.base import RubricScore
 from lemma.scoring.dedup import submission_fingerprint
 from lemma.scoring.pareto import ScoredEntry
-from lemma.scoring.proof_intrinsic import proof_intrinsic_score
 
 
-def entry_from_scores(
+def entry_from_verified_proof(
     uid: int,
-    rubric: RubricScore,
-    trace: str,
     *,
     theorem_statement: str,
     proof_script: str,
-    proof_weight: float,
-    proof_intrinsic_strip_comments: bool = True,
 ) -> ScoredEntry:
-    """Blend intrinsic proof heuristic with judge rubric (``proof_weight`` in ``[0,1]``)."""
-    w = max(0.0, min(1.0, float(proof_weight)))
-    p_inst = proof_intrinsic_score(proof_script, strip_comments=proof_intrinsic_strip_comments)
-    combined = w * p_inst + (1.0 - w) * float(rubric.composite)
-    fp = submission_fingerprint(theorem_statement, proof_script, trace)
+    """Return one binary reward entry for a proof that already passed Lean."""
+    fp = submission_fingerprint(theorem_statement, proof_script)
     return ScoredEntry(
         uid=uid,
-        reasoning_score=combined,
-        tokens=len(trace or ""),
+        score=1.0,
+        cost=0,
         submission_fp=fp,
     )

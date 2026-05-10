@@ -26,7 +26,7 @@ def proof_intrinsic_score(proof_script: str, *, strip_comments: bool = True) -> 
     """Return a score in ``[0, 1]`` from proof length / structure proxies.
 
     This is not a measure of mathematical difficulty — only a coarse signal to reduce
-    judge-only dominance when combined with ``LEMMA_SCORE_PROOF_WEIGHT``.
+    Optional research heuristic; live proof-only scoring does not call this.
     """
     s = (proof_script or "").strip()
     if strip_comments:

@@ -1,14 +1,13 @@
 """Commit–reveal for miner responses (optional ``LEMMA_COMMIT_REVEAL_ENABLED``).
 
 Phase ``commit``: miner sends ``proof_commitment_hex = SHA256(preimage)`` without revealing proof text.
-Phase ``reveal``: miner sends full proof, reasoning, and ``commit_reveal_nonce_hex``; validator checks
+Phase ``reveal``: miner sends full proof and ``commit_reveal_nonce_hex``; validator checks
 the preimage matches the stored commitment from phase ``commit``.
 """
 
 from __future__ import annotations
 
 import hashlib
-import json
 import re
 
 _MAGIC = b"LemmaCommitRevealV1"
@@ -33,25 +32,12 @@ def _bytes_from_fixed_hex(s: str | None, *, hex_chars: int) -> bytes | None:
         return None
 
 
-def reasoning_blob_for_commit(trace: str | None, steps: list | None) -> str:
-    """Canonical string for hashing (must match miner commit and validator verify)."""
-    if steps:
-        ser = []
-        for st in steps:
-            title = getattr(st, "title", None)
-            text = getattr(st, "text", "") or ""
-            ser.append([title, text])
-        return json.dumps(ser)
-    return trace or ""
-
-
 def commit_preimage_v1(
     *,
     theorem_id: str,
     metronome_id: str,
     nonce: bytes,
     proof_script: str,
-    reasoning_blob: str,
 ) -> bytes:
     if len(nonce) != 32:
         raise ValueError("nonce must be 32 bytes")
@@ -61,7 +47,6 @@ def commit_preimage_v1(
         (metronome_id or "").encode("utf-8"),
         nonce,
         (proof_script or "").encode("utf-8"),
-        (reasoning_blob or "").encode("utf-8"),
     )
     return b"\x1e".join(parts)
 
@@ -85,7 +70,6 @@ def verify_reveal_against_commitment(
     metronome_id: str,
     nonce_hex: str,
     proof_script: str,
-    reasoning_blob: str,
 ) -> bool:
     nonce = _bytes_from_fixed_hex(nonce_hex, hex_chars=_NONCE_HEX_CHARS)
     if nonce is None:
@@ -96,7 +80,6 @@ def verify_reveal_against_commitment(
             metronome_id=metronome_id,
             nonce=nonce,
             proof_script=proof_script,
-            reasoning_blob=reasoning_blob,
         )
     except ValueError:
         return False

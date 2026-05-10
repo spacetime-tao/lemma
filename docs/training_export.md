@@ -6,14 +6,14 @@ Validators optionally append one JSON object per scored miner response each epoc
 
 | Profile | Schema | Contents | Use when |
 | --- | --- | --- | --- |
-| **`full`** (default) | `schema_version` **1** | `reasoning_*`, `theorem_statement`, `proof_script`, public `coldkey` when available from the metagraph, optional rubric/prose labels when enabled, optional `proof_metrics` when `LEMMA_LEAN_PROOF_METRICS=1`, non-secret `export_context` hashes, plus **`pareto_weight`** after weights are computed | Internal research, calibration, full offline replay |
-| **`reasoning_only`** | `schema_version` **2** | Same reasoning fields + `block`, `theorem_id`, `uid`, `model_card`, non-secret `export_context` hashes; **no** proof text, **no** rubric, **no** `proof_metrics`, **no** `pareto_weight` | Sharing trace data with weaker direct incentive labels |
+| **`full`** (default) | `schema_version` **1** | `theorem_statement`, `proof_script`, public `coldkey` when available from the metagraph, optional labels when enabled, optional `proof_metrics` when `LEMMA_LEAN_PROOF_METRICS=1`, non-secret `export_context` hashes, plus **`pareto_weight`** after weights are computed | Internal research, calibration, full offline replay |
+| **`summary`** | `schema_version` **2** | `block`, `theorem_id`, `uid`, `model_card`, non-secret `export_context` hashes; **no** proof text, **no** labels, **no** `proof_metrics`, **no** `pareto_weight` | Lightweight operational provenance without solution leakage |
 
 Set in `.env`:
 
 ```bash
 LEMMA_TRAINING_EXPORT_JSONL=/var/lib/lemma/train.jsonl
-LEMMA_TRAINING_EXPORT_PROFILE=reasoning_only
+LEMMA_TRAINING_EXPORT_PROFILE=summary
 ```
 
 ## Collect proof-metrics calibration data
@@ -44,7 +44,7 @@ Operator checklist:
    including multiple successful submissions on the same theorem ids.
 3. Keep a copy of the exact `.env` / validator settings used for the run.
    Exports now include non-secret `export_context` hashes (`lemma_version`,
-   `judge_profile_sha256`, optional rubric/profile hashes,
+   `judge_profile_sha256`,
    `generated_registry_sha256`), but those hashes are not a replacement for the
    full private run notes.
 4. Run the analyzer below and save its text output beside the export.
@@ -78,11 +78,11 @@ Keep the analyzer report with any scoring decision notes. Look first at:
   the quality label is equal or lower on the same theorem,
 - padding-looking outliers and the conservative `gate_verdict`.
 
-Do **not** change `LEMMA_SCORE_PROOF_WEIGHT` from one report alone. The proof-side
-gate in [proof-intrinsic-decision.md](proof-intrinsic-decision.md) still requires
-real export data plus adversarial padding fixtures before live reward changes.
-Copy the analyzer summary lines, not the private JSONL, into that decision
-record.
+Proof metrics in exports are analysis fields. Live scoring is binary Lean
+pass/fail. The checklist in
+[proof-intrinsic-decision.md](proof-intrinsic-decision.md) requires real export
+data plus adversarial padding fixtures before publishing metric claims. Copy the
+analyzer summary lines, not the private JSONL, into that decision record.
 
 Analyze a local `full` export with proof metrics:
 
@@ -141,16 +141,20 @@ for a governance decision. Like the proof-metrics guard, this is not approval fo
 a reward change. Copy the summary lines, not the private JSONL, into the
 decision record in [sybil_economics.md](sybil_economics.md).
 
-## Gaming and leakage (why `reasoning_only` exists)
+## Gaming and leakage (why `summary` exists)
 
 Exports are **not** a neutral “public good.” Depending on fields, they can teach models to:
 
-- **Optimize labels instead of proofs** — rubric or label fields can expose scalar targets.
+- **Optimize labels instead of proofs** — label fields can expose scalar targets.
 - **Copy proofs** — `proof_script` is a full solution for `theorem_id` at `block`.
 - **Optimize incentives** — `pareto_weight` ties rows to the subnet weight map.
 - **Reverse-engineer proof-side probes** — `proof_metrics` can expose candidate scoring research signals.
 
-**`reasoning_only`** removes proof text, rubric/label scores, proof metrics, and Pareto weights. It **does not** remove all structure: `theorem_id`, `uid`, and `block` still support stratification or deanonymization risks if combined with other data. For maximum privacy, post-process or aggregate before publication.
+**`summary`** removes proof text, labels, proof metrics, and Pareto weights. It
+does not remove all structure: `theorem_id`, `uid`, and `block` still support
+stratification or deanonymization risks if combined with other data. For maximum
+privacy, post-process or aggregate before publication. The old
+`reasoning_only` value is accepted as a legacy alias for `summary`.
 
 ## Schema reference
 
@@ -158,18 +162,18 @@ Exports are **not** a neutral “public good.” Depending on fields, they can t
 
 - **`export_profile`**: `"full"`.
 - **`export_context`**: non-secret provenance hashes for the validator run:
-  `lemma_version`, `judge_profile_sha256`, optional rubric/profile hashes, and
+  `lemma_version`, `judge_profile_sha256`, and
   `generated_registry_sha256`.
-- **`theorem_statement`**, **`proof_script`**, **`rubric`**: see [`training_export.py`](../lemma/validator/training_export.py).
+- **`theorem_statement`**, **`proof_script`**, optional labels: see [`training_export.py`](../lemma/validator/training_export.py).
 - **`coldkey`**: public metagraph coldkey when available; omitted if unavailable.
 - **`proof_metrics`**: optional compare-only Lean probe output when `LEMMA_LEAN_PROOF_METRICS=1`.
 - After the epoch, **`pareto_weight`** is merged per UID.
 
-### `reasoning_only` (`schema_version` 2)
+### `summary` (`schema_version` 2)
 
-- **`export_profile`**: `"reasoning_only"`.
+- **`export_profile`**: `"summary"`.
 - **`export_context`**: same non-secret provenance hashes as `full`.
-- No **`proof_script`**, **`rubric`**, **`proof_metrics`**, or **`pareto_weight`**.
+- No **`proof_script`**, labels, **`proof_metrics`**, or **`pareto_weight`**.
 
 ## References
 

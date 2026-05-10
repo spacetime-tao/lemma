@@ -14,10 +14,14 @@ Prerequisites: [getting-started.md](getting-started.md).
 - `JUDGE_PROFILE_SHA256_EXPECTED` to fail on misconfiguration.
 - Miners: prover can use any operator-chosen host via `PROVER_OPENAI_BASE_URL` / `PROVER_MODEL`; from containers use a host-reachable URL (`host.docker.internal` on macOS/Windows, bridge gateway on Linux).
 
+## Scoring policy
+
+The live validator path is proof-only and binary: Lean-verified proofs enter
+scoring as a pass, then dedup/reputation/Pareto build the weight map.
+
 ## Miner payloads
 
-- Require `proof_script`; optional `reasoning_steps` / `reasoning_trace` may be kept for logs, exports, or human review.
-- Cap size with `SYNAPSE_MAX_TRACE_CHARS`.
+- Require `proof_script`; informal reasoning belongs outside the live protocol.
 - Align `LEMMA_BLOCK_TIME_SEC_ESTIMATE`, forward-wait clamps, `LEMMA_LLM_HTTP_TIMEOUT_S`, and `LEAN_VERIFY_TIMEOUT_S` across validators (see `.env.example`).
 - Validator cadence is subnet epoch boundaries only (mandatory).
 
@@ -28,7 +32,7 @@ Prerequisites: [getting-started.md](getting-started.md).
 
 ## Training export
 
-`LEMMA_TRAINING_EXPORT_JSONL` appends one JSON object per scored miner per epoch. Optional **`LEMMA_TRAINING_EXPORT_PROFILE`** controls whether proof text, optional prose fields, proof metrics, and Pareto weights are included — see [training_export.md](training_export.md). For proof-metrics calibration, use `LEMMA_TRAINING_EXPORT_PROFILE=full` with `LEMMA_LEAN_PROOF_METRICS=1`, follow the [operator checklist](training_export.md#collect-proof-metrics-calibration-data), and keep exports private. Lemma does not upload; use cron/systemd and [`scripts/training_export_upload_example.sh`](../scripts/training_export_upload_example.sh) for storage.
+`LEMMA_TRAINING_EXPORT_JSONL` appends one JSON object per scored miner per epoch. Optional **`LEMMA_TRAINING_EXPORT_PROFILE`** controls whether proof text, proof metrics, and Pareto weights are included — see [training_export.md](training_export.md). For proof-metrics calibration, use `LEMMA_TRAINING_EXPORT_PROFILE=full` with `LEMMA_LEAN_PROOF_METRICS=1`, follow the [operator checklist](training_export.md#collect-proof-metrics-calibration-data), and keep exports private. Lemma does not upload; use cron/systemd and [`scripts/training_export_upload_example.sh`](../scripts/training_export_upload_example.sh) for storage.
 
 ## Observability
 
@@ -55,6 +59,11 @@ the risk profile.
 - **Shared host failure:** multiple services on one VPS can all fail together if
   the host, firewall, Docker daemon, or API budget fails. This is fine for tests;
   production operators should monitor and isolate roles as stakes rise.
+- **Warm-cache lesson:** the reliable speedup path is a light pinned Lean image,
+  persistent workspace cache on fast disk, and a long-lived Docker worker or
+  remote worker pool. Testnet measurements saw a simple generated proof around
+  292 s cold and 25 s warm on a 4 vCPU / 8 GB shared Linux worker; baked
+  all-Mathlib mega-images were brittle in that run.
 
 For production, prefer: coldkey private material offline/local, only hotkeys on
 servers, explicit `AXON_EXTERNAL_IP`, explicit firewall rules, systemd or another

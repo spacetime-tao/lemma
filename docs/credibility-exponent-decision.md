@@ -22,7 +22,7 @@ live default.
 
 Credibility is a reliability signal, not a proof-quality score. It should fall
 when validator Lean verification fails and rise when it passes. It should not try
-to detect Lean-valid padding; that belongs to the proof-side scoring work in
+to detect Lean-valid padding; that belongs to offline proof-metric research in
 [proof-intrinsic-decision.md](proof-intrinsic-decision.md).
 
 ## Why not default to 2.5 yet?

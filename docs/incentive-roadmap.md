@@ -10,7 +10,7 @@ This doc is for **operators and contributors** planning work—not step-by-step 
 
 - [x] Optional prose-tooling hardening: strict single-object JSON rubric parse (`judge/json_util.py`) — rejects multi-rubric games
 - [x] Optional prose-tooling hardening: fenced miner content + prompt treating trace as untrusted data
-- [x] Identical-submission dedup (same normalized theorem + proof + trace fingerprint)
+- [x] Identical-submission dedup (same normalized theorem + proof fingerprint)
 - [x] Coldkey dedup (best hotkey per coldkey on metagraph)
 - [x] EMA smoothing / reputation state for validator scoring experiments (on-disk state)
 - [x] Optional multi-theorem epochs (`LEMMA_EPOCH_PROBLEM_COUNT`, default 1)
@@ -28,11 +28,12 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 
 ### Scoring & objective
 
-- [x] **One-sentence objective** — Lemma rewards valid, efficient Lean proofs for published theorem statements. Decision note: [objective-decision.md](objective-decision.md).
-- [ ] **Proof-only scorer** — Replace the proof-text bulk heuristic with deterministic proof-efficiency scoring. Target design: [proof-only-incentives.md](proof-only-incentives.md). The first implementation should score only after Lean pass, normalize comments/whitespace, compare within the same theorem, and prefer lower proof-side costs.
-- [ ] **Reasoning optionality** — Make miner informal reasoning optional metadata instead of a validator reward requirement. The reference miner may still emit notes for humans and datasets, but valid proof submissions should not fail policy only because prose is missing.
+- [x] **One-sentence objective** — Lemma rewards Lean-valid proofs for published theorem statements. Decision note: [objective-decision.md](objective-decision.md).
+- [x] **Proof-only live gate** — Live validators no longer call the judge for rewards; a Lean-verified proof enters scoring as a binary pass. Target design: [proof-only-incentives.md](proof-only-incentives.md).
+- [x] **Binary reward entry** — Verified proofs enter live scoring as binary proof-pass entries.
+- [x] **Proof-only miner payload** — Miner responses are centered on `proof_script`; informal reasoning is out-of-band and not a validator reward requirement.
 - [x] **Credibility multiplier** — Per-UID verify-pass EMA persisted in reputation JSON; score uses `(credibility ** LEMMA_REPUTATION_CREDIBILITY_EXPONENT)` after EMA smoothing (`LEMMA_REPUTATION_VERIFY_CREDIBILITY_ALPHA`, default 0.08; set alpha to **0** to freeze credibility updates). Default exponent remains **1.0** until calibrated; the KB `2.5` target is documented as a policy candidate in [credibility-exponent-decision.md](credibility-exponent-decision.md). Credibility is not a Lean-valid padding detector; proof-quality replacement work stays under [proof-intrinsic-decision.md](proof-intrinsic-decision.md).
-- [x] **Training export** — Documented gaming/leakage, proof-metrics calibration, and sybil/Pareto replay collection ([training_export.md](training_export.md)); private `full` exports include theorem statement, proof, coldkey when available, optional labels, proof metrics, non-secret profile/registry provenance, and Pareto weights for offline analysis. **`LEMMA_TRAINING_EXPORT_PROFILE=reasoning_only`** omits the sensitive proof/label/replay fields but keeps non-secret provenance (`lemma/validator/training_export.py`).
+- [x] **Training export** — Documented gaming/leakage, proof-metrics calibration, and sybil/Pareto replay collection ([training_export.md](training_export.md)); private `full` exports include theorem statement, proof, coldkey when available, optional labels, proof metrics, non-secret profile/registry provenance, and Pareto weights for offline analysis. **`LEMMA_TRAINING_EXPORT_PROFILE=summary`** omits proof/label/replay fields but keeps non-secret provenance (`lemma/validator/training_export.py`).
 
 ### Problem supply & predictability
 
@@ -73,7 +74,7 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 
 ## Plumbing / cleanup (lower urgency than mechanism gaps)
 
-Track in issues or refactors as capacity allows: remaining human-friendly CLI wrappers and other small runtime glue. Recent cleanup removed `validator/query.py`, split catalog dev helpers out of runtime, merged validator startup gates shared by `validator-check` and `service`, collapsed warm Lake-cache behavior to the single `LEMMA_LEAN_ALWAYS_CACHE_GET` override, inlined trace-length scoring, removed single-use miner/validator helpers, dropped an unused strict-judge assertion wrapper, removed an unused problem-seed boundary-label helper, moved theorem status/problem inspection, one-shot judge preview, and validator config summary to `lemma-cli`, and trimmed `lemma meta` to concise hashes by default.
+Track in issues or refactors as capacity allows: remaining human-friendly CLI wrappers and other small runtime glue. Recent cleanup removed `validator/query.py`, split catalog dev helpers out of runtime, merged validator startup gates shared by `validator-check` and `service`, collapsed warm Lake-cache behavior to the single `LEMMA_LEAN_ALWAYS_CACHE_GET` override, removed stale trace-length scoring, removed single-use miner/validator helpers, dropped an unused strict-judge assertion wrapper, removed an unused problem-seed boundary-label helper, moved theorem status/problem inspection, one-shot judge preview, and validator config summary to `lemma-cli`, and trimmed `lemma meta` to concise hashes by default.
 
 ---
 
@@ -85,7 +86,7 @@ Track in issues or refactors as capacity allows: remaining human-friendly CLI wr
 - Problem supply policy: [problem-supply-policy.md](problem-supply-policy.md)
 - Implementation map: [incentive_migration.md](incentive_migration.md)
 - Objective decision: [objective-decision.md](objective-decision.md)
-- Proof intrinsic scoring decision: [proof-intrinsic-decision.md](proof-intrinsic-decision.md)
+- Proof intrinsic metric decision: [proof-intrinsic-decision.md](proof-intrinsic-decision.md)
 - Proof-only incentive design: [proof-only-incentives.md](proof-only-incentives.md)
 - Credibility exponent decision: [credibility-exponent-decision.md](credibility-exponent-decision.md)
 - Commit-reveal threat model: [commit-reveal.md](commit-reveal.md)

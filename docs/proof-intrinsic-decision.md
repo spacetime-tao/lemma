@@ -1,4 +1,4 @@
-# Proof Intrinsic Scoring Decision
+# Proof Intrinsic Metric Decision
 
 This note keeps `proof_intrinsic_score` from quietly growing into a second,
 regex-shaped judge. Treat every line of scoring code as a liability: if the
@@ -7,15 +7,13 @@ incentive becomes clearer.
 
 ## Current Boundary
 
-Validator proof scoring only reaches this layer after a proof passes Lean
-verification. `proof_intrinsic_score` is a deterministic text-shape heuristic: it
-strips Lean comments by default, then scores proof text length, `by` frequency,
-and non-empty line count.
+Live validator scoring does not call `proof_intrinsic_score`. The function is a
+research heuristic: it strips Lean comments by default, then scores proof text
+length, `by` frequency, and non-empty line count.
 
 The long-term reward design is proof-only. See
 [proof-only-incentives.md](proof-only-incentives.md). That means this heuristic
-should either become a small, well-tested proof-side cost signal or be replaced
-by a stronger Lean-backed metric.
+stays out of live rewards and belongs only in offline analysis.
 
 ## Problem
 
@@ -28,52 +26,46 @@ bulk more than proof quality:
 - Comment stripping removed the easiest padding path, but it did not solve the
   general problem.
 
-Raising this heuristic without a better foundation would reward padding. Removing
-it without a replacement would leave fewer proof-side tie-breakers. Both are bad
-default moves.
+Raising this heuristic without a better foundation would reward padding. The
+live path avoids that problem by keeping proof scoring binary.
 
 ## Decision
 
 Keep Lean pass/fail as the objective floor.
 
-Keep the current proof intrinsic heuristic only as a conservative bootstrap
-signal. Do not add more regex padding detectors as the main fix. If the subnet
-needs a stronger proof-side score, it should come from a Lean-backed or
-elaborator-backed signal, not from more text-shape guesses.
+Keep the current proof intrinsic heuristic outside the live default path. Do not
+add more regex padding detectors as the main fix. If the subnet studies proof
+shape, prefer Lean-backed or elaborator-backed measurements over more text-shape
+guesses.
 
 ## Acceptable Next Code Changes
 
-1. Keep `LEMMA_SCORE_PROOF_WEIGHT` low by default unless a stronger proof-side
-   signal replaces the current text heuristic.
-2. Add focused tests that preserve the current heuristic behavior while the
-   migration is planned, so accidental scoring drift is visible.
-3. Prototype a replacement metric outside the live default path, using signals
+1. Add focused tests that preserve the current heuristic behavior for offline
+   reports, so accidental drift is visible.
+2. Prototype metrics outside the live default path, using signals
    that Lean or its elaborator can justify.
-4. Make any scoring-default change in a separate commit with docs and migration
-   notes, not hidden inside a cleanup patch.
+3. Keep reward assembly tests pinned to binary proof-pass behavior.
 
-## Replacement Metric Gate
+## Offline Metric Gate
 
-A replacement for `proof_intrinsic_score` should be accepted only if it is:
+An offline proof metric is worth keeping only if it is:
 
 - Deterministic across validators.
-- Cheap enough for validator load.
+- Cheap enough for explicit export or shadow runs.
 - Harder to pad than proof text length.
 - Covered by tests with honest short proofs, honest longer proofs, and padding
   attempts.
-- Reflected in `judge_profile_sha256` or another scoring/profile pin when it
-  affects consensus-critical validator behavior.
 
 Possible research directions include proof term size, elaborator trace summaries,
 nontrivial goal transitions, tactic trace structure, and imported theorem usage.
-These are starting points, not approved designs.
+These are starting points, not live designs.
 
 ## Go/No-Go Validation Gate
 
-Do not change live rewards from this research path until the decision is backed
-by real export data and adversarial fixtures.
+Do not promote this research out of offline analysis. Before publishing metric
+claims, back them with real export data and adversarial fixtures.
 
-Minimum gate for the next scoring decision:
+Minimum gate for the next metric review:
 
 1. Collect a real validator `full` export with `LEMMA_LEAN_PROOF_METRICS=1`
    ([training_export.md](training_export.md)). Use only rows where the
@@ -84,16 +76,16 @@ Minimum gate for the next scoring decision:
    consistent `judge_profile_sha256`; mixed validator profiles are not decision
    evidence.
 2. Run `tools.proof_metrics_analyze` and keep the report with the decision
-   notes. Failed probe rows are a reliability signal, not scoring evidence.
+   notes. Failed probe rows are a reliability signal, not metric evidence.
 3. Compare the candidate metric against honest short proofs, honest longer
    proofs, and padding attempts: comments, long string literals, unused trivial
    `have` blocks, long names, and extra lines.
 4. Make one explicit choice in a separate commit:
-   - **replace** `proof_intrinsic_score` with a Lean-backed metric,
-   - **keep** the current low-weight heuristic while collecting more data, or
-   - **remove/reduce** the proof-text component if no candidate clears the gate.
+   - **keep** a metric in offline reports,
+   - **collect more data**, or
+   - **remove/reduce** a misleading proof-text metric from reports.
 
-The gate fails if the candidate mostly tracks raw proof text length, rewards
+The gate fails if the candidate mostly tracks raw proof text length, favors
 obvious Lean-valid padding, has frequent probe failures, or adds enough runtime
 cost to make validator operation worse.
 
@@ -104,18 +96,18 @@ comments, strings, unused trivial `have` blocks, and long names. Failed probe
 rows should be counted but not used as calibration evidence. It is not a
 substitute for real validator export data.
 
-Any accepted scoring change must update tests, operator docs, migration notes,
-and the validator scoring/profile pin. It must not be hidden inside cleanup.
+Any accepted research-metric change must update tests and operator docs. It must
+not be hidden inside cleanup.
 
 ## Decision Rubric
 
 After a real export clears `--require-decision-ready`, make exactly one of these
-choices. Treat this as a governance / scoring decision, not an analyzer result.
+choices. Treat this as a research review, not an analyzer result.
 
-### Replace
+### Keep In Offline Reports
 
-Replace `proof_intrinsic_score` only if the candidate Lean-backed metric is
-useful inside same-theorem comparisons:
+Keep a Lean-backed metric in offline reports only if it is useful inside
+same-theorem comparisons:
 
 - `corr_within_theorem(candidate, quality_label)` is positive enough to matter
   across multiple theorem ids, not just globally correlated with theorem size.
@@ -124,17 +116,13 @@ useful inside same-theorem comparisons:
 - Padding fixtures and real rows do not show the candidate repeatedly rewarding
   comments, strings, unused trivial `have` blocks, long names, or extra lines.
 - Runtime cost and probe failure rate are low enough for validator operations.
-- The scoring/profile pin changes with the new reward input.
 
-### Keep Low
+### Collect More Data
 
-Keep the current low-weight text heuristic when the evidence is inconclusive but
-not actively harmful:
+Keep collecting data when the evidence is inconclusive but not actively harmful:
 
 - Lean-backed candidates are noisy, saturated, or theorem-size dependent.
 - Same-theorem disagreement examples exist but do not clearly favor padding.
-- The current `proof_intrinsic_score` remains low influence and does not dominate
-  Lean pass/fail behavior.
 - More export data would plausibly change the conclusion.
 
 ### Reduce Or Remove
@@ -146,15 +134,15 @@ liability:
   preferring worse proofs.
 - The heuristic mostly tracks proof length or syntactic bulk after comment
   stripping.
-- No candidate Lean-backed metric clears the replacement gate.
+- No candidate Lean-backed metric clears the offline metric gate.
 - Keeping the heuristic would encourage miners to pad Lean-valid proofs.
 
 ### No Decision
 
-Do not change scoring when the export fails readiness, lacks same-theorem
+Do not make a metric claim when the export fails readiness, lacks same-theorem
 comparisons, lacks quality labels, has frequent probe failures, or depends on one
 small hand-picked theorem family. In that case, collect more data or keep the
-current low default.
+metric out of published conclusions.
 
 ## Analyzer Summary to Preserve
 
@@ -177,8 +165,8 @@ Copy these lines into the decision record:
 Decision-record template:
 
 ```text
-Proof intrinsic scoring decision:
-Chosen policy: replace | keep low | reduce/remove | no decision
+Proof intrinsic metric decision:
+Chosen policy: keep offline | collect more data | reduce/remove | no decision
 Decision ready: yes | no
 Reason:
 
@@ -197,11 +185,9 @@ Evidence reviewed:
 - Adversarial fixture notes:
 - Human review notes:
 
-Reward/profile changes:
-- LEMMA_SCORE_PROOF_WEIGHT:
+Metric changes:
 - proof_intrinsic_score changes:
 - Replacement metric, if any:
-- Profile pin fields:
 - Migration notes:
 
 Rollback:
@@ -212,18 +198,17 @@ Rollback:
 
 ## Prototype Boundary
 
-Do not wire a new proof-side metric into live scoring until it passes the gate
-above. The first prototype is outside the default validator scoring path and
-writes measurements for comparison only.
+Do not wire a new proof-side metric into live scoring. The prototype is outside
+the default validator scoring path and writes measurements for comparison only.
 
 Good prototype shape:
 
 - Reuse the existing verified workspace after Lean pass.
 - Add one extra Lean probe file only in the prototype path.
 - Record candidate metrics beside the current score so they can be compared on
-  real submissions before any default changes.
-- Keep `entry_from_scores` behavior pinned by tests while the replacement is
-  evaluated.
+  real submissions before any public metric claims.
+- Keep live binary proof-pass reward behavior pinned by tests while the
+  metric is evaluated.
 
 Current prototype: set `LEMMA_LEAN_PROOF_METRICS=1` to attach compare-only
 `proof_metrics` to `VerifyResult`. The probe asks Lean to `#print` the verified
@@ -235,15 +220,15 @@ The opt-in Docker and host Lean golden tests assert that the probe returns
 metrics on a real passing proof when those suites are enabled.
 
 When `LEMMA_TRAINING_EXPORT_JSONL` is set, the `full` export profile includes
-`proof_metrics` for successful rows. `reasoning_only` intentionally
-omits it because the field is proof-derived research data.
+`proof_metrics` for successful rows. The `summary` profile intentionally omits
+it because the field is proof-derived research data.
 
 The operator checklist for collecting real proof-metrics rows lives in
 [training_export.md](training_export.md). Keep those exports private.
 
 Use `uv run python -m tools.proof_metrics_analyze <train.jsonl>` to compare
 exported proof metrics against proof text length, current `proof_intrinsic_score`,
-and any available quality labels before considering any scoring change. The analyzer counts
+and any available quality labels before drawing conclusions. The analyzer counts
 failed proof-metric probes separately and excludes them from correlations and
 diagnostic candidate lists; failed probe output is not proof-term evidence. It
 also reports low-quality / high-metric candidates so term-size inflation from
@@ -251,11 +236,11 @@ strings, unused trivial `have` blocks, or long names stays visible when the Lean
 probe rises with the padding. Its `gate_verdict` is intentionally conservative:
 `research_only` means do not wire the metric into rewards, `insufficient_data`
 means collect a usable export first, and `manual_review_required` still does not
-mean automatic approval. Its `decision_data_blockers` line is separate from the
+make the metric a reward input. Its `decision_data_blockers` line is separate from the
 metric verdict: blockers mean the export is too small or missing quality labels to
-support a scoring decision, even if the metric gate itself has no obvious
+support a metric decision, even if the metric gate itself has no obvious
 padding finding. The readiness check also requires same-theorem comparison sets
-so wide one-row-per-theorem exports cannot approve a proof-side scoring change.
+so wide one-row-per-theorem exports cannot support a proof-metric conclusion.
 For exports that include those comparison sets, `corr_within_theorem(...)`
 subtracts each theorem's baseline before comparing metric movement to label
 movement; treat those lines as more relevant than global correlations when
@@ -263,11 +248,11 @@ judging whether a proof-side metric is measuring proof quality rather than
 theorem size. The report also prints same-theorem disagreement examples for
 pairs where metric bytes, delimiter count, or the current text heuristic is
 higher but the available quality label is equal or lower; those examples should
-be inspected before any replace / keep-low / remove decision.
+be inspected before any keep / collect-more / remove decision.
 `--require-decision-ready` is available for release checklists: it exits nonzero
-unless the export clears readiness blockers and reaches the manual-review gate.
-Passing that flag is not approval to change rewards; it only means there is
-enough data to start the human decision. Modern exports include an
+until the export clears readiness blockers and reaches the manual-review gate.
+Passing that flag does not make a metric a reward input; it only means there is
+enough data to start human review. Modern exports include an
 `export_context` block with non-secret profile and registry hashes; the analyzer
 reports those counts and blocks decision readiness when successful rows mix
 validator profiles or generated-registry hashes. It also prints `decision_data_gaps`,
@@ -281,12 +266,12 @@ verification?
 
 That means a Lean-valid but padded proof can still improve credibility. Do not
 fix that by adding text-shape penalties to the credibility EMA. Padding belongs
-in the proof-side scoring decision above, where any replacement signal can be
-measured, profiled, and pinned before it affects rewards.
+in offline proof-metric analysis, where candidate signals can be measured before
+anyone trusts them.
 
 The compare-only proof metrics export is the current place to study that
-orthogonal signal. If those metrics become reliable enough to score, wire them
-through the proof-side gate, not through reputation credibility.
+orthogonal signal. Keep those metrics out of reputation credibility and live
+reward assembly.
 
 ## Initial Calibration
 
@@ -315,10 +300,9 @@ corr(metric_bytes, proof_intrinsic)=0.6028
 ```
 
 Interpretation: the Lean probe is useful as a research signal because it ignores
-pure comment padding in this sample. It is not sufficient as a scoring signal:
-valid but useless term-level padding, such as an unused large string, can still
-inflate it. Keep it compare-only until a better Lean/elaborator-backed metric is
-defined and tested against more padding attempts.
+pure comment padding in this sample. It is not a reward signal: valid but useless
+term-level padding, such as an unused large string, can still inflate it. Keep it
+compare-only and test more padding attempts before trusting it in reports.
 
 Follow-up: the historical run above exposed one direct bug in the current
 heuristic. Comment-only and blank lines are now normalized out before line count,
@@ -362,11 +346,10 @@ corr(metric_delimiters, proof_intrinsic)=0.3917
 
 Interpretation: delimiter count looks more useful than raw bytes for this small
 sample because it ignores string padding, long-name padding, and unused trivial
-`have` padding while still rising for the used structured proof. It is not yet a
+`have` padding while still rising for the used structured proof. It is not a
 reward signal: the sample is tiny, max depth saturates quickly, and the analyzer
 still reports `research_only`. The next proof-side step should compare delimiter
-shape on real validator exports before replacing, reducing, or removing the
-current low-weight text heuristic.
+shape on real validator exports before trusting any report based on it.
 
 Signals to avoid as scoring inputs:
 
@@ -378,7 +361,8 @@ Signals to avoid as scoring inputs:
 
 ## Open Questions
 
-- What Lean-backed signal should eventually replace the text heuristic?
-- Is informal reasoning a permanent incentive target, or only a bootstrap aid?
+- Which Lean-backed signals are useful for offline proof-metric research?
+- Which informal proof explanations, if any, should be handled outside the live
+  protocol for human review or public writeups?
 - Should hard theorem supply and bounty-style curation become the stronger long
   term path instead of trying to infer proof difficulty from one submitted proof?

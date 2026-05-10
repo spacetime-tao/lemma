@@ -14,12 +14,11 @@ def _collapse_ws(text: str) -> str:
     return re.sub(r"\s+", " ", (text or "").strip())
 
 
-def submission_fingerprint(theorem_statement: str, proof_script: str, trace_text: str) -> str:
-    """Stable hash of normalized miner-visible submission payload (per theorem)."""
+def submission_fingerprint(theorem_statement: str, proof_script: str) -> str:
+    """Stable hash of normalized proof payload for proof-only scoring."""
     parts = (
         _collapse_ws(theorem_statement),
         _collapse_ws(strip_lean_comments_for_intrinsic(proof_script)),
-        _collapse_ws(trace_text),
     )
     h = hashlib.sha256()
     for part in parts:
@@ -32,7 +31,7 @@ def dedup_identical_submissions(
     entries: list[ScoredEntry],
     key_fn: Callable[[ScoredEntry], str],
 ) -> tuple[list[ScoredEntry], int]:
-    """Keep the highest ``reasoning_score`` entry per identical key; return (kept, dropped_count)."""
+    """Keep the highest ``score`` entry per identical key; return (kept, dropped_count)."""
     return _dedup_by_key(entries, key_fn)
 
 
@@ -40,7 +39,7 @@ def dedup_coldkeys(
     entries: list[ScoredEntry],
     uid_to_coldkey: Callable[[int], str],
 ) -> tuple[list[ScoredEntry], int]:
-    """Keep the highest ``reasoning_score`` entry per coldkey string."""
+    """Keep the highest ``score`` entry per coldkey string."""
     return _dedup_by_key(entries, lambda e: uid_to_coldkey(e.uid))
 
 
@@ -48,12 +47,12 @@ def _dedup_by_key(
     entries: list[ScoredEntry],
     key_fn: Callable[[ScoredEntry], str],
 ) -> tuple[list[ScoredEntry], int]:
-    """Keep the highest ``reasoning_score`` entry per key."""
+    """Keep the highest ``score`` entry per key."""
     best: dict[str, ScoredEntry] = {}
     for e in entries:
         key = key_fn(e)
         cur = best.get(key)
-        if cur is None or e.reasoning_score > cur.reasoning_score:
+        if cur is None or e.score > cur.score:
             best[key] = e
     kept = list(best.values())
     dropped = max(0, len(entries) - len(kept))

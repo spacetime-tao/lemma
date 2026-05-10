@@ -23,14 +23,13 @@ from lemma.protocol_attest import miner_verify_attest_message, sign_miner_verify
 from lemma.protocol_commit_reveal import (
     commit_preimage_v1,
     commitment_hex_from_preimage,
-    reasoning_blob_for_commit,
 )
 
 _COMMIT_REVEAL_CACHE_TTL_S = 900.0
 _COMMIT_REVEAL_CACHE_MAX_ENTRIES = 512
 _CommitRevealKey = tuple[str, str, str]
-_CommitRevealEntry = tuple[float, str, str, str, list | None]
-_CommitRevealValue = tuple[str, str, str, list | None]
+_CommitRevealEntry = tuple[float, str, str]
+_CommitRevealValue = tuple[str, str]
 
 
 def _commit_reveal_cache_key(synapse: LemmaChallenge) -> _CommitRevealKey | None:
@@ -93,8 +92,8 @@ class CommitRevealCache:
             entry = self._entries.pop(key, None)
         if entry is None:
             return None
-        _expires_at, nonce_hex, proof, trace, steps = entry
-        return nonce_hex, proof, trace, steps
+        _expires_at, nonce_hex, proof = entry
+        return nonce_hex, proof
 
 
 def _optional_chain_head(settings: LemmaSettings) -> int | None:
@@ -216,7 +215,7 @@ def make_forward(
                     "commit-reveal requires validator dendrite hotkey",
                 )
         solve_s = 0.0
-        trace, proof, steps = "", "", None
+        proof = ""
         if phase == "reveal":
             cached = cr_cache.pop(cr_key)
             if cached is None:
@@ -225,30 +224,28 @@ def make_forward(
                     400,
                     "commit-reveal: reveal phase but no cached commit entry",
                 )
-            nonce_hex, proof, trace, steps = cached
+            nonce_hex, proof = cached
             synapse.commit_reveal_nonce_hex = nonce_hex
         else:
             t0 = time.perf_counter()
             async with sem:
-                trace, proof, steps = await prover.solve(synapse)
+                proof = await prover.solve(synapse)
             solve_s = time.perf_counter() - t0
 
         if settings.miner_forward_timeline:
             if phase == "reveal":
                 logger.info(
-                    "miner timeline 2 REVEAL theorem_id={} metronome_id={} proof_chars={} trace_chars={}",
+                    "miner timeline 2 REVEAL theorem_id={} metronome_id={} proof_chars={}",
                     synapse.theorem_id,
                     synapse.metronome_id,
                     len(proof or ""),
-                    len(trace or ""),
                 )
             else:
                 logger.info(
-                    "miner timeline 2 SOLVED theorem_id={} prover_s={:.2f}s proof_chars={} trace_chars={}",
+                    "miner timeline 2 SOLVED theorem_id={} prover_s={:.2f}s proof_chars={}",
                     synapse.theorem_id,
                     solve_s,
                     len(proof or ""),
-                    len(trace or ""),
                 )
 
         prob_meta = None
@@ -265,12 +262,10 @@ def make_forward(
 
         if settings.miner_log_forwards:
             logger.info(
-                "miner forward theorem_id={} trace_chars={} proof_chars={}",
+                "miner forward theorem_id={} proof_chars={}",
                 synapse.theorem_id,
-                len(trace or ""),
                 len(proof or ""),
             )
-            logger.info("reasoning (excerpt):\n{}", _excerpt(trace or ""))
             logger.info("proof_script (excerpt):\n{}", _excerpt(proof or ""))
 
         local_tag = ""
@@ -319,7 +314,7 @@ def make_forward(
             if settings.miner_local_verify:
                 logger.info(
                     "miner timeline 3 OUTCOME theorem_id={} local_lean={} "
-                    "(Lean on this machine like validators; judge scores are not returned on the axon)",
+                    "(Lean on this machine like validators; proof scores are not returned on the axon)",
                     synapse.theorem_id,
                     local_lean_status,
                 )
@@ -327,7 +322,7 @@ def make_forward(
                 logger.info(
                     "miner timeline 3 OUTCOME theorem_id={} local_lean=off — "
                     "set LEMMA_MINER_LOCAL_VERIFY=1 for Lean PASS/FAIL here; "
-                    "validator judge + final weighting stay off-axon",
+                    "validator proof scoring + final weighting stay off-axon",
                     synapse.theorem_id,
                 )
 
@@ -343,13 +338,12 @@ def make_forward(
             tf = f" template={template_fn}" if template_fn else ""
             lt = f" {local_tag}" if local_tag else ""
             logger.info(
-                "miner_forward_summary theorem_id={} split={}{} prover_s={:.2f}s trace_chars={} proof_chars={}"
+                "miner_forward_summary theorem_id={} split={}{} prover_s={:.2f}s proof_chars={}"
                 "{} session_forwards={} session_avg_prover_s={:.2f}s session_local_ok={} session_local_fail={}",
                 synapse.theorem_id,
                 split,
                 tf,
                 solve_s,
-                len(trace or ""),
                 len(proof or ""),
                 lt,
                 nf,
@@ -366,22 +360,18 @@ def make_forward(
                     "commit phase requires local Lean PASS before publishing commitment "
                     f"(status={local_lean_status})",
                 )
-            rblob = reasoning_blob_for_commit(trace, steps)
             nonce_b = secrets.token_bytes(32)
             pre = commit_preimage_v1(
                 theorem_id=synapse.theorem_id or "",
                 metronome_id=str(synapse.metronome_id or ""),
                 nonce=nonce_b,
                 proof_script=proof or "",
-                reasoning_blob=rblob,
             )
             ch = commitment_hex_from_preimage(pre)
-            cr_cache.store(cr_key, (nonce_b.hex(), proof or "", trace or "", steps))
+            cr_cache.store(cr_key, (nonce_b.hex(), proof or ""))
             synapse.proof_commitment_hex = ch
             synapse.commit_reveal_phase = "commit"
             synapse.proof_script = ""
-            synapse.reasoning_trace = ""
-            synapse.reasoning_steps = None
             synapse.commit_reveal_nonce_hex = None
             synapse.miner_verify_attest_signature_hex = None
             err = synapse_payload_error(synapse, settings)
@@ -395,8 +385,6 @@ def make_forward(
             )
             return _with_computed_body_hash(synapse)
 
-        synapse.reasoning_steps = steps
-        synapse.reasoning_trace = trace
         synapse.proof_script = proof
 
         if settings.lemma_miner_verify_attest_enabled:
@@ -422,13 +410,11 @@ def make_forward(
         if err:
             return reject_synopsis(synapse, 413, err)
         logger.info(
-            "miner answered theorem_id={} metronome_id={} prover_s={:.2f}s proof_chars={} trace_chars={} "
-            "local_lean={}",
+            "miner answered theorem_id={} metronome_id={} prover_s={:.2f}s proof_chars={} local_lean={}",
             synapse.theorem_id,
             synapse.metronome_id,
             solve_s,
             len(proof or ""),
-            len(trace or ""),
             local_lean_status,
         )
         return _with_computed_body_hash(synapse)

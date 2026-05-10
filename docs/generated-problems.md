@@ -36,7 +36,7 @@ The generator does not embed limits. **Subnet policy** sets block-time / forward
 
 ## Scoring round
 
-Each epoch is independent: pass Lean → proof-side scoring → Pareto weights for that round. Emissions follow Bittensor rules. Details: [faq.md](faq.md).
+Each epoch is independent: pass Lean → proof-only scoring → weights for that round. Emissions follow Bittensor rules. Details: [faq.md](faq.md).
 
 ### Example
 

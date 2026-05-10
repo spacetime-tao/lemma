@@ -24,7 +24,7 @@ Requires **`LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`** (public eval catalog — 
 
 ## Validator scoring profile
 
-The validator profile covers problem cadence, verification policy, proof-side scoring, dedup, reputation, and response-acceptance hooks.
+The validator profile covers problem cadence, verification policy, live binary scoring policy, dedup, reputation, and response-acceptance hooks.
 
 ```bash
 uv run lemma meta
@@ -44,7 +44,19 @@ Validator→miner calls use Bittensor Dendrite/Axon today; synapse **`body_hash`
 
 ## Shared validator settings
 
-The **subnet operator** publishes one configuration for the subnet: timeouts, seeds, proof-side scoring, and sandbox image. Validators are expected to deploy **that** template so scores stay comparable. Document and distribute: `LEMMA_BLOCK_TIME_SEC_ESTIMATE`, `LEMMA_FORWARD_WAIT_MIN_S`, `LEMMA_FORWARD_WAIT_MAX_S`, `LEAN_VERIFY_TIMEOUT_S`, `LEMMA_TIMEOUT_SCALE_BY_SPLIT` / `LEMMA_TIMEOUT_SPLIT_*_MULT` (only if the operator’s policy includes them), `LEMMA_PROBLEM_SEED_MODE`, `LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`, `EMPTY_EPOCH_WEIGHTS_POLICY`, `LEAN_SANDBOX_*`, and proof-scoring fields. The main scoring/cadence/verification fields are pinned by `judge_profile_sha256`. Nothing here is “per-validator preference.” On-chain code does not enforce equality — parity relies on the published policy ([faq.md](faq.md)).
+The **subnet operator** publishes one configuration for the subnet: timeouts,
+seeds, binary proof scoring policy, dedup/reputation policy, and sandbox image.
+Validators are expected to deploy **that** template so scores stay comparable.
+Document and distribute: `LEMMA_BLOCK_TIME_SEC_ESTIMATE`,
+`LEMMA_FORWARD_WAIT_MIN_S`, `LEMMA_FORWARD_WAIT_MAX_S`,
+`LEAN_VERIFY_TIMEOUT_S`, `LEMMA_TIMEOUT_SCALE_BY_SPLIT` /
+`LEMMA_TIMEOUT_SPLIT_*_MULT` (only if the operator’s policy includes them),
+`LEMMA_PROBLEM_SEED_MODE`, `LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`,
+`EMPTY_EPOCH_WEIGHTS_POLICY`, `LEAN_SANDBOX_*`, and scoring/dedup/reputation
+fields. The main scoring/cadence/verification fields are pinned by
+`judge_profile_sha256`. Nothing here is “per-validator preference.” On-chain
+code does not enforce equality — parity relies on the published policy
+([faq.md](faq.md)).
 
 ### Parity checklist
 

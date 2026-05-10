@@ -4,7 +4,7 @@ from pathlib import Path
 
 from lemma.judge.base import RubricScore
 from lemma.lean.proof_metrics import LeanProofMetrics
-from lemma.protocol import LemmaChallenge, ReasoningStep
+from lemma.protocol import LemmaChallenge
 from lemma.validator.training_export import append_epoch_jsonl, training_record
 
 
@@ -17,10 +17,6 @@ def test_training_record_roundtrip_fields(tmp_path: Path) -> None:
         mathlib_rev="m",
         deadline_unix=0,
         metronome_id="z",
-        reasoning_steps=[
-            ReasoningStep(title="A", text="First."),
-            ReasoningStep(text="Second."),
-        ],
         proof_script="namespace Submission\n",
         model_card="prover=openai model=demo base_url=https://example.invalid/v1",
     )
@@ -55,8 +51,6 @@ def test_training_record_roundtrip_fields(tmp_path: Path) -> None:
     assert row["export_context"] == export_context
     assert row["theorem_id"] == "tid"
     assert row["theorem_statement"] == "theorem p : True := by sorry"
-    assert row["reasoning_steps"] is not None
-    assert len(row["reasoning_steps"]) == 2
     assert row["rubric"]["composite"] == 0.8
     assert row["proof_metrics"]["proof_declaration_bytes"] == 538
     assert row["proof_metrics"]["proof_declaration_lines"] == 9
@@ -72,7 +66,7 @@ def test_training_record_roundtrip_fields(tmp_path: Path) -> None:
     assert '"proof_metrics":' in line
 
 
-def test_training_record_reasoning_only_no_scores(tmp_path: Path) -> None:
+def test_training_record_summary_no_scores(tmp_path: Path) -> None:
     resp = LemmaChallenge(
         theorem_id="x",
         theorem_statement="theorem p : True := by sorry",
@@ -81,7 +75,6 @@ def test_training_record_reasoning_only_no_scores(tmp_path: Path) -> None:
         mathlib_rev="m",
         deadline_unix=0,
         metronome_id="z",
-        reasoning_steps=[ReasoningStep(title="A", text="First.")],
         proof_script="namespace Submission\n",
         model_card="m",
     )
@@ -92,11 +85,11 @@ def test_training_record_reasoning_only_no_scores(tmp_path: Path) -> None:
         uid=3,
         resp=resp,
         rubric=r,
-        profile="reasoning_only",
+        profile="summary",
         export_context={"lemma_version": "0.1.0"},
     )
     assert row["schema_version"] == 2
-    assert row["export_profile"] == "reasoning_only"
+    assert row["export_profile"] == "summary"
     assert row["export_context"] == {"lemma_version": "0.1.0"}
     assert "proof_script" not in row
     assert "theorem_statement" not in row
@@ -109,3 +102,21 @@ def test_training_record_reasoning_only_no_scores(tmp_path: Path) -> None:
     line = out.read_text(encoding="utf-8").strip()
     assert "pareto_weight" not in line
     assert "proof_metrics" not in line
+
+
+def test_training_record_legacy_reasoning_only_alias_is_summary() -> None:
+    resp = LemmaChallenge(
+        theorem_id="x",
+        theorem_statement="theorem p : True := by sorry",
+        imports=["Mathlib"],
+        lean_toolchain="t",
+        mathlib_rev="m",
+        deadline_unix=0,
+        metronome_id="z",
+        proof_script="namespace Submission\n",
+    )
+
+    row = training_record(block=1, theorem_id="tid", uid=3, resp=resp, profile="reasoning_only")
+
+    assert row["schema_version"] == 2
+    assert row["export_profile"] == "summary"

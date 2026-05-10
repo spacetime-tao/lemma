@@ -1,10 +1,9 @@
-"""One scoring round: broadcast, verify, judge, Pareto, set_weights."""
+"""One scoring round: broadcast, verify, score, Pareto, set_weights."""
 
 from __future__ import annotations
 
 import asyncio
 import hashlib
-import os
 import time
 from collections import defaultdict
 from collections.abc import Awaitable, Callable
@@ -21,10 +20,6 @@ from lemma.common.problem_seed import (
     resolve_problem_seed,
 )
 from lemma.common.subtensor import get_subtensor
-from lemma.judge.base import Judge
-from lemma.judge.fake import FakeJudge
-from lemma.judge.fingerprint import rubric_sha256
-from lemma.judge.openai_judge import OpenAIJudge
 from lemma.judge.profile import judge_profile_sha256
 from lemma.lean.sandbox import VerifyResult
 from lemma.lean.verify_runner import run_lean_verify
@@ -38,61 +33,17 @@ from lemma.protocol_attest import (
 )
 from lemma.protocol_commit_reveal import (
     normalize_commitment_hex,
-    reasoning_blob_for_commit,
     verify_reveal_against_commitment,
 )
-from lemma.reasoning.format import effective_reasoning_text
 from lemma.scoring.dedup import dedup_coldkeys, dedup_identical_submissions
 from lemma.scoring.pareto import ScoredEntry, pareto_weights
 from lemma.scoring.reputation import apply_ema_to_entries, load_reputation, save_reputation
-from lemma.scoring.rewards import entry_from_scores
+from lemma.scoring.rewards import entry_from_verified_proof
 from lemma.validator.training_export import append_epoch_jsonl, training_record
 from lemma.validator.weights_policy import build_full_weights
 
 if TYPE_CHECKING:
     from lemma.common.config import LemmaSettings
-
-
-def _build_judge(settings: LemmaSettings, dry_run: bool) -> Judge:
-    """Return the judge implementation for this epoch.
-
-    ``LEMMA_FAKE_JUDGE=1`` is dry-run only.
-
-    Validator **dry-run** epochs default to ``FakeJudge`` so rehearsal loops stay cheap and deterministic.
-    Set ``LEMMA_DRY_RUN_REAL_JUDGE=1`` to use the configured live judge (same HTTP stack as production) while
-    still skipping ``set_weights``.
-    """
-    fake_judge_requested = os.environ.get("LEMMA_FAKE_JUDGE", "").strip().lower() in ("1", "true", "yes")
-    if fake_judge_requested and dry_run:
-        return FakeJudge()
-    if fake_judge_requested:
-        raise RuntimeError("LEMMA_FAKE_JUDGE is only allowed for validator dry-run; unset it for live validation")
-    use_stub_in_dry = dry_run and os.environ.get("LEMMA_DRY_RUN_REAL_JUDGE", "").strip() != "1"
-    if use_stub_in_dry:
-        logger.info("dry-run epoch: using FakeJudge (set LEMMA_DRY_RUN_REAL_JUDGE=1 for live judge HTTP)")
-        return FakeJudge()
-    if dry_run:
-        logger.info("LEMMA_DRY_RUN_REAL_JUDGE=1 — using live judge in dry-run (set_weights still skipped)")
-    to = float(settings.judge_llm_http_timeout_s or settings.llm_http_timeout_s)
-    ra = max(1, int(settings.judge_llm_retry_attempts))
-    prov = (settings.judge_provider or "chutes").lower()
-    if prov not in ("openai", "chutes"):
-        raise RuntimeError(
-            "validator epochs require JUDGE_PROVIDER=chutes; legacy openai alias accepted; "
-            "Anthropic is local judge tooling only"
-        )
-    key = settings.judge_openai_api_key_resolved()
-    if not key:
-        raise RuntimeError("JUDGE_OPENAI_API_KEY / OPENAI_API_KEY missing; cannot score live validator epoch")
-    return OpenAIJudge(
-        key,
-        settings.openai_model,
-        base_url=settings.openai_base_url,
-        temperature=settings.judge_temperature,
-        max_tokens=settings.judge_max_tokens,
-        timeout=to,
-        retry_attempts=ra,
-    )
 
 
 def _coldkey_for_uid(metagraph: object, uid: int) -> str:
@@ -169,13 +120,13 @@ def _merge_multi_round_entries(uid_groups: dict[int, list[ScoredEntry]]) -> list
         if len(es) == 1:
             merged.append(es[0])
             continue
-        rs = sum(e.reasoning_score for e in es) / len(es)
-        ts = int(round(sum(e.tokens for e in es) / len(es)))
+        rs = sum(e.score for e in es) / len(es)
+        ts = int(round(sum(e.cost for e in es) / len(es)))
         merged.append(
             ScoredEntry(
                 uid=uid,
-                reasoning_score=rs,
-                tokens=ts,
+                score=rs,
+                cost=ts,
                 submission_fp="",
             ),
         )
@@ -289,8 +240,6 @@ async def run_epoch(
         logger.warning("No peer UIDs to query")
         return {}
 
-    logger.debug("canonical judge rubric sha256={}", rubric_sha256())
-
     problem_seed, problem_seed_tag = resolve_problem_seed(
         chain_head_block=seed_head,
         netuid=netuid,
@@ -300,7 +249,6 @@ async def run_epoch(
     )
 
     rep_store = load_reputation(settings.lemma_reputation_state_path)
-    judge = _build_judge(settings, dry_run)
 
     k_problems = max(1, int(settings.lemma_epoch_problem_count))
     aggregate: dict[int, list[ScoredEntry]] = defaultdict(list)
@@ -311,7 +259,6 @@ async def run_epoch(
         {
             "lemma_version": __version__,
             "judge_profile_sha256": judge_profile_sha256(settings),
-            "judge_rubric_sha256": rubric_sha256(),
             "generated_registry_sha256": generated_registry_sha256(),
         }
         if export_path
@@ -320,8 +267,6 @@ async def run_epoch(
 
     total_verified = 0
     total_scored = 0
-    judge_errors = 0
-    judge_parse_rejects = 0
     dedup_dropped = 0
     coldkey_dropped = 0
     deadline_rejects = 0
@@ -446,14 +391,12 @@ async def run_epoch(
                             uid_cr,
                         )
                         continue
-                    rblob = reasoning_blob_for_commit(resp_cr.reasoning_trace, resp_cr.reasoning_steps)
                     if not verify_reveal_against_commitment(
                         expected_commitment_hex=exp,
                         theorem_id=resp_cr.theorem_id or "",
                         metronome_id=str(resp_cr.metronome_id or ""),
                         nonce_hex=resp_cr.commit_reveal_nonce_hex or "",
                         proof_script=resp_cr.proof_script or "",
-                        reasoning_blob=rblob,
                     ):
                         commit_reveal_rejects += 1
                         logger.warning(
@@ -562,9 +505,12 @@ async def run_epoch(
                     return None
                 return (uid, resp, vr)
 
-            verify_key_fn = None
+            verify_key_fn: Callable[[int, LemmaChallenge], str] | None = None
             if not settings.lemma_miner_verify_attest_enabled:
-                verify_key_fn = lambda _uid, resp: _lean_verify_equivalence_key(resp)
+
+                def verify_key_fn(_uid: int, resp: LemmaChallenge) -> str:
+                    return _lean_verify_equivalence_key(resp)
+
             verified = await _run_verify_batch(candidates, _verify_one, key_fn=verify_key_fn)
             total_verified += len(verified)
 
@@ -577,65 +523,29 @@ async def run_epoch(
                     alpha=vca,
                 )
 
-            judge_sem = asyncio.Semaphore(max(1, settings.lemma_judge_max_concurrent))
-
-            async def _score_one(
-                item: tuple[int, LemmaChallenge, VerifyResult],
-                *,
-                _jsem: asyncio.Semaphore = judge_sem,
-                _theorem_id: str = problem.id,
-            ) -> tuple[ScoredEntry | None, str]:
-                uid_i, resp_i, vr_i = item
-                trace_text = effective_reasoning_text(resp_i)
-                try:
-                    async with _jsem:
-                        rubric = await judge.score(
-                            resp_i.theorem_statement,
-                            trace_text,
-                            resp_i.proof_script or "",
-                        )
-                except ValueError as err_parse:
-                    logger.warning("judge parse/validation failed uid={} err={}", uid_i, err_parse)
-                    return None, "parse"
-                except Exception as err_judge:  # noqa: BLE001
-                    logger.warning("judge failed uid={} err={}", uid_i, err_judge)
-                    return None, "error"
+            scored_sub: list[ScoredEntry] = []
+            for uid_i, resp_i, vr_i in verified:
                 if export_path:
                     async with export_lock:
                         training_rows.append(
                             training_record(
                                 block=cur_block,
-                                theorem_id=_theorem_id,
+                                theorem_id=problem.id,
                                 uid=uid_i,
                                 resp=resp_i,
-                                rubric=rubric,
                                 profile=export_profile,
                                 proof_metrics=vr_i.proof_metrics,
                                 coldkey=_coldkey_for_uid_or_none(metagraph, uid_i),
                                 export_context=export_context,
                             ),
                         )
-                ent = entry_from_scores(
-                    uid_i,
-                    rubric,
-                    trace_text,
-                    theorem_statement=resp_i.theorem_statement,
-                    proof_script=resp_i.proof_script or "",
-                    proof_weight=settings.lemma_score_proof_weight,
-                    proof_intrinsic_strip_comments=settings.lemma_proof_intrinsic_strip_comments,
+                scored_sub.append(
+                    entry_from_verified_proof(
+                        uid_i,
+                        theorem_statement=resp_i.theorem_statement,
+                        proof_script=resp_i.proof_script or "",
+                    ),
                 )
-                return ent, "ok"
-
-            score_pairs = await asyncio.gather(*[_score_one(v) for v in verified])
-            scored_sub: list[ScoredEntry] = []
-            for ent, tag in score_pairs:
-                if tag == "parse":
-                    judge_parse_rejects += 1
-                    judge_errors += 1
-                elif tag == "error":
-                    judge_errors += 1
-                elif ent is not None:
-                    scored_sub.append(ent)
             total_scored += len(scored_sub)
 
             if settings.lemma_scoring_dedup_identical and scored_sub:
@@ -669,10 +579,8 @@ async def run_epoch(
     weights_by_uid = pareto_weights(scored)
 
     logger.debug(
-        "epoch concurrency caps used: LEMMA_LEAN_VERIFY_MAX_CONCURRENT={} LEMMA_JUDGE_MAX_CONCURRENT={} "
-        "k_problems={}",
+        "epoch concurrency caps used: LEMMA_LEAN_VERIFY_MAX_CONCURRENT={} k_problems={}",
         settings.lemma_lean_verify_max_concurrent,
-        settings.lemma_judge_max_concurrent,
         k_problems,
     )
 
@@ -703,11 +611,11 @@ async def run_epoch(
         "lemma_epoch_summary chain_head_block={} problem_seed_chain_head={} problem_seed_slack_blocks={} "
         "problem_seed={} problem_seed_tag={} split={} "
         "theorem_id={} k_problems={} verified={} scored={} pareto_entries={} "
-        "judge_errors={} judge_parse_rejects={} dedup_dropped={} coldkey_dropped={} deadline_rejects={} "
+        "dedup_dropped={} coldkey_dropped={} deadline_rejects={} "
         "challenge_rejects={} "
         "attest_rejects={} commit_reveal_rejects={} "
         "skip_set_weights={} seconds={:.2f}  "
-        "[verified=Lean proof OK; scored=proof+judge blend then EMA/dedup; pareto_entries=weight rows]",
+        "[verified=Lean proof OK; scored=binary proof pass then optional EMA/dedup; pareto_entries=weight rows]",
         cur_block,
         seed_head,
         slack_b,
@@ -719,8 +627,6 @@ async def run_epoch(
         total_verified,
         total_scored,
         len(weights_by_uid),
-        judge_errors,
-        judge_parse_rejects,
         dedup_dropped,
         coldkey_dropped,
         deadline_rejects,

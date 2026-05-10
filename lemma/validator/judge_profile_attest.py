@@ -99,7 +99,7 @@ def judge_profile_peer_check_errors(settings: LemmaSettings) -> list[str]:
                 if peer_h != my_hash:
                     return [
                         f"judge profile attest: {url!r} reports {peer_h[:16]}… "
-                        f"but this validator is {my_hash[:16]}… — align judge stacks or URLs.",
+                        f"but this validator is {my_hash[:16]}… — align validator profiles or URLs.",
                     ]
     except OSError as e:
         return [f"judge profile attest: network error: {e}"]

@@ -1,25 +1,30 @@
 """Judge profile hashing for subnet parity."""
 
-from lemma.common.config import (
-    CANONICAL_JUDGE_OPENAI_BASE_URL,
-    CANONICAL_JUDGE_OPENAI_MODEL,
-    LemmaSettings,
-)
+from lemma.common.config import LemmaSettings
 from lemma.judge.profile import judge_profile_dict, judge_profile_sha256
 
 
-def test_judge_profile_openai_includes_base_url() -> None:
-    s = LemmaSettings(
+def test_profile_ignores_optional_judge_stack() -> None:
+    a = LemmaSettings(
         judge_provider="openai",
         openai_model="Qwen/Qwen3-32B-TEE",
         openai_base_url="https://llm.chutes.ai/v1",
         judge_temperature=0.2,
         judge_max_tokens=256,
     )
-    d = judge_profile_dict(s)
-    assert d["openai_model"] == "Qwen/Qwen3-32B-TEE"
-    assert d["openai_base_url"] == "https://llm.chutes.ai/v1"
-    assert "anthropic_model" not in d
+    b = LemmaSettings(
+        judge_provider="anthropic",
+        openai_model="local-model",
+        openai_base_url="http://127.0.0.1:8000/v1",
+        judge_temperature=1.0,
+        judge_max_tokens=1024,
+    )
+
+    assert judge_profile_sha256(a) == judge_profile_sha256(b)
+    d = judge_profile_dict(a)
+    assert "judge_provider" not in d
+    assert "rubric_sha256" not in d
+    assert "openai_model" not in d
 
 
 def test_judge_profile_includes_validator_scoring_policy() -> None:
@@ -33,7 +38,6 @@ def test_judge_profile_includes_validator_scoring_policy() -> None:
         timeout_split_easy_mult=1.1,
         timeout_split_medium_mult=1.2,
         timeout_split_hard_mult=1.3,
-        lemma_score_proof_weight=0.4,
         lemma_reputation_credibility_exponent=2.0,
         lemma_epoch_problem_count=3,
         lemma_commit_reveal_enabled=True,
@@ -43,12 +47,11 @@ def test_judge_profile_includes_validator_scoring_policy() -> None:
     )
     d = judge_profile_dict(s)
 
-    assert d["profile_schema"] == "lemma_validator_profile_v3"
+    assert d["profile_schema"] == "lemma_validator_profile_v4"
     assert d["problem_policy"]["problem_seed_quantize_blocks"] == 55
     assert d["verification_policy"]["lean_sandbox_image"] == "lemma/lean-sandbox:latest"
     assert d["verification_policy"]["lean_verify_timeout_s"] == 123
     assert d["verification_policy"]["timeout_split_hard_mult"] == 1.3
-    assert d["scoring_policy"]["lemma_score_proof_weight"] == 0.4
     assert d["scoring_policy"]["lemma_reputation_credibility_exponent"] == 2.0
     assert d["scoring_policy"]["lemma_epoch_problem_count"] == 3
     assert d["protocol_policy"]["lemma_commit_reveal_enabled"] is True
@@ -59,13 +62,6 @@ def test_judge_profile_includes_validator_scoring_policy() -> None:
     assert "secret" not in salt_hash
 
 
-def test_default_score_proof_weight_is_low_bootstrap_signal(monkeypatch) -> None:
-    monkeypatch.delenv("LEMMA_SCORE_PROOF_WEIGHT", raising=False)
-    s = LemmaSettings(_env_file=None)
-    assert s.lemma_score_proof_weight == 0.10
-    assert judge_profile_dict(s)["scoring_policy"]["lemma_score_proof_weight"] == 0.10
-
-
 def test_default_reputation_credibility_exponent_is_linear_policy(monkeypatch) -> None:
     monkeypatch.delenv("LEMMA_REPUTATION_CREDIBILITY_EXPONENT", raising=False)
     s = LemmaSettings(_env_file=None)
@@ -73,9 +69,9 @@ def test_default_reputation_credibility_exponent_is_linear_policy(monkeypatch) -
     assert judge_profile_dict(s)["scoring_policy"]["lemma_reputation_credibility_exponent"] == 1.0
 
 
-def test_judge_profile_hash_changes_when_scoring_policy_changes() -> None:
-    a = LemmaSettings(lemma_score_proof_weight=0.35)
-    b = LemmaSettings(lemma_score_proof_weight=0.5)
+def test_judge_profile_hash_changes_when_reputation_policy_changes() -> None:
+    a = LemmaSettings(lemma_reputation_credibility_exponent=1.0)
+    b = LemmaSettings(lemma_reputation_credibility_exponent=2.0)
     assert judge_profile_sha256(a) != judge_profile_sha256(b)
 
 
@@ -100,38 +96,3 @@ def test_judge_profile_stable_sha256() -> None:
         judge_max_tokens=256,
     )
     assert judge_profile_sha256(s) == judge_profile_sha256(s)
-
-
-def test_judge_profile_base_url_trailing_slash_normalized() -> None:
-    a = LemmaSettings(
-        judge_provider="openai",
-        openai_model="m",
-        openai_base_url="http://localhost:8000/v1/",
-        judge_temperature=0.2,
-        judge_max_tokens=256,
-    )
-    b = LemmaSettings(
-        judge_provider="openai",
-        openai_model="m",
-        openai_base_url="http://localhost:8000/v1",
-        judge_temperature=0.2,
-        judge_max_tokens=256,
-    )
-    assert judge_profile_sha256(a) == judge_profile_sha256(b)
-
-
-def test_chutes_and_legacy_openai_chutes_stack_share_fingerprint() -> None:
-    """``JUDGE_PROVIDER=chutes`` matches legacy ``openai`` when the stack is the official Chutes judge."""
-    legacy = LemmaSettings(
-        judge_provider="openai",
-        openai_model=CANONICAL_JUDGE_OPENAI_MODEL,
-        openai_base_url=CANONICAL_JUDGE_OPENAI_BASE_URL,
-    )
-    modern = LemmaSettings(
-        judge_provider="chutes",
-        openai_model=CANONICAL_JUDGE_OPENAI_MODEL,
-        openai_base_url=CANONICAL_JUDGE_OPENAI_BASE_URL,
-    )
-    assert judge_profile_sha256(legacy) == judge_profile_sha256(modern)
-    assert judge_profile_dict(legacy)["judge_provider"] == "chutes"
-    assert judge_profile_dict(modern)["judge_provider"] == "chutes"
