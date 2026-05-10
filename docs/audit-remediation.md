@@ -60,12 +60,12 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 
 | ID | Issue | Source § | Priority | Remediation direction | Key refs (verify in tree) |
 |----|--------|----------|----------|------------------------|---------------------------|
-| **I1** | `synapse_miner_response_integrity_ok` returns **True** when `computed_body_hash` is missing → middleboxes can strip headers; combined with attest/trace concerns | R3 §3.1, §6 | P1 | **Done:** miner responses fail closed when `computed_body_hash` is missing or mismatched. | `lemma/protocol.py`, `tests/test_protocol.py` |
+| **I1** | `synapse_miner_response_integrity_ok` returns **True** when `computed_body_hash` is missing → middleboxes can strip headers; combined with attest/trace concerns | R3 §3.1, §6 | P1 | **Transport-bounded:** validator rejects mismatched response hashes when Dendrite exposes one, but live Axon/Dendrite response objects omit `computed_body_hash`; deadline/challenge fields still fail closed. Full response-hash enforcement belongs with the transport migration gate. | `lemma/protocol.py`, `tests/test_protocol.py`, `docs/transport.md` |
 | **I2** | `deadline_block is None` may bypass deadline path if fields stripped | R3 §6 | P1 | **Done:** the same integrity gate rejects miner responses without `deadline_block`. | `lemma/protocol.py`, `tests/test_protocol.py`, `lemma/validator/epoch.py` |
 | **I3** | Single `block_after_query` for batch — timing games | R3 §6 | P2 | **Done/documented acceptance:** Dendrite exposes a batch result, not a trusted per-response receipt block; validator enforces deadline at the post-batch chain head. | `epoch.py` |
 | **I4** | Synapse transport deprecated in KB vs Epistula | R3 §5.15, §11 | P4 | **Bounded:** [transport.md](transport.md) records Dendrite/Axon as the shipping path and HTTP + Epistula as a major-release migration gate, not a second default transport. | `protocol.py`, `docs/transport.md`, `knowledge/` |
 
-**2026-05 progress:** I1/I2/I3 patched or bounded. `synapse_miner_response_integrity_ok` now fails closed when `computed_body_hash` is missing, mismatched, or when `deadline_block` is missing from the miner response. Deadline enforcement uses the post-batch chain head because Dendrite does not expose a trusted per-response receipt block. I4 is bounded as a major-release transport migration decision.
+**2026-05 progress:** I1/I2/I3 patched or bounded. `synapse_miner_response_integrity_ok` now rejects missing `deadline_block` and rejects `computed_body_hash` mismatches when the transport supplies that field. Live Axon/Dendrite miner responses omit the response hash, so missing response hashes are a transport limitation rather than a functional rejection path. Deadline enforcement uses the post-batch chain head because Dendrite does not expose a trusted per-response receipt block. I4 is bounded as a major-release transport migration decision.
 
 ---
 

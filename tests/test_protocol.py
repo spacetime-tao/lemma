@@ -52,7 +52,7 @@ def test_body_hash_includes_proof_and_reasoning() -> None:
     assert a.body_hash != b.body_hash
 
 
-def test_synapse_miner_response_integrity_ok_rejects_missing_header_hash() -> None:
+def test_synapse_miner_response_integrity_ok_accepts_missing_response_hash() -> None:
     s = LemmaChallenge(
         theorem_id="x",
         theorem_statement="t",
@@ -63,7 +63,7 @@ def test_synapse_miner_response_integrity_ok_rejects_missing_header_hash() -> No
         metronome_id="mid",
         proof_script="p",
     )
-    assert synapse_miner_response_integrity_ok(s) is False
+    assert synapse_miner_response_integrity_ok(s) is True
 
 
 def test_synapse_miner_response_integrity_ok_matches_header_hash() -> None:

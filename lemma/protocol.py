@@ -130,10 +130,12 @@ class LemmaChallenge(bt.Synapse):
 
 
 def synapse_miner_response_integrity_ok(s: LemmaChallenge) -> bool:
-    """Return True if recomputed :meth:`~bittensor.core.synapse.Synapse.body_hash` matches axon ``computed_body_hash``.
+    """Return True when response transport metadata does not contradict the recomputed body hash.
 
-    Missing ``computed_body_hash`` or ``deadline_block`` is a production integrity failure: both fields are part of
-    the validator response contract, and accepting ``None`` makes stripping attacks look like normal responses.
+    Dendrite exposes ``computed_body_hash`` on validator->miner requests but may omit it on miner->validator
+    responses. Reject mismatches when the transport provides a hash, and always require ``deadline_block``.
     """
     expected = (s.computed_body_hash or "").strip()
-    return bool(expected) and s.deadline_block is not None and s.body_hash == expected
+    if s.deadline_block is None:
+        return False
+    return not expected or s.body_hash == expected
