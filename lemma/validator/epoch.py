@@ -150,6 +150,19 @@ def _response_matches_problem_challenge(
     return int(resp.deadline_block) == int(deadline_block)
 
 
+def _response_status_summary(responses: list[Any]) -> str:
+    counts: dict[str, int] = defaultdict(int)
+    for resp in responses:
+        axon = getattr(resp, "axon", None)
+        dendrite = getattr(resp, "dendrite", None)
+        code = getattr(dendrite, "status_code", None) or getattr(axon, "status_code", None)
+        msg = getattr(dendrite, "status_message", None) or getattr(axon, "status_message", None) or ""
+        msg = " ".join(str(msg).split())[:96]
+        key = f"{code} {msg}".strip() if code or msg else f"type={type(resp).__name__}"
+        counts[key] += 1
+    return "; ".join(f"{n}x {key}" for key, n in sorted(counts.items()))
+
+
 def _merge_multi_round_entries(uid_groups: dict[int, list[ScoredEntry]]) -> list[ScoredEntry]:
     merged: list[ScoredEntry] = []
     for uid, es in uid_groups.items():
@@ -495,13 +508,14 @@ async def run_epoch(
                 )
                 logger.warning(
                     "epoch sub_round={}/{} no miner candidates: queried_uids={} lemma_challenge_responses={} "
-                    "synapse_success={} success_with_proof={}",
+                    "synapse_success={} success_with_proof={} status_summary={}",
                     sub_k + 1,
                     k_problems,
                     len(uids),
                     n_ch,
                     n_ok,
                     n_proof,
+                    _response_status_summary(list(responses)),
                 )
 
             verify_sem = asyncio.Semaphore(max(1, settings.lemma_lean_verify_max_concurrent))
