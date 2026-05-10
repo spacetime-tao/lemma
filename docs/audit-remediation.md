@@ -307,6 +307,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **`env.example`** removed; **`.env.example`** is the only env template.
 - **`scripts/load_minif2f.py`** removed; `scripts/build_lemma_catalog.py` is the single catalog rebuild path.
 - **`scripts/lemma-run`** removed; docs use standard `uv run` commands instead of a repo wrapper.
+- **`examples/legacy_subnet_burn_validator.py`** removed; it was not a Lemma validator and set 100% weight to UID 0.
 - **`docs/comparator.md`** and runtime comparator hook removed; no bundled production comparator or unpinned post-verify command path.
 - **`pyproject.toml` extras** — `tiktoken` removed; `anthropic` and `btcli` moved to optional extras.
 - **`Dockerfile`** no longer installs full `docker.io`; runtime image uses Python Docker SDK + mounted host socket. Added `.dockerignore`.
