@@ -110,6 +110,55 @@ substitute for real validator export data.
 Any accepted scoring change must update tests, operator docs, migration notes,
 and the validator scoring/profile pin. It must not be hidden inside cleanup.
 
+## Decision Rubric
+
+After a real export clears `--require-decision-ready`, make exactly one of these
+choices. Treat this as a governance / scoring decision, not an analyzer result.
+
+### Replace
+
+Replace `proof_intrinsic_score` only if the candidate Lean-backed metric is
+useful inside same-theorem comparisons:
+
+- `corr_within_theorem(candidate, judge_composite)` is positive enough to matter
+  across multiple theorem ids, not just globally correlated with theorem size.
+- `same_theorem_metric_judge_disagreements(candidate)` is sparse and explainable
+  under manual review.
+- Padding fixtures and real rows do not show the candidate repeatedly rewarding
+  comments, strings, unused trivial `have` blocks, long names, or extra lines.
+- Runtime cost and probe failure rate are low enough for validator operations.
+- The scoring/profile pin changes with the new reward input.
+
+### Keep Low
+
+Keep the current low-weight text heuristic when the evidence is inconclusive but
+not actively harmful:
+
+- Lean-backed candidates are noisy, saturated, or theorem-size dependent.
+- Same-theorem disagreement examples exist but do not clearly favor padding.
+- The current `proof_intrinsic_score` remains low-weight and does not dominate
+  judge or Lean pass/fail behavior.
+- More export data would plausibly change the conclusion.
+
+### Reduce Or Remove
+
+Reduce or remove the proof-text component when the evidence shows it is mostly a
+liability:
+
+- `same_theorem_metric_judge_disagreements(proof_intrinsic)` repeatedly shows
+  the text heuristic preferring worse judged proofs.
+- The heuristic mostly tracks proof length or syntactic bulk after comment
+  stripping.
+- No candidate Lean-backed metric clears the replacement gate.
+- Keeping the heuristic would encourage miners to pad Lean-valid proofs.
+
+### No Decision
+
+Do not change scoring when the export fails readiness, lacks same-theorem
+comparisons, lacks judge labels, has frequent probe failures, or depends on one
+small hand-picked theorem family. In that case, collect more data or keep the
+current low default.
+
 ## Prototype Boundary
 
 Do not wire a new proof-side metric into live scoring until it passes the gate

@@ -85,7 +85,7 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 
 | ID | Issue | Source § | Priority | Remediation direction | Key refs |
 |----|--------|----------|----------|------------------------|----------|
-| **P1** | Comment stripping defeats **one** padding class; **string literals**, trivial `have … by trivial`, long names still inflate | R3 §2.1 | P2 | Default weight lowered; comment-only / blank-line padding normalized; compare-only Lean probe + v2 calibration added; analyzer now flags low-judge / high-metric candidates, same-theorem comparison readiness, within-theorem correlations, same-theorem disagreements, and prints a conservative gate verdict. Next real fix must pass the replace / keep-low / remove-reduce decision gate before scoring use. | `lemma/scoring/proof_intrinsic.py`, `config.py`, `docs/proof-intrinsic-decision.md` |
+| **P1** | Comment stripping defeats **one** padding class; **string literals**, trivial `have … by trivial`, long names still inflate | R3 §2.1 | P2 | Default weight lowered; comment-only / blank-line padding normalized; compare-only Lean probe + v2 calibration added; analyzer now flags low-judge / high-metric candidates, same-theorem comparison readiness, within-theorem correlations, same-theorem disagreements, and prints a conservative gate verdict. Next real fix must pass the replace / keep-low / reduce-remove decision rubric before scoring use. | `lemma/scoring/proof_intrinsic.py`, `config.py`, `docs/proof-intrinsic-decision.md` |
 | **P2** | Default credibility exponent `1.0` vs KB mention of `2.5` | R3 §7 | P3 | **Done:** documented divergence; keep `1.0` default until calibrated/governed. Operators can explicitly set `2.5`. | `config.py`, `scoring/reputation.py`, `docs/credibility-exponent-decision.md` |
 | **P3** | Credibility rises on Lean pass; padding that passes Lean **does not** get penalized by cred | R3 §7 | P2 | **Done:** accepted as policy boundary. Credibility is Lean pass/fail reliability; padding research stays in compare-only proof metrics until a proof-side scoring replacement is calibrated. | `docs/proof-intrinsic-decision.md`, `docs/credibility-exponent-decision.md` |
 | **P4** | Spot-verify skip returns pass → cred EMA increases without verify | R3 §3.2, §7 | P1 | **Done:** attest-trusted skips remain scoreable but no longer improve verify credibility. | `lemma/validator/epoch.py`, `lemma/protocol_attest.py`, `tests/test_reputation.py` |
@@ -198,7 +198,7 @@ Current snapshot uses `wc -l` over Python files, except `docs/` which counts Mar
 | `lemma/common/` | 1 110 | 1 261 | +151 |
 | `lemma/` total | **12 630** | **8 802** (66 files) | **-3 828** |
 | `tests/` | 2 330 | 3 992 (59 files) | +1 662 |
-| `docs/` markdown | 1 355 | 2 847 (30 files) | +1 492 |
+| `docs/` markdown | 1 355 | 2 897 (30 files) | +1 542 |
 
 CLI alone was cited as **43 %** of `lemma/`; it is now about **21 %** by this simple line-count snapshot. The core shrank substantially, while tests/docs grew because safety gates, replay guards, and decision records were added.
 
@@ -378,5 +378,6 @@ Examples called out in Round 3: judge model/URL, Anthropic default model age, Le
 | 2026-05 | Tightened proof-metrics readiness and added within-theorem correlations |
 | 2026-05 | Added same-theorem proof-metric disagreement candidates |
 | 2026-05 | Extended same-theorem disagreement reporting to the current text heuristic |
+| 2026-05 | Added explicit proof-intrinsic replace / keep-low / reduce-remove rubric |
 
 **Maintainers:** bump §17 when you materially change scope or close a whole section.
