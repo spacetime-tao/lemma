@@ -71,8 +71,8 @@ Reason: the product center is simple, reproducible proof acceptance.
 
 ## Latest Baseline Status
 
-- Core Lemma `main` pushed through `bd8f271`
-  (`Clarify proof-verification messaging`).
+- Core Lemma `main` pushed through `82a77c2`
+  (`Reward all verified proofs with coldkey partition`).
 - `lemma-cli` `main` pushed through `022a779` (CLI proof-verification
   messaging).
 - Local verification before VPS testing:
@@ -82,6 +82,10 @@ Reason: the product center is simple, reproducible proof acceptance.
   - CLI ruff: passed;
   - `lemma-cli doctor`: passed;
   - `lemma validator-check`: printed READY after subnet pins refresh.
+- Local verification after same-proof reward rule change:
+  - core `.venv/bin/pytest`: 252 passed, 2 skipped;
+  - core `.venv/bin/ruff check lemma tests tools/sybil_replay_analyze.py`:
+    passed.
 - Worker droplet `lemma-lean-worker-1` (`167.99.145.132`):
   - repo `/opt/lemma` updated to `bd8f271`, `uv sync` run, service restarted;
   - `lemma-lean-worker-http.service` active;
