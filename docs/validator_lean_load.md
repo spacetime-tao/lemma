@@ -29,6 +29,18 @@ Requires **`LEMMA_MINER_VERIFY_ATTEST_ENABLED=1`**. Miners must run local Lean P
 
 Attest **disabled**: spot fraction is ignored (full verify path uses normal Lean unless other shortcuts apply).
 
+## Cadence Implications
+
+Shorter generated windows, such as 25 blocks (~5 minutes at the 12 s estimate)
+or 50 blocks (~10 minutes), are possible policy choices, not free defaults.
+They should be adopted only after operators measure warm-cache verification,
+judge throughput, and miner response latency on production-like Linux hosts.
+
+Miner verify attest can reduce validator Lean load, but only after miners run
+`LEMMA_MINER_LOCAL_VERIFY=1`, attest signatures validate, and validators keep a
+nonzero spot full-verify fraction. Until that evidence exists, keep the default
+mental model simple: validators fully verify passing candidate proofs.
+
 ## Offload Lean to another host
 
 **`LEMMA_LEAN_VERIFY_REMOTE_URL`** POSTs proofs to **`lemma lean-worker`** — validator CPU drops; network + worker capacity become the limit ([`verify_runner.py`](../lemma/lean/verify_runner.py)). Align **`LEMMA_LEAN_VERIFY_REMOTE_BEARER`** and timeouts with production.
