@@ -89,7 +89,7 @@ uv run lemma validator dry-run
 uv run lemma validator start
 ```
 
-Use **`uv run lemma validator start`** only from the repo root. A legacy burn-to-UID-0 demo lives under **`examples/`** for reference.
+Use **`uv run lemma validator start`** only from the repo root.
 
 Parity: `uv run lemma meta` — [governance.md](governance.md).
 
