@@ -1,10 +1,10 @@
 # Vision & roadmap
 
-Lemma is an **incentivized theorem-proving subnet** for mathematics on **Bittensor**. Participants answer formal math challenges in **Lean 4** by submitting a **proof script** (and, on the default path, a **reasoning trace**). Validators **verify proofs** in **Docker** (lean-sandbox image). An **LLM judge** currently scores how well the trace explains the work after Lean passes. **Weights on chain** follow from that pipeline.
+Lemma is an **incentivized theorem-proving subnet** for mathematics on **Bittensor**. Participants answer formal math challenges in **Lean 4** by submitting a **proof script**. Validators **verify proofs** in **Docker** (lean-sandbox image). **Weights on chain** should follow from Lean pass/fail plus deterministic proof-efficiency signals.
 
-**One-sentence objective:** Lemma incentivizes miners to produce Lean-valid mathematical proofs for published theorem statements.
+**One-sentence objective:** Lemma rewards valid, efficient Lean proofs for published theorem statements.
 
-The informal-reasoning judge is a current bootstrap ranking signal for submissions that already pass Lean, not the default long-term identity of the subnet. See [objective-decision.md](objective-decision.md) and [judge-incentive-decision.md](judge-incentive-decision.md).
+Informal reasoning may exist as optional explanation, training data, or a human-readable artifact, but the permanent reward axis is proof-only. See [objective-decision.md](objective-decision.md) and [proof-only-incentives.md](proof-only-incentives.md).
 
 **Important distinction:** what the subnet *must* check mechanically is the **proof script against the locked `theorem`**. *How* that script was produced—autonomous model, human mathematician, or a mixed team—is largely **out of band** for Lean. Today’s reference miner is LLM-driven. A planned **bounty / long-horizon lane** (opt-in, higher stakes, offline-friendly) is **not** required at launch—it fits **after** the base economy is healthy (see **Economics v0 → v1** below).
 
@@ -22,7 +22,7 @@ The trade-off is discipline elsewhere: the **statement must be fixed**, the **pr
 
 ## Where we are: proof of concept → runnable subnet
 
-The codebase already demonstrates an **end-to-end loop**: sample or generate a `Problem`, send a `LemmaChallenge`, run a prover (the bundled path is **LLM-backed**), verify with `lake` / sandbox tooling, optionally judge the trace, and participate in normal miner/validator flows. Operator tooling (`lemma` CLI, env setup, docs, CI) exists so others can reproduce that loop locally.
+The codebase already demonstrates an **end-to-end loop**: sample or generate a `Problem`, send a `LemmaChallenge`, run a prover (the bundled path is **LLM-backed**), verify with `lake` / sandbox tooling, and participate in normal miner/validator flows. Operator tooling (`lemma` CLI, env setup, docs, CI) exists so others can reproduce that loop locally.
 
 **Near-term bar:** a new miner can join with documented steps, use **known-formalized** problems locally, and get **consistent scoring** without bespoke support.
 
@@ -76,13 +76,13 @@ A live subnet needs a **curated feed** of problems—not only generators, but **
 
 ### 4. Scale & operations
 
-Under load: queueing, timeouts, cost of verification vs judge calls, observability, and **runbooks** for stuck verifies, RPC drift, or bad releases.
+Under load: queueing, timeouts, verification cost, optional prose-evaluation cost, observability, and **runbooks** for stuck verifies, RPC drift, or bad releases.
 
 **Goal:** the subnet survives **N miners** without manual firefighting for known failure modes.
 
 ### 5. Advanced incentives (evidence-driven)
 
-After real traffic: consider **partial-progress** or **lemma-submission** tracks, anti-collusion tweaks, and richer scoring—**only** where the protocol can define rewards without breaking the Lean gate’s clarity.
+After real traffic: consider **partial-progress** or **lemma-submission** tracks, anti-collusion tweaks, and richer proof-side scoring—**only** where the protocol can define rewards without breaking the Lean gate’s clarity.
 
 **Goal:** incentive changes follow **measured** miner behavior, not pre-launch theory alone.
 
@@ -90,7 +90,7 @@ After real traffic: consider **partial-progress** or **lemma-submission** tracks
 
 ## Through-line
 
-**Lemma's identity is incentivized theorem proving; Lean verification stays the objective floor.** Everything else—judges, traces, economics—exists to make that floor **useful, fair, and sustainable** on a decentralized network.
+**Lemma's identity is incentivized theorem proving; Lean verification stays the objective floor.** Everything else—efficiency metrics, economics, problem supply, and operations—exists to make that floor **useful, fair, and sustainable** on a decentralized network.
 
 ---
 
@@ -101,6 +101,7 @@ After real traffic: consider **partial-progress** or **lemma-submission** tracks
 | [Architecture](architecture.md) | Components and data flow today. |
 | [Governance](governance.md) | Pins, meta, policy. |
 | [Objective decision](objective-decision.md) | One-sentence objective and scoring boundary. |
+| [Proof-only incentives](proof-only-incentives.md) | Long-term proof-only reward design. |
 | [Problem supply policy](problem-supply-policy.md) | Public generated supply boundary and builder promotion checklist. |
 | [Open problem campaigns](open-problem-campaigns.md) | v1+ campaign / bounty lane for faithful open-problem formalization and submit-when-ready proofs. |
 | [Getting started](getting-started.md) | Install and first commands. |

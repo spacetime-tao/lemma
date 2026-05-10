@@ -8,7 +8,7 @@ This document tracks **post-audit** mechanism changes in Lemma: proof-centric sc
 
 | Mechanism | Env / behavior |
 |-----------|----------------|
-| Proof + judge blend | `LEMMA_SCORE_PROOF_WEIGHT` (default **0.10** intrinsic / **0.90** judge composite); tune per subnet policy. See [proof-intrinsic-decision.md](proof-intrinsic-decision.md) and [judge-incentive-decision.md](judge-incentive-decision.md) before changing defaults. |
+| Proof-only target | Long-term rewards are Lean pass plus deterministic proof-efficiency scoring. See [proof-only-incentives.md](proof-only-incentives.md). |
 | Identical submission dedup | `LEMMA_SCORING_DEDUP_IDENTICAL=1` — same normalized `(theorem, proof, trace)` keeps best score; proof comments are stripped and whitespace is collapsed before fingerprinting. |
 | Coldkey dedup | `LEMMA_SCORING_COLDKEY_DEDUP=1` — one hotkey per coldkey (metagraph). |
 | EMA reputation | `LEMMA_REPUTATION_EMA_ALPHA` (default **0.08**); state file `LEMMA_REPUTATION_STATE_PATH` or `~/.lemma/validator_reputation.json`. |
@@ -22,7 +22,7 @@ This document tracks **post-audit** mechanism changes in Lemma: proof-centric sc
 | Miner verify attest | **`LEMMA_MINER_VERIFY_ATTEST_ENABLED=1`** — miners must run **`LEMMA_MINER_LOCAL_VERIFY=1`**, local Lean PASS, then Sr25519-sign `protocol_attest.miner_verify_attest_message(synapse, validator_hotkey=...)` into **`miner_verify_attest_signature_hex`**. Validators verify against metagraph hotkeys and reject responses whose challenge fields do not match the current theorem/metronome; **`LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION`** (default **1.0** = always full Docker verify) selects a deterministic subset for full Lean (lower values reduce validator CPU — trust tradeoff). Threat model: [miner-verify-attest.md](miner-verify-attest.md). |
 | Commit-reveal | **`LEMMA_COMMIT_REVEAL_ENABLED=1`** — validator sends two forwards per sub-round: **`commit_reveal_phase=commit`** (miners return **`proof_commitment_hex`**, SHA256 of canonical preimage; see `lemma/protocol_commit_reveal.py`) then **`commit_reveal_phase=reveal`** (full proof + **`commit_reveal_nonce_hex`**). Responses without a matching commit are dropped. Doubles axon round-trip latency vs single-phase. Threat model: [commit-reveal.md](commit-reveal.md). |
 | Judge profile peer attest | **`LEMMA_JUDGE_PROFILE_ATTEST_ENABLED=1`** — after pins match, HTTP GET each URL in **`LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS`** (comma-separated); response must be **plain 64-char hex** or JSON **`{"judge_profile_sha256":"..."}`** equal to this validator’s **`judge_profile_sha256`**. **`LEMMA_JUDGE_PROFILE_ATTEST_SKIP=1`** skips peer probes (solo / dev only; logs WARN). Run **`lemma validator judge-attest-serve`** on peers to expose `GET /lemma/judge_profile_sha256`. Threat model: [judge-profile-attest.md](judge-profile-attest.md). |
-| Training export profiles | **`LEMMA_TRAINING_EXPORT_JSONL`** optional JSONL; **`LEMMA_TRAINING_EXPORT_PROFILE`** = **`full`** (proof + rubric + optional `proof_metrics` + `pareto_weight`) or **`reasoning_only`** (schema v2 — trace fields without proof, proof metrics, judge labels, or weights). See [training_export.md](training_export.md). |
+| Training export profiles | **`LEMMA_TRAINING_EXPORT_JSONL`** optional JSONL; **`LEMMA_TRAINING_EXPORT_PROFILE`** = **`full`** (proof + optional labels + optional `proof_metrics` + `pareto_weight`) or **`reasoning_only`** (schema v2 — trace fields without proof, proof metrics, labels, or weights). See [training_export.md](training_export.md). |
 | Generated template RNG | Chain seed is **SHA256-mixed** before template selection (`lemma_generated_rng_v1`) so adjacent seeds pick less correlated templates; **`LEMMA_GENERATED_LEGACY_PLAIN_RNG=1`** restores legacy `Random(seed)`. Problem ids remain **`gen/<chain_seed>`**. |
 | Problem seed RPC slack | **`LEMMA_PROBLEM_SEED_CHAIN_HEAD_SLACK_BLOCKS`** pulls chain head back before `resolve_problem_seed` and forward HTTP deadline math — reduces ±1 RPC skew at quantize edges (`lemma/common/problem_seed.py`). |
 | Lean workspace cache key | Default **template-only** slot under **`LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR`**; optional **`LEMMA_LEAN_WORKSPACE_CACHE_INCLUDE_SUBMISSION_HASH=1`** appends proof-body fingerprint (`workspace_verify_cache_key` in `lemma/lean/workspace.py`). |
@@ -39,7 +39,7 @@ Adding templates changes `generated_registry_sha256`. Operators must run `lemma-
 
 - Scoring: `lemma/scoring/rewards.py`, `lemma/scoring/proof_intrinsic.py`, `lemma/validator/epoch.py`
 - Proof intrinsic decision: [proof-intrinsic-decision.md](proof-intrinsic-decision.md)
-- Judge incentive decision: [judge-incentive-decision.md](judge-incentive-decision.md)
+- Proof-only incentive design: [proof-only-incentives.md](proof-only-incentives.md)
 - Credibility exponent decision: [credibility-exponent-decision.md](credibility-exponent-decision.md)
 - Dedup: `lemma/scoring/dedup.py`
 - Reputation: `lemma/scoring/reputation.py`

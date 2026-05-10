@@ -1,4 +1,4 @@
-# Judge Profile Peer Attest Threat Model
+# Validator Profile Peer Attest Threat Model
 
 `LEMMA_JUDGE_PROFILE_ATTEST_ENABLED=1` makes a validator fetch each configured
 peer URL and compare the returned `judge_profile_sha256` with its own local
@@ -25,7 +25,7 @@ local scoring profile does not match the peer set they expected to align with.
 
 It catches common mistakes such as:
 
-- different judge model or base URL,
+- different prose-evaluator model or base URL if that optional tooling is enabled,
 - different scoring weights or reputation settings,
 - different problem cadence or verification policy,
 - wrong peer URL,
@@ -62,4 +62,3 @@ intentional. Expect a single unreachable or mismatched URL to fail the check.
 `LEMMA_JUDGE_PROFILE_ATTEST_SKIP=1` is for solo and development runs only. It
 means peer URLs are not checked, so it should not be treated as production
 alignment.
-

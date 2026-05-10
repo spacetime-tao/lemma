@@ -5,30 +5,25 @@ into rewarding whatever the latest scoring layer happens to measure.
 
 ## One-Sentence Objective
 
-Lemma incentivizes miners to produce Lean-valid mathematical proofs for
-published theorem statements.
+Lemma rewards valid, efficient Lean proofs for published theorem statements.
 
-## Current Incentive Layer
+## Incentive Boundary
 
-The live scoring path has a second layer after Lean passes: a pinned LLM judge
-scores the miner's informal reasoning trace. That judge layer is useful for
-bootstrapping readable reasoning traces and training data, but it is not the
-core objective by default.
+The permanent reward path should be proof-only:
 
-Plainly:
+- **Eligibility:** Lean accepts the submitted proof for the locked theorem.
+- **Ranking:** deterministic proof-side efficiency signals compare passing
+  proofs for the same challenge.
+- **Out of band:** informal reasoning can help humans, datasets, and debugging,
+  but it is not a permanent reward axis.
 
-- **Core objective:** produce a proof that Lean accepts for the stated theorem.
-- **Current bootstrap ranking signal:** among Lean-valid submissions, reward
-  clearer informal reasoning using the shared judge profile.
-- **Governance choice:** if explanation quality becomes permanent, say so
-  explicitly and update this objective.
+See [proof-only-incentives.md](proof-only-incentives.md) for the concrete design.
 
 ## Why This Matters
 
-Lean verification is objective and reproducible. LLM judging is useful but
-subjective. Keeping those roles separate prevents the subnet from accidentally
-becoming a prose-optimization game while still allowing the current judge layer
-to help during bootstrapping.
+Lean verification is objective and reproducible. Proof-efficiency metrics are
+not perfect, but they are at least tied to the formal artifact validators can
+check. This keeps Lemma from becoming a prose-optimization game.
 
 ## Change Gate
 
@@ -38,6 +33,6 @@ Any future scoring change should answer this first:
 > or more economically useful?
 
 If the answer is no, the change should not be part of the core incentive path.
-See [judge-incentive-decision.md](judge-incentive-decision.md) and
-[proof-intrinsic-decision.md](proof-intrinsic-decision.md) for the two current
-scoring decision gates.
+See [proof-only-incentives.md](proof-only-incentives.md) and
+[proof-intrinsic-decision.md](proof-intrinsic-decision.md) for the scoring
+design gates.
