@@ -59,6 +59,18 @@ Policy choices to make:
 | **Uncopyable work lane** | The subnet can generate tasks where extra miners do not cheaply clone the same answer. | Requires problem-supply and validator design, not just scoring. |
 | **External identity / governance policy** | The subnet intentionally wants off-chain identity or stake policy. | Outside Lemma’s default open scoring code. |
 
+## Decision rubric
+
+Use this rubric after a private `full` export clears `--require-decision-ready`. If the export does not clear the readiness gate, record **no decision** and collect better data instead of changing live rewards.
+
+| Decision | Evidence that supports it |
+| --- | --- |
+| **Keep current dedup only** | Exact clones gain little or no extra share; rewritten clones do not gain durable extra share across epochs; UID registration cost is already meaningful relative to expected reward. |
+| **Cap / dampen near-duplicate reward** | Rewritten clones gain material extra share across several epochs; examples are copied proofs, lightly edited traces, or same-theorem variants; the proposed similarity rule can be replayed before activation. |
+| **Move to winners-take-most / stronger subset rewards** | K coordinated miners stay close to Kx group share after current dedup; Pareto ranking keeps many near-copy entries; a stronger policy can be simulated on the same export before activation. |
+| **Invest in uncopyable work / problem supply first** | Replay shows copied outputs are naturally competitive and no simple similarity rule is robust enough; the fix belongs in task design rather than another scoring check. |
+| **No reward-code change** | Coldkeys are missing, the export is too small, UID cost/reward context is unknown, or the finding depends on one hand-picked epoch. |
+
 Decision-record template:
 
 ```text
