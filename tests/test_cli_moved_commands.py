@@ -50,3 +50,11 @@ def test_moved_problems_command_forwards_args_to_lemma_cli() -> None:
     assert result.exit_code == 0
     assert "Problem inspector moved to lemma-cli." in result.output
     assert "Run `lemma-cli problems show --current`." in result.output
+
+
+def test_moved_judge_command_forwards_args_to_lemma_cli() -> None:
+    result = CliRunner().invoke(main, ["judge", "--trace", "trace.txt"])
+
+    assert result.exit_code == 0
+    assert "Judge preview moved to lemma-cli." in result.output
+    assert "Run `lemma-cli judge --trace trace.txt`." in result.output

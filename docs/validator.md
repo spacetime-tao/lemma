@@ -16,7 +16,7 @@ Judge: Chutes is the live validator path. Anthropic is only for local/experiment
 | --- | --- |
 | **End-to-end** preview (prover → Lean → judge) on the live theorem | **`lemma-cli rehearsal`** (default Lean on; `--no-verify` to skip) |
 | Exercise **prover** only | `lemma-cli try-prover` (add `--verify` for local Lean) |
-| Exercise **judge** alone on text files you saved | `uv run lemma judge --trace reasoning.txt` (optional `--theorem` / `--proof` paths) |
+| Exercise **judge** alone on text files you saved | `lemma-cli judge --trace reasoning.txt` (optional `--theorem` / `--proof` paths) |
 | Rehearse the **full validator** without `set_weights` | `uv run lemma validator dry-run` — rubric step uses **FakeJudge** by default; set **`LEMMA_DRY_RUN_REAL_JUDGE=1`** to bill the real judge during dry-run |
 | Only print validator-related env | `uv run lemma validator config` (not a scoring run) |
 
@@ -95,7 +95,7 @@ uv run lemma validator dry-run
 uv run lemma validator start
 ```
 
-For a cheap local loop without any inference HTTP, use **`uv run lemma validator dry-run`**, which defaults to FakeJudge in the rubric step. Prefer **`uv run lemma judge --trace …`** to test only the judge stack, or set **`LEMMA_DRY_RUN_REAL_JUDGE=1`** during dry-run when you want to bill the live judge.
+For a cheap local loop without any inference HTTP, use **`uv run lemma validator dry-run`**, which defaults to FakeJudge in the rubric step. Prefer **`lemma-cli judge --trace …`** to test only the judge stack, or set **`LEMMA_DRY_RUN_REAL_JUDGE=1`** during dry-run when you want to bill the live judge.
 
 ## Fingerprints
 

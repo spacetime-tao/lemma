@@ -187,7 +187,7 @@ Current snapshot uses `wc -l` over Python files, except `docs/` which counts Mar
 
 | Layer | Round 3 cited LoC | 2026-05 current `wc -l` | Delta |
 |-------|-------------------|-------------------------|-------|
-| `lemma/cli/` | 5 398 (16 files) | 1 418 (5 files) | -3 980 |
+| `lemma/cli/` | 5 398 (16 files) | 1 257 (4 files) | -4 141 |
 | `lemma/validator/` | 875 | 1 142 | +267 |
 | `lemma/scoring/` | 282 | 305 | +23 |
 | `lemma/judge/` | 543 | 568 | +25 |
@@ -196,11 +196,11 @@ Current snapshot uses `wc -l` over Python files, except `docs/` which counts Mar
 | `lemma/problems/` | 784 | 1 004 | +220 |
 | `lemma/protocol*` | 290 | 331 | +41 |
 | `lemma/common/` | 1 110 | 1 261 | +151 |
-| `lemma/` total | **12 630** | **8 400** (65 files) | **-4 230** |
-| `tests/` | 2 330 | 4 008 (59 files) | +1 678 |
-| `docs/` markdown | 1 355 | 2 913 (30 files) | +1 558 |
+| `lemma/` total | **12 630** | **8 239** (64 files) | **-4 391** |
+| `tests/` | 2 330 | 4 016 (59 files) | +1 686 |
+| `docs/` markdown | 1 355 | 2 916 (30 files) | +1 561 |
 
-CLI alone was cited as **43 %** of `lemma/`; it is now about **17 %** by this simple line-count snapshot. The core shrank substantially, while tests/docs grew because safety gates, replay guards, and decision records were added.
+CLI alone was cited as **43 %** of `lemma/`; it is now about **15 %** by this simple line-count snapshot. The core shrank substantially, while tests/docs grew because safety gates, replay guards, and decision records were added.
 
 ### 13.2 CLI / click surface (§15–16)
 
@@ -218,6 +218,7 @@ CLI alone was cited as **43 %** of `lemma/`; it is now about **17 %** by this si
 - **`doctor`** moved to `lemma-cli`; core keeps a redirect only.
 - **`miner observability`** moved to `lemma-cli miner-observability`; core keeps a redirect only.
 - **`status` / `problems`** theorem inspection moved to `lemma-cli`; core keeps redirects only.
+- **`judge`** one-shot saved-file preview moved to `lemma-cli`; core keeps a redirect only.
 - **`bittensor[cli]`** moved behind optional `btcli` extra; core depends on the Bittensor SDK only, while operators can still run `uv sync --extra btcli` for wallet/register commands.
 - **`validator-check` interactive start prompt** removed; core pre-flight now exits after READY / NOT READY, while guided handoff belongs in `lemma-cli`.
 - **`local-loop`** undocumented FakeJudge + host-Lean dev shortcut removed; use explicit `lemma validator dry-run` or `lemma-cli rehearsal` instead.
@@ -382,5 +383,6 @@ Examples called out in Round 3: judge model/URL, Anthropic default model age, Le
 | 2026-05 | Added explicit proof-intrinsic replace / keep-low / reduce-remove rubric |
 | 2026-05 | Added explicit sybil/Pareto replay decision rubric |
 | 2026-05 | Moved theorem status/problem inspection to `lemma-cli` and refreshed CLI line counts |
+| 2026-05 | Moved one-shot judge preview to `lemma-cli` and refreshed CLI line counts |
 
 **Maintainers:** bump §17 when you materially change scope or close a whole section.
