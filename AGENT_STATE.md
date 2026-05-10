@@ -66,6 +66,17 @@ Reason: the product center is simple, reproducible proof acceptance.
   staying online, responding inside the validator forward window, verifying
   proofs, setting weights, and earning alpha.
 
+## Latest Baseline Status
+
+- Local shared env restored: `uv pip install -e ../lemma-cli` installed
+  `lemma-cli` into the core `.venv`.
+- Local profile pins refreshed with `lemma-cli configure subnet-pins --yes`.
+- `lemma-cli doctor` passed locally.
+- `lemma validator-check` printed READY locally after the pin refresh.
+- Only local SSH alias found so far: `lemmasub-do`; SSH to that host timed out on
+  2026-05-10. Need current miner and validator droplet SSH aliases or IPs before
+  running the VPS baseline.
+
 ## Notes For Future Agents
 
 - Preserve binary proof-pass language.
