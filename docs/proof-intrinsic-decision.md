@@ -156,6 +156,11 @@ metric verdict: blockers mean the export is too small or missing judge labels to
 support a scoring decision, even if the metric gate itself has no obvious
 padding finding. The readiness check also requires same-theorem comparison sets
 so wide one-row-per-theorem exports cannot approve a proof-side scoring change.
+For exports that include those comparison sets, `corr_within_theorem(...)`
+subtracts each theorem's baseline before comparing metric movement to judge
+movement; treat those lines as more relevant than global correlations when
+judging whether a proof-side metric is measuring proof quality rather than
+theorem size.
 `--require-decision-ready` is available for release checklists: it exits nonzero
 unless the export clears readiness blockers and reaches the manual-review gate.
 Passing that flag is not approval to change rewards; it only means there is

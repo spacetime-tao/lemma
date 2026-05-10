@@ -64,6 +64,8 @@ Keep the analyzer report with any scoring decision notes. Look first at:
 - `rows_with_successful_proof_metrics` vs failed probe rows,
 - correlations between metric bytes / delimiter-count shape data, proof text
   length, current `proof_intrinsic_score`, and judge composite,
+- `within_theorem_comparisons` and `corr_within_theorem(...)`, which subtract
+  each theorem's baseline before comparing proof metrics to judge scores,
 - padding-looking outliers and the conservative `gate_verdict`.
 
 Do **not** change `LEMMA_SCORE_PROOF_WEIGHT` from one report alone. The proof-side
@@ -83,7 +85,9 @@ probe rows. It also reports minimum data-readiness blockers using conservative
 defaults: at least 50 successful proof-metric rows, 5 theorem ids, 5 UIDs, and
 judge composite labels. It also requires at least 3 theorem ids with 2 or more
 judged successful rows from 2 or more UIDs, so wide one-row-per-theorem exports
-do not masquerade as proof-quality evidence.
+do not masquerade as proof-quality evidence. The report then prints centered
+within-theorem correlations for metric bytes, delimiter count, and the current
+text heuristic against judge composite.
 
 For release checklists, add `--require-decision-ready`. It exits nonzero unless
 `decision_ready=yes`. This is only a readiness guard: it still requires manual

@@ -86,6 +86,8 @@ def test_load_report_summarizes_metric_rows(tmp_path) -> None:
     assert "corr(metric_bytes, proof_len_chars)=" in rendered
     assert "corr(metric_delimiters, proof_len_chars)=n/a" in rendered
     assert "corr(metric_delimiters, proof_intrinsic)=n/a" in rendered
+    assert "within_theorem_comparisons=theorems=0 rows=0" in rendered
+    assert "corr_within_theorem(metric_bytes, judge_composite)=n/a" in rendered
     assert "padding_outliers_by_proof_len_minus_metric_bytes:" in rendered
     assert "low_judge_high_metric_candidates:" in rendered
     assert "theorem=padded" in rendered
@@ -189,6 +191,7 @@ def test_validation_fixture_separates_padding_from_failed_probes() -> None:
     assert "corr(metric_delimiters, proof_len_chars)=" in rendered
     assert "corr(metric_delimiters, proof_intrinsic)=" in rendered
     assert "corr(metric_delimiters, judge_composite)=" in rendered
+    assert "within_theorem_comparisons=theorems=0 rows=0" in rendered
     assert "theorem=comment-padding" in rendered
     assert "theorem=string-padding" in rendered
     assert "theorem=unused-have-padding" in rendered
@@ -263,8 +266,59 @@ def test_require_decision_ready_passes_for_ready_manual_review_export(tmp_path, 
     rendered = capsys.readouterr().out
     assert "decision_data_blockers=none" in rendered
     assert "comparison_theorems=5" in rendered
+    assert "within_theorem_comparisons=theorems=5 rows=50" in rendered
+    assert "corr_within_theorem(metric_bytes, judge_composite)=n/a" in rendered
     assert "decision_ready=yes" in rendered
     assert "gate_verdict=manual_review_required" in rendered
+
+
+def test_render_report_includes_within_theorem_centered_correlations(tmp_path, capsys) -> None:
+    path = tmp_path / "within.jsonl"
+    rows = []
+    for theorem_idx in range(3):
+        theorem_id = f"theorem-{theorem_idx}"
+        rows.extend(
+            [
+                {
+                    "theorem_id": theorem_id,
+                    "uid": theorem_idx * 2,
+                    "proof_script": f"theorem low_{theorem_idx} : True := by trivial\n",
+                    "rubric": {"composite": 0.2},
+                    "proof_metrics": {
+                        "proof_declaration_bytes": 100,
+                        "proof_declaration_lines": 10,
+                        "proof_declaration_delimiters": 8,
+                        "proof_declaration_max_depth": 3,
+                        "probe_exit_code": 0,
+                    },
+                },
+                {
+                    "theorem_id": theorem_id,
+                    "uid": theorem_idx * 2 + 1,
+                    "proof_script": (
+                        f"theorem high_{theorem_idx} : True := by\n"
+                        "  have h : True := by trivial\n"
+                        "  exact h\n"
+                    ),
+                    "rubric": {"composite": 0.8},
+                    "proof_metrics": {
+                        "proof_declaration_bytes": 200,
+                        "proof_declaration_lines": 20,
+                        "proof_declaration_delimiters": 16,
+                        "proof_declaration_max_depth": 4,
+                        "probe_exit_code": 0,
+                    },
+                },
+            ],
+        )
+    path.write_text("\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8")
+
+    assert main([str(path)]) == 0
+    rendered = capsys.readouterr().out
+    assert "comparison_theorems=3" in rendered
+    assert "within_theorem_comparisons=theorems=3 rows=6" in rendered
+    assert "corr_within_theorem(metric_bytes, judge_composite)=1.0000" in rendered
+    assert "corr_within_theorem(metric_delimiters, judge_composite)=1.0000" in rendered
 
 
 def test_require_decision_ready_requires_same_theorem_comparisons(tmp_path, capsys) -> None:
