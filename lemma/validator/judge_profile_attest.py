@@ -72,7 +72,7 @@ def judge_profile_peer_check_errors(settings: LemmaSettings) -> list[str]:
     if not urls:
         return [
             "LEMMA_JUDGE_PROFILE_ATTEST_ENABLED=1 requires LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS "
-            "(comma-separated GET URLs; each must return this validator's judge_profile_sha256). "
+            "(comma-separated GET URLs; each must return this validator's profile hash). "
             "Or set LEMMA_JUDGE_PROFILE_ATTEST_SKIP=1 for single-node dev.\n"
             "Tip: run `lemma validator judge-attest-serve` on peers and point URLs at "
             "http://HOST:PORT/lemma/judge_profile_sha256",
@@ -82,7 +82,7 @@ def judge_profile_peer_check_errors(settings: LemmaSettings) -> list[str]:
     if my_hash.startswith("0x"):
         my_hash = my_hash[2:]
     if not _HEX64.match(my_hash):
-        return ["internal: local judge_profile_sha256 is not a 64-char hex string"]
+        return ["internal: local validator profile hash is not a 64-char hex string"]
 
     timeout = float(settings.lemma_judge_profile_attest_http_timeout_s or 15.0)
     try:
@@ -92,20 +92,20 @@ def judge_profile_peer_check_errors(settings: LemmaSettings) -> list[str]:
                     r = client.get(url)
                     r.raise_for_status()
                 except httpx.HTTPError as e:
-                    return [f"judge profile attest: HTTP error for {url!r}: {e}"]
+                    return [f"validator profile attest: HTTP error for {url!r}: {e}"]
                 peer_h = parse_peer_judge_hash(r.text)
                 if not peer_h:
-                    return [f"judge profile attest: could not parse 64-char hex from {url!r}"]
+                    return [f"validator profile attest: could not parse 64-char hex from {url!r}"]
                 if peer_h != my_hash:
                     return [
-                        f"judge profile attest: {url!r} reports {peer_h[:16]}… "
+                        f"validator profile attest: {url!r} reports {peer_h[:16]}… "
                         f"but this validator is {my_hash[:16]}… — align validator profiles or URLs.",
                     ]
     except OSError as e:
-        return [f"judge profile attest: network error: {e}"]
+        return [f"validator profile attest: network error: {e}"]
 
     logger.info(
-        "judge profile attest: {} peer URL(s) match local judge_profile_sha256",
+        "validator profile attest: {} peer URL(s) match local profile hash",
         len(urls),
     )
     return []
@@ -140,7 +140,7 @@ def serve_judge_profile_attest_forever(host: str, port: int, settings: LemmaSett
 
     srv = ThreadingHTTPServer((host, port), Handler)
     logger.info(
-        "judge attest HTTP on http://{}:{}/lemma/judge_profile_sha256 (GET /health)",
+        "validator profile attest HTTP on http://{}:{}/lemma/judge_profile_sha256 (GET /health)",
         host,
         port,
     )

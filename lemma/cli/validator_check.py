@@ -141,7 +141,7 @@ def run_validator_check(settings: LemmaSettings) -> int:
                 err=True,
             )
         else:
-            click.echo(stylize("OK profile pin matches live judge_profile_sha256", fg="green"))
+            click.echo(stylize("OK profile pin matches live validator profile hash", fg="green"))
     else:
         click.echo(
             stylize(
@@ -178,12 +178,12 @@ def run_validator_check(settings: LemmaSettings) -> int:
                 err=True,
             )
 
-    # --- Judge profile peer attest (optional) ---
+    # --- Validator profile peer attest (optional; env names are compatibility) ---
     if settings.lemma_judge_profile_attest_enabled:
         if settings.lemma_judge_profile_attest_allow_skip:
             click.echo(
                 stylize(
-                    "WARN judge attest  LEMMA_JUDGE_PROFILE_ATTEST_SKIP=1 — peer URLs not checked "
+                    "WARN profile attest  LEMMA_JUDGE_PROFILE_ATTEST_SKIP=1 — peer URLs not checked "
                     "(solo/dev only; not production alignment)",
                     fg="yellow",
                 ),
@@ -191,12 +191,12 @@ def run_validator_check(settings: LemmaSettings) -> int:
         attest_errs = [
             msg
             for msg in startup_fatal
-            if msg.startswith("judge profile attest:") or msg.startswith("LEMMA_JUDGE_PROFILE_ATTEST_ENABLED")
+            if msg.startswith("validator profile attest:") or msg.startswith("LEMMA_JUDGE_PROFILE_ATTEST_ENABLED")
         ]
         if attest_errs:
             click.echo(
                 stylize(
-                    "FAIL judge attest  peer URLs did not match local judge_profile_sha256 — see above",
+                    "FAIL profile attest  peer URLs did not match local validator profile hash — see above",
                     fg="red",
                     bold=True,
                 ),
@@ -205,7 +205,7 @@ def run_validator_check(settings: LemmaSettings) -> int:
         elif not settings.lemma_judge_profile_attest_allow_skip:
             click.echo(
                 stylize(
-                    "OK judge attest  peer URLs agree with local judge_profile_sha256",
+                    "OK profile attest  peer URLs agree with local validator profile hash",
                     fg="green",
                 ),
             )

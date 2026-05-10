@@ -25,7 +25,6 @@ local scoring profile does not match the peer set they expected to align with.
 
 It catches common mistakes such as:
 
-- different prose-evaluator model or base URL if that optional tooling is enabled,
 - different scoring weights or reputation settings,
 - different problem cadence or verification policy,
 - wrong peer URL,
@@ -50,8 +49,8 @@ It does not:
 
 Use TLS, private networking, reverse proxies, firewall rules, or another
 operator-controlled authentication layer if peer URLs cross an untrusted
-network. A stronger design, such as signed/on-chain profile attestations or
-k-of-n governance, should be a separate product decision.
+network. Signed/on-chain profile attestations or k-of-n checks belong in a
+separate design.
 
 ## Operator Guidance
 

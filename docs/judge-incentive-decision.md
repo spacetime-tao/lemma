@@ -1,35 +1,27 @@
-# Optional Prose Evaluation Boundary
+# Binary Proof-Pass Reward Boundary
 
-Lemma's reward objective is proof-only: a submitted Lean proof must pass the
-pinned verifier. The live path gives verified proofs a binary pass.
-See [proof-only-incentives.md](proof-only-incentives.md).
+Lemma's live reward objective is binary Lean pass/fail: a submitted proof either
+passes the pinned verifier for the published theorem, or it does not. See
+[proof-only-incentives.md](proof-only-incentives.md).
 
-Prose evaluation can still be useful outside rewards:
-
-- debugging why a prover tried a particular proof path;
-- building private training exports;
-- helping humans review difficult examples;
-- comparing model behavior during research.
-
-Those uses remain out of the validator reward function. New code should not add
-reward-critical dependence on explanation quality, rubric-shaped text, or a
-specific inference provider.
-
-## Boundary
+## Live Reward Path
 
 Reward-critical:
 
 1. theorem binding and protocol checks;
-2. Lean verification result;
-3. proof-only scoring, currently binary pass;
+2. pinned Lean verification result;
+3. binary proof-pass scoring;
 4. validator profile pins for cadence, verifier, scoring, and registry state.
 
-Optional / research:
+## Local Research Surface
+
+Local prose evaluation can still help humans inspect examples, debug prover
+behavior, or build private research exports. It does not produce subnet weights
+or miner HTTP scores.
+
+Research-only:
 
 1. informal reasoning text;
 2. prose labels;
 3. explanation-quality reports;
 4. private datasets for prover improvement.
-
-This keeps the live economic signal tied to formal proof artifacts while still
-allowing humans and models to learn from explanations.

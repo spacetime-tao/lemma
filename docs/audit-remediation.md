@@ -44,15 +44,15 @@
 From audit §19 — **not all are agreed team policy**; use as a prioritized debate list.
 
 1. Delete or replace **`proof_intrinsic_score`** (elaborator-backed metric vs length heuristic). **Bounded:** live scoring no longer calls the heuristic; compare-only Lean metrics remain for calibration.
-2. Decide **`LEMMA_REPUTATION_CREDIBILITY_EXPONENT`** default vs KB **2.5** target. **Done:** divergence documented; default remains `1.0` until governed.
+2. Decide **`LEMMA_REPUTATION_CREDIBILITY_EXPONENT`** default vs KB **2.5** target. **Done:** divergence documented; default is `1.0`.
 3. **Expand `judge_profile_sha256`** (or sibling hash) to cover subnet-critical knobs currently outside the pin (~18 fields in Round 3). **Done.**
 4. **Fail closed** when `computed_body_hash` missing — remove fail-open in `synapse_miner_response_integrity_ok`; update/remove tests that codify bypass. **Done.**
 5. **Per-validator salt** in attest spot-verify selection hash (reduces predictable skip + UID grinding). **Done/partial:** salt shipped; residual UID-grinding economics remain design-level.
-6. **Sybil / Pareto:** move beyond coldkey dedup toward mechanism aligned with Affine-style winners-take-all-per-subset (needs design). **Bounded next step:** [sybil_economics.md](sybil_economics.md) now requires a replay/economics decision gate and policy rubric before reward-code changes; replay tooling exists, but real export data + governance are still required.
+6. **Sybil / Pareto:** move beyond coldkey dedup toward mechanism aligned with Affine-style winners-take-all-per-subset (needs design). **Bounded next step:** [sybil_economics.md](sybil_economics.md) now requires a replay/economics decision gate and policy rubric before scoring-code changes; replay tooling exists, but real export data is still required.
 7. Drop **`LEMMA_PROBLEM_SOURCE=frozen`** / bundled JSON if policy allows (large policy decision). **Partial:** direct frozen use is dev-gated.
 8. **Aggressively cut CLI / wizard / `main.py` surface** (Part 2 scale stats). **Mostly done:** friendly UX moved to `lemma-cli`, core keeps shims/minimal commands.
 9. Move **`lemma/catalog/`** dev tooling to `tools/` (audit flagged twice). **Done.**
-10. **Plan structural redesign** — container-based miner artifact + proof-only scoring (see §12); keeps prose tooling outside rewards.
+10. **Plan structural redesign** — container-based miner artifact + binary Lean pass/fail rewards (see §12).
 
 ---
 
@@ -73,8 +73,8 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 
 | ID | Issue | Source § | Priority | Remediation direction |
 |----|--------|----------|----------|------------------------|
-| **O1** | Reward objective must stay tied to kernel-verifiable proof rather than miner prose | R3 §2, §11 | P4 / product | **Target chosen:** rewards are proof-only and binary: Lean pass/fail. See [proof-only-incentives.md](proof-only-incentives.md). |
-| **O2** | `primary_design_axis` / one-sentence rule in KB violated by current honest description | R3 §2.3 | P4 | **Done/bounded:** objective pinned as Lean-valid proofs; proof-only reward target documented in [proof-only-incentives.md](proof-only-incentives.md). |
+| **O1** | Reward objective must stay tied to kernel-verifiable proof | R3 §2, §11 | P4 / product | **Target chosen:** rewards are proof-only and binary: Lean pass/fail. See [proof-only-incentives.md](proof-only-incentives.md). |
+| **O2** | `primary_design_axis` / one-sentence rule in KB violated by current honest description | R3 §2.3 | P4 | **Done/bounded:** objective pinned as Lean-valid proofs; binary proof-pass design documented in [proof-only-incentives.md](proof-only-incentives.md). |
 | **O3** | Pareto + coldkey dedup + identical dedup still allow sybil farming per R3 math | R3 §2.2, §8, §12 | P2/P4 | **Needs-design:** economic modeling; not fixable by parser alone. [sybil_economics.md](sybil_economics.md) records the minimum replay/economics gate plus the keep / cap / stronger-mechanism / no-change rubric; `tools/sybil_replay_analyze.py` provides offline replay summaries and concrete readiness gaps from private full exports. |
 
 ---
@@ -86,8 +86,8 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 | ID | Issue | Source § | Priority | Remediation direction | Key refs |
 |----|--------|----------|----------|------------------------|----------|
 | **P1** | Comment stripping defeats **one** padding class; **string literals**, trivial `have … by trivial`, long names still inflate | R3 §2.1 | P2 | Comment-only / blank-line padding normalized; compare-only Lean probe + v2 calibration added; exports now carry profile/registry provenance; analyzer flags low-quality / high-metric candidates, same-theorem comparison readiness, mixed profile hashes, concrete data gaps, within-theorem correlations, same-theorem disagreements, and prints a conservative gate verdict for offline analysis. | `lemma/scoring/proof_intrinsic.py`, `config.py`, `docs/proof-intrinsic-decision.md` |
-| **P2** | Default credibility exponent `1.0` vs KB mention of `2.5` | R3 §7 | P3 | **Done:** documented divergence; keep `1.0` default until calibrated/governed. Operators can explicitly set `2.5`. | `config.py`, `scoring/reputation.py`, `docs/credibility-exponent-decision.md` |
-| **P3** | Credibility rises on Lean pass; padding that passes Lean **does not** get penalized by cred | R3 §7 | P2 | **Done:** accepted as policy boundary. Credibility is Lean pass/fail reliability; padding research stays in compare-only proof metrics outside rewards. | `docs/proof-intrinsic-decision.md`, `docs/credibility-exponent-decision.md` |
+| **P2** | Default credibility exponent `1.0` vs KB mention of `2.5` | R3 §7 | P3 | **Done:** documented divergence; `1.0` is the default. Operators can explicitly set `2.5`. | `config.py`, `scoring/reputation.py`, `docs/credibility-exponent-decision.md` |
+| **P3** | Credibility rises on Lean pass; padding that passes Lean **does not** get penalized by cred | R3 §7 | P2 | **Done:** accepted as policy boundary. Credibility is Lean pass/fail reliability; padding research stays in compare-only proof metrics. | `docs/proof-intrinsic-decision.md`, `docs/credibility-exponent-decision.md` |
 | **P4** | Spot-verify skip returns pass → cred EMA increases without verify | R3 §3.2, §7 | P1 | **Done:** attest-trusted skips remain scoreable but no longer improve verify credibility. | `lemma/validator/epoch.py`, `lemma/protocol_attest.py`, `tests/test_reputation.py` |
 
 ---
@@ -96,7 +96,7 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 
 | ID | Issue | Source § | Priority | Remediation direction | Key refs |
 |----|--------|----------|----------|------------------------|----------|
-| **A1** | Attest preimage does not bind the old prose/judge axis | R3 §3.1 | P2 | **Superseded:** prose is outside the live protocol; attest covers proof-local Lean verification only. | `docs/miner-verify-attest.md` |
+| **A1** | Attest preimage does not bind the old prose/judge axis | R3 §3.1 | P2 | **Superseded:** the live protocol centers on proof scripts and Lean verification; attest covers proof-local Lean verification only. | `docs/miner-verify-attest.md` |
 | **A2** | No validator hotkey in attest; cross-validator replay | R3 §3.1 | P2 | **Done:** v2 attest preimage binds validator hotkey. | `lemma/protocol_attest.py`, `tests/test_protocol_attest.py` |
 | **A3** | Spot fraction `<1` → predictable selection; no per-validator salt; UID grinding | R3 §3.2 | P1 | **Done/partial:** salted selection and credibility split shipped; residual UID-grinding economics stay design-level. | `lemma/protocol_attest.py`, `docs/miner-verify-attest.md` |
 | **A4** | On spot skip, theorem/proof mismatch not caught by verify | R3 §3.3 | P1 | **Done:** validator rejects responses whose challenge fields do not match the current theorem/metronome before attest trust or scoring. | `lemma/validator/epoch.py`, `tests/test_validator_challenge_binding.py` |
@@ -140,9 +140,9 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 | **G1** | **Dedupe** of identical dicts across parse passes → **echo** rubric may collapse to one valid score | R3 §10.1 | P2 | **Done:** parser now rejects repeated valid rubric occurrences even when values are identical; tests cover echoed fenced rubric + final rubric. | `lemma/judge/json_util.py`, `tests/test_judge_json.py` |
 | **G2** | Two **distinct** valid rubrics in trace → parse fails → miner dropped | R3 §10.1 | P2 | **Done:** fail-closed policy pinned; exactly one valid rubric object is required, while wrong-shaped junk JSON can be skipped before a later valid rubric. | `lemma/judge/json_util.py`, `tests/test_judge_json.py` |
 | **G3** | Sanitizer only escapes ``` ; many other injection channels | R3 §10.2–10.3 | P2 | **Done/partial:** prompt fences miner text, breaks triple-backtick fence escapes, and tells judge to ignore instructions/JSON inside fences; determined model-side injection remains model-dependent. | `lemma/judge/prompt_sanitize.py`, `lemma/judge/prompts.py`, `tests/test_prompt_sanitize.py` |
-| **G4** | **FakeJudge** length curve; missing API key falls back with log only | R3 §10.4 | P1 | **Superseded:** live validator scoring is proof-only, so FakeJudge is no longer in the validator hot path. One-shot judge tooling remains optional. | `lemma/validator/epoch.py`, `lemma/judge/one_shot.py` |
+| **G4** | **FakeJudge** length curve; missing API key falls back with log only | R3 §10.4 | P1 | **Superseded:** validator scoring is binary Lean pass/fail, so FakeJudge is no longer in the validator hot path. One-shot judge tooling remains local. | `lemma/validator/epoch.py`, `lemma/judge/one_shot.py` |
 
-**2026-05 progress:** G1/G2/G3 patched/documented for optional prose tooling. Judge parsing is fail-closed around valid rubric multiplicity, including identical repeated rubric objects; invalid dict-shaped junk can be skipped so a later single valid rubric can win. Miner-controlled theorem, trace, and proof are fenced before judge calls, triple-backtick escapes are broken, and the prompt tells the model to ignore instructions/JSON inside those fences. The live validator path now scores Lean-verified proofs without calling a judge.
+**2026-05 progress:** G1/G2/G3 patched/documented for local prose tooling. Judge parsing is fail-closed around valid rubric multiplicity, including identical repeated rubric objects; invalid dict-shaped junk can be skipped so a later single valid rubric can win. Miner-controlled theorem, trace, and proof are fenced before judge calls, triple-backtick escapes are broken, and the prompt tells the model to ignore instructions/JSON inside those fences. The live validator path now records binary Lean pass/fail.
 
 ---
 
@@ -171,7 +171,7 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 
 ## 12. Structural options (not a single ticket)
 
-Round 3 §11 and §18 point toward a **minimum-viable direction** under `knowledge/`: hybrid **`container_execution` + `adversarial_red_blue`**, Docker image commitment on-chain, and Lean kernel as the eligibility gate. That keeps prose tooling outside rewards. The current bundled miner is kept as a minimal Axon compatibility path, not as an endorsement of growing miner strategy inside core ([miner.md](miner.md)).
+Round 3 §11 and §18 point toward a **minimum-viable direction** under `knowledge/`: hybrid **`container_execution` + `adversarial_red_blue`**, Docker image commitment on-chain, and Lean kernel as the eligibility gate. The current bundled miner is kept as a minimal Axon compatibility path, not as an endorsement of growing miner strategy inside core ([miner.md](miner.md)).
 
 Track exploration separately from **incremental** rows in §3–§11.
 
@@ -292,7 +292,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
 - **`allow_noncanonical_judge_model`** — removed; it was an ignored compatibility knob and no longer belongs in live validator policy.
 - Resolver collapse opportunities (`anthropic` vs OpenAI keys) — validator pre-flight now follows the single
   Chutes-compatible key path; OpenAI-compatible judge/prover key resolvers trim consistently.
-- **validator prose-judge stack policy** — removed from the live validator path after proof-only scoring; local one-shot judge tooling remains.
+- **validator prose-judge stack policy** — removed from the live validator path after binary proof-pass scoring; local one-shot judge tooling remains.
 - Six env names for two wallet values — validator wallet overrides now keep the documented
   `BT_VALIDATOR_WALLET_COLD` / `BT_VALIDATOR_WALLET_HOT` env names and drop the unused `LEMMA_*` aliases.
 - **`common/env_file.py`** moved to `lemma-cli`; `.env` merging is operator setup UX, not core consensus logic.
@@ -302,7 +302,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
   env aliases were removed. Timeout-split stays validator policy; the proof-script minimum stays a miner-only retry policy.
 - Settings env aliases now accept documented uppercase names only; lowercase field-name env aliases were removed
   while Python constructor kwargs remain available through an init-time alias shim.
-- Removed live validator prose-judge startup checks after proof-only scoring made them irrelevant.
+- Removed live validator prose-judge startup checks after binary proof-pass scoring made them irrelevant.
 
 ### 13.7 Tests (coverage imbalance)
 
@@ -334,14 +334,14 @@ Abbreviated; see `knowledge/` for full YAML. Status reflects the current remedia
 
 | Invariant | KB pointer | Current remediation status |
 |-----------|------------|----------------------|
-| One-sentence primary design axis | `subnet.invariants.yaml` | Current objective pinned in `docs/objective-decision.md`; judge layer bounded separately |
+| One-sentence primary design axis | `subnet.invariants.yaml` | Current objective pinned in `docs/objective-decision.md` and `docs/proof-only-incentives.md` |
 | Validator-only development | `subnet.invariants.yaml#architecture.validator_only_development` | Still violated by bundled reference miner; boundary documented as minimal Axon compatibility, not a place for competitive strategy |
 | Single-file validator pattern | `validator.contract.yaml` | Still violated by package layout; root `validator.py` stub removed |
 | Push compute to miners | `subnet.invariants.yaml#compute_distribution` | Still violated |
 | EMA for stability | `validator.rules.yaml` | Honored |
 | Credibility tracking tuning | `incentive.primitives.yaml` | Wired; default exponent divergence documented in `docs/credibility-exponent-decision.md` |
 | Secret eval sets | `validator.rules.yaml` | Still gated; not in judge pin |
-| N miners profitability | `sybil.realities.yaml` | Still violated; decision gate, policy rubric, offline replay helper, and concrete readiness gaps added; real replay data/governance still pending before reward-code changes |
+| N miners profitability | `sybil.realities.yaml` | Still violated; decision gate, policy rubric, offline replay helper, and concrete readiness gaps added; real replay data still pending before scoring-code changes |
 | Coldkey dedup ≠ sybil resistance | `sybil.realities.yaml` | Still violated by design; documented as anti-clutter only |
 | Validators not individually trusted | `trust.assumptions.yaml` | Softer-trust model documented for Chutes + voluntary HTTP peer checks |
 | Synapse deprecated | `subnet.invariants.yaml` | Still shipping path; bounded by [transport.md](transport.md) as a major-release HTTP + Epistula migration gate |

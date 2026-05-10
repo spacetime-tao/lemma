@@ -32,7 +32,8 @@ uv run lemma meta
 
 - `judge_profile_sha256`: current profile hash name for validator scoring policy.
 
-Production: one pinned validator profile; `JUDGE_PROFILE_SHA256_EXPECTED`. The hash name may be renamed in a later cleanup, but the rule is simple: validators should share the same reward-relevant config.
+Production: one pinned validator profile; `JUDGE_PROFILE_SHA256_EXPECTED`.
+Validators should share the same reward-relevant config.
 
 ## Sybil and multi-account incentives
 

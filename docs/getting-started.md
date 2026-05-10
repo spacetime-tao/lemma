@@ -33,6 +33,8 @@ uv pip install -e ../lemma-cli
 Use one Python environment. The core `lemma` repo owns the subnet dependencies;
 `lemma-cli` is installed into the same `.venv` so setup, doctor, status, and
 preview commands see the same `.env`, packages, and `lemma` command.
+`uv pip install -e ../lemma-cli` is `uv` installing the sibling CLI into that
+existing env, not a separate `pip` workflow.
 
 Default `uv sync` installs from **PyPI** and keeps only the **`bittensor`** SDK needed by Lemma itself. Add `--extra btcli` when you want repo-local wallet/register commands: it pulls in the official **[bittensor-cli](https://pypi.org/project/bittensor-cli/)** package through **`bittensor[cli]`**. **`btcli`** is only the **command name** those packages put on your `PATH`—there is no legitimate PyPI package you should install called `btcli`; typosquat packages have existed, so always use **`bittensor`**, **`bittensor-cli`**, or **`bittensor[cli]`** from PyPI.
 

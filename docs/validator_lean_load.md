@@ -96,8 +96,8 @@ Also distinguish two clocks:
 
 Reducing theorem windows from 100 blocks to 50 or 25 blocks increases theorem
 variety and shortens miner response budgets, but it does not by itself make the
-validator write weights more often. If governance wants 5- or 10-minute scored
-rounds, the full validator cadence, weight-setting policy, forward wait,
+validator write weights more often. For 5- or 10-minute scored rounds, the full
+validator cadence, weight-setting policy, forward wait,
 proof-scoring cost, and warm-cache Lean timing need to be reviewed together.
 
 Miner verify attest can reduce validator Lean load, but only after miners run

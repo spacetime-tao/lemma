@@ -37,6 +37,8 @@ Production should use a subnet-published immutable tag or digest, not the mutabl
 
 ## LLM keys
 
-Only for prover calls such as **`lemma-cli rehearsal`** / **`lemma-cli try-prover`**, or optional prose-evaluation tooling.
+Only prover-preview commands such as **`lemma-cli rehearsal`** /
+**`lemma-cli try-prover`** need inference keys.
 
-`lemma-cli rehearsal` runs **prover + Lean** on the current subnet theorem (chain RPC required). Optional prose-evaluation commands in `lemma-cli` may ask for a separate key, but they are not part of the proof-only reward target.
+`lemma-cli rehearsal` runs **prover + Lean** on the current subnet theorem
+(chain RPC required). Live rewards remain binary Lean pass/fail.

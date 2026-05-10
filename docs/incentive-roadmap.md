@@ -8,17 +8,17 @@ This doc is for **operators and contributors** planning work—not step-by-step 
 
 ## Shipped (hard-migration baseline)
 
-- [x] Optional prose-tooling hardening: strict single-object JSON rubric parse (`judge/json_util.py`) — rejects multi-rubric games
-- [x] Optional prose-tooling hardening: fenced miner content + prompt treating trace as untrusted data
+- [x] Local prose-tooling hardening: strict single-object JSON rubric parse (`judge/json_util.py`) — rejects multi-rubric games
+- [x] Local prose-tooling hardening: fenced miner content + prompt treating trace as untrusted data
 - [x] Identical-submission dedup (same normalized theorem + proof fingerprint)
 - [x] Coldkey dedup (best hotkey per coldkey on metagraph)
-- [x] EMA smoothing / reputation state for validator scoring experiments (on-disk state)
+- [x] EMA smoothing / reputation state for binary reward weighting (on-disk state)
 - [x] Optional multi-theorem epochs (`LEMMA_EPOCH_PROBLEM_COUNT`, default 1)
 - [x] Empty-epoch uniform weights exclude own validator UID when possible
 - [x] Canonical validator profile pin at validator startup (operator-aligned)
 - [x] Generated template registry SHA pin at startup
 - [x] Synapse body-hash integrity fails closed when `computed_body_hash` is missing/mismatched or `deadline_block` is missing
-- [x] `LEMMA_JUDGE_PROFILE_ATTEST_ENABLED` — HTTP peer check vs local `judge_profile_sha256` (`LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS`, optional `LEMMA_JUDGE_PROFILE_ATTEST_SKIP`); compatibility command: `lemma validator judge-attest-serve`
+- [x] `LEMMA_JUDGE_PROFILE_ATTEST_ENABLED` — HTTP peer check vs local validator profile hash (`judge_profile_sha256` compatibility field; `LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS`, optional `LEMMA_JUDGE_PROFILE_ATTEST_SKIP`); compatibility command: `lemma validator judge-attest-serve`
 
 ---
 
@@ -29,10 +29,10 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 ### Scoring & objective
 
 - [x] **One-sentence objective** — Lemma rewards Lean-valid proofs for published theorem statements. Decision note: [objective-decision.md](objective-decision.md).
-- [x] **Proof-only live gate** — Live validators no longer call the judge for rewards; a Lean-verified proof enters scoring as a binary pass. Target design: [proof-only-incentives.md](proof-only-incentives.md).
+- [x] **Binary live gate** — Live validators reward binary Lean pass/fail. Design: [proof-only-incentives.md](proof-only-incentives.md).
 - [x] **Binary reward entry** — Verified proofs enter live scoring as binary proof-pass entries.
-- [x] **Proof-only miner payload** — Miner responses are centered on `proof_script`; informal reasoning is out-of-band and not a validator reward requirement.
-- [x] **Credibility multiplier** — Per-UID verify-pass EMA persisted in reputation JSON; score uses `(credibility ** LEMMA_REPUTATION_CREDIBILITY_EXPONENT)` after EMA smoothing (`LEMMA_REPUTATION_VERIFY_CREDIBILITY_ALPHA`, default 0.08; set alpha to **0** to freeze credibility updates). Default exponent remains **1.0** until calibrated; the KB `2.5` target is documented as a policy candidate in [credibility-exponent-decision.md](credibility-exponent-decision.md). Credibility is not a Lean-valid padding detector; proof-quality replacement work stays under [proof-intrinsic-decision.md](proof-intrinsic-decision.md).
+- [x] **Proof-only miner payload** — Miner responses are centered on `proof_script`; validators do not require informal reasoning text.
+- [x] **Credibility multiplier** — Per-UID verify-pass EMA persisted in reputation JSON; score uses `(credibility ** LEMMA_REPUTATION_CREDIBILITY_EXPONENT)` after EMA smoothing (`LEMMA_REPUTATION_VERIFY_CREDIBILITY_ALPHA`, default 0.08; set alpha to **0** to freeze credibility updates). Default exponent is **1.0**; the KB `2.5` mention is documented in [credibility-exponent-decision.md](credibility-exponent-decision.md). Credibility is not a Lean-valid padding detector; proof-quality analysis stays under [proof-intrinsic-decision.md](proof-intrinsic-decision.md).
 - [x] **Training export** — Documented gaming/leakage, proof-metrics calibration, and sybil/Pareto replay collection ([training_export.md](training_export.md)); private `full` exports include theorem statement, proof, coldkey when available, optional labels, proof metrics, non-secret profile/registry provenance, and Pareto weights for offline analysis. **`LEMMA_TRAINING_EXPORT_PROFILE=summary`** omits proof/label/replay fields but keeps non-secret provenance (`lemma/validator/training_export.py`).
 
 ### Problem supply & predictability
@@ -49,8 +49,8 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 
 ### Trust & sybil
 
-- [x] **Sybil economics** — Operator guide [sybil_economics.md](sybil_economics.md): Lemma dedup vs coldkey sybil realities, UID pressure, offline replay helper, the decision gate required before sybil/Pareto reward changes, the decision-record template, and the policy rubric for interpreting replay results. The replay analyzer now supports `--require-decision-ready` plus concrete `decision_data_gaps` for release checklists. **Still open:** run the replay on real private exports and make a governance decision before reward-code changes; tie-break / stake policy remains subnet governance ([`knowledge/sybil.realities.yaml`](../knowledge/sybil.realities.yaml)).
-- [x] **Validator profile / infra trust** — HTTP peer check for **`judge_profile_sha256`** ships (`LEMMA_JUDGE_PROFILE_ATTEST_*`) and is documented as operator coordination, not Byzantine consensus or transport security. Stronger attestations (e.g. signed/on-chain or k-of-n governance) remain a separate design. See [judge-profile-attest.md](judge-profile-attest.md).
+- [x] **Sybil economics** — Operator guide [sybil_economics.md](sybil_economics.md): Lemma dedup vs coldkey sybil realities, UID pressure, offline replay helper, the decision gate required before Sybil/Pareto scoring changes, the decision-record template, and the policy rubric for interpreting replay results. The replay analyzer now supports `--require-decision-ready` plus concrete `decision_data_gaps` for release checklists. **Still open:** run the replay on real private exports and record a release decision before changing Sybil/tie-break behavior ([`knowledge/sybil.realities.yaml`](../knowledge/sybil.realities.yaml)).
+- [x] **Validator profile / infra trust** — HTTP peer check for **`judge_profile_sha256`** ships (`LEMMA_JUDGE_PROFILE_ATTEST_*`) and is documented as operator coordination, not Byzantine consensus or transport security. Signed/on-chain or k-of-n checks remain a separate design. See [judge-profile-attest.md](judge-profile-attest.md).
 
 ### Compute placement
 
@@ -61,7 +61,7 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 
 - [x] **Axon/Dendrite** — [transport.md](transport.md): current Dendrite/synapse + body-hash integrity; relation to `knowledge/subnet.invariants.yaml` deprecation for **new** designs vs Lemma’s shipping stack; HTTP + Epistula recorded as a major-release migration gate, not a second default transport.
 
-### Optional prose-tooling robustness
+### Local prose-tooling robustness
 
 - [x] **Trace/prose parsing** — `parse_rubric_json` prefers brace-balanced spans that open like `{"coherence"|"exploration"|"clarity"` before naive first-`{` slicing; invalid dict-shaped candidates are skipped so a later valid rubric object can win; repeated valid rubric occurrences, even identical echoes, fail closed. Miner text is fenced and triple-backtick escapes are broken before optional prose-evaluation calls. Determined injection remains model-strength dependent.
 
