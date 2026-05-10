@@ -9,13 +9,13 @@ import time
 import bittensor as bt
 from loguru import logger
 
+import lemma.validator.epoch as ep
 from lemma.common.config import LemmaSettings, validator_judge_stack_strict_issue
 from lemma.common.logging import setup_logging
 from lemma.common.subtensor import get_subtensor
 from lemma.judge.profile import judge_profile_sha256
 from lemma.problems.factory import get_problem_source
 from lemma.problems.generated import generated_registry_sha256
-from lemma.validator import epoch as ep
 from lemma.validator.judge_profile_attest import judge_profile_peer_check_errors
 
 _DOCKER_REQUIRED_ERROR = (
