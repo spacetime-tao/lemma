@@ -1,109 +1,130 @@
 # VPS Safety And Key Custody
 
-This guide is for cloud servers running Lemma miners or validators.
+This guide is for operators running Lemma miners or validators on cloud servers.
+It keeps the setup simple while avoiding the most common key and uptime mistakes.
 
-## Main Rule
+## Key Rule
 
 Keep coldkeys local or offline. Put only hotkeys on servers.
 
-- Coldkey: control key. It can transfer TAO, stake, unstake, and replace
-  hotkeys.
-- Hotkey: service key. A miner or validator can use it on a VPS.
+- **Coldkey:** treasury/control key. It can transfer TAO, stake, unstake, and
+  recover or replace hotkeys. Do not copy the coldkey private file or seed phrase
+  to a VPS.
+- **Hotkey:** operational key. A miner or validator service can use it on a VPS.
+  If the server is compromised, replace the hotkey from the coldkey.
 
-Do not paste seed phrases, passwords, or private key files into chat, logs,
-tickets, or shell history.
+Do not paste seed phrases, coldkey passwords, or private key files into chat,
+logs, tickets, or shell history.
 
-## Miner VPS
+## Recommended Layouts
 
-Good default for most operators:
+### Miner VPS
 
-1. Create and fund keys locally.
+Good default for operators.
+
+1. Create and fund/register keys from your local machine.
 2. Copy only the miner hotkey to the VPS.
-3. Set `AXON_EXTERNAL_IP` to the VPS public IP.
-4. Open only the miner axon port, such as `8091`.
-5. Run miners under systemd.
-6. Keep prover API keys in `.env`, not shell history.
+3. Set `AXON_EXTERNAL_IP` explicitly to the VPS public IP.
+4. Open only the miner axon port(s), for example `8091`.
+5. Run miners under systemd so they restart after reboots.
+6. Keep prover API keys in root-readable or service-user-readable `.env` files,
+   not in shell history.
 
-Multiple miner hotkeys can share one VPS for testing. Each needs its own hotkey,
-`AXON_PORT`, log file, and service unit.
+Multiple miner hotkeys can share one VPS for testing, but each needs its own
+hotkey, `AXON_PORT`, log file, and service unit.
 
-## Validator VPS
+### Validator VPS
 
-Use a larger host for validators. Lean and Docker need CPU, RAM, and disk.
+Good for persistent operation if the host is large enough.
 
 1. Keep the validator coldkey local.
 2. Copy only the validator hotkey to the VPS.
-3. Use Docker and a persistent Lean cache.
-4. Prefer a long-lived Docker worker.
-5. Start from [`deploy/systemd/lemma-validator.service`](../deploy/systemd/lemma-validator.service).
-6. Put remote Lean workers on a private network or behind TLS.
-7. Set `LEMMA_LEAN_VERIFY_REMOTE_BEARER` for remote workers.
+3. Use Docker and a persistent Lean cache directory.
+4. Prefer a local long-lived Docker worker on the validator host:
+   `LEMMA_LEAN_DOCKER_WORKER=lemma-lean-worker`.
+5. For systemd, start from
+   [`deploy/systemd/lemma-validator.service`](../deploy/systemd/lemma-validator.service)
+   and adjust paths only if your checkout or `uv` install differs.
+6. If using a remote Lean worker, keep it on a private network or behind TLS and
+   `LEMMA_LEAN_VERIFY_REMOTE_BEARER`.
+7. Avoid SSH tunnels for production validator verification. They are fine for
+   supervised tests, but one tunnel reset can turn a good miner round into
+   `verified=0`.
 
-Avoid SSH tunnels for production validation. A tunnel reset can make a good
-round look like `verified=0`.
+### Separate Lean Worker VPS
 
-## Separate Lean Worker
+Useful when validator CPU or disk is the bottleneck.
 
-Use a separate worker when validator CPU or disk is the bottleneck.
+1. Bind the worker to `127.0.0.1` when it is on the same host as the validator.
+2. For cross-host workers, use a private VPC, firewall allowlist, TLS, and
+   bearer auth.
+3. Monitor worker health and logs separately from validator logs.
 
-- Same host: bind the worker to `127.0.0.1`.
-- Cross-host: use private networking, firewall allowlists, TLS, and bearer auth.
-- Monitor worker logs separately from validator logs.
+## Creating A Separate Test Identity
 
-## Test Identities
+Use a separate coldkey only when you want to test independent economic identity.
+For simple throughput testing, multiple hotkeys under one coldkey are enough.
+If you create a second miner hotkey, it can run on the same miner VPS as another
+service with its own wallet hotkey, axon port, log file, and systemd unit. Keep
+the second coldkey local just like the first one.
 
-Use a separate coldkey only when testing separate economic identity.
-
-For throughput tests, multiple hotkeys under one coldkey are enough.
-
-Create wallets locally:
+Create the wallet locally:
 
 ```bash
 uv run btcli wallet create --wallet-name codex --hotkey codexhot
 ```
 
-Fund locally:
+Then copy the new coldkey public address and fund it locally:
 
 ```bash
 uv run btcli wallet transfer --wallet-name lemma --network test \
   --destination <codex-coldkey-ss58> --amount <test-tao-amount>
 ```
 
-Register:
+Register the hotkey locally:
 
 ```bash
 uv run btcli subnets register --wallet-name codex --hotkey codexhot --network test --netuid 467
 ```
 
-For a validator, stake locally:
+For a validator identity, stake locally from the coldkey:
 
 ```bash
 uv run btcli stake add --wallet-name codex --hotkey codexhot --network test --netuid 467
 ```
 
-After registration, copy only the hotkey files needed by the service.
+After registration, copy only the hotkey files needed for the service to the VPS.
+Keep the `codex` coldkey seed phrase, coldkey password, and coldkey private file
+off the server.
 
-Codex should not create, store, or hold coldkeys for an operator. It can help
-write commands, inspect public chain state, and configure services after the
-user creates keys locally.
+Codex should not create, store, or custody coldkeys for an operator. It can help
+write commands, inspect public chain state, and configure services after the user
+creates keys and enters passwords locally.
 
-## Same Proofs And Same Coldkey
+## Same Proofs And Same-Coldkey Hotkeys
 
-If two miners submit the same proof and both pass Lean, both can enter the
-weight map.
+Current Lemma rewards every miner entry whose proof verifies. If two miners
+submit the same proof for the same theorem and both proofs pass Lean, both can
+enter the weight map.
 
-If those miners share one coldkey, Lemma partitions that coldkey's allocation
-across its successful hotkeys. More same-coldkey hotkeys do not multiply the
-operator's allocation.
+For multiple hotkeys under one coldkey, Lemma partitions that coldkey's
+allocation across its successful hotkeys. The operator does not get multiplied
+emission by registering more hotkeys under the same coldkey; the allocation is
+spread among them.
 
-The earlier May 2026 VPS test ran before this rule changed. In that run, UIDs
-`2`-`6` passed Lean, but old identical-proof dedup kept UID `2` and dropped the
-other identical proofs from rewards.
+The earlier May 2026 VPS test ran before this rule change. In that run, UIDs
+`2`-`6` all answered successfully, but the old reward dedup kept UID `2` and
+dropped the other identical proofs from the reward map. The other UIDs did not
+fail Lean.
 
 ## Practical Next Steps
 
-1. Keep one-coldkey, multi-hotkey setup for uptime and latency tests.
-2. Add a separate coldkey only for economic identity tests.
-3. Improve prover diversity for robustness and harder theorem coverage.
-4. Run a persistent validator only after Docker cache, hotkey-only custody, and
-   monitoring are in place.
+For continued testing:
+
+1. Keep the current one-coldkey, multi-hotkey setup for uptime, latency, and
+   observability tests.
+2. Add a separate coldkey only when testing independent economic identity.
+3. Improve prover diversity for robustness and harder theorem coverage, not to
+   work around same-proof reward drops.
+4. Run a persistent validator only after the validator host has hotkey-only key
+   custody, Docker worker/cache, and monitoring in place.

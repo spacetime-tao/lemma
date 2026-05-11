@@ -1,35 +1,28 @@
-# Training Export
+# Training export (validator JSONL)
 
-Validators can write one JSON object per scored miner response each epoch.
+Validators optionally append one JSON object per scored miner response each epoch when **`LEMMA_TRAINING_EXPORT_JSONL`** is set. Lemma **does not upload** files; operators rotate or ship logs themselves ([`scripts/training_export_upload_example.sh`](../scripts/training_export_upload_example.sh), [production.md](production.md)).
 
-Enable it with:
+## Profiles (`LEMMA_TRAINING_EXPORT_PROFILE`)
+
+| Profile | Schema | Contents | Use when |
+| --- | --- | --- | --- |
+| **`full`** (default) | `schema_version` **1** | `theorem_statement`, `proof_script`, public `coldkey` when available from the metagraph, optional labels when enabled, optional `proof_metrics` when `LEMMA_LEAN_PROOF_METRICS=1`, non-secret `export_context` hashes, plus **`pareto_weight`** after weights are computed | Internal research, calibration, full offline replay |
+| **`summary`** | `schema_version` **2** | `block`, `theorem_id`, `uid`, `model_card`, non-secret `export_context` hashes; **no** proof text, **no** labels, **no** `proof_metrics`, **no** `pareto_weight` | Lightweight operational provenance without solution leakage |
+
+Set in `.env`:
 
 ```bash
 LEMMA_TRAINING_EXPORT_JSONL=/var/lib/lemma/train.jsonl
-```
-
-Lemma does not upload exports. Operators rotate, store, or ship files
-themselves. See
-[`scripts/training_export_upload_example.sh`](../scripts/training_export_upload_example.sh).
-
-## Profiles
-
-Set:
-
-```bash
 LEMMA_TRAINING_EXPORT_PROFILE=summary
 ```
 
-| Profile | Schema | Contains | Use |
-| --- | --- | --- | --- |
-| `full` | 1 | Theorem, proof, public coldkey when available, optional labels, optional proof metrics, `export_context`, and `pareto_weight`. | Private research and replay. |
-| `summary` | 2 | Block, theorem id, UID, model card, and non-secret `export_context`. | Lightweight operations. |
+## Collect proof-metrics calibration data
 
-`summary` does not include proof text, labels, proof metrics, or Pareto weight.
+Use this only for private validator research, not public dataset sharing. The
+`full` profile includes proof text, optional labels, optional proof metrics, and
+Pareto weights.
 
-## Proof-Metrics Calibration
-
-Use this only for private research.
+On a validator run where you want proof-side calibration rows:
 
 ```bash
 LEMMA_TRAINING_EXPORT_JSONL=/var/lib/lemma/proof-metrics.jsonl
@@ -37,117 +30,155 @@ LEMMA_TRAINING_EXPORT_PROFILE=full
 LEMMA_LEAN_PROOF_METRICS=1
 ```
 
-`LEMMA_LEAN_PROOF_METRICS=1` adds one compare-only Lean probe after a proof
-already passes. It does not change rewards or weights.
+Keep the normal production pins aligned (`LEAN_SANDBOX_IMAGE`,
+timeouts, registry/profile hashes). `LEMMA_LEAN_PROOF_METRICS=1` adds one
+compare-only Lean probe after a proof already passes verification; it does **not**
+change rewards or weights.
 
-Checklist:
+Operator checklist:
 
-1. Pick a private export path.
-2. Do not commit or publish the export.
-3. Collect varied successful proofs, including multiple UIDs on the same theorem
-   ids.
-4. Save the `.env` and validator settings used for the run.
-5. Run the analyzer:
+1. Pick a private path for `LEMMA_TRAINING_EXPORT_JSONL`; do not commit or publish
+   the export.
+2. Run with `LEMMA_TRAINING_EXPORT_PROFILE=full` and
+   `LEMMA_LEAN_PROOF_METRICS=1` long enough to collect varied successful proofs,
+   including multiple successful submissions on the same theorem ids.
+3. Keep a copy of the exact `.env` / validator settings used for the run.
+   Exports now include non-secret `export_context` hashes (`lemma_version`,
+   `judge_profile_sha256`,
+   `generated_registry_sha256`), but those hashes are not a replacement for the
+   full private run notes.
+4. Run the analyzer below and save its text output beside the export.
+5. Treat `gate_verdict=research_only` as a hard stop for scoring changes.
+   `manual_review_required` still means review, not approval.
+6. Make any future scoring-default change in a separate commit with docs,
+   migration notes, and the scoring/profile pin updated.
 
-   ```bash
-   uv run python -m tools.proof_metrics_analyze /var/lib/lemma/proof-metrics.jsonl
-   ```
-
-6. Keep the analyzer output beside the export.
-7. Treat `gate_verdict=research_only` as a hard stop for scoring changes.
-
-Look first at:
-
-- `decision_data_blockers`;
-- `decision_data_gaps`;
-- `export_context`;
-- successful versus failed probe rows;
-- within-theorem comparisons;
-- padding outliers;
-- same-theorem disagreement examples.
-
-For release checklists:
+After collecting rows, run:
 
 ```bash
-uv run python -m tools.proof_metrics_analyze /var/lib/lemma/train.jsonl --require-decision-ready
+uv run python -m tools.proof_metrics_analyze /var/lib/lemma/proof-metrics.jsonl
 ```
 
-This only checks readiness for human review. It does not approve a scoring
-change.
+Keep the analyzer report with any scoring decision notes. Look first at:
 
-The fixture at `tests/fixtures/proof_metrics_validation.jsonl` tests the
-analyzer. It is not scoring evidence.
+- `decision_data_blockers` and `decision_data_warnings`; blockers mean the
+  export is not varied enough for a scoring decision yet,
+- `decision_data_gaps`, which turns the blockers into concrete collection
+  targets such as `successful_rows+44`, `comparison_theorems+3`, or
+  `judge_profile_sha256_rows+6`,
+- `export_context`, which should show one validator profile and one generated
+  registry hash across successful rows,
+- `rows_with_successful_proof_metrics` vs failed probe rows,
+- correlations between metric bytes / delimiter-count shape data, proof text
+  length, current `proof_intrinsic_score`, and any available quality labels,
+- `within_theorem_comparisons` and `corr_within_theorem(...)`, which subtract
+  each theorem's baseline before comparing proof metrics to quality labels,
+- same-theorem disagreement candidates, which point to pairs where
+  metric bytes, delimiter count, or the current text heuristic is higher but
+  the quality label is equal or lower on the same theorem,
+- padding-looking outliers and the conservative `gate_verdict`.
 
-Decision guidance: [proof-intrinsic-decision.md](proof-intrinsic-decision.md).
+Proof metrics in exports are analysis fields. Live scoring uses Lean
+verification of the submitted proof for the published theorem. The checklist in
+[proof-intrinsic-decision.md](proof-intrinsic-decision.md) requires real export
+data plus adversarial padding fixtures before publishing metric claims. Copy the
+analyzer summary lines, not the private JSONL, into that decision record.
 
-## Sybil/Pareto Replay
+Analyze a local `full` export with proof metrics:
 
-Use a private `full` export to evaluate Sybil/Pareto reward changes.
+```bash
+uv run python -m tools.proof_metrics_analyze /var/lib/lemma/train.jsonl
+```
+
+If the path is omitted, the tool reads `LEMMA_TRAINING_EXPORT_JSONL`. The
+analyzer reports failed proof-metric probes separately and excludes them from
+correlations/outlier lists, so calibration is based only on successful Lean
+probe rows. It also reports minimum data-readiness blockers using conservative
+defaults: at least 50 successful proof-metric rows, 5 theorem ids, 5 UIDs, and
+quality labels. Successful rows must include one consistent
+`judge_profile_sha256`; mixed validator profiles block a metric review, and mixed
+generated-registry hashes do too. It also requires at least 3 theorem ids with 2
+or more successful rows from 2 or more UIDs, so wide
+one-row-per-theorem exports do not masquerade as proof-quality evidence. The
+`decision_data_gaps` line is the shortest collection checklist for what remains
+missing. The report then prints centered
+within-theorem correlations for metric bytes, delimiter count, and the current
+text heuristic against available quality labels, plus same-theorem disagreement
+candidates for human review.
+
+For release checklists, add `--require-decision-ready`. It exits nonzero unless
+`decision_ready=yes`. This is only a readiness guard: it still requires manual
+review and does not approve a scoring change.
+
+The repo also keeps a synthetic analyzer fixture at
+`tests/fixtures/proof_metrics_validation.jsonl`. It is useful for checking the
+analysis code, but it is not evidence for a scoring change; use real validator
+exports for that.
+
+## Collect sybil/Pareto replay data
+
+Use a private `full` export when evaluating sybil/Pareto reward changes. The
+replay helper compares the current same-coldkey partition behavior against
+no-partition and legacy identical-proof grouping baselines, then simulates
+exact-copy vs lightly rewritten K-miner pressure:
 
 ```bash
 uv run python -m tools.sybil_replay_analyze /var/lib/lemma/train.jsonl
 ```
 
-The helper compares:
+Current full exports include `theorem_statement` and public coldkeys when the
+validator metagraph provides them. If older exports do not include coldkeys, the
+coldkey replay assumes one coldkey per UID. That is still useful for
+identical-copy and rewritten-copy pressure, but it is not evidence that
+same-coldkey partitioning is sybil resistance.
 
-- current same-coldkey partition;
-- no partition;
-- legacy identical-proof grouping;
-- exact-copy pressure;
-- lightly rewritten K-miner pressure.
+The report prints aggregate `summary_*` lines for exact-copy and rewritten-copy
+clone pressure across the sampled epochs, then the per-epoch replay details.
+The `decision_data_gaps` line is the shortest replay collection checklist, for
+example `replayable_rows+47`, `epochs+4`, or `coldkey_rows+3`.
+For release checklists, add `--require-decision-ready`. It exits nonzero unless
+the export has enough clean rows, epochs, UIDs, theorem ids, and coldkey coverage
+for a release decision. Like the proof-metrics guard, this is not approval for a
+reward change. Copy the summary lines, not the private JSONL, into the decision
+record in [sybil_economics.md](sybil_economics.md).
 
-If old exports lack coldkeys, coldkey replay assumes one coldkey per UID. That
-is still useful for clone pressure, but not proof that partitioning is sybil
-resistance.
+## Gaming and leakage (why `summary` exists)
 
-For release checklists:
+Exports are **not** a neutral “public good.” Depending on fields, they can teach models to:
 
-```bash
-uv run python -m tools.sybil_replay_analyze /var/lib/lemma/train.jsonl --require-decision-ready
-```
+- **Optimize labels instead of proofs** — label fields can expose scalar targets.
+- **Copy proofs** — `proof_script` is a full solution for `theorem_id` at `block`.
+- **Optimize incentives** — `pareto_weight` ties rows to the subnet weight map.
+- **Reverse-engineer proof-side probes** — `proof_metrics` can expose candidate scoring research signals.
 
-Copy summary lines into [sybil_economics.md](sybil_economics.md). Do not publish
-the private JSONL.
+**`summary`** removes proof text, labels, proof metrics, and Pareto weights. It
+does not remove all structure: `theorem_id`, `uid`, and `block` still support
+stratification or deanonymization risks if combined with other data. For maximum
+privacy, post-process or aggregate before publication. The old
+`reasoning_only` value is accepted as a legacy alias for `summary`.
 
-## Gaming And Leakage
+## Schema reference
 
-Exports can leak useful training or gaming signals:
+### `full` (`schema_version` 1)
 
-- labels can teach models to chase labels;
-- proof scripts are full solutions;
-- `pareto_weight` exposes reward outcomes;
-- `proof_metrics` exposes research signals.
+- **`export_profile`**: `"full"`.
+- **`export_context`**: non-secret provenance hashes for the validator run:
+  `lemma_version`, `judge_profile_sha256`, and
+  `generated_registry_sha256`.
+- **`theorem_statement`**, **`proof_script`**, optional labels: see [`training_export.py`](../lemma/validator/training_export.py).
+- **`coldkey`**: public metagraph coldkey when available; omitted if unavailable.
+- **`proof_metrics`**: optional compare-only Lean probe output when `LEMMA_LEAN_PROOF_METRICS=1`.
+- After the epoch, **`pareto_weight`** is merged per UID.
 
-Use `summary` when you only need operations provenance.
+### `summary` (`schema_version` 2)
 
-For public release, aggregate or post-process further. `theorem_id`, `uid`, and
-`block` can still reveal structure when combined with other data.
-
-The old `reasoning_only` value is accepted as a legacy alias for `summary`.
-
-## Schema Reference
-
-### `full`
-
-- `export_profile`: `"full"`.
-- `schema_version`: `1`.
-- `export_context`: non-secret hashes for the run.
-- `theorem_statement`, `proof_script`, and optional labels.
-- `coldkey` when the metagraph provides it.
-- `proof_metrics` when `LEMMA_LEAN_PROOF_METRICS=1`.
-- `pareto_weight` after weights are computed.
-
-### `summary`
-
-- `export_profile`: `"summary"`.
-- `schema_version`: `2`.
-- `export_context`: same non-secret hashes as `full`.
-- No `proof_script`, labels, `proof_metrics`, or `pareto_weight`.
+- **`export_profile`**: `"summary"`.
+- **`export_context`**: same non-secret provenance hashes as `full`.
+- No **`proof_script`**, labels, **`proof_metrics`**, or **`pareto_weight`**.
 
 ## References
 
-- [`lemma/validator/training_export.py`](../lemma/validator/training_export.py)
-- [`lemma/validator/epoch.py`](../lemma/validator/epoch.py)
-- [`tools/proof_metrics_analyze.py`](../tools/proof_metrics_analyze.py)
-- [`tools/sybil_replay_analyze.py`](../tools/sybil_replay_analyze.py)
-- [workplan.md](workplan.md)
+- Implementation: [`lemma/validator/training_export.py`](../lemma/validator/training_export.py), epoch hook in [`lemma/validator/epoch.py`](../lemma/validator/epoch.py).
+- Offline proof-metrics analyzer: [`tools/proof_metrics_analyze.py`](../tools/proof_metrics_analyze.py).
+- Offline sybil/Pareto replay analyzer: [`tools/sybil_replay_analyze.py`](../tools/sybil_replay_analyze.py).
+- Backlog context: [workplan.md](workplan.md).

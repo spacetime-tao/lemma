@@ -1,42 +1,27 @@
 # Lemma
 
-Lemma is a Bittensor subnet for formal math proofs.
+> **Lemma: incentivized theorem proving for mathematics on [Bittensor](https://docs.learnbittensor.org/).** Miners submit Lean proof scripts for published theorem statements. Validators mechanically verify those proofs with Lean. A proof that passes verification can be scored; a proof that fails verification cannot.
 
-Miners submit Lean proof scripts for published theorem statements. Validators
-check those scripts with Lean in Docker. If Lean accepts the proof, it can enter
-scoring. If Lean rejects it, it cannot.
-
-Terms:
-
-- A theorem is the exact claim to prove.
-- A proof script is the Lean code submitted by a miner.
-- Lean is the proof checker.
-- A miner searches for proofs.
-- A validator checks proofs and writes weights.
-
-## Status
-
-Lemma is still early software, but it can run on Bittensor testnet:
-
-- Subnet: `467`
-- Network: `test`
-- Mainnet name: Finney
-
-Start with [getting-started.md](docs/getting-started.md). The friendlier
-operator CLI lives in [lemma-cli](https://github.com/spacetime-tao/lemma-cli).
+A **theorem** is the precise claim to establish; a **proof** is the formal, machine-checkable argument that shows it. **Lean** is a proof assistant (and language): it checks those proofs mechanically, line by line. Validators run that check in **Docker** (lean-sandbox image).
 
 ## What Lemma Produces
 
-Lemma produces verified theorem/proof pairs.
+Lemma produces verified formal proofs.
 
-The network publishes a theorem. A miner tries to find a Lean proof. A validator
-checks that proof against the theorem. If Lean accepts it, the proof is valid
-work.
+The network publishes theorem statements. Miners spend AI compute searching for
+Lean proof scripts. Validators mechanically check those scripts against the
+published theorem. If Lean accepts the proof, that theorem/proof pair is the
+work product.
 
-This is proof mining: Bitcoin miners produce valid hashes; Lemma miners produce
-valid Lean proofs.
+That makes Lemma proof mining: similar in spirit to Bitcoin mining, but instead
+of producing valid hashes under a difficulty rule, miners produce valid Lean
+proofs under a theorem rule.
 
-## Quick Start
+**Status:** The codebase is still largely **proof-of-concept**, but you can **register and run on** **Subnet 467 — Lemma** on **Bittensor testnet** (`--network test`, `NETUID=467` after `uv run lemma-cli configure chain`). **Finney** is Bittensor **mainnet** (a different network). Full copy-paste flow: [getting-started](docs/getting-started.md). Economics, security, and long-term direction: [vision](docs/vision.md).
+
+**First-time path:** [docs/getting-started.md](docs/getting-started.md) — install, keys, `uv run lemma-cli setup`, miner, validator (copy-paste blocks). Friendly operator UX lives in [lemma-cli](https://github.com/spacetime-tao/lemma-cli).
+
+## Quick start
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -47,57 +32,42 @@ uv run lemma --help
 uv run lemma-cli --help
 ```
 
-Use one tool: `uv`.
+Use one environment and one tool: `uv`. The core Lemma `.venv` owns the subnet
+dependencies, and the `cli` extra installs `lemma-cli` as the friendly operator
+surface (`setup`, `doctor`, `docs`, …). Create wallets with the `btcli`
+command from official [bittensor-cli](https://pypi.org/project/bittensor-cli/);
+install it in this repo with `uv sync --extra btcli --extra cli` (or
+`uv sync --extra dev --extra btcli --extra cli` for development). See
+**getting-started** for PyPI package names vs the `btcli` executable.
 
-The core repo owns subnet code and dependencies. The `cli` extra installs
-`lemma-cli` for setup, doctor checks, and operator help. Use the official
-`bittensor-cli` package for the `btcli` command:
-
-```bash
-uv sync --extra btcli --extra cli
-```
-
-For development, add `--extra dev`.
-
-Use this validator entrypoint:
-
-```bash
-uv run lemma validator start
-```
-
-Docker images should use:
-
-```dockerfile
-ENTRYPOINT ["lemma"]
-CMD ["validator", "start"]
-```
+**Validator entrypoint:** use **`lemma validator start`** (or Docker `ENTRYPOINT ["lemma"]` / `CMD ["validator", "start"]`).
 
 ## Docs
 
 | Topic | File |
-| --- | --- |
-| First setup | [getting-started.md](docs/getting-started.md) |
-| Vision | [vision.md](docs/vision.md) |
+| ----- | ---- |
+| Install & operator checklist | [getting-started.md](docs/getting-started.md) |
+| Vision & roadmap | [vision.md](docs/vision.md) |
 | Components | [architecture.md](docs/architecture.md) |
-| FAQ | [faq.md](docs/faq.md) |
+| FAQ (timeouts, seeds, scoring) | [faq.md](docs/faq.md) |
 | Miner | [miner.md](docs/miner.md) |
 | Validator | [validator.md](docs/validator.md) |
-| Models and APIs | [models.md](docs/models.md) |
-| Production | [production.md](docs/production.md) |
-| VPS safety | [vps-safety.md](docs/vps-safety.md) |
-| Governance and pins | [governance.md](docs/governance.md) |
-| Toolchain image policy | [toolchain-image-policy.md](docs/toolchain-image-policy.md) |
+| Models / APIs | [models.md](docs/models.md) |
+| Production / ops | [production.md](docs/production.md) |
+| VPS safety / key custody | [vps-safety.md](docs/vps-safety.md) |
+| Governance / pins | [governance.md](docs/governance.md) |
+| Toolchain / image pinning | [toolchain-image-policy.md](docs/toolchain-image-policy.md) |
 | Tests | [testing.md](docs/testing.md) |
 | Generated problems | [generated-problems.md](docs/generated-problems.md) |
-| Problem supply | [problem-supply-policy.md](docs/problem-supply-policy.md) |
+| Problem supply policy | [problem-supply-policy.md](docs/problem-supply-policy.md) |
 | Catalog sources | [catalog-sources.md](docs/catalog-sources.md) |
-| Objective | [objective-decision.md](docs/objective-decision.md) |
-| Proof rewards | [proof-verification-incentives.md](docs/proof-verification-incentives.md) |
-| Research proof metrics | [proof-intrinsic-decision.md](docs/proof-intrinsic-decision.md) |
-| Credibility exponent | [credibility-exponent-decision.md](docs/credibility-exponent-decision.md) |
-| Commit-reveal | [commit-reveal.md](docs/commit-reveal.md) |
-| Miner verify attest | [miner-verify-attest.md](docs/miner-verify-attest.md) |
-| Validator profile attest | [validator-profile-attest.md](docs/validator-profile-attest.md) |
+| Objective decision | [objective-decision.md](docs/objective-decision.md) |
+| Proof verification incentives | [proof-verification-incentives.md](docs/proof-verification-incentives.md) |
+| Proof intrinsic scoring | [proof-intrinsic-decision.md](docs/proof-intrinsic-decision.md) |
+| Credibility exponent policy | [credibility-exponent-decision.md](docs/credibility-exponent-decision.md) |
+| Commit-reveal threat model | [commit-reveal.md](docs/commit-reveal.md) |
+| Miner verify attest threat model | [miner-verify-attest.md](docs/miner-verify-attest.md) |
+| Validator profile peer attest threat model | [validator-profile-attest.md](docs/validator-profile-attest.md) |
 | System requirements | [system-requirements.md](docs/system-requirements.md) |
 
 ## References

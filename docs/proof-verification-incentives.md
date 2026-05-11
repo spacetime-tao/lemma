@@ -1,57 +1,64 @@
 # Proof Verification Incentives
 
-Lemma rewards Lean-valid proofs for published theorem statements.
+Lemma's reward axis is formal proof validity: miners earn for producing
+Lean-valid proofs for published theorem statements.
 
-That is the live reward axis.
+## Design Objective
+
+One sentence:
+
+> Lemma rewards Lean-valid proofs for published theorem statements.
+
+This keeps the subnet objective close to the thing validators can reproduce:
+given a locked theorem statement and a submitted `Submission.lean`, Lean either
+accepts the proof or rejects it.
 
 ## Reward Shape
 
-1. The miner submits a proof script.
-2. The proof must pass the pinned Lean toolchain, Mathlib revision, sandbox
-   policy, theorem binding, and cheat scans.
-3. Each eligible miner entry receives the same proof score before reputation and
-   weight policy.
-4. Validators may reuse one Lean result for identical proof payloads inside an
-   epoch. This saves CPU. It does not remove a miner reward entry.
-5. Reputation, Pareto weighting, and same-coldkey partitioning build final
-   weights.
+1. **Eligibility:** the submitted proof must pass the pinned Lean toolchain,
+   Mathlib revision, sandbox policy, theorem binding checks, and cheat scans.
+2. **Proof score:** each eligible miner entry receives the same proof score
+   before reputation and subnet weight policy are applied.
+3. **Verifier reuse:** validators may reuse a Lean result for identical proof
+   payloads inside one epoch, but that does not remove a miner from rewards.
+4. **Weights:** reputation and Pareto weighting build the miner weight map. When
+   several hotkeys share one coldkey, that coldkey's allocation is partitioned
+   among those hotkeys instead of multiplied.
 
-## Current Live Rule
+## Current Live Rollout
 
-Lean passes: the proof can enter scoring.
-
-Lean fails: the proof cannot receive proof score.
+The live validator path is intentionally simple: a submitted proof either passes
+Lean verification for the published theorem and enters scoring, or it does not.
 
 ## Out Of Scope For Rewards
 
-These do not earn proof score:
+- Rewriting the theorem in an easier form.
+- Comment or whitespace padding.
+- Proof scripts that pass only by adding unsound assumptions.
+- Extra syntax that does not improve the checked proof.
 
-- changing the theorem into an easier theorem;
-- passing only by adding unsound assumptions;
-- comment or whitespace padding;
-- extra syntax that does not improve the checked proof;
-- informal reasoning prose.
+## Cadence Implications
 
-## Cadence
+Proof-verification scoring keeps the hot path focused on the verifier. Miner
+responses can be small because a proof script is enough for scoring.
 
-Proof-only scoring keeps miner responses small. Lean verification is still the
-hard budget.
+That makes 50-block or 25-block theorem windows more plausible, but Lean
+verification remains the hard budget. Shorter windows should be adopted only
+after warm-cache verification, remote worker throughput, and miner response time
+fit the target cadence.
 
-Shorter theorem windows should come only after measuring:
+For the current generated v0 lane, 25 blocks is a reasonable target only if the
+operator can keep verifier caches warm and bound miner response time. Cold-cache
+verification can still consume most of a 5-minute window.
 
-- warm-cache verify time;
-- remote worker throughput;
-- miner response time;
-- live scored miner count.
+## Implementation Sequence
 
-## Implementation State
-
-- Proof-verification reward tests exist.
-- Live miner payload centers on `proof_script`.
-- Validator readiness checks verifier and subnet pins.
+1. Keep proof-verification reward assembly pinned by tests. **Done.**
+2. Keep the live miner payload centered on `proof_script`. **Done.**
+3. Keep validator readiness tied to the verifier and subnet pins. **Done.**
 
 ## Decision Log
 
 | Date | Decision |
 | --- | --- |
-| 2026-05 | Live rewards are proof-only: Lean-valid proofs can enter scoring; invalid proofs cannot. |
+| 2026-05 | Live rewards should be proof-only: Lean-valid proofs can enter scoring; invalid proofs cannot. |

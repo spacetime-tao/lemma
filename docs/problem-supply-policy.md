@@ -1,90 +1,76 @@
 # Problem Supply Policy
 
-Lemma's default problem source is public deterministic generated templates.
+Lemma's default problem source is public, deterministic generated templates. This is a deliberate consensus tradeoff, not a secrecy mechanism.
 
-This is a consensus tradeoff. It is not secrecy.
+## Current boundary
 
-## Current Boundary
+Generated mode maps a chain-aligned seed to one theorem with code in [`lemma/problems/generated.py`](../lemma/problems/generated.py). The SHA256 seed mix decorrelates adjacent seeds, but it does not hide the seed-to-theorem map. Anyone with the release can precompute future generated challenges once they know the relevant chain height.
 
-Generated mode maps a chain-aligned seed to one theorem through
-[`lemma/problems/generated.py`](../lemma/problems/generated.py).
+That means:
 
-SHA256 seed mixing reduces adjacent-seed correlation. It does not hide the
-seed-to-theorem map.
+- Do not describe generated templates as secret evaluation.
+- Do not rely on validator-held hidden problem sets; validator secrets are expected to leak ([trust assumptions](../knowledge/trust.assumptions.yaml)).
+- Do not treat SHA256 mixing as anti-precompute security.
+- Do use `generated_registry_sha256` to keep validators on the same public generator.
 
-Anyone with the release can precompute future generated challenges once they
-know the relevant chain height.
+The current generated lane is a steady traffic lane: it gives validators deterministic, Lean-checkable challenges with known template families. It is not a complete difficulty market for all of mathematics.
 
-Do:
+## Accepted risk
 
-- describe generated templates as public;
-- use `generated_registry_sha256` to keep validators aligned;
-- expand supply through reviewed builders and governed releases.
+Public deterministic supply is acceptable only if the operator is explicit about the risk: miners may recognize repeated shapes, build warm caches, and pre-solve common families. That is not a transport or hashing bug. It is a problem-supply limitation.
 
-Do not:
+Mitigation comes from breadth and governance:
 
-- call generated templates secret evaluation;
-- rely on validator-held hidden problem sets;
-- treat SHA256 mixing as anti-precompute security.
+- add more generated builders with varied proof shapes;
+- rotate releases with announced registry hashes;
+- use curated public catalog lanes only when intentionally enabled;
+- later add a separate bounty/curation lane for harder formalization work.
 
-## Accepted Risk
+## Builder promotion checklist
 
-Miners may learn repeated shapes, build warm caches, and pre-solve common
-families.
+New generated builders should enter the live registry only after they pass the same checks operators expect from production traffic:
 
-That is a supply limitation, not a transport bug.
+1. The statement is Lean-valid after replacing the miner proof with `sorry`.
+2. At least one known proof passes the sandbox on the pinned Lean/Mathlib image.
+3. The expected split is honest (`easy`, `medium`, `hard`) and not based only on proof text length.
+4. Cold-cache and warm-cache verification costs fit the published timeout policy.
+5. The builder has a stable source hash in `generated_registry_sha256`.
+6. `docs/generated-problems.md` and operator release notes describe the changed mix.
+7. Operators publish the new `generated_registry_sha256` and cutover release together.
 
-Mitigation comes from:
+The local/CI gate is [`scripts/ci_verify_generated_templates.py`](../scripts/ci_verify_generated_templates.py). It always checks that every builder is reachable and has coherent registry metadata. With `RUN_DOCKER_LEAN_TEMPLATES=1`, it also materializes all generated templates into a Lean workspace and runs `lake build`.
 
-- more varied builders;
-- announced registry rotations;
-- curated public catalog lanes;
-- later bounty or campaign lanes.
+Do not add low-value templates merely to increase the builder count. A small set of honest, varied templates is better than a large set of brittle near-duplicates.
 
-## Builder Promotion Checklist
-
-Add a generated builder to the live registry only when:
-
-1. The statement is Lean-valid with the miner proof replaced by `sorry`.
-2. At least one known proof passes the pinned sandbox.
-3. The split label is honest: `easy`, `medium`, or `hard`.
-4. Cold-cache and warm-cache costs fit timeout policy.
-5. The builder changes `generated_registry_sha256`.
-6. [generated-problems.md](generated-problems.md) and release notes describe the
-   mix change.
-7. Operators publish the new registry hash and cutover release.
-
-Run:
-
-```bash
-uv run python scripts/ci_verify_generated_templates.py
-```
-
-With Docker Lean:
-
-```bash
-RUN_DOCKER_LEAN_TEMPLATES=1 \
-  LEAN_SANDBOX_IMAGE=<immutable-image-ref> \
-  uv run python scripts/ci_verify_generated_templates.py
-```
-
-Do not add low-value near-duplicates just to increase the builder count.
-
-## Release And Rotation Checklist
+## Release and rotation checklist
 
 Use this when changing generated builders, split mix, catalog policy, or problem
-cadence.
+cadence. The point is to make supply changes explicit, not to pretend a new hash
+is a new security model.
 
-1. Run the cheap registry/template gate.
-2. Run the Docker Lean template gate when the release image is available.
-3. Record old and new `generated_registry_sha256`.
-4. Summarize builder counts by split.
-5. Review near-duplicates.
-6. Confirm verify costs fit timeout policy.
-7. Announce Git tag, sandbox image ref, registry hash, and cutover block.
-8. Keep the previous release runnable for rollback.
+1. Run the cheap registry/template gate:
 
-Decision record:
+   ```bash
+   uv run python scripts/ci_verify_generated_templates.py
+   ```
+
+2. If the sandbox image for the release is available, run the Lean template gate:
+
+   ```bash
+   RUN_DOCKER_LEAN_TEMPLATES=1 \
+     LEAN_SANDBOX_IMAGE=<immutable-image-ref> \
+     uv run python scripts/ci_verify_generated_templates.py
+   ```
+
+3. Record the old and new `generated_registry_sha256` from `uv run lemma meta`.
+4. Summarize the old and new builder counts by split.
+5. Check whether any new builder family is a near-duplicate of an existing one.
+6. Confirm verification costs fit the published timeout policy.
+7. Announce the Git tag, immutable sandbox image ref, registry hash, and cutover
+   block/window together.
+8. Keep the previous release runnable long enough for rollback.
+
+Decision record shape:
 
 ```text
 Generated supply release:
@@ -112,24 +98,12 @@ Rollback:
 - Previous registry sha:
 ```
 
-## Frozen And Curated Lanes
+## Frozen and curated lanes
 
-`LEMMA_PROBLEM_SOURCE=frozen` is a public eval catalog, not hidden production
-supply.
+`LEMMA_PROBLEM_SOURCE=frozen` is gated as a public eval catalog, not a hidden production source. Turning it on should be an operator decision with a release note, not a fallback path.
 
-Future curated, campaign, or bounty lanes can have different cadence and
-incentives. They should still avoid validator-held secrets.
+A future curated, campaign, or bounty lane can have different cadence and incentives, but it should still avoid validator-held secrets. Prefer public formalization tasks, explicit deadlines, rollover rules, and clear reward policy over secret test-set assumptions. Longer-horizon open-problem work is tracked separately in [open-problem-campaigns.md](open-problem-campaigns.md).
 
-Use public formalization tasks, clear deadlines, rollover rules, and clear
-reward policy.
+## What remains open
 
-Long-horizon work: [open-problem-campaigns.md](open-problem-campaigns.md).
-
-## Open Work
-
-The hard problem is supply design:
-
-- how fast to add template families;
-- when to introduce curated hard problems;
-- whether one-off formalization bounties should be separate from generated
-  traffic.
+The main unsolved work is not a code hash. It is supply design: how quickly to expand template families, when to introduce curated hard problems, and whether the subnet should reward one-off formalization bounties separately from steady generated traffic.

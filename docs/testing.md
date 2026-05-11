@@ -1,62 +1,45 @@
 # Testing
 
-Install dev dependencies first:
+Clone repo and `uv sync --extra dev` ([getting-started.md](getting-started.md)).
+
+## Default suite
 
 ```bash
 uv sync --extra dev
-```
-
-## Default Suite
-
-```bash
 uv run pytest tests/ -q
-uv run ruff check lemma tests tools
+uv run ruff check lemma tests
 ```
 
-No API keys are needed for proof-verification tests. Docker Lean tests are
-skipped unless enabled.
+No API keys are needed for proof-only verification tests; Docker Lean tests are skipped unless enabled.
 
-## Opt-In Lean Tests
+## Opt-in Lean tests
 
-| Test | Enable |
-| --- | --- |
-| [`test_sandbox_host.py`](../tests/test_sandbox_host.py) | `LEMMA_RUN_HOST_LEAN=1` and `lake` on `PATH`. |
-| [`test_docker_golden.py`](../tests/test_docker_golden.py) | `RUN_DOCKER_LEAN=1`, Docker, and `LEAN_SANDBOX_IMAGE`. |
+| File | Enable |
+| ---- | ------ |
+| [`test_sandbox_host.py`](../tests/test_sandbox_host.py) | `LEMMA_RUN_HOST_LEAN=1` and `lake` on `PATH` |
+| [`test_docker_golden.py`](../tests/test_docker_golden.py) | `RUN_DOCKER_LEAN=1`, Docker, `LEAN_SANDBOX_IMAGE` |
 
-When offline, `LEMMA_SKIP_LAKE_CACHE=1` skips `lake exe cache get`.
+`LEMMA_SKIP_LAKE_CACHE=1` skips `lake exe cache get` when offline.
 
-## Docker Golden
+### Docker golden
 
 ```bash
 docker build -f compose/lean.Dockerfile -t lemma/lean-sandbox:latest .
 RUN_DOCKER_LEAN=1 uv run pytest tests/test_docker_golden.py -v
 ```
 
-Local `latest` is fine for development. Production should use an immutable image
-tag or digest. See [toolchain-image-policy.md](toolchain-image-policy.md).
+CI uses tag `lemma-lean-sandbox:ci`; locally `latest` is fine.
+Production should use a subnet-published immutable tag or digest, not the mutable local `latest` tag ([toolchain-image-policy.md](toolchain-image-policy.md)).
 
-## Generated Template Gate
+## Generated template gate (CI `docker-lean-sandbox` job)
 
-CI runs:
+[`scripts/ci_verify_generated_templates.py`](../scripts/ci_verify_generated_templates.py) always runs the cheap metadata gate: every generated builder must be reachable, have coherent registry metadata, and bridge the expected theorem name. With `RUN_DOCKER_LEAN_TEMPLATES=1`, it also runs `lake build` on every generated template shape. By default it merges all theorems into **one** Lake workspace (single Mathlib build). Set `CI_TEMPLATE_MULTIPLEX=0` to fall back to per-template workspaces (slow; mainly for debugging).
 
-```bash
-uv run python scripts/ci_verify_generated_templates.py
-```
+## LLM keys
 
-The cheap gate checks that every generated builder is reachable and has coherent
-metadata.
+Only prover-preview commands such as **`lemma-cli rehearsal`** /
+**`lemma-cli try-prover`** need inference keys.
 
-With `RUN_DOCKER_LEAN_TEMPLATES=1`, the script also runs `lake build` on every
-generated template shape.
-
-Set `CI_TEMPLATE_MULTIPLEX=0` only when debugging per-template workspaces.
-
-## LLM Keys
-
-Only prover preview commands need inference keys:
-
-- `uv run lemma-cli rehearsal`
-- `uv run lemma-cli try-prover`
-
-`lemma-cli rehearsal` runs prover plus Lean on the current subnet theorem. Live
-scoring still accepts only proofs that pass validator Lean verification.
+`lemma-cli rehearsal` runs **prover + Lean** on the current subnet theorem
+(chain RPC required). Live scoring accepts only proofs that pass Lean
+verification for that theorem.

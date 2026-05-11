@@ -1,112 +1,73 @@
-# Governance And Upgrades
+# Governance and upgrades
 
-Lean verification is objective. Validator scoring still needs shared releases
-and shared settings.
+Lean verification is objective; validator scoring must stay deterministic and coordinated. Coordinate visible behavior off-chain.
 
-## Generated Templates
+## Generated templates (`LEMMA_PROBLEM_SOURCE=generated`)
 
-With `LEMMA_PROBLEM_SOURCE=generated`, validators map block seed to theorem
-through [`generated.py`](../lemma/problems/generated.py).
-
-This map is public and precomputable. That is a known problem-supply boundary,
-not a secrecy feature.
-
-Before changing the live generated registry or cadence, use the checklist in
-[problem-supply-policy.md](problem-supply-policy.md#release-and-rotation-checklist).
-
-Publish the generated registry hash:
+Validators map block seed → theorem via [`generated.py`](../lemma/problems/generated.py). Consensus needs the same registry and release. The map is public and precomputable; [problem-supply-policy.md](problem-supply-policy.md) records that this is a supply/governance boundary, not a secrecy mechanism.
 
 ```bash
 uv run lemma meta
 ```
 
-Validators may set:
+Publish `generated_registry_sha256`; validators may set `LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED`. Difficulty mix: [generated-problems.md](generated-problems.md). Builder promotion checklist: [problem-supply-policy.md](problem-supply-policy.md).
+Use the release and rotation checklist in [problem-supply-policy.md](problem-supply-policy.md#release-and-rotation-checklist) before changing the live generated registry or cadence.
 
-```text
-LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED
-```
+## Frozen catalog (`LEMMA_PROBLEM_SOURCE=frozen`)
 
-## Frozen Catalog
+Requires **`LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`** (public eval catalog — not default for subnet-like traffic).
 
-`LEMMA_PROBLEM_SOURCE=frozen` is for public eval catalog use. It requires:
-
-```text
-LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1
-```
-
-When changing frozen catalogs:
-
-1. Build JSON.
+1. Build JSON ([catalog-sources.md](catalog-sources.md)).
 2. Update `catalog_manifest.json`.
-3. Rebuild the sandbox image if toolchain pins change.
-4. Tag the release and announce the cutover.
+3. Rebuild sandbox image if toolchain pins change.
+4. Tag releases and announce cutover blocks.
 
-## Validator Profile
+## Validator scoring profile
 
-The validator profile covers reward-relevant settings:
-
-- problem cadence;
-- verification policy;
-- proof scoring;
-- same-coldkey partitioning;
-- reputation;
-- response hooks.
-
-Run:
+The validator profile covers problem cadence, verification policy, live proof scoring policy, same-coldkey partitioning, reputation, and response-acceptance hooks.
 
 ```bash
 uv run lemma meta
 ```
 
-Share `validator_profile_sha256`. Production validators should use the same
-profile and may set `LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED`.
+- `validator_profile_sha256`: current profile hash name for validator scoring policy.
 
-## Shared Settings
+Production: one pinned validator profile; `LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED`.
+Validators should share the same reward-relevant config.
 
-The subnet operator should publish one env template for:
+## Sybil and multi-account incentives
 
-- timeouts;
-- seed mode;
-- problem cadence;
-- proof scoring;
-- partition and reputation policy;
-- sandbox image;
-- empty-epoch policy.
+Same-coldkey partitioning does **not** prove unique humans. Read [sybil_economics.md](sybil_economics.md) and [`knowledge/sybil.realities.yaml`](../knowledge/sybil.realities.yaml) before treating coldkeys as identity.
 
-These are subnet policy, not per-validator preferences.
+## Wire transport
 
-## Parity Checklist
+Validator→miner calls use Bittensor Dendrite/Axon today; synapse **`body_hash`** vs **`computed_body_hash`** catches tampering — [transport.md](transport.md). HTTP + Epistula is a major-release migration gate, not a second default transport.
 
-1. Pin one Git tag.
-2. Pin one immutable sandbox image ref.
-3. Publish one env template.
-4. Publish `validator_profile_sha256`.
-5. Publish `generated_registry_sha256` when generated mode is used.
-6. Announce upgrades with a changelog and cutover.
+## Shared validator settings
 
-Hashes reduce drift. They do not prove validators are honest.
+The **subnet operator** publishes one configuration for the subnet: timeouts,
+seeds, proof-verification scoring policy, partition/reputation policy, and sandbox image.
+Validators are expected to deploy **that** template so scores stay comparable.
+Document and distribute: `LEMMA_BLOCK_TIME_SEC_ESTIMATE`,
+`LEMMA_FORWARD_WAIT_MIN_S`, `LEMMA_FORWARD_WAIT_MAX_S`,
+`LEAN_VERIFY_TIMEOUT_S`, `LEMMA_TIMEOUT_SCALE_BY_SPLIT` /
+`LEMMA_TIMEOUT_SPLIT_*_MULT` (only if the operator’s policy includes them),
+`LEMMA_PROBLEM_SEED_MODE`, `LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`,
+`EMPTY_EPOCH_WEIGHTS_POLICY`, `LEAN_SANDBOX_*`, and scoring/partition/reputation
+fields. The main scoring/cadence/verification fields are pinned by
+`validator_profile_sha256`. Nothing here is “per-validator preference.” On-chain
+code does not enforce equality — parity relies on the published policy
+([faq.md](faq.md)).
 
-## Sybil And Multi-Account Notes
+### Parity checklist
 
-Same-coldkey partitioning does not prove unique humans.
+1. Pin one Git tag and one immutable sandbox image ref ([toolchain-image-policy.md](toolchain-image-policy.md)).
+2. Publish a shared env template.
+3. Pin `uv run lemma meta`: `LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED`, optional `LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED` (generated mode).
+4. Announce upgrades with changelog and cutover.
 
-Read [sybil_economics.md](sybil_economics.md) and
-[`knowledge/sybil.realities.yaml`](../knowledge/sybil.realities.yaml) before
-treating coldkeys as identity.
+Hashes reduce drift; they do not prove honest validators. Epoch tempo comes from Bittensor; forward HTTP wait per query is derived from block height and shared clamps — not a per-node dial.
 
-## Transport
+## Miner axon policy
 
-Lemma uses Bittensor Dendrite/Axon today. Synapse body-hash checks catch many
-transport mismatches.
-
-HTTP plus Epistula would be a major migration, not a small setting change. See
-[transport.md](transport.md).
-
-## Miner Axon Policy
-
-Announce changes to:
-
-- `MINER_MIN_VALIDATOR_STAKE`;
-- permit rules;
-- synapse caps;
-- forward wait policy.
+`MINER_MIN_VALIDATOR_STAKE`, permits, synapse caps — announce changes so miners are not surprised.

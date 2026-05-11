@@ -1,144 +1,137 @@
-# Vision
+# Vision & roadmap
 
-Lemma is a Bittensor subnet for formal math proofs.
+Lemma is an **incentivized theorem-proving subnet** for mathematics on **Bittensor**. Participants answer formal math challenges in **Lean 4** by submitting a **proof script**. Validators **verify proofs** in **Docker** (lean-sandbox image). **Weights on chain** should center on Lean-verified proofs.
 
-Miners submit Lean proof scripts. Validators check those scripts in Docker.
-Weights should center on Lean-verified proofs.
+**One-sentence objective:** Lemma rewards Lean-valid proofs for published theorem statements.
 
-Objective:
+The subnet reward axis is proof verification. See
+[objective-decision.md](objective-decision.md) and
+[proof-verification-incentives.md](proof-verification-incentives.md).
 
-> Lemma rewards Lean-valid proofs for published theorem statements.
+**Important distinction:** what the subnet *must* check mechanically is the **proof script against the locked `theorem`**. *How* that script was produced—autonomous model, human mathematician, or a mixed team—is largely **out of band** for Lean. Today’s reference miner is LLM-driven. A planned **bounty / long-horizon lane** (opt-in, higher stakes, offline-friendly) is **not** required at launch—it fits **after** the base economy is healthy (see **Economics v0 → v1** below).
 
-Related:
+This document is for **contributors and partners** who want the long-term direction—not only the current implementation. Today’s code is still largely **proof-of-concept**; you can nevertheless **run on** **Subnet 467 (Lemma)** on **Bittensor testnet** while that matures. **Finney** is mainnet—a separate network.
 
-- [objective-decision.md](objective-decision.md)
-- [proof-verification-incentives.md](proof-verification-incentives.md)
+---
 
-## What Lemma Produces
+## What the subnet produces
 
-Lemma produces verified theorem/proof pairs.
+Lemma produces **verified formal proofs**.
 
-The subnet publishes a theorem. Miners search for a proof. Validators check the
-proof. If Lean accepts it, the theorem/proof pair is valid work.
+The live product is a theorem/proof pair where the proof script is accepted by
+Lean for the published theorem statement. Put another way: Lemma is a market for
+proof search. The subnet publishes formal theorem statements; miners use AI and
+compute to search for proofs; validators mechanically verify the submissions;
+accepted proofs become the produced work.
 
-This is proof mining: Bitcoin miners produce valid hashes; Lemma miners produce
-valid Lean proofs.
+That keeps the base story simple: Bitcoin miners produce valid hashes under a
+difficulty rule. Lemma miners produce valid Lean proofs under a theorem rule.
 
-## Why Lean Is The Gate
+For the current v0 generated lane, this is best understood as **proof capacity**:
+the network is measuring whether miners and validators can reliably find,
+submit, verify, and weight proofs. In later off-cadence lanes, the same mechanism
+can point at curated theorem campaigns, Mathlib gaps, benchmark queues, or
+human-requested theorem work.
 
-Lean gives a mechanical check.
+---
 
-The proof either typechecks against the stated theorem, or it does not.
+## Why Lean as the gate
 
-That gives Lemma a clear reward floor. The grader is not a human curve. It is
-the Lean checker.
+Lean gives an **objective mechanical check** at the kernel: either the proof
+type-checks against the stated `theorem`, or it does not. There is no partial
+credit inside the proof assistant itself. That property is what makes a
+decentralized grading story credible: the “grader” is not a human curve, it is
+**mechanical verification**.
 
-The tradeoff is discipline:
+The trade-off is discipline elsewhere: the **statement must be fixed**, the **proof must be the only editable surface**, and tooling must reject **unsound shortcuts** (for example `sorry`, rogue `axiom`s, or silently changing the goal). Lemma’s validator path encodes those constraints; tightening them over time is core work, not polish.
 
-- the theorem statement must be fixed;
-- the proof must be the editable surface;
-- tooling must reject `sorry`, bad `axiom`s, and goal changes.
+---
 
-## Current State
+## Where we are: proof of concept → runnable subnet
 
-The repo already runs an end-to-end loop:
+The codebase already demonstrates an **end-to-end loop**: sample or generate a `Problem`, send a `LemmaChallenge`, run a prover (the bundled path is **LLM-backed**), verify with `lake` / sandbox tooling, and participate in normal miner/validator flows. Operator tooling (`lemma` CLI, env setup, docs, CI) exists so others can reproduce that loop locally.
 
-1. choose or generate a problem;
-2. send a `LemmaChallenge`;
-3. run a prover;
-4. verify with Lean;
-5. participate in miner and validator flows.
+**Near-term bar:** a new miner can join with documented steps, use **known-formalized** problems locally, and get **consistent scoring** without bespoke support.
 
-Near-term bar: a new miner can join from docs, use known-formalized problems,
-and get consistent scoring without special help.
+---
 
-## Bounty Lane Later
+## Bounty lane (v1-phase): offline work, any prover, submit when ready
 
-A future v1 lane can support slower work:
+This lane is the **optional second track** described under **Economics v1**—rolled out once the steady lane has matured. For **hard or “unsolved” style** items (curated `sorry`, formalized Olympiad-tier statements, rare frontier prompts), the economically meaningful work often happens **off the subnet clock**:
 
-- hard curated statements;
-- Mathlib gaps;
-- `sorry` cleanup;
-- submit-when-ready proofs;
-- higher-stakes bounties.
+- A person or team develops a proof using **their own editors, libraries, and CI**—the same way Mathlib contributors work today.
+- They **run Lean locally** (or in their own infra) until `lake build` succeeds and they are confident the proof matches the **published statement hash** they will be judged against.
+- When satisfied, they **submit** the `proof_script` through the normal miner /
+  challenge flow. **If verification passes, they earn the reward**; if not, they
+  do not.
 
-This is not needed at launch.
+Nothing in that story *requires* an LLM to be the author of the proof. Lemma’s role is to be the **trustless checkpoint**: fixed goal, reproducible verify, transparent payout rules. **Publicizing a major result** (paper, blog, Mathlib PR) is separate from verification but encouraged culturally—and large wins can still be shared *after* the on-chain check, the same way any open-source contribution is.
 
-The author of a proof can be a model, a person, or a team. Lean only checks the
-final proof script against the locked theorem.
+The **steady, high-frequency lane** stays automation-heavy for throughput at launch; the **bounty lane** is where human-scale timelines (days to months) and **submit-when-ready** behavior fit once that optional track exists.
 
-## Roadmap
+---
 
-### 1. v0 Economy
+## Roadmap (streamlined)
 
-Launch with one steady generated lane.
+Phases below are **sequenced**, not mutually exclusive—some security and problem-supply work can start early.
 
-Keep the rules simple:
+### 1. Economics v0 (launch) → v1 (second lane)
 
-- publish work;
-- verify work mechanically;
-- pay for valid work.
+**v0 — bootstrapping:** Launch with **one steady, high-frequency lane**: predictable verify cost, automation-friendly, easy for miners to participate and **earn emissions** while the subnet economy kicks off. Keep it BTC-like in spirit: publish work, verify work mechanically, pay for valid work. Prefer **simple rules** people can explain without heavy game theory—e.g. **static** emission per solved item or per epoch. **Goal:** validators and miners can describe payouts in **one page**.
 
-Validators and miners should be able to explain payouts in one page.
+**Not at launch:** the **second lane** (opt-in **bounty** / long-horizon tasks, **offline proving** then **submit when ready**, higher rewards, manual-scale work—see **Bounty lane** above). That is **v1-phase**: introduce it **after** the base economy is mature, so higher-stakes opt-in work does not compete with kicking off broad miner participation.
 
-### 2. Security Around Lean
+**v1 — when ready:** add the optional bounty track; **rollover** when no one solves a bounty; avoid early reliance on time-escalating prize clocks that encourage last-minute sniping. **Cadence** can differ by lane—e.g. ~**30 days** per bounty rotation for *curated* formalized-hard / `sorry`-class work; **open conjectures** stay “usually unsolved this cycle,” not “must finish in N days.”
 
-Lean is strict. The surrounding system must stay honest:
+### 2. Security & trust model (system around Lean)
 
-- lock statements;
-- reject `sorry` and unsafe axioms;
-- pin Docker images and toolchains;
-- publish profile hashes;
-- document upgrade paths.
+Lean is strict; the **surrounding software** must not be the weak link:
 
-Goal: a short threat model and a validator checklist that match production.
+- **Statement lock:** miners cannot substitute an easier `theorem`.
+- **Proof hygiene:** reject `sorry`, control `axiom` usage, keep cheat scans and sandbox boundaries aligned with what the subnet claims to reward.
+- **Operational trust:** Docker images, optional **remote verify** workers, API keys, and upgrade paths (pins, meta hashes) documented and testable.
 
-### 3. Problem Supply
+**Goal:** a short **threat model** plus a validator checklist that matches production behavior.
 
-A live subnet needs a governed problem feed.
+### 3. Problem supply & difficulty pipeline
 
-Each live challenge should have:
+A live subnet needs a **curated feed** of problems—not only generators, but **governance** over difficulty, verify time, and rotation:
 
-- known class;
-- expected verify cost;
-- clear rotation policy.
+- **Tiers** (e.g. easy → extreme) backed by **catalog or generated** sources, with explicit **verify budgets**.
+- **“Unsolved” / bounty lane (v1):** mostly **Mathlib-style `sorry`** cleanup and similar formalized gaps (high value, bounded difficulty variance); **rare** true frontier items only with clear expectations. Solvers may work **offline** and **submit when ready** (see **Bounty lane** above)—rolled out after the steady lane is stable.
+- **Automation + human gates** so an epoch does not randomly alternate between trivial and intractable.
 
-Generated tasks are the first lane. Curated and bounty lanes can come later.
+**Goal:** every live challenge has a **known class**, **expected verify cost**, and **clear rotation policy**.
 
-### 4. Scale And Operations
+### 4. Scale & operations
 
-The subnet needs runbooks for:
+Under load: queueing, timeouts, verification cost, observability, and **runbooks** for stuck verifies, RPC drift, or bad releases.
 
-- queues;
-- timeouts;
-- Lean cost;
-- RPC drift;
-- bad releases;
-- stuck verify workers.
+**Goal:** the subnet survives **N miners** without manual firefighting for known failure modes.
 
-Goal: the subnet survives real miner load without manual firefighting.
+### 5. Advanced incentives (evidence-driven)
 
-### 5. Later Incentives
+After real traffic: consider **partial-progress** or **lemma-submission** tracks and anti-collusion tweaks—**only** where the protocol can define rewards without breaking the Lean gate’s clarity.
 
-After real traffic, consider partial-progress tracks, lemma-submission tracks,
-or anti-collusion changes.
+**Goal:** incentive changes follow **measured** miner behavior, not pre-launch theory alone.
 
-Only add them when the reward can stay clear and testable.
+---
 
-## Through Line
+## Through-line
 
-Lemma's identity is paid theorem proving.
+**Lemma's identity is incentivized theorem proving; Lean verification stays the objective floor.** Everything else—economics, problem supply, and operations—exists to make that floor **useful, fair, and sustainable** on a decentralized network.
 
-Lean verification stays the objective floor. Economics, problem supply, and
-operations exist to make that floor useful, fair, and sustainable.
+---
 
-## Related Docs
+## Related docs
 
 | Doc | Use |
 | --- | --- |
-| [Architecture](architecture.md) | Components and data flow. |
-| [Governance](governance.md) | Pins and release policy. |
-| [Problem supply policy](problem-supply-policy.md) | Generated supply boundary. |
-| [Open problem campaigns](open-problem-campaigns.md) | Long-term bounty lane. |
+| [Architecture](architecture.md) | Components and data flow today. |
+| [Governance](governance.md) | Pins, meta, policy. |
+| [Objective decision](objective-decision.md) | One-sentence objective and scoring boundary. |
+| [Proof verification incentives](proof-verification-incentives.md) | Long-term proof-only reward design. |
+| [Problem supply policy](problem-supply-policy.md) | Public generated supply boundary and builder promotion checklist. |
+| [Open problem campaigns](open-problem-campaigns.md) | v1+ campaign / bounty lane for faithful open-problem formalization and submit-when-ready proofs. |
 | [Getting started](getting-started.md) | Install and first commands. |
 | [Miner](miner.md) / [Validator](validator.md) | Operator detail. |

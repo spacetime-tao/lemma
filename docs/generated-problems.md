@@ -1,86 +1,49 @@
-# Generated Problems
+# Generated problems (default)
 
-`LEMMA_PROBLEM_SOURCE=generated` is the default.
+When `LEMMA_PROBLEM_SOURCE=generated`, each round maps `chain_head → problem_seed` via `LEMMA_PROBLEM_SEED_MODE`: default **`quantize`** holds one theorem for each `LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS` window (default **100** blocks). **`subnet_epoch`** uses subnet Tempo from chain RPC instead. The seed picks one theorem from [`generated.py`](../lemma/problems/generated.py). Same code + seed ⇒ same `Problem`.
 
-Each round maps chain state to a `problem_seed`. The seed picks one theorem from
-[`generated.py`](../lemma/problems/generated.py).
+## How many problems?
 
-Default seed mode:
+There is **no single fixed “number of theorems in the world”** here. What exists today is:
 
-```text
-LEMMA_PROBLEM_SEED_MODE=quantize
-LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS=100
-```
+- **40 template builders** (10 easy, 22 medium, 8 hard) in `_RAW_BUILDERS`: each is a function that emits a `Problem` for a given RNG seeded from the block.
+- **One sampled challenge per `(seed, registry version)`**: `random.Random(seed)` picks among those builders, and many builders inject **fresh random numerals** (e.g. concrete `Nat` sums), so **infinitely many distinct statements** can appear over time even though the *family* of shapes is finite.
+- **30 topic labels** (`TOPICS`) for logging / exports—algebra, analysis, combinatorics, logic, etc.—not separate proof rules.
 
-`subnet_epoch` can use Bittensor Tempo instead.
+So: **finite template repertoire, infinite instance stream** as the chain advances. If you need a **closed catalog** (countable, frozen list), use `LEMMA_PROBLEM_SOURCE=frozen` and see [catalog-sources.md](catalog-sources.md).
 
-Same code plus same seed gives the same `Problem`.
+### Plain English
 
-## How Many Problems?
+What **40 builders** means is **not** “there are only 40 problems total.” It means **40 recipes**. Each recipe says how to cook one *kind* of challenge—e.g. ask for a proof about two random natural numbers, list structure, set algebra, finite sets, or a certain logical shape. Every time the subnet advances and hands out a **new seed**, the code runs the RNG again: it may pick **another recipe**, or the **same recipe with new random constants**. So **one family** can produce **endlessly many slightly different statements**: same pattern, different numbers or details.
 
-There are 40 template builders today:
+You should **not** picture a short list to memorize. You picture **many instances** flowing from **a small cookbook**. The **topic** labels (algebra, analysis, …) are mainly for logging—they are not separate rule sets in Lean.
 
-- 10 easy;
-- 22 medium;
-- 8 hard.
+**Honest limit:** these are **variations inside fixed templates**, not “every possible theorem in mathematics.” Over time, miners may still recognize **which shapes repeat**—that is normal. **More diversity** comes from adding builders, frozen/catalog problems, or separate bounty lanes—whatever governance turns on. See [problem-supply-policy.md](problem-supply-policy.md) for the explicit predictability boundary.
 
-A builder is a recipe. It can produce many instances by changing numbers or
-details from the seed.
+**Future directions** (not all implemented): more builders or splits; imports from formalized contest corpora (e.g. miniF2F-style); harder multi-lemma templates; curated `sorry` bounties alongside generated traffic—governance decides what is live.
 
-So there are not only 40 total problems. There are 40 families that can produce
-many statements.
+## Template mix
 
-Topics are labels for logs and exports. They are not separate proof rules.
+- 40 builders: 10 easy, 22 medium, 8 hard (`_RAW_BUILDERS`).
+- Uniform random per seed → roughly 25% / 55% / 20% easy / medium / hard.
+- `TOPICS`: labels for logging; shape comes from the template.
 
-## Honest Limit
-
-Generated problems are variations inside fixed templates. They are not every
-possible theorem in math.
-
-Miners may learn repeating shapes over time. More diversity comes from adding
-builders, frozen/catalog problems, or future bounty lanes. See
-[problem-supply-policy.md](problem-supply-policy.md).
-
-## Template Mix
-
-Current rough mix:
-
-- 25% easy;
-- 55% medium;
-- 20% hard.
-
-Easy templates fit quick tactics. Medium templates look like common Mathlib
-exercises. Hard templates target longer proofs.
+Easy templates suit quick tactics; medium resemble typical Mathlib exercises; hard targets longer proofs.
 
 ## Timeouts
 
-The generator does not set time limits.
+The generator does not embed limits. **Subnet policy** sets block-time / forward-wait clamps for miner answers and `LEAN_VERIFY_TIMEOUT_S` for sandbox `lake build` — one published template for all validators ([governance.md](governance.md)). Hard templates stress **prover time** first; Lean checking is usually fast for a clean script unless elaboration or cold caches blow up ([faq.md](faq.md)).
 
-Subnet policy sets:
+## Scoring round
 
-- miner forward wait;
-- `LEAN_VERIFY_TIMEOUT_S`;
-- validator cadence.
+Each epoch is independent: pass Lean → proof-only scoring → weights for that round. Emissions follow Bittensor rules. Details: [faq.md](faq.md).
 
-See [governance.md](governance.md).
+### Example
 
-## Scoring
+| UID | Outcome |
+| --- | ------- |
+| Timeout | No weight |
+| Lean fails | No weight |
+| Lean OK + scored | Enters Pareto pool |
 
-Each epoch is independent:
-
-1. Miner returns proof.
-2. Lean checks proof.
-3. Passing proof enters scoring.
-4. Validator writes weights for that round.
-
-| Outcome | Result |
-| --- | --- |
-| Timeout | No proof score. |
-| Lean fails | No proof score. |
-| Lean passes | Enters scoring. |
-
-Related docs:
-
-- [faq.md](faq.md)
-- [catalog-sources.md](catalog-sources.md)
-- [problem-supply-policy.md](problem-supply-policy.md)
+Registry changes: [governance.md](governance.md). Predictability and release checklist: [problem-supply-policy.md](problem-supply-policy.md). Frozen mode: [catalog-sources.md](catalog-sources.md).

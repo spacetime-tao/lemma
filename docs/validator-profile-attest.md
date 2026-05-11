@@ -1,60 +1,63 @@
 # Validator Profile Peer Attest Threat Model
 
-`LEMMA_VALIDATOR_PROFILE_ATTEST_ENABLED=1` checks that configured peer validators
-report the same `validator_profile_sha256`.
+`LEMMA_VALIDATOR_PROFILE_ATTEST_ENABLED=1` makes a validator fetch each configured
+peer URL and compare the returned `validator_profile_sha256` with its own local
+profile hash.
 
-Serve your hash with:
+Peers usually expose the hash with:
 
 ```bash
 uv run lemma validator profile-attest-serve --host 0.0.0.0 --port 8799
 ```
 
-It exposes:
+That serves:
 
-- `GET /lemma/validator_profile_sha256`
-- `GET /health`
+- `GET /lemma/validator_profile_sha256` as plaintext hash,
+- `GET /health` as a simple health check.
 
-The profile response can be a 64-character hex string or JSON:
-
-```json
-{"validator_profile_sha256":"..."}
-```
+Peer responses may be either a 64-character hex string or JSON with
+`{"validator_profile_sha256":"..."}`.
 
 ## What It Protects
 
-This is an operator coordination check.
+This is an operator coordination check. It helps validators notice when their
+local scoring profile does not match the peer set they expected to align with.
 
-It catches common drift:
+It catches common mistakes such as:
 
-- scoring weights differ;
-- reputation settings differ;
-- problem cadence differs;
-- verification policy differs;
-- peer URL is wrong;
-- local config is stale.
+- different scoring weights or reputation settings,
+- different problem cadence or verification policy,
+- wrong peer URL,
+- stale local config after an upgrade.
 
-Current behavior is all-of-N. Every configured peer must return this validator's
-hash, or startup and `lemma validator-check` report failure.
+The current behavior is all-of-N: every configured peer URL must return the same
+hash as this validator, or startup / `lemma validator-check` reports a failure.
 
 ## What It Does Not Protect
 
-This is not:
+This is not Byzantine consensus, on-chain attestation, or a cryptographic quorum.
 
-- Byzantine consensus;
-- on-chain attestation;
-- a cryptographic quorum;
-- traffic encryption;
-- peer authentication by itself.
+It does not:
 
-It does not prove a peer actually used that profile while scoring.
+- authenticate peers by itself,
+- encrypt traffic,
+- prevent a network attacker from spoofing plaintext HTTP,
+- prove that a peer actually used the profile while scoring,
+- handle k-of-n disagreement,
+- retry through flaky peer outages,
+- replace local `LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED` pinning.
 
-Use TLS, private networking, reverse proxies, firewalls, or another auth layer
-for untrusted networks.
+Use TLS, private networking, reverse proxies, firewall rules, or another
+operator-controlled authentication layer if peer URLs cross an untrusted
+network. Signed/on-chain profile attestations or k-of-n checks belong in a
+separate design.
 
 ## Operator Guidance
 
-Use peer attest for a small known validator group.
+Use peer attest when a known validator group wants a simple startup check that
+they are running the same scoring profile. Keep the peer URL list small and
+intentional. Expect a single unreachable or mismatched URL to fail the check.
 
-Keep the peer list short. Expect one bad or unreachable URL to fail the check.
-
-`LEMMA_VALIDATOR_PROFILE_ATTEST_SKIP=1` is for solo or dev runs only.
+`LEMMA_VALIDATOR_PROFILE_ATTEST_SKIP=1` is for solo and development runs only. It
+means peer URLs are not checked, so it should not be treated as production
+alignment.
