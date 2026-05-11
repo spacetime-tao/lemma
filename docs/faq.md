@@ -10,7 +10,7 @@ Plain-language answers. For the full picture see [litepaper.md](litepaper.md); f
 
 When proofs pass, **how credit turns into tokens** is handled by Bittensor’s usual machinery: validators publish **weights** (scores for each miner), and miners earn **alpha**, the subnet’s **reward token**. The exact formulas live with the subnet parameters—start with the [litepaper](litepaper.md), then [technical-reference.md](technical-reference.md) if you need numbers.
 
-**Analogy:** Same rough shape as Bitcoin—open competition, fixed rules—but the work is finding a **correct proof** of a published statement, not racing for the next chain block. One difference: for each Bitcoin **block**, only **one** miner wins that round. On Lemma, **any** miner whose proof **passes the checker** for that round counts as passing the gate (how much **alpha** each one gets still follows **weight** rules).
+**Analogy:** Same rough shape as Bitcoin—open competition, fixed rules—but the work is finding a **correct proof** of a published statement, not racing for the next chain block. One difference: for each Bitcoin **block**, only **one** miner wins that round. On Lemma, **any** miner whose proof **passes** can earn that round; the checker gives every passing proof the **same base score** (it does not rank “better” proofs). **Weights** and **alpha** still flow through Bittensor—subnet rules like smoothing, credibility, and same-coldkey handling can shift **relative** shares, so payouts are **not strictly identical** for every passer every time.
 
 ---
 
@@ -18,7 +18,7 @@ When proofs pass, **how credit turns into tokens** is handled by Bittensor’s u
 
 ### What is formal mathematics?
 
-Math written so precisely that software can tell whether each step is legal—logic plus definitions, no appeal to “you know what I mean.”
+It is mathematics built in a fully specified logical language: definitions, axioms, and which inference steps are allowed are fixed up front. If you write a proof in that language, software can check it line by line—each step either matches the rules or it does not.
 
 ### What is a theorem?
 
