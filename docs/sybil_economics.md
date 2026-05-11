@@ -137,4 +137,4 @@ Rollback:
 
 - Partition implementation: [`lemma/scoring/dedup.py`](../lemma/scoring/dedup.py), used from [`lemma/validator/epoch.py`](../lemma/validator/epoch.py).
 - Offline replay helper: [`tools/sybil_replay_analyze.py`](../tools/sybil_replay_analyze.py).
-- Incentive overview: [incentive_migration.md](incentive_migration.md), [incentive-roadmap.md](incentive-roadmap.md).
+- Incentive overview: [incentive_migration.md](incentive_migration.md), [workplan.md](workplan.md).

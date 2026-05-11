@@ -1,218 +1,94 @@
 # Agent State
 
-This file is a lightweight handoff note for long-running agent work. Keep it
-short, current, and useful when chat context is lost.
+This is the handoff note for chat freezes, context loss, and future agents.
+Keep it short, current, and useful. The active work tracker is
+[`docs/workplan.md`](docs/workplan.md).
 
 ## Working Mentality
 
 Treat every line of code as a liability. Every line must be maintained,
 reviewed, tested, and understood. Prefer lean changes that fix the underlying
-shape of the system over extra layers of checks, guards, or compensating
-logic.
+shape of the system over extra layers of checks, guards, or compensating logic.
 
 ## Current Direction
 
-Lemma's live incentive mechanism should center on Lean verification: a miner's
-proof either verifies for the published theorem and can enter scoring, or it
-does not verify and stays out of scoring.
+Lemma's live reward axis is binary proof verification:
 
-Reason: the product center is simple, reproducible proof acceptance.
+- a miner submits `proof_script`;
+- the validator checks that proof against the published theorem with Lean;
+- a proof that verifies can enter scoring;
+- a proof that fails verification does not enter scoring.
 
-## Active Checklist
+Informal reasoning and optional prose-judge tooling are out-of-band. Do not add
+reasoning prose, subjective judge scores, or proof-efficiency heuristics back
+into the live reward path without a separate product decision.
 
-- Audit core Lemma docs and code for cohesion with the proof-verification subnet
-  design.
-- Simplify public docs before internal trackers: README, getting-started,
-  miner, validator, VPS safety, production, and FAQ first; workplan and
-  audit-remediation can stay detailed agent/internal maps.
-- Keep `lemma-cli` and core Lemma aligned so operator setup feels like one
-  simple path, not two overlapping tools.
-- User created and registered the second coldkey/hotkey test identity
-  `codex` / `codexhot` on testnet subnet `467` as UID `7`. The new miner hotkey
-  can run on `lemma-miner-1` as another service; keep the coldkey local.
-- Continue VPS deployment testing:
-  - miner hotkeys on one droplet or several droplets;
-  - validator on a separate droplet;
-  - local machine mainly for development and key safety unless tests prove
-    local operation is better.
-- Measure whether the current VPS setup can reliably earn alpha:
-  - miner forward response time;
-  - prover API latency and timeout behavior;
-  - validator Lean verification time, cold and warm;
-  - scored miner count per validator round;
-  - timeout/fail reasons from validator logs.
-- Speed up the hot path where real timings justify it:
-  - persistent `LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR`;
-  - long-lived `LEMMA_LEAN_DOCKER_WORKER`;
-  - remote Lean worker on Linux if validator CPU or disk becomes the bottleneck;
-  - prover retry/timeout/model tuning only when it improves forward completion.
+## Current Repository State
+
+- Working checkout: `/Users/leehall/lemma`.
+- Local branch: `main` tracking `origin/main`.
+- Current local/GitHub head during this audit:
+  `b7088f00295fe0e23ad4a856ac43799b9acd8882`
+  (`Remove stale judge config from proof-only path`).
+- Current GitHub failure before this handoff update:
+  - CI run `25649757216` failed in `uv sync --extra dev`.
+  - Docker publish run `25649757232` failed in `pip install .`.
+  - Root cause: `pyproject.toml` added a direct-reference `cli` extra for
+    `lemma-cli` without Hatch metadata
+    `allow-direct-references = true`.
+- Local fix in this working tree: `[tool.hatch.metadata]`
+  `allow-direct-references = true`.
+
+## Local Verification Snapshot
+
+Current local baseline after the metadata fix on 2026-05-11:
+
+- `uv sync --extra dev`: passed after sandbox escalation for the uv cache path.
+- `uv run ruff check lemma tests tools`: passed.
+- `uv run pytest tests/ -q --ignore=tests/test_docker_golden.py`:
+  `255 passed, 1 skipped, 12 warnings`.
+- `uv run python scripts/ci_verify_generated_templates.py`:
+  `OK: generated template metadata gate covered 40 builders`.
+- `RUN_DOCKER_LEAN=1 LEAN_SANDBOX_IMAGE=lemma/lean-sandbox:latest uv run pytest tests/test_docker_golden.py -v --tb=short`:
+  `1 passed in 210.60s`.
+- `docker build -f Dockerfile -t lemma-runtime:ci-smoke .`: passed.
+- `uv run mypy lemma`: non-blocking quality gap,
+  `70 errors in 11 files`.
+
+## VPS Status Snapshot
+
+Do not deploy or restart services during the current docs/CI-fix pass.
+
+- `lemma-lean-worker-1` (`167.99.145.132`):
+  - SSH responded with uptime.
+  - `/opt/lemma` deployed commit: `82bba8d`.
+  - Active services: `lemma-lean-worker-http.service`,
+    `lemma-validator.service`.
+- `lemma-miner-1` (`161.35.50.115`):
+  - SSH responded with uptime.
+  - `/opt/lemma` deployed commit: `82bba8d`.
+  - Active services: `lemma-miner.service`, `lemma-miner3.service`,
+    `lemma-miner4.service`, `lemma-miner5.service`, `lemma-miner6.service`,
+    `lemma-miner7.service`.
+
+Both droplets are alive but one commit behind `main` at `b7088f0`. This is
+record-only for the current pass.
+
+## Where To Work
+
+- Active work tracker: [`docs/workplan.md`](docs/workplan.md).
+- Proof objective: [`docs/objective-decision.md`](docs/objective-decision.md).
+- Proof-verification incentives:
+  [`docs/proof-verification-incentives.md`](docs/proof-verification-incentives.md).
+- Testing commands: [`docs/testing.md`](docs/testing.md).
+- VPS/key custody: [`docs/vps-safety.md`](docs/vps-safety.md).
+
+## Rules For Future Agents
+
+- Preserve proof-verification language: pass or fail, binary system.
+- Keep `spacetime-tao/lemma` focused on consensus-critical code.
+- Keep friendly operator UX in `lemma-cli` unless the core repo needs a minimal
+  compatibility shim.
 - Use tests and real logs before changing mechanism code.
-
-## Relevant Docs
-
-- Proof-verification reward design: `docs/objective-decision.md`,
-  `docs/proof-verification-incentives.md`, `docs/faq.md`.
-- VPS/operator guidance: `docs/production.md`, `docs/system-requirements.md`,
-  `docs/miner.md`, `docs/validator.md`.
-- Validator throughput: `docs/validator_lean_load.md`, `docs/workplan.md`.
-- CLI/core install cohesion: `README.md`, `docs/getting-started.md`,
-  sibling repo `lemma-cli/README.md`.
-
-## Testing Notes To Preserve
-
-- Test one miner hotkey first, then add more hotkeys only after the single-hotkey
-  path is stable.
-- Multiple miner hotkeys on one VPS need separate wallet hotkeys, axon ports,
-  logs, and service units.
-- UID `7` is the separate economic identity test. Run it beside UIDs `2`-`6`
-  to compare one same-coldkey group against one separate coldkey/hotkey.
-- Multiple hotkeys under one coldkey are okay for testing. Current scoring
-  partitions one coldkey's allocation among its successful hotkeys instead of
-  multiplying the allocation.
-- Validator tests should compare cold verification against warmed verification;
-  do not use the cold Mathlib path as the steady-state estimate.
-- Docker Desktop on a local Mac can mislead verification timing because bind
-  mounts and filesystem caching behave differently than Linux VPS storage.
-- The practical goal is not only local PASS. The goal is miners and validators
-  staying online, responding inside the validator forward window, verifying
-  proofs, setting weights, and earning alpha.
-
-## Current Status Snapshot
-
-- Core Lemma `main` is pushed through `4ef996d`
-  (`Poll validator epochs conservatively`).
-- `lemma-lean-worker-1` (`167.99.145.132`) runs the persistent
-  `lemma-validator.service` from `/opt/lemma`.
-- `lemma-miner-1` (`161.35.50.115`) runs varied-model miner services on ports
-  `8091`-`8096`; UID `7` is the separate `codex` / `codexhot` economic identity.
-- The persistent validator exposed and fixed an epoch-wait bug: do not sleep
-  through a subnet epoch using a rough wall-clock block estimate. The service now
-  polls conservatively near epoch boundaries.
-- Next testing step: watch the fixed persistent validator through an automatic
-  epoch, then compare miner forward time, Lean verify time, `set_weights`, reveal,
-  and alpha movement.
-
-## Latest Baseline Status
-
-- Core Lemma `main` pushed through `154572f`
-  (`Record second identity testing reminder`).
-- `lemma-cli` `main` pushed through `b27e81e` (CLI proof-verification
-  wording).
-- Local verification before VPS testing:
-  - core `uv run pytest`: 250 passed, 2 skipped;
-  - core `uv run ruff check lemma tests`: passed;
-  - CLI pytest: 27 passed;
-  - CLI ruff: passed;
-  - `lemma-cli doctor`: passed;
-  - `lemma validator-check`: printed READY after subnet pins refresh.
-- Local verification after same-proof reward rule change:
-  - core `.venv/bin/pytest`: 252 passed, 2 skipped;
-  - core `.venv/bin/ruff check lemma tests tools/sybil_replay_analyze.py`:
-    passed.
-- Worker droplet `lemma-lean-worker-1` (`167.99.145.132`):
-  - runtime repo `/opt/lemma` updated to `60af0e0`; latest `main` only adds
-    handoff/status docs;
-  - `lemma-lean-worker-http.service` active;
-  - worker listens on `127.0.0.1:8787`; remote external port refused, which is
-    expected for the private worker;
-  - local worker health on the droplet returned `{"status":"ok"}`.
-- Miner droplet `lemma-miner-1` (`161.35.50.115`):
-  - runtime repo `/opt/lemma` updated to `60af0e0`, `uv sync --extra btcli`
-    run; latest `main` only adds handoff/status docs;
-  - active miner services on ports `8091`-`8095`, externally reachable;
-  - UIDs `2`-`6` registered on testnet netuid `467` at that IP/port set;
-  - services restarted active after the reward-partition and prover-hint deploy.
-- Direct validator dry-run through an SSH tunnel to the worker:
-  - theorem `gen/7091600`;
-  - all five miner responses verified; old reward logic kept one rewarded UID;
-  - dry-run weights subset: `{2: 1.0}`;
-  - all five miners solved the same theorem in roughly `13.6`-`16.1` seconds;
-  - this did not set weights or earn alpha because it was a dry-run.
-- One live validator epoch ran locally through an SSH tunnel to the worker:
-  - theorem `gen/7091700`;
-  - all five miner responses verified; old reward logic kept one rewarded UID;
-  - live weights subset: `{2: 1.0}`;
-  - `set_weights success=True message=Not waiting for finalization or inclusion`;
-  - miner logs show UIDs `2`-`6` answered in roughly `13.6`-`19.0` seconds.
-- Current alpha blocker: local validator UID `1` has `stake=0.0` and
-  `validator_permit=False`. Its `last_update` moved to block `7091764`, but raw
-  chain weights still only show UID `0` as a visible validator row. To make miner
-  hotkeys earn alpha from this validator, stake testnet TAO to the validator
-  hotkey and confirm it receives validator permit, then run another live epoch.
-- Staking attempt from Codex was blocked by the encrypted coldkey password
-  prompt. No stake moved; wallet `lemma` remained at `2.272251606` free and
-  `0.0` staked. User needs to run the stake command locally and enter the
-  coldkey password outside chat.
-- User completed staking locally after increasing slippage tolerance. Wallet
-  `lemma` then showed `0.268630335` free and `2.214305457` staked; metagraph at
-  block `7092853` showed validator UID `1` with `S=2277.37988281`, `active=1`,
-  and `validator_permit=False`. A follow-up live epoch was started to see if the
-  now-staked validator can write a visible weight row and move miner alpha.
-- Post-stake immediate live epoch:
-  - remote-worker attempt at theorem `gen/7093100` failed verification because
-    the local SSH tunnel to the worker reset; miners still answered in roughly
-    `21.9`-`34.7` seconds.
-  - local Docker-worker retry at theorem `gen/7093200` succeeded:
-    all five miner responses verified; old reward logic kept UID `2`; live
-    weights subset `{2: 1.0}`, `set_weights success=True`.
-  - metagraph at block `7093239` showed UID `1` with `validator_permit=True`,
-    `S=2297.36254883`, and validator emission `13.71050453`.
-  - miner UIDs `2`-`6` still showed zero immediate emission because subnet
-    `commit_reveal_weights_enabled=True`; UID `1` has a timelocked weight commit
-    from block `7093234`, reveal period `1` epoch, and `revealed_uid1=None`.
-    Check again after the next epoch/reveal window.
-- After the next epoch/reveal window, metagraph at block `7093921` showed miner
-  alpha moving:
-  - raw weights rows: UID `0 -> 1`, UID `1 -> 2`;
-  - validator UID `1`: `validator_trust=1.0`, `emission=148.01081848`,
-    `S=2528.13598633`;
-  - miner UID `2`: `consensus=1.0`, `incentive=1.0`,
-    `emission=148.01081848`, `S=148.01081848`;
-  - miner UIDs `3`-`6` remained at zero because the old validator reward path
-    grouped identical proof submissions and kept UID `2`.
-- Follow-up mechanism change: identical proof reward dedup should not be live.
-  Current code keeps all verified miner entries and applies same-coldkey reward
-  partitioning after weights are computed.
-- Post-change live test:
-  - first one-shot live epoch at theorem `gen/7094100` had `verified=0`
-    because the miner proof used the wrong absolute-value lemma;
-  - added prover hint for integer absolute-value triangle goals and redeployed
-    miners;
-  - next attempt in the same theorem window landed too near `deadline_block`
-    and correctly dropped five late responses;
-  - fresh-window one-shot at theorem `gen/7094200` succeeded:
-    `verified=5`, `scored=5`, `coldkey_partitioned=5`,
-    `set_weights success=True`, live weights `{2: 0.2, 3: 0.2, 4: 0.2,
-    5: 0.2, 6: 0.2}`;
-  - post-run chain query at block `7094268` still showed old revealed weights
-    `1 -> 2` plus a new timelocked commit from validator hotkey at block
-    `7094223`; commit-reveal had not yet exposed the new split weights.
-- Next independent-identity test:
-  - UID `7` (`codexhot`) runs on `lemma-miner-1` port `8096` as
-    `lemma-miner7.service`;
-  - current miner model lineup:
-    - UID `2`: `gemini-3.1-pro-preview`;
-    - UID `3`: `gemini-3-pro-preview`;
-    - UID `4`: `gemini-2.5-pro`;
-    - UID `5`: `gemini-2.5-flash`;
-    - UID `6`: `gemini-2.5-flash-lite`;
-    - UID `7`: `gemini-flash-lite-latest`;
-  - first dry-run with UID `7` used `gemini-2.0-flash-lite`, which returned a
-    Gemini 404; the model was switched to `gemini-flash-lite-latest`.
-  - second dry-run saw all six candidates, five verified proofs, UID `6`
-    compile failure, and weights `{2: 0.125, 3: 0.125, 4: 0.125, 5: 0.125,
-    7: 0.5}`.
-  - live one-shot at fresh block window `7094800` succeeded with all six
-    candidates, five verified proofs, UID `6` compile failure, and
-    `set_weights success=True`; live weights were `{2: 0.125, 3: 0.125,
-    4: 0.125, 5: 0.125, 7: 0.5}`.
-  - post-live query at block `7094856` showed a new timelocked commit from
-    validator UID `1` at block `7094847`; visible UID `7` alpha/emission had
-    not moved yet because commit-reveal delay still applies.
-
-## Notes For Future Agents
-
-- Preserve proof-verification language.
-- Keep docs, tests, and CLI copy centered on Lean proof verification.
-- Avoid adding defensive complexity where the data model or call path can make
+- Avoid defensive complexity where a simpler data model or call path can make
   invalid states impossible.
