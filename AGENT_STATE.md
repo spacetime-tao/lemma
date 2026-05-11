@@ -173,12 +173,27 @@ Reason: the product center is simple, reproducible proof acceptance.
     `1 -> 2` plus a new timelocked commit from validator hotkey at block
     `7094223`; commit-reveal had not yet exposed the new split weights.
 - Next independent-identity test:
-  - add UID `7` (`codexhot`) to `lemma-miner-1` on the next free axon port;
-  - run a validator dry-run first and confirm UIDs `2`-`7` respond before the
-    deadline and verify;
-  - run one live epoch only after dry-run timing is clean;
-  - expected equal-proof shape: UIDs `2`-`6` share one coldkey allocation, while
-    UID `7` keeps its separate coldkey allocation.
+  - UID `7` (`codexhot`) runs on `lemma-miner-1` port `8096` as
+    `lemma-miner7.service`;
+  - current miner model lineup:
+    - UID `2`: `gemini-3.1-pro-preview`;
+    - UID `3`: `gemini-3-pro-preview`;
+    - UID `4`: `gemini-2.5-pro`;
+    - UID `5`: `gemini-2.5-flash`;
+    - UID `6`: `gemini-2.5-flash-lite`;
+    - UID `7`: `gemini-flash-lite-latest`;
+  - first dry-run with UID `7` used `gemini-2.0-flash-lite`, which returned a
+    Gemini 404; the model was switched to `gemini-flash-lite-latest`.
+  - second dry-run saw all six candidates, five verified proofs, UID `6`
+    compile failure, and weights `{2: 0.125, 3: 0.125, 4: 0.125, 5: 0.125,
+    7: 0.5}`.
+  - live one-shot at fresh block window `7094800` succeeded with all six
+    candidates, five verified proofs, UID `6` compile failure, and
+    `set_weights success=True`; live weights were `{2: 0.125, 3: 0.125,
+    4: 0.125, 5: 0.125, 7: 0.5}`.
+  - post-live query at block `7094856` showed a new timelocked commit from
+    validator UID `1` at block `7094847`; visible UID `7` alpha/emission had
+    not moved yet because commit-reveal delay still applies.
 
 ## Notes For Future Agents
 
