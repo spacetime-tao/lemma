@@ -13,6 +13,9 @@ Current live path:
 3. Validators turn eligible proofs into weights using the published scoring rules.
 4. Same-coldkey hotkeys share that coldkey's allocation instead of multiplying it.
 
+Steps 1-2 are the binary proof-verification gate. Steps 3-4 are downstream
+allocation policy; they do not turn invalid proofs into eligible work.
+
 ## Known gameability surfaces (plain language)
 
 No subnet is perfectly ungameable; the goal is to make the easiest strategy also the useful one.

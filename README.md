@@ -7,7 +7,7 @@ A Lemma round is simple:
 1. The subnet publishes a theorem statement.
 2. Miners submit candidate Lean proof scripts.
 3. Validators verify those scripts with the published toolchain.
-4. Passing proofs become eligible for scoring and rewards under Lemma’s subnet rules.
+4. Passing proofs become eligible for downstream scoring and allocation under Lemma’s subnet rules; failing proofs do not.
 
 Lemma is still proof-of-concept software. It currently runs on Bittensor testnet as **subnet 467** (`--network test`; run `uv run lemma configure chain` to set `NETUID=467`). Mainnet, also known as Finney, is separate. Only treat mainnet rewards or tokens as relevant when the deployment you are following is registered, active, and matched to the correct **network** and **netuid**.
 

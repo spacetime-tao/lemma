@@ -50,21 +50,17 @@ not let parallel checklists drift.
   Lean verification.
 - Remote Lean worker safe default: unauthenticated non-loopback `lemma
   lean-worker` binds now fail unless the explicit dev-only override is set.
+- Binary proof eligibility docs: high-traffic docs now separate the binary Lean
+  eligibility gate from downstream allocation policy.
 
 ## Current Blockers And Gaps
 
-1. **Binary proof eligibility versus downstream allocation policy.**
-   Verified proofs enter with `score=1.0`, but reputation/credibility EMA,
-   Pareto layering, and same-coldkey partitioning still alter final weights.
-   Keep documentation precise: proof verification is binary; final allocation
-   is additional policy.
-
-2. **Full Bandit low-severity cleanup.**
+1. **Full Bandit low-severity cleanup.**
    CI's medium/high Bandit gate passes. A full Bandit run still reports
    low-severity subprocess, seeded RNG, `assert`, and cleanup-exception items.
    Only fix these when the change removes ambiguity or code.
 
-3. **Real subnet evidence still matters.**
+2. **Real subnet evidence still matters.**
    Local proof PASS is necessary but not enough. The subnet still needs measured
    miner response time, prover latency, validator Lean verification time, scored
    miner count, timeout/fail reasons, set-weights behavior, and emission changes
@@ -110,11 +106,9 @@ Next VPS testing should measure behavior, not add mechanism code:
 
 ## Next Work Order
 
-1. Keep binary proof eligibility language precise in docs that mention
-   reputation, credibility, Pareto weighting, or same-coldkey partitioning.
-2. Re-run Docker-backed Lean golden and runtime Docker build smoke when Docker
+1. Re-run Docker-backed Lean golden and runtime Docker build smoke when Docker
    is available.
-3. Then choose the next evidence slice:
+2. Then choose the next evidence slice:
    - VPS timing/observability run;
    - measured Lean worker throughput;
    - sybil/reward replay on real private exports;

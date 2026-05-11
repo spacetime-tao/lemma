@@ -31,6 +31,11 @@ accepts the proof or rejects it.
 The live validator path is intentionally simple: a submitted proof either passes
 Lean verification for the published theorem and enters scoring, or it does not.
 
+That binary gate is separate from final allocation. A Lean-valid proof earns
+eligibility with the same base proof score; reputation, verify credibility,
+Pareto layering, and same-coldkey partitioning are downstream policy that can
+change weights after eligibility.
+
 ## Out Of Scope For Rewards
 
 - Rewriting the theorem in an easier form.

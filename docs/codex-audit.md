@@ -68,9 +68,9 @@ remaining surfaces deserve a more conservative score.
    `entry_from_verified_proof()` assigns every verified proof `score=1.0` and
    `cost=0`, which preserves the proof-pass eligibility rule. After that,
    reputation/credibility EMA, Pareto layering, and same-coldkey partitioning can
-   alter final weights. This may be intended economics, but the docs and future
-   mechanism work should keep saying the precise thing: **proof verification is
-   binary; downstream allocation policy is additional policy**.
+   alter final weights. Status: docs refreshed after the audit to say the precise
+   thing: **proof verification is binary; downstream allocation policy is
+   additional policy**.
 
 4. **Tracker drift was real.**
 
@@ -114,11 +114,9 @@ Commands and results recorded during the Codex audit:
 
 ## Recommended fix order
 
-1. Keep binary proof eligibility language precise, especially where docs discuss
-   reputation, credibility, Pareto weighting, and same-coldkey partitioning.
-2. Retire or isolate optional judge/proof-metric research code when it stops
+1. Retire or isolate optional judge/proof-metric research code when it stops
    paying for its maintenance cost.
-3. Work through low-severity Bandit noise only when the fix removes ambiguity or
+2. Work through low-severity Bandit noise only when the fix removes ambiguity or
    code, not by scattering defensive wrappers.
 
 ---
