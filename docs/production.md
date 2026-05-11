@@ -118,3 +118,7 @@ When `LEMMA_LEAN_VERIFY_REMOTE_URL` points at an HTTP worker:
 ## Docker socket on validator/miner hosts
 
 Processes that can run arbitrary containers (or `docker exec` into pinned workers) effectively have **root on the host**. Pin **`LEAN_SANDBOX_IMAGE`** by immutable tag or digest ([toolchain-image-policy.md](toolchain-image-policy.md)), restrict who can edit `.env`, and treat the Docker socket as a **high-privilege** dependency.
+
+## Independent security review
+
+CI runs linters, tests, `pip-audit`, and `bandit`, but that is **not** a substitute for a focused third-party review of your deployment (Docker socket, remote Lean workers, keys, and networking). Before **high-stakes mainnet** operation or large treasury exposure, budget an independent security assessment appropriate to your threat model.

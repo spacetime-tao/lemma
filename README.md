@@ -52,6 +52,7 @@ In the miner docs, **axon** is Bittensor’s term for the network address and po
 | Vision & roadmap | [vision.md](docs/vision.md) |
 | Components | [architecture.md](docs/architecture.md) |
 | Technical reference | [technical-reference.md](docs/technical-reference.md) |
+| Codebase audit (Cursor) | [cursor-audit.md](docs/cursor-audit.md) |
 | Miner | [miner.md](docs/miner.md) |
 | Validator | [validator.md](docs/validator.md) |
 | Models / APIs | [models.md](docs/models.md) |

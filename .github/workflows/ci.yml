@@ -19,12 +19,16 @@ jobs:
         run: uv run ruff check lemma tests tools
       - name: Mypy
         run: uv run mypy lemma
+      # setuptools PYSEC-2025-49: bittensor==10.3.0 requires setuptools>=70,<71 — upgrade when upstream relaxes.
+      # py PYSEC-2022-42969: transitive (e.g. via `retry`); no clean fix in the current tree without replacing deps.
       - name: Pip-audit
-        continue-on-error: true
-        run: uv run pip-audit
+        run: |
+          uv run pip-audit \
+            --ignore-vuln PYSEC-2025-49 \
+            --ignore-vuln PYSEC-2022-42969
+      # -ll: report only medium+ (low-severity e.g. seeded `random` for problem sampling is not a security bug).
       - name: Bandit
-        continue-on-error: true
-        run: uv run bandit -q -r lemma
+        run: uv run bandit -q -r lemma -ll
       - name: Pytest
         # Docker golden runs only in docker-lean-sandbox (needs image + disk).
         run: uv run pytest tests/ -q --ignore=tests/test_docker_golden.py
