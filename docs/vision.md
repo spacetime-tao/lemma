@@ -42,7 +42,11 @@ human-requested theorem work.
 
 ## Why Lean as the gate
 
-Lean gives an **objective, binary check** at the kernel: either the proof type-checks against the stated `theorem`, or it does not. There is no partial credit inside the proof assistant itself. That property is what makes a decentralized grading story credible: the “grader” is not a human curve, it is **mechanical verification**.
+Lean gives an **objective mechanical check** at the kernel: either the proof
+type-checks against the stated `theorem`, or it does not. There is no partial
+credit inside the proof assistant itself. That property is what makes a
+decentralized grading story credible: the “grader” is not a human curve, it is
+**mechanical verification**.
 
 The trade-off is discipline elsewhere: the **statement must be fixed**, the **proof must be the only editable surface**, and tooling must reject **unsound shortcuts** (for example `sorry`, rogue `axiom`s, or silently changing the goal). Lemma’s validator path encodes those constraints; tightening them over time is core work, not polish.
 
