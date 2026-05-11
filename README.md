@@ -60,6 +60,7 @@ In the miner docs, **axon** is Bittensor’s term for the network address and po
 | Production / ops | [production.md](docs/production.md) |
 | VPS safety / key custody | [vps-safety.md](docs/vps-safety.md) |
 | DigitalOcean Droplet runbook | [droplet-operations.md](docs/droplet-operations.md) |
+| Service-user migration | [service-user-migration.md](docs/service-user-migration.md) |
 | Governance / pins | [governance.md](docs/governance.md) |
 | Toolchain / image pinning | [toolchain-image-policy.md](docs/toolchain-image-policy.md) |
 | Tests | [testing.md](docs/testing.md) |

@@ -6,7 +6,8 @@ subnet operator has published a different network, netuid, and validator profile
 
 Use this together with [getting-started.md](getting-started.md),
 [vps-safety.md](vps-safety.md), [miner.md](miner.md), and
-[validator.md](validator.md).
+[validator.md](validator.md). If you already have root-run services and want to
+migrate them later, see [service-user-migration.md](service-user-migration.md).
 
 ## Local Or Droplets?
 

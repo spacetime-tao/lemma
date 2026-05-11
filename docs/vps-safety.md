@@ -4,6 +4,8 @@ This guide is for operators running Lemma miners or validators on cloud servers.
 It keeps the setup simple while avoiding the most common key and uptime mistakes.
 For a DigitalOcean-specific setup and restart walkthrough, see
 [droplet-operations.md](droplet-operations.md).
+For migrating existing root-run services to a dedicated service user, see
+[service-user-migration.md](service-user-migration.md).
 
 ## Key Rule
 
