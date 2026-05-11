@@ -22,8 +22,15 @@ Reason: the product center is simple, reproducible proof acceptance.
 
 - Audit core Lemma docs and code for cohesion with the proof-verification subnet
   design.
+- Simplify public docs before internal trackers: README, getting-started,
+  miner, validator, VPS safety, production, and FAQ first; workplan and
+  audit-remediation can stay detailed agent/internal maps.
 - Keep `lemma-cli` and core Lemma aligned so operator setup feels like one
   simple path, not two overlapping tools.
+- After the current same-coldkey split-weight test reveals cleanly, remind the
+  user to create a second coldkey/hotkey locally if independent-identity testing
+  is the next goal. The new miner hotkey can run on `lemma-miner-1` as another
+  service; keep the coldkey local.
 - Continue VPS deployment testing:
   - miner hotkeys on one droplet or several droplets;
   - validator on a separate droplet;
@@ -58,6 +65,8 @@ Reason: the product center is simple, reproducible proof acceptance.
   path is stable.
 - Multiple miner hotkeys on one VPS need separate wallet hotkeys, axon ports,
   logs, and service units.
+- A second coldkey/hotkey pair is only needed when testing a separate economic
+  identity. It is not needed for the current same-coldkey partition test.
 - Multiple hotkeys under one coldkey are okay for testing. Current scoring
   partitions one coldkey's allocation among its successful hotkeys instead of
   multiplying the allocation.
@@ -71,8 +80,8 @@ Reason: the product center is simple, reproducible proof acceptance.
 
 ## Latest Baseline Status
 
-- Core Lemma `main` pushed through `60af0e0`
-  (`Hint integer absolute value triangle proofs`).
+- Core Lemma `main` pushed through `fb2fef2`
+  (`Record VPS partition test status`).
 - `lemma-cli` `main` pushed through `022a779` (CLI proof-verification
   messaging).
 - Local verification before VPS testing:
@@ -87,13 +96,15 @@ Reason: the product center is simple, reproducible proof acceptance.
   - core `.venv/bin/ruff check lemma tests tools/sybil_replay_analyze.py`:
     passed.
 - Worker droplet `lemma-lean-worker-1` (`167.99.145.132`):
-  - repo `/opt/lemma` updated to `60af0e0`;
+  - runtime repo `/opt/lemma` updated to `60af0e0`; latest `main` only adds
+    handoff/status docs;
   - `lemma-lean-worker-http.service` active;
   - worker listens on `127.0.0.1:8787`; remote external port refused, which is
     expected for the private worker;
   - local worker health on the droplet returned `{"status":"ok"}`.
 - Miner droplet `lemma-miner-1` (`161.35.50.115`):
-  - repo `/opt/lemma` updated to `60af0e0`, `uv sync --extra btcli` run;
+  - runtime repo `/opt/lemma` updated to `60af0e0`, `uv sync --extra btcli`
+    run; latest `main` only adds handoff/status docs;
   - active miner services on ports `8091`-`8095`, externally reachable;
   - UIDs `2`-`6` registered on testnet netuid `467` at that IP/port set;
   - services restarted active after the reward-partition and prover-hint deploy.
