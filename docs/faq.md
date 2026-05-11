@@ -62,7 +62,7 @@ Sends challenges to miners, collects replies, **runs Lean** (often inside **Dock
 
 ### What does Bittensor provide?
 
-Shared **identity** (keys), **discovery** (who is registered), and **settlement** (recording weights and distributing **alpha**). You still run **Lemma’s software** locally (`lemma miner …`, `lemma validator …`).
+**Wallet keys** (coldkey / hotkey accounts on the chain), **discovery** (who is registered on the subnet), and **settlement** (recording weights and distributing **alpha**). You still run **Lemma’s software** locally (`lemma miner …`, `lemma validator …`).
 
 ---
 
@@ -70,7 +70,7 @@ Shared **identity** (keys), **discovery** (who is registered), and **settlement*
 
 ### Do miners earn alpha?
 
-**Alpha** is Bittensor’s usual name for the **subnet’s reward token**. Whether you earn any, and how much, depends on **live subnet parameters**, registration, and whether you are on **testnet** or **mainnet**—same as any subnet. Lemma ties rewards to **proofs that pass Lean**; see [litepaper — Proofs, Scores, And Weights](litepaper.md#proofs-scores-and-weights).
+**Yes.** **Alpha** is the subnet’s reward token on Bittensor; miners receive it when their submitted proofs contribute under Lemma’s scoring and weight rules (starting from proofs that **pass Lean**). Details: [litepaper — Proofs, Scores, And Weights](litepaper.md#proofs-scores-and-weights).
 
 ### Testnet vs mainnet?
 
@@ -121,8 +121,4 @@ Everyone is supposed to follow the same **published pins** and artifacts ([gover
 ### Where do I start?
 
 1. [litepaper.md](litepaper.md)  
-2. [getting-started.md](getting-started.md)  
-
-### Is Lemma “LLM chat grading”?
-
-No. A chatbot might **help you draft** a proof offline, but the **live requirement** is a **proof script the checker accepts**—not a graded conversation.
+2. [getting-started.md](getting-started.md)
