@@ -77,6 +77,21 @@ Reason: the product center is simple, reproducible proof acceptance.
   staying online, responding inside the validator forward window, verifying
   proofs, setting weights, and earning alpha.
 
+## Current Status Snapshot
+
+- Core Lemma `main` is pushed through `4ef996d`
+  (`Poll validator epochs conservatively`).
+- `lemma-lean-worker-1` (`167.99.145.132`) runs the persistent
+  `lemma-validator.service` from `/opt/lemma`.
+- `lemma-miner-1` (`161.35.50.115`) runs varied-model miner services on ports
+  `8091`-`8096`; UID `7` is the separate `codex` / `codexhot` economic identity.
+- The persistent validator exposed and fixed an epoch-wait bug: do not sleep
+  through a subnet epoch using a rough wall-clock block estimate. The service now
+  polls conservatively near epoch boundaries.
+- Next testing step: watch the fixed persistent validator through an automatic
+  epoch, then compare miner forward time, Lean verify time, `set_weights`, reveal,
+  and alpha movement.
+
 ## Latest Baseline Status
 
 - Core Lemma `main` pushed through `154572f`

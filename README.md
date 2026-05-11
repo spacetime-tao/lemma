@@ -67,7 +67,7 @@ PyPI package names vs the `btcli` executable.
 | Problem supply policy | [problem-supply-policy.md](docs/problem-supply-policy.md) |
 | Catalog sources | [catalog-sources.md](docs/catalog-sources.md) |
 | Objective decision | [objective-decision.md](docs/objective-decision.md) |
-| Proof-only incentive design | [proof-only-incentives.md](docs/proof-only-incentives.md) |
+| Proof verification incentives | [proof-only-incentives.md](docs/proof-only-incentives.md) |
 | Proof intrinsic scoring | [proof-intrinsic-decision.md](docs/proof-intrinsic-decision.md) |
 | Credibility exponent policy | [credibility-exponent-decision.md](docs/credibility-exponent-decision.md) |
 | Commit-reveal threat model | [commit-reveal.md](docs/commit-reveal.md) |

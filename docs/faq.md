@@ -8,9 +8,8 @@ Current live path:
 
 1. Lean must typecheck (kernel gate).
 2. A passing proof enters scoring; a failing proof does not.
-3. Reputation and Pareto weighting build the final weight map.
-4. Pareto weighting still runs, but live proof cost is currently `0`, so it mostly behaves like score/reputation layering or an equal split among tied passers.
-5. Same-coldkey hotkeys share that coldkey's allocation instead of multiplying it.
+3. Validators turn eligible proofs into weights using the published scoring rules.
+4. Same-coldkey hotkeys share that coldkey's allocation instead of multiplying it.
 
 ## Known gameability surfaces (plain language)
 

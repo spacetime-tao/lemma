@@ -21,6 +21,13 @@ workspace, populate `.lake`, and publish the workspace into
 `LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR`. Once that slot is warm, later proofs for
 the same template reuse the workspace and usually skip `lake exe cache get`.
 
+Can validators skip warmups entirely? Not literally. Lean still has to load the
+pinned toolchain, use Mathlib artifacts, elaborate the submitted `Submission.lean`,
+and check the proof. The goal is to move one-time work out of the hot path:
+prebuild the sandbox image, keep `.lake` on persistent disk, and reuse a
+long-lived worker so normal rounds pay mostly for the submitted proof, not for
+fresh setup.
+
 Best current practice:
 
 1. Build the sandbox image before running a validator:
