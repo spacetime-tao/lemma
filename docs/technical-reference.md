@@ -121,6 +121,9 @@ Two different clocks:
 2. `LEAN_VERIFY_TIMEOUT_S` (validator sandbox)  
    Time for `lake build` plus axiom/cheat checks on the returned script. The Lean kernel checks proof terms quickly relative to “finding” the proof; elaboration can still be slow when proofs are huge, automation expands large terms, or typeclass inference does heavy work (see the [mathlib overview](https://leanprover-community.github.io/mathlib-overview.html) for topic breadth — e.g. dense algebra, category theory, bundled structures). The first build in a cold Docker layer can also spend minutes downloading or elaborating Mathlib; warm caches behave much better.
 
+   Validators reject `proof_script` payloads over `SYNAPSE_MAX_PROOF_CHARS`
+   before scheduling Lean verification.
+
 So: Lean can usually check a correct, modest submission quickly; the risky cases are enormous scripts, pathological elaboration, or cold-cache sandbox cost — not “kernel verification is inherently slow for topology.”
 
 ## Why don’t my `.env` changes show up?

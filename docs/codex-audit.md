@@ -51,12 +51,10 @@ remaining surfaces deserve a more conservative score.
 
 1. **Validator response size cap is asymmetric.**
 
-   The miner path has `SYNAPSE_MAX_PROOF_CHARS` enforcement through
-   `lemma/miner/limits.py`, but the validator epoch path accepts
-   `resp.proof_script` into candidate verification without an equivalent inbound
-   proof-size check. Large proof payloads still hit Lean timeouts and Docker
-   limits eventually, but the cheaper and clearer boundary is to reject oversized
-   responses before verification work is queued.
+   The audit found miner-side `SYNAPSE_MAX_PROOF_CHARS` enforcement without a
+   matching validator inbound check. Status: fixed after the audit; the shared
+   synapse limit now rejects oversized `resp.proof_script` payloads in the
+   validator epoch path before verification work is queued.
 
 2. **Remote Lean worker defaults are permissive.**
 

@@ -1,5 +1,5 @@
 from lemma.common.config import LemmaSettings
-from lemma.miner.limits import synapse_payload_error
+from lemma.common.synapse_limits import synapse_payload_error
 from lemma.protocol import LemmaChallenge
 
 

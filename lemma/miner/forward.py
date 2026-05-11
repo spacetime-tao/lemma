@@ -13,10 +13,11 @@ import bittensor as bt
 from loguru import logger
 
 from lemma.common.config import LemmaSettings
+from lemma.common.synapse_limits import synapse_payload_error
 from lemma.lean.verify_runner import run_lean_verify
 from lemma.miner.daily_budget import allow_daily_forward
 from lemma.miner.gating import MetagraphCache, metagraph_incentive_for_hotkey
-from lemma.miner.limits import reject_synopsis, synapse_payload_error
+from lemma.miner.limits import reject_synopsis
 from lemma.miner.prover import Prover
 from lemma.problems.factory import resolve_problem
 from lemma.protocol import LemmaChallenge

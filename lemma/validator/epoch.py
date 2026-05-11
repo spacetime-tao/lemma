@@ -20,6 +20,7 @@ from lemma.common.problem_seed import (
     resolve_problem_seed,
 )
 from lemma.common.subtensor import get_subtensor
+from lemma.common.synapse_limits import synapse_payload_error
 from lemma.judge.profile import judge_profile_sha256
 from lemma.lean.sandbox import VerifyResult
 from lemma.lean.verify_runner import run_lean_verify
@@ -297,6 +298,7 @@ async def run_epoch(
     coldkey_partitioned = 0
     deadline_rejects = 0
     challenge_rejects = 0
+    payload_rejects = 0
     attest_rejects = 0
     commit_reveal_rejects = 0
     last_problem: Problem | None = None
@@ -407,6 +409,11 @@ async def run_epoch(
                         db,
                     )
                     deadline_rejects += 1
+                    continue
+                payload_err = synapse_payload_error(resp, settings)
+                if payload_err:
+                    logger.warning("uid={} dropping response: {}", uid, payload_err)
+                    payload_rejects += 1
                     continue
                 if not resp.proof_script:
                     continue
@@ -644,7 +651,7 @@ async def run_epoch(
         "problem_seed={} problem_seed_tag={} split={} "
         "theorem_id={} k_problems={} verified={} scored={} pareto_entries={} "
         "coldkey_partitioned={} deadline_rejects={} "
-        "challenge_rejects={} "
+        "challenge_rejects={} payload_rejects={} "
         "attest_rejects={} commit_reveal_rejects={} "
         "skip_set_weights={} seconds={:.2f}  "
         "[verified=Lean proof OK; scored=verified proof rows; pareto_entries=weight rows]",
@@ -662,6 +669,7 @@ async def run_epoch(
         coldkey_partitioned,
         deadline_rejects,
         challenge_rejects,
+        payload_rejects,
         attest_rejects,
         commit_reveal_rejects,
         skip_chain_write,

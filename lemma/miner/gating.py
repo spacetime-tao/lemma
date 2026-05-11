@@ -80,7 +80,7 @@ def _bool_tensor(metagraph: bt.Metagraph, name: str, uid: int) -> bool:
 
 def make_miner_blacklist(settings: LemmaSettings, cache: MetagraphCache):
     def blacklist(synapse: LemmaChallenge) -> Tuple[bool, str]:  # noqa: UP006
-        from lemma.miner.limits import synapse_payload_error
+        from lemma.common.synapse_limits import synapse_payload_error
 
         pay_err = synapse_payload_error(synapse, settings, response=False)
         if pay_err:

@@ -7,11 +7,10 @@ not let parallel checklists drift.
 ## Current Baseline
 
 - Repository: `spacetime-tao/lemma`, local checkout `LOCAL_WORKSPACE/lemma`.
-- Current head during this audit:
-  `28bbbfc8c747c46ff5d6c5b0e015e5451aeb4e58`
-  (`Docs: add cursor-audit.md; CI gate pip-audit/bandit; production security note; README index`).
-- Local `main` matched GitHub `main` during the Codex audit via
-  `git ls-remote origin HEAD refs/heads/main`.
+- Current head before the validator inbound-limit fix:
+  `cba0fac41d40a272d49292f899a2c51071205c42`
+  (`Docs: add Codex audit and refresh tracker`).
+- That head had already been pushed to GitHub before this follow-up fix began.
 - Live reward direction: proof passes Lean and can enter scoring, or proof
   fails Lean and does not enter scoring.
 - Operator UX belongs in the core `lemma` command; consensus policy stays in
@@ -33,41 +32,42 @@ not let parallel checklists drift.
   registry reachability/coherence.
 - Normal operator workflows are consolidated under `lemma`: setup, doctor,
   status, problem views, preview, miner, and validator entrypoints.
-- Local baseline checks from the Codex audit:
+- Local baseline checks after the validator inbound-limit fix:
   - `.venv/bin/ruff check lemma tests tools`;
   - `.venv/bin/mypy lemma`
-    (`Success: no issues found in 68 source files`);
+    (`Success: no issues found in 69 source files`);
   - `.venv/bin/pytest tests -q`
-    (`254 passed, 2 skipped, 12 warnings`);
+    (`255 passed, 2 skipped, 12 warnings`);
   - generated-template metadata gate for 40 builders;
   - `.venv/bin/bandit -q -r lemma -ll`;
   - `.venv/bin/pip-audit --ignore-vuln PYSEC-2025-49 --ignore-vuln PYSEC-2022-42969`
     (`No known vulnerabilities found, 3 ignored`).
 
+## Recently Closed
+
+- Validator inbound proof-size boundary: validator epochs now reject oversized
+  `resp.proof_script` payloads with `SYNAPSE_MAX_PROOF_CHARS` before scheduling
+  Lean verification.
+
 ## Current Blockers And Gaps
 
-1. **Validator inbound proof-size boundary.**
-   Miner-side response limits enforce `SYNAPSE_MAX_PROOF_CHARS`, but the
-   validator epoch path should reject oversized `resp.proof_script` payloads
-   before scheduling Lean verification.
-
-2. **Remote Lean worker safe default.**
+1. **Remote Lean worker safe default.**
    `lemma lean-worker` allows unauthenticated `/verify` when
    `LEMMA_LEAN_VERIFY_REMOTE_BEARER` is unset. Docs warn operators, but the code
    should make unauthenticated non-loopback serving an explicit dev choice.
 
-3. **Binary proof eligibility versus downstream allocation policy.**
+2. **Binary proof eligibility versus downstream allocation policy.**
    Verified proofs enter with `score=1.0`, but reputation/credibility EMA,
    Pareto layering, and same-coldkey partitioning still alter final weights.
    Keep documentation precise: proof verification is binary; final allocation
    is additional policy.
 
-4. **Full Bandit low-severity cleanup.**
+3. **Full Bandit low-severity cleanup.**
    CI's medium/high Bandit gate passes. A full Bandit run still reports
    low-severity subprocess, seeded RNG, `assert`, and cleanup-exception items.
    Only fix these when the change removes ambiguity or code.
 
-5. **Real subnet evidence still matters.**
+4. **Real subnet evidence still matters.**
    Local proof PASS is necessary but not enough. The subnet still needs measured
    miner response time, prover latency, validator Lean verification time, scored
    miner count, timeout/fail reasons, set-weights behavior, and emission changes
