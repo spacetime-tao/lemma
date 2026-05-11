@@ -191,6 +191,18 @@ def test_documented_timeout_and_prover_policy_env_names_work(
     assert s.prover_min_proof_script_chars == 500
 
 
+def test_documented_lean_worker_dev_override_env_name_works(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    monkeypatch.delenv("LEMMA_PREFER_PROCESS_ENV", raising=False)
+    env_file = tmp_path / ".env"
+    env_file.write_text("LEMMA_LEAN_WORKER_ALLOW_UNAUTHENTICATED_NON_LOOPBACK=1\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    s = LemmaSettings(_env_file=str(env_file))
+    assert s.lean_worker_allow_unauthenticated_non_loopback is True
+
+
 def test_undocumented_prover_policy_aliases_are_ignored(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,

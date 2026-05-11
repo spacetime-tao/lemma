@@ -57,7 +57,8 @@ Useful when validator CPU or disk is the bottleneck.
 
 1. Bind the worker to `127.0.0.1` when it is on the same host as the validator.
 2. For cross-host workers, use a private VPC, firewall allowlist, TLS, and
-   bearer auth.
+   bearer auth. `lemma lean-worker` requires bearer auth for non-loopback binds
+   unless the dev-only unauthenticated override is set.
 3. Monitor worker health and logs separately from validator logs.
 
 ## Creating A Separate Test Identity

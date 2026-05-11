@@ -114,7 +114,7 @@ mental model simple: validators fully verify passing candidate proofs.
 
 ## Offload Lean to another host
 
-**`LEMMA_LEAN_VERIFY_REMOTE_URL`** POSTs proofs to **`lemma lean-worker`** — validator CPU drops; network + worker capacity become the limit ([`verify_runner.py`](../lemma/lean/verify_runner.py)). Align **`LEMMA_LEAN_VERIFY_REMOTE_BEARER`** and timeouts with production.
+**`LEMMA_LEAN_VERIFY_REMOTE_URL`** POSTs proofs to **`lemma lean-worker`** — validator CPU drops; network + worker capacity become the limit ([`verify_runner.py`](../lemma/lean/verify_runner.py)). Non-loopback workers require **`LEMMA_LEAN_VERIFY_REMOTE_BEARER`** unless **`LEMMA_LEAN_WORKER_ALLOW_UNAUTHENTICATED_NON_LOOPBACK=1`** is set for dev-only exposure. Align bearer auth and timeouts with production.
 
 ## References
 

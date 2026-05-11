@@ -502,6 +502,14 @@ class LemmaSettings(BaseSettings):
             "``LEMMA_LEAN_VERIFY_REMOTE_URL``."
         ),
     )
+    lean_worker_allow_unauthenticated_non_loopback: bool = Field(
+        default=False,
+        validation_alias="LEMMA_LEAN_WORKER_ALLOW_UNAUTHENTICATED_NON_LOOPBACK",
+        description=(
+            "Explicit dev override for `lemma lean-worker --host` values outside loopback when no "
+            "LEMMA_LEAN_VERIFY_REMOTE_BEARER is configured."
+        ),
+    )
     lean_verify_remote_timeout_margin_s: float = Field(
         default=30.0,
         ge=0.0,

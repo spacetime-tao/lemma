@@ -7,9 +7,9 @@ not let parallel checklists drift.
 ## Current Baseline
 
 - Repository: `spacetime-tao/lemma`, local checkout `LOCAL_WORKSPACE/lemma`.
-- Current head before the validator inbound-limit fix:
-  `cba0fac41d40a272d49292f899a2c51071205c42`
-  (`Docs: add Codex audit and refresh tracker`).
+- Current head before the remote worker safe-default fix:
+  `f06ab1ad1a94a9787c07ee39169f1e089fc2f939`
+  (`Refresh audit next steps after proof cap`).
 - That head had already been pushed to GitHub before this follow-up fix began.
 - Live reward direction: proof passes Lean and can enter scoring, or proof
   fails Lean and does not enter scoring.
@@ -32,12 +32,12 @@ not let parallel checklists drift.
   registry reachability/coherence.
 - Normal operator workflows are consolidated under `lemma`: setup, doctor,
   status, problem views, preview, miner, and validator entrypoints.
-- Local baseline checks after the validator inbound-limit fix:
+- Local baseline checks after the remote worker safe-default fix:
   - `.venv/bin/ruff check lemma tests tools`;
   - `.venv/bin/mypy lemma`
     (`Success: no issues found in 69 source files`);
   - `.venv/bin/pytest tests -q`
-    (`255 passed, 2 skipped, 12 warnings`);
+    (`261 passed, 2 skipped, 12 warnings`);
   - generated-template metadata gate for 40 builders;
   - `.venv/bin/bandit -q -r lemma -ll`;
   - `.venv/bin/pip-audit --ignore-vuln PYSEC-2025-49 --ignore-vuln PYSEC-2022-42969`
@@ -48,26 +48,23 @@ not let parallel checklists drift.
 - Validator inbound proof-size boundary: validator epochs now reject oversized
   `resp.proof_script` payloads with `SYNAPSE_MAX_PROOF_CHARS` before scheduling
   Lean verification.
+- Remote Lean worker safe default: unauthenticated non-loopback `lemma
+  lean-worker` binds now fail unless the explicit dev-only override is set.
 
 ## Current Blockers And Gaps
 
-1. **Remote Lean worker safe default.**
-   `lemma lean-worker` allows unauthenticated `/verify` when
-   `LEMMA_LEAN_VERIFY_REMOTE_BEARER` is unset. Docs warn operators, but the code
-   should make unauthenticated non-loopback serving an explicit dev choice.
-
-2. **Binary proof eligibility versus downstream allocation policy.**
+1. **Binary proof eligibility versus downstream allocation policy.**
    Verified proofs enter with `score=1.0`, but reputation/credibility EMA,
    Pareto layering, and same-coldkey partitioning still alter final weights.
    Keep documentation precise: proof verification is binary; final allocation
    is additional policy.
 
-3. **Full Bandit low-severity cleanup.**
+2. **Full Bandit low-severity cleanup.**
    CI's medium/high Bandit gate passes. A full Bandit run still reports
    low-severity subprocess, seeded RNG, `assert`, and cleanup-exception items.
    Only fix these when the change removes ambiguity or code.
 
-4. **Real subnet evidence still matters.**
+3. **Real subnet evidence still matters.**
    Local proof PASS is necessary but not enough. The subnet still needs measured
    miner response time, prover latency, validator Lean verification time, scored
    miner count, timeout/fail reasons, set-weights behavior, and emission changes
@@ -113,12 +110,11 @@ Next VPS testing should measure behavior, not add mechanism code:
 
 ## Next Work Order
 
-1. Tighten `lemma lean-worker` startup around unauthenticated non-loopback binds.
-2. Keep binary proof eligibility language precise in docs that mention
+1. Keep binary proof eligibility language precise in docs that mention
    reputation, credibility, Pareto weighting, or same-coldkey partitioning.
-3. Re-run Docker-backed Lean golden and runtime Docker build smoke when Docker
+2. Re-run Docker-backed Lean golden and runtime Docker build smoke when Docker
    is available.
-4. Then choose the next evidence slice:
+3. Then choose the next evidence slice:
    - VPS timing/observability run;
    - measured Lean worker throughput;
    - sybil/reward replay on real private exports;

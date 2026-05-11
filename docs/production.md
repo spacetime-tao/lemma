@@ -111,7 +111,7 @@ economic-identity test and should be labeled as such on testnet.
 When `LEMMA_LEAN_VERIFY_REMOTE_URL` points at an HTTP worker:
 
 - **Bind:** Prefer **`127.0.0.1`** on the same host as the consumer; avoid exposing **`0.0.0.0:8787`** on the public internet without a reverse proxy.
-- **Auth:** Set matching **`LEMMA_LEAN_VERIFY_REMOTE_BEARER`** on client and worker (Bearer token).
+- **Auth:** Set matching **`LEMMA_LEAN_VERIFY_REMOTE_BEARER`** on client and worker (Bearer token). The worker refuses unauthenticated non-loopback binds unless **`LEMMA_LEAN_WORKER_ALLOW_UNAUTHENTICATED_NON_LOOPBACK=1`** is set for dev-only exposure.
 - **TLS:** The built-in worker is **plain HTTP**. For cross-network use, terminate TLS in front (nginx, Caddy, cloud LB) or keep verify on a private VPC.
 - **Health:** `GET /health` on the worker returns JSON `{"status":"ok"}` for probes.
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from ipaddress import ip_address
 from typing import Any
 
 from loguru import logger
@@ -11,6 +12,30 @@ from loguru import logger
 from lemma.common.config import LemmaSettings
 from lemma.lean.problem_codec import problem_from_payload
 from lemma.lean.verify_runner import lean_sandbox_from_settings
+
+
+def _bind_host_is_loopback(host: str) -> bool:
+    h = (host or "").strip().lower()
+    if h == "localhost":
+        return True
+    try:
+        return ip_address(h.strip("[]")).is_loopback
+    except ValueError:
+        return False
+
+
+def lean_worker_bind_error(host: str, settings: LemmaSettings) -> str | None:
+    if (settings.lean_verify_remote_bearer or "").strip():
+        return None
+    if settings.lean_worker_allow_unauthenticated_non_loopback:
+        return None
+    if _bind_host_is_loopback(host):
+        return None
+    return (
+        "lemma lean-worker refuses unauthenticated non-loopback binds. "
+        "Set LEMMA_LEAN_VERIFY_REMOTE_BEARER, bind to 127.0.0.1, or set "
+        "LEMMA_LEAN_WORKER_ALLOW_UNAUTHENTICATED_NON_LOOPBACK=1 for explicit dev-only exposure."
+    )
 
 
 class _VerifyHandler(BaseHTTPRequestHandler):
@@ -94,8 +119,12 @@ class _VerifyHandler(BaseHTTPRequestHandler):
         self._send_json(200, vr.model_dump())
 
 
-def serve_forever(host: str, port: int) -> None:
+def serve_forever(host: str, port: int, settings: LemmaSettings | None = None) -> None:
     """Run ``ThreadingHTTPServer`` until Ctrl+C."""
+    settings = settings or LemmaSettings()
+    err = lean_worker_bind_error(host, settings)
+    if err:
+        raise ValueError(err)
     httpd = ThreadingHTTPServer((host, port), _VerifyHandler)
     logger.info("lemma lean-worker listening on http://{}:{}/verify (POST)", host, port)
     try:

@@ -70,3 +70,14 @@ def test_removed_legacy_aliases_fail() -> None:
         result = CliRunner().invoke(main, [*command, "--help"])
         assert result.exit_code != 0
         assert "No such command" in result.output
+
+
+def test_lean_worker_rejects_public_bind_without_bearer(monkeypatch, tmp_path) -> None:
+    monkeypatch.delenv("LEMMA_LEAN_VERIFY_REMOTE_BEARER", raising=False)
+    monkeypatch.delenv("LEMMA_LEAN_WORKER_ALLOW_UNAUTHENTICATED_NON_LOOPBACK", raising=False)
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(main, ["lean-worker", "--host", "0.0.0.0"])
+
+    assert result.exit_code != 0
+    assert "refuses unauthenticated non-loopback binds" in result.output

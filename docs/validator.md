@@ -64,8 +64,10 @@ The bundled runtime Docker image is intentionally CLI-light: it talks to the hos
 
 To keep the **validator VM** light (Axon + orchestration), run Lean on a **separate** box that shares the same **`.env`** pins (`LEAN_SANDBOX_IMAGE`, cache dir, optional **`LEMMA_LEAN_DOCKER_WORKER`**, etc.):
 
-1. On the worker host: `uv run lemma lean-worker --host 0.0.0.0 --port 8787` (or bind behind an internal LB).
-2. On the validator: set **`LEMMA_LEAN_VERIFY_REMOTE_URL=http://<worker>:8787`** (optional **`LEMMA_LEAN_VERIFY_REMOTE_BEARER`** on both sides).
+1. On the worker host: set **`LEMMA_LEAN_VERIFY_REMOTE_BEARER`**, then run `uv run lemma lean-worker --host 0.0.0.0 --port 8787` (or bind behind an internal LB).
+2. On the validator: set **`LEMMA_LEAN_VERIFY_REMOTE_URL=http://<worker>:8787`** and the same **`LEMMA_LEAN_VERIFY_REMOTE_BEARER`**.
+
+`lemma lean-worker` refuses unauthenticated non-loopback binds by default. For local dev exposure only, set **`LEMMA_LEAN_WORKER_ALLOW_UNAUTHENTICATED_NON_LOOPBACK=1`**.
 
 The validator **POSTs** each proof to **`/verify`**; the worker returns the same **`VerifyResult`** JSON as local **`LeanSandbox`**. HTTP read timeout is **`LEAN_VERIFY_TIMEOUT_S`** (including split scaling from the validator) plus **`LEMMA_LEAN_VERIFY_REMOTE_TIMEOUT_MARGIN_S`**.
 

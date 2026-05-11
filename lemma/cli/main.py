@@ -728,7 +728,11 @@ def verify_cmd(problem_id: str, submission_path: Path, host_lean: bool) -> None:
 @click.option("--port", default=8787, type=int, show_default=True)
 def lean_worker_cmd(host: str, port: int) -> None:
     """Run HTTP Lean verify worker (POST /verify); pair with LEMMA_LEAN_VERIFY_REMOTE_URL."""
-    from lemma.lean.worker_http import serve_forever
+    from lemma.lean.worker_http import lean_worker_bind_error, serve_forever
 
-    setup_logging(LemmaSettings().log_level)
-    serve_forever(host, port)
+    settings = LemmaSettings()
+    err = lean_worker_bind_error(host, settings)
+    if err:
+        raise click.ClickException(err)
+    setup_logging(settings.log_level)
+    serve_forever(host, port, settings)

@@ -58,12 +58,10 @@ remaining surfaces deserve a more conservative score.
 
 2. **Remote Lean worker defaults are permissive.**
 
-   `lemma lean-worker` accepts `/verify` without authentication when
-   `LEMMA_LEAN_VERIFY_REMOTE_BEARER` is unset. The production docs warn against
-   public exposure and recommend bearer auth/TLS/private networking, which is
-   good. Still, the code shape makes the unsafe mode easy to run. A stronger
-   default would require an explicit dev flag for unauthenticated non-loopback
-   serving or fail startup when binding broadly without a bearer.
+   The audit found that `lemma lean-worker` accepted `/verify` without
+   authentication when `LEMMA_LEAN_VERIFY_REMOTE_BEARER` was unset. Status:
+   fixed after the audit; non-loopback worker binds now require bearer auth
+   unless the operator sets the explicit dev-only unauthenticated override.
 
 3. **Binary eligibility is simple; final weights are not purely binary.**
 
@@ -116,12 +114,11 @@ Commands and results recorded during the Codex audit:
 
 ## Recommended fix order
 
-1. Tighten `lemma lean-worker` startup around unauthenticated non-loopback binds.
-2. Keep binary proof eligibility language precise, especially where docs discuss
+1. Keep binary proof eligibility language precise, especially where docs discuss
    reputation, credibility, Pareto weighting, and same-coldkey partitioning.
-3. Retire or isolate optional judge/proof-metric research code when it stops
+2. Retire or isolate optional judge/proof-metric research code when it stops
    paying for its maintenance cost.
-4. Work through low-severity Bandit noise only when the fix removes ambiguity or
+3. Work through low-severity Bandit noise only when the fix removes ambiguity or
    code, not by scattering defensive wrappers.
 
 ---
