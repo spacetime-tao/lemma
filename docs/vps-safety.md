@@ -68,38 +68,63 @@ If you create a second miner hotkey, it can run on the same miner VPS as another
 service with its own wallet hotkey, axon port, log file, and systemd unit. Keep
 the second coldkey local just like the first one.
 
-Create the wallet locally:
+Create the wallet locally (replace names with yours):
 
 ```bash
-uv run btcli wallet create --wallet-name codex --hotkey codexhot
+uv run btcli wallet create --wallet-name my_remote --hotkey vps_hotkey
 ```
 
 Then copy the new coldkey public address and fund it locally:
 
 ```bash
 uv run btcli wallet transfer --wallet-name lemma --network test \
-  --destination <codex-coldkey-ss58> --amount <test-tao-amount>
+  --destination <my_remote-coldkey-ss58> --amount <test-tao-amount>
 ```
 
 Register the hotkey locally:
 
 ```bash
-uv run btcli subnets register --wallet-name codex --hotkey codexhot --network test --netuid 467
+uv run btcli subnets register --wallet-name my_remote --hotkey vps_hotkey --network test --netuid 467
 ```
 
 For a validator identity, stake locally from the coldkey:
 
 ```bash
-uv run btcli stake add --wallet-name codex --hotkey codexhot --network test --netuid 467
+uv run btcli stake add --wallet-name my_remote --hotkey vps_hotkey --network test --netuid 467
 ```
 
-After registration, copy only the hotkey files needed for the service to the VPS.
-Keep the `codex` coldkey seed phrase, coldkey password, and coldkey private file
-off the server.
+### Copy only the hotkey to the VPS
 
-Codex should not create, store, or custody coldkeys for an operator. It can help
-write commands, inspect public chain state, and configure services after the user
-creates keys and enters passwords locally.
+After registration, the miner or validator on the VPS needs the **hotkey**
+signing material, not the coldkey.
+
+1. On the machine where you created the wallet, open your Bittensor wallet
+   directory (commonly `~/.bittensor/wallets/<wallet-name>/`).
+2. **Never** copy `coldkey`, coldkey seed phrases, or coldkey passwords to the
+   VPS.
+3. Copy **only** the subtree for this hotkey:
+   `.../wallets/<wallet-name>/hotkeys/<hotkey-name>/` (layout can vary slightly
+   by `btcli` version; copy the directory that holds **only** that hotkey’s
+   files).
+4. On the VPS, recreate the same path under `~/.bittensor/wallets/<wallet-name>/`
+   and transfer with `scp -r` or `rsync`, for example:
+
+```bash
+# From your laptop — replace user, host, wallet, and hotkey names
+ssh user@your-vps 'mkdir -p ~/.bittensor/wallets/my_remote/hotkeys'
+scp -r ~/.bittensor/wallets/my_remote/hotkeys/vps_hotkey \
+  user@your-vps:~/.bittensor/wallets/my_remote/hotkeys/
+```
+
+5. Tighten permissions on the VPS (`chmod -R go-rwx ~/.bittensor/wallets` or run
+   the service as a dedicated user). Point Lemma / `btcli` at this wallet and
+   hotkey name; **hotkey-only** custody is enough for signing miner or validator
+   traffic.
+
+Assistants, docs generators, and similar tools should **not** create, store, or
+custody coldkeys for an operator. They can help write commands, inspect public
+chain state, and configure services after you create keys and enter passwords
+locally.
 
 ## Same Proofs And Same-Coldkey Hotkeys
 
@@ -111,20 +136,3 @@ For multiple hotkeys under one coldkey, Lemma partitions that coldkey's
 allocation across its successful hotkeys. The operator does not get multiplied
 emission by registering more hotkeys under the same coldkey; the allocation is
 spread among them.
-
-The earlier May 2026 VPS test ran before this rule change. In that run, UIDs
-`2`-`6` all answered successfully, but the old reward dedup kept UID `2` and
-dropped the other identical proofs from the reward map. The other UIDs did not
-fail Lean.
-
-## Practical Next Steps
-
-For continued testing:
-
-1. Keep the current one-coldkey, multi-hotkey setup for uptime, latency, and
-   observability tests.
-2. Add a separate coldkey only when testing independent economic identity.
-3. Improve prover diversity for robustness and harder theorem coverage, not to
-   work around same-proof reward drops.
-4. Run a persistent validator only after the validator host has hotkey-only key
-   custody, Docker worker/cache, and monitoring in place.
