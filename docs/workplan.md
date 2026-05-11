@@ -7,7 +7,7 @@ not let parallel checklists drift.
 ## Current Baseline
 
 - Repository: `spacetime-tao/lemma`, local checkout `LOCAL_WORKSPACE/lemma`.
-- Current local/GitHub `main` head after the audit-fix sequence:
+- Last CI-verified audit-fix head:
   `00e18051933b76b3d097956b79adeec236088711`
   (`Clarify proof eligibility versus allocation`).
 - Live reward direction: proof passes Lean and can enter scoring, or proof
