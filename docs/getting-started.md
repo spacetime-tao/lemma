@@ -5,7 +5,7 @@ End-to-end: **uv** + repo → **keys** → **`uv run lemma setup`** → **miner 
 - Run `uv run lemma` for command help (same as `uv run lemma --help`).
 - Inference defaults: [Chutes](https://chutes.ai) OpenAI-compatible `https://llm.chutes.ai/v1` (see `.env.example`). Other OpenAI-compatible stacks use the same env vars.
 - After setup: `uv run lemma status`, then `uv run lemma problems` (or `uv run lemma problems show --current`). Deep reference: [technical-reference.md](technical-reference.md).
-- **On-chain try:** Lemma runs on **Bittensor testnet** (`--network test`), **netuid 467**. **Finney** is mainnet—do not confuse the two. The repo is still largely proof-of-concept; long-term direction is in [vision](vision.md).
+- **On-chain try:** Lemma runs on **Bittensor testnet** (`--network test`), **netuid 467**—miners can earn **testnet alpha** per subnet rules. **Finney** is **mainnet**; **mainnet alpha** applies only if Lemma (or your target deployment) is registered there with emissions—never confuse network or netuid. The repo is still largely proof-of-concept; direction is in [vision](vision.md).
 
 ## Paths at a glance
 

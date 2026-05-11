@@ -1,23 +1,16 @@
 # Lemma
 
-> **Lemma: incentivized theorem proving for mathematics on [Bittensor](https://docs.learnbittensor.org/).** Miners submit Lean proof scripts for published theorem statements. Validators mechanically verify those proofs with Lean. A proof that passes verification can be scored; a proof that fails verification cannot.
+> **Lemma: a [Bittensor](https://docs.learnbittensor.org/) subnet that rewards miners for formal proofs.** Published theorem statements; miners return **Lean proof scripts**; validators run **Lean** so pass/fail is mechanical; subnet policy maps accepted proofs toward **weights** and **alpha**. Similar in spirit to Bitcoin’s competitive proof-of-work—but the puzzle is **valid mathematics**, not hashes.
 
-A **theorem** is the precise claim to establish; a **proof** is the formal, machine-checkable argument that shows it. **Lean** is a proof assistant (and language): it checks those proofs mechanically, line by line. Validators run that check in **Docker** (lean-sandbox image).
+A **theorem** is the precise claim; a **proof script** is the Lean source that establishes it. **Lean** checks every step. Validators run that check in **Docker** (lean-sandbox image).
 
 ## What Lemma Produces
 
-Lemma produces verified formal proofs.
+Lemma produces **machine-checked** mathematics that clears the subnet’s Lean gate.
 
-The network publishes theorem statements. Miners spend AI compute searching for
-Lean proof scripts. Validators mechanically check those scripts against the
-published theorem. If Lean accepts the proof, that theorem/proof pair is the
-work product.
+The network publishes theorem statements. Miners spend compute (often via LLM-backed provers) searching for proof scripts. Validators re-run Lean on the same pins. Accepted proofs feed subnet incentive logic; rejected scripts do not.
 
-That makes Lemma proof mining: similar in spirit to Bitcoin mining, but instead
-of producing valid hashes under a difficulty rule, miners produce valid Lean
-proofs under a theorem rule.
-
-**Status:** The codebase is still largely **proof-of-concept**, but you can **register and run on** **Subnet 467 — Lemma** on **Bittensor testnet** (`--network test`, `NETUID=467` after `uv run lemma configure chain`). **Finney** is Bittensor **mainnet** (a different network).
+**Status:** Software is still largely **proof-of-concept**. Lemma runs on **Bittensor testnet** as **Subnet 467** (`--network test`, `NETUID=467` after `uv run lemma configure chain`). **Alpha on testnet** follows testnet emissions; **mainnet (Finney) alpha** only applies if a Lemma deployment is registered there with live emissions—verify network and netuid for your deployment.
 
 ## Start Here
 

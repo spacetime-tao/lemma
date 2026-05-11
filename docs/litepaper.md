@@ -36,82 +36,80 @@ published formal statement, a miner-authored proof artifact, a mechanical check�
 real tasks pin imports, namespaces, and theorem names to whatever the subnet
 published for that round.
 
-### Example A: a small arithmetic fact
+### Example A: a small fact about natural numbers
 
-**Theorem (plain English).** If \(a\) and \(b\) are even natural numbers, then
-\(a + b\) is even.
+**Theorem (plain English).** For any natural number \(n\), adding zero on the
+right leaves \(n\) unchanged: \(n + 0 = n\). The walk-through below also picks a
+concrete numeral, \(7 + 0 = 7\), as the final claim.
 
-**What the subnet publishes.** A formal Lean statement of that claim (plus pinned
-toolchain and Mathlib revision). Everyone sees the same target: prove *this*
-statement, not a paraphrase.
+**What the subnet publishes.** A formal Lean version of that claim (plus pinned
+toolchain and Mathlib revision). Everyone aims at the same target: close the
+exact statement the broadcast names, in the module layout the rules require.
 
-**What the miner returns.** A `proof_script`: Lean source that fills in the
-proof—typically a complete `Submission.lean` module that imports what the
-challenge requires and closes the theorem Lean expects.
+**What the miner returns.** A `proof_script`—Lean source, usually a
+`Submission.lean`-style file that the challenge specifies.
 
-**What “proof” means here.** It is not an essay and not a chat reply. It is code
-Lean typechecks against the statement. Conceptually the miner fills in a proof
-body for the exact theorem the validator broadcast—imports, namespace, and name
-come from the live challenge rules. A toy shape (not a real challenge layout)
-looks like:
+**A real proof (illustrative).** The snippet below is valid Lean 4
+(prelude-style). A **lemma** states the general fact; a **theorem** reuses that
+lemma for a specific number. On the network, names, namespaces, and imports
+come from the live challenge, not from this copy-paste.
 
 ```lean
--- Illustrative only — names/imports are dictated by the broadcast.
-theorem published_claim : True := trivial
+/-- Adding zero on the right does not change a natural (helper lemma). -/
+lemma add_right_zero (n : Nat) : n + 0 = n :=
+  Nat.add_zero n
+
+/-- Therefore 7 + 0 = 7, by the same fact. -/
+theorem seven_add_zero : 7 + 0 = 7 :=
+  add_right_zero 7
 ```
 
-Real submissions replace `published_claim` and `True` with the actual statement
-and a real proof script (`by …`) Lean accepts.
+**How to read it.** `Nat.add_zero` is Lean’s standard lemma that \(n + 0 = n\).
+The helper packages it under `add_right_zero`. The theorem applies the helper
+with `n := 7`. Lean checks each step; if anything failed—wrong statement,
+missing piece, or `sorry`—the file would not build.
 
-Validators do not grade style or elegance first—they check whether Lean accepts
-the proof under policy.
+### Example B: when no proof score is earned
 
-### Example B: when no reward is earned
+**Same rule.** The subnet publishes a formal statement; the miner must return a
+proof script that Lean accepts for **that** statement under policy.
 
-**Theorem (plain English).** Same published statement as above.
+**Mechanical failure.** Typical causes are unfinished proofs (`sorry`), unsolved
+goals, syntax or import errors, wrong theorem name or statement relative to the
+broadcast, or toolchain mismatch—not “almost correct” prose, because the
+artifact is code, not an explanation.
 
-**Bad submission.** The miner returns a script that uses `sorry`, skips a goal,
-imports the wrong module, or diverges from the published statement.
-
-**Outcome.** Lean rejects the proof. That round cannot earn proof score from that
-submission, regardless of how plausible the underlying idea sounds.
-
-That separation—mechanical pass/fail before subjective judgment—is deliberate.
+**Outcome.** Lean rejects the build or leaves a goal open. That submission does
+not earn proof score for that round: there is nothing to score until Lean
+accepts a complete proof.
 
 ## What Lemma Is Not
 
-Lemma is not a chat benchmark. It is not trying to reward the best explanation
-of a proof. It is not asking validators to decide which answer sounds most
-convincing.
+The live path is **machine-checked**: publish statement → proof script → Lean
+pass or fail → subnet policy maps passes into weights. Lemma does **not** define
+the live reward around natural-language grading of explanations.
 
-The live reward path is narrower:
+Useful questions for operators:
 
-- Was the theorem the one the subnet published?
+- Was the theorem exactly the one the subnet published?
 - Did the miner return a proof script?
-- Did Lean accept that proof under the pinned toolchain and policy?
-- Can that passing proof enter the weight map?
+- Did Lean accept it under the pinned toolchain and policy?
+- Does subnet policy let that pass contribute to weights?
 
-That narrowness is a feature. It makes the work easier to check, easier to
-repeat, and harder to turn into subjective grading.
+That narrow pipeline keeps verification repeatable across validators.
 
 ## Why Lean Matters
 
-Lean gives Lemma a hard check. The proof either typechecks against the theorem or
-it does not.
+Lean gives Lemma a single, shared gate: the proof either typechecks against the
+published theorem under the rules or it does not. **Emissions follow subnet
+policy** for work that passes that gate—keyed to the proof script, not to
+off-chain opinion about how the math “ought to” be argued.
 
-That matters because rewards should not depend on whether a person likes an
-explanation. It should not depend on a model writing convincing prose. The live
-reward path is about the proof script.
-
-Informal reasoning can still be useful. It can help humans understand attempts,
-debug model behavior, or build private datasets. It is not the live reward
-signal.
-
-The same distinction matters for proof length, style, and elegance. A short proof
-may be good. A long proof may be good. A proof with awkward generated code may
-still be valid. The live system starts with the fact that Lean accepted the proof.
-Other research signals should stay out of the reward path until they have real
-evidence behind them.
+Explanations, chat logs, and heuristics can help people **debug** or **teach**,
+but they are not the on-chain pass/fail check. Proof length, style, and
+readability can vary; if Lean accepts the script, the pass is real. Any extra
+signals belong in research or out-of-band analysis until the subnet explicitly
+adopts them with evidence.
 
 ## What Miners Do
 
