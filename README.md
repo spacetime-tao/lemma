@@ -1,6 +1,6 @@
 # Lemma
 
-**Lemma** is a [Bittensor](https://docs.learnbittensor.org/) subnet that rewards miners for answering **published math problems** with solutions a **computer can check**. By **formal proof** people usually mean that kind of solution: every step follows from explicit rules, like checking that a program does what it claims—no scoring by “how convincing it sounds.”
+**Lemma** is a [Bittensor](https://docs.learnbittensor.org/) subnet that rewards miners who solve **published math problems**. You respond with **machine-checkable solutions**—**i.e., a proof**: each step is explicit enough that software can verify the whole argument and return a clear yes or no. That is different from winning on rhetoric or intuition alone.
 
 Each round the subnet **publishes** a statement to prove. Miners **submit** candidate proofs. **Validators** run the same automated checker so everyone gets the same pass-or-fail answer. That verification runs in **Docker** so different machines agree. Subnet policy maps accepted proofs to **weights** and **alpha**.
 
