@@ -116,13 +116,12 @@ Commands and results recorded during the Codex audit:
 
 ## Recommended fix order
 
-1. Add validator-side response size enforcement before queuing Lean verification.
-2. Tighten `lemma lean-worker` startup around unauthenticated non-loopback binds.
-3. Keep binary proof eligibility language precise, especially where docs discuss
+1. Tighten `lemma lean-worker` startup around unauthenticated non-loopback binds.
+2. Keep binary proof eligibility language precise, especially where docs discuss
    reputation, credibility, Pareto weighting, and same-coldkey partitioning.
-4. Retire or isolate optional judge/proof-metric research code when it stops
+3. Retire or isolate optional judge/proof-metric research code when it stops
    paying for its maintenance cost.
-5. Work through low-severity Bandit noise only when the fix removes ambiguity or
+4. Work through low-severity Bandit noise only when the fix removes ambiguity or
    code, not by scattering defensive wrappers.
 
 ---

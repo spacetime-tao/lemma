@@ -113,13 +113,12 @@ Next VPS testing should measure behavior, not add mechanism code:
 
 ## Next Work Order
 
-1. Add validator-side proof response size enforcement before Lean verify.
-2. Tighten `lemma lean-worker` startup around unauthenticated non-loopback binds.
-3. Keep binary proof eligibility language precise in docs that mention
+1. Tighten `lemma lean-worker` startup around unauthenticated non-loopback binds.
+2. Keep binary proof eligibility language precise in docs that mention
    reputation, credibility, Pareto weighting, or same-coldkey partitioning.
-4. Re-run Docker-backed Lean golden and runtime Docker build smoke when Docker
+3. Re-run Docker-backed Lean golden and runtime Docker build smoke when Docker
    is available.
-5. Then choose the next evidence slice:
+4. Then choose the next evidence slice:
    - VPS timing/observability run;
    - measured Lean worker throughput;
    - sybil/reward replay on real private exports;
