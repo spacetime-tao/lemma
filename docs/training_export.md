@@ -6,7 +6,7 @@ Validators optionally append one JSON object per scored miner response each epoc
 
 | Profile | Schema | Contents | Use when |
 | --- | --- | --- | --- |
-| **`full`** (default) | `schema_version` **1** | `theorem_statement`, `proof_script`, public `coldkey` when available from the metagraph, optional labels when enabled, optional `proof_metrics` when `LEMMA_LEAN_PROOF_METRICS=1`, non-secret `export_context` hashes, plus **`pareto_weight`** after weights are computed | Internal research, calibration, full offline replay |
+| **`full`** (default) | `schema_version` **1** | `theorem_statement`, `proof_script`, public `coldkey` when available from the metagraph, optional labels when enabled, optional `proof_metrics` when `LEMMA_LEAN_PROOF_METRICS=1`, non-secret `export_context` hashes, plus final **`pareto_weight`** after weights are computed | Internal research, calibration, full offline replay |
 | **`summary`** | `schema_version` **2** | `block`, `theorem_id`, `uid`, `model_card`, non-secret `export_context` hashes; **no** proof text, **no** labels, **no** `proof_metrics`, **no** `pareto_weight` | Lightweight operational provenance without solution leakage |
 
 Set in `.env`:
@@ -20,7 +20,7 @@ LEMMA_TRAINING_EXPORT_PROFILE=summary
 
 Use this only for private validator research, not public dataset sharing. The
 `full` profile includes proof text, optional labels, optional proof metrics, and
-Pareto weights.
+the final `pareto_weight` field.
 
 On a validator run where you want proof-side calibration rows:
 
@@ -115,9 +115,9 @@ The repo also keeps a synthetic analyzer fixture at
 analysis code, but it is not evidence for a scoring change; use real validator
 exports for that.
 
-## Collect sybil/Pareto replay data
+## Collect sybil/reward replay data
 
-Use a private `full` export when evaluating sybil/Pareto reward changes. The
+Use a private `full` export when evaluating sybil or reward changes. The
 replay helper compares the current same-coldkey partition behavior against
 no-partition and legacy identical-proof grouping baselines, then simulates
 exact-copy vs lightly rewritten K-miner pressure:
@@ -148,10 +148,11 @@ Exports are **not** a neutral “public good.” Depending on fields, they can t
 
 - **Optimize labels instead of proofs** — label fields can expose scalar targets.
 - **Copy proofs** — `proof_script` is a full solution for `theorem_id` at `block`.
-- **Optimize incentives** — `pareto_weight` ties rows to the subnet weight map.
+- **Optimize incentives** — `pareto_weight` ties rows to final subnet weights.
 - **Reverse-engineer proof-side probes** — `proof_metrics` can expose candidate scoring research signals.
 
-**`summary`** removes proof text, labels, proof metrics, and Pareto weights. It
+**`summary`** removes proof text, labels, proof metrics, and `pareto_weight`
+values. It
 does not remove all structure: `theorem_id`, `uid`, and `block` still support
 stratification or deanonymization risks if combined with other data. For maximum
 privacy, post-process or aggregate before publication. The old
@@ -168,7 +169,9 @@ privacy, post-process or aggregate before publication. The old
 - **`theorem_statement`**, **`proof_script`**, optional labels: see [`training_export.py`](../lemma/validator/training_export.py).
 - **`coldkey`**: public metagraph coldkey when available; omitted if unavailable.
 - **`proof_metrics`**: optional compare-only Lean probe output when `LEMMA_LEAN_PROOF_METRICS=1`.
-- After the epoch, **`pareto_weight`** is merged per UID.
+- After the epoch, **`pareto_weight`** is merged per UID. This is the exported
+  final weight from the current weight helper, not a proof-quality or
+  proof-efficiency score.
 
 ### `summary` (`schema_version` 2)
 
@@ -180,5 +183,5 @@ privacy, post-process or aggregate before publication. The old
 
 - Implementation: [`lemma/validator/training_export.py`](../lemma/validator/training_export.py), epoch hook in [`lemma/validator/epoch.py`](../lemma/validator/epoch.py).
 - Offline proof-metrics analyzer: [`tools/proof_metrics_analyze.py`](../tools/proof_metrics_analyze.py).
-- Offline sybil/Pareto replay analyzer: [`tools/sybil_replay_analyze.py`](../tools/sybil_replay_analyze.py).
+- Offline sybil/reward replay analyzer: [`tools/sybil_replay_analyze.py`](../tools/sybil_replay_analyze.py).
 - Backlog context: [workplan.md](workplan.md).

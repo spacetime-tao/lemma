@@ -21,9 +21,10 @@ accepts the proof or rejects it.
    before reputation and subnet weight policy are applied.
 3. **Verifier reuse:** validators may reuse a Lean result for identical proof
    payloads inside one epoch, but that does not remove a miner from rewards.
-4. **Weights:** reputation and Pareto weighting build the miner weight map. When
-   several hotkeys share one coldkey, that coldkey's allocation is partitioned
-   among those hotkeys instead of multiplied.
+4. **Weights:** eligible proof entries become miner weights.
+   Reputation/credibility can adjust an entry. When several hotkeys share one
+   coldkey, that coldkey's allocation is partitioned among those hotkeys instead
+   of multiplied.
 
 ## Current Live Rollout
 

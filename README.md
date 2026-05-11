@@ -17,9 +17,16 @@ That makes Lemma proof mining: similar in spirit to Bitcoin mining, but instead
 of producing valid hashes under a difficulty rule, miners produce valid Lean
 proofs under a theorem rule.
 
-**Status:** The codebase is still largely **proof-of-concept**, but you can **register and run on** **Subnet 467 — Lemma** on **Bittensor testnet** (`--network test`, `NETUID=467` after `uv run lemma-cli configure chain`). **Finney** is Bittensor **mainnet** (a different network). Full copy-paste flow: [getting-started](docs/getting-started.md). Economics, security, and long-term direction: [vision](docs/vision.md).
+**Status:** The codebase is still largely **proof-of-concept**, but you can **register and run on** **Subnet 467 — Lemma** on **Bittensor testnet** (`--network test`, `NETUID=467` after `uv run lemma-cli configure chain`). **Finney** is Bittensor **mainnet** (a different network).
 
-**First-time path:** [docs/getting-started.md](docs/getting-started.md) — install, keys, `uv run lemma-cli setup`, miner, validator (copy-paste blocks). Friendly operator UX lives in [lemma-cli](https://github.com/spacetime-tao/lemma-cli).
+## Start Here
+
+1. **Read the litepaper:** [docs/litepaper.md](docs/litepaper.md)
+2. **Run the setup path:** [docs/getting-started.md](docs/getting-started.md)
+3. **Use the technical reference:** [docs/technical-reference.md](docs/technical-reference.md)
+
+Friendly operator UX lives in
+[lemma-cli](https://github.com/spacetime-tao/lemma-cli).
 
 ## Quick start
 
@@ -42,14 +49,15 @@ install it in this repo with `uv sync --extra btcli --extra cli` (or
 
 **Validator entrypoint:** use **`lemma validator start`** (or Docker `ENTRYPOINT ["lemma"]` / `CMD ["validator", "start"]`).
 
-## Docs
+## Short Docs Index
 
 | Topic | File |
 | ----- | ---- |
+| Litepaper | [litepaper.md](docs/litepaper.md) |
 | Install & operator checklist | [getting-started.md](docs/getting-started.md) |
 | Vision & roadmap | [vision.md](docs/vision.md) |
 | Components | [architecture.md](docs/architecture.md) |
-| FAQ (timeouts, seeds, scoring) | [faq.md](docs/faq.md) |
+| Technical reference | [technical-reference.md](docs/technical-reference.md) |
 | Miner | [miner.md](docs/miner.md) |
 | Validator | [validator.md](docs/validator.md) |
 | Models / APIs | [models.md](docs/models.md) |
@@ -59,16 +67,10 @@ install it in this repo with `uv sync --extra btcli --extra cli` (or
 | Toolchain / image pinning | [toolchain-image-policy.md](docs/toolchain-image-policy.md) |
 | Tests | [testing.md](docs/testing.md) |
 | Generated problems | [generated-problems.md](docs/generated-problems.md) |
-| Problem supply policy | [problem-supply-policy.md](docs/problem-supply-policy.md) |
-| Catalog sources | [catalog-sources.md](docs/catalog-sources.md) |
-| Objective decision | [objective-decision.md](docs/objective-decision.md) |
-| Proof verification incentives | [proof-verification-incentives.md](docs/proof-verification-incentives.md) |
-| Proof intrinsic scoring | [proof-intrinsic-decision.md](docs/proof-intrinsic-decision.md) |
-| Credibility exponent policy | [credibility-exponent-decision.md](docs/credibility-exponent-decision.md) |
-| Commit-reveal threat model | [commit-reveal.md](docs/commit-reveal.md) |
-| Miner verify attest threat model | [miner-verify-attest.md](docs/miner-verify-attest.md) |
-| Validator profile peer attest threat model | [validator-profile-attest.md](docs/validator-profile-attest.md) |
 | System requirements | [system-requirements.md](docs/system-requirements.md) |
+
+Deeper design records live in `docs/` for proof rewards, problem supply,
+Sybil/reward policy, proof metrics, commit-reveal, and attest behavior.
 
 ## References
 

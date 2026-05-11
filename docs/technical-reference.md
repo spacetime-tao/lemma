@@ -1,6 +1,8 @@
-# FAQ
+# Technical Reference
 
-> **New here:** follow [getting-started](getting-started.md) first (install, keys, miner, validator). This file is long-form reference: scoring, timeouts, seeds, policy.
+> **New here:** read [litepaper.md](litepaper.md), then follow
+> [getting-started.md](getting-started.md). This file is the deeper reference for
+> scoring, timeouts, seeds, verifier behavior, model setup, and operations.
 
 ## Scoring
 
@@ -104,7 +106,7 @@ Timeout values are subnet policy: the operator publishes a single canonical `.en
 
 **Validators** do **not** get a matching global rule like “finish verifying and scoring **every** successful miner before block *N* or before the next theorem.” Lemma picks **one** theorem when `run_epoch` **starts** and runs forward → verify → score for that round; advancing blocks do **not** swap the theorem mid-batch or void in-flight scoring. There is **no** separate “validator batch clock” in addition to the per-proof limits below. You still want fast hardware and tuning so each epoch completes in reasonable wall-clock time and stays competitive with other validators.
 
-**What happens if one proof hits `LEAN_VERIFY_TIMEOUT_S`?** That miner’s Lean step **fails** (verify reason `timeout`). They are **not** verified for the round, so they get **no** proof score and **no** Pareto weight from that proof. Other miners in the same round are unaffected.
+**What happens if one proof hits `LEAN_VERIFY_TIMEOUT_S`?** That miner’s Lean step **fails** (verify reason `timeout`). They are **not** verified for the round, so they get **no** proof score and **no** live weight from that proof. Other miners in the same round are unaffected.
 
 Concurrency caps such as **`LEMMA_LEAN_VERIFY_MAX_CONCURRENT`** limit how many proofs are processed at once; extra work **queues**, it is not dropped because the chain moved. With miner attest enabled, **`LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION`** trades CPU vs trust — see [validator_lean_load.md](validator_lean_load.md).
 

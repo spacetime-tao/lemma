@@ -121,7 +121,7 @@ Next VPS testing should measure behavior, not add mechanism code:
    - typing hardening for the `mypy` errors;
    - VPS timing/observability run;
    - measured Lean worker throughput;
-   - sybil/Pareto replay on real private exports.
+   - sybil/reward replay on real private exports.
 
 ## Non-Goals
 

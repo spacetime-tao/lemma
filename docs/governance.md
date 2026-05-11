@@ -57,7 +57,7 @@ Document and distribute: `LEMMA_BLOCK_TIME_SEC_ESTIMATE`,
 fields. The main scoring/cadence/verification fields are pinned by
 `validator_profile_sha256`. Nothing here is “per-validator preference.” On-chain
 code does not enforce equality — parity relies on the published policy
-([faq.md](faq.md)).
+([technical-reference.md](technical-reference.md)).
 
 ### Parity checklist
 

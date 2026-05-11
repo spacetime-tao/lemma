@@ -39,9 +39,9 @@ sybil deterrent    ≈ cost_of_N_slots > reward_from_running_N_parallel_miners
 2. **Do** assume attackers can obtain **many coldkeys** if slots are cheap or rewards are high.
 3. **Prefer** tasks where the useful work is the proof that verifies, not another subjective ranking signal.
 
-## Decision gate before Sybil/Pareto scoring changes
+## Decision gate before Sybil or reward scoring changes
 
-Do not add another sybil/Pareto scoring layer without replay evidence. The
+Do not add another sybil or reward scoring layer without replay evidence. The
 default code should stay simple: verified proofs enter scoring, and same-coldkey
 hotkeys share one coldkey allocation.
 
@@ -73,13 +73,13 @@ Policy choices to make:
 
 ## Decision rubric
 
-Use this rubric after a private `full` export clears `--require-decision-ready`. If the export does not clear the readiness gate, record **no decision** and collect the fields named in `decision_data_gaps` instead of changing Sybil/Pareto defaults.
+Use this rubric after a private `full` export clears `--require-decision-ready`. If the export does not clear the readiness gate, record **no decision** and collect the fields named in `decision_data_gaps` instead of changing Sybil or reward defaults.
 
 | Decision | Evidence that supports it |
 | --- | --- |
 | **Keep current partition only** | Same-coldkey hotkeys share one allocation; distinct-coldkey clone pressure is not material relative to UID registration cost. |
 | **Cap / dampen near-duplicate reward** | Rewritten clones gain material extra share across several epochs; examples are copied proofs, lightly edited traces, or same-theorem variants; the proposed similarity rule can be replayed before activation. |
-| **Move to winners-take-most / stronger subset rewards** | K coordinated miners stay close to Kx group share after current partitioning; Pareto ranking keeps many near-copy entries; a stronger policy can be simulated on the same export before activation. |
+| **Move to winners-take-most / stronger subset rewards** | K coordinated miners stay close to Kx group share after current partitioning; current weighting keeps many near-copy entries; a stronger policy can be simulated on the same export before activation. |
 | **Invest in uncopyable work / problem supply first** | Replay shows copied outputs are naturally competitive and no simple similarity rule is robust enough; the fix belongs in task design rather than another scoring check. |
 | **No scoring-code change** | Coldkeys are missing, the export is too small, UID cost/reward context is unknown, or the finding depends on one hand-picked epoch. |
 
@@ -99,7 +99,7 @@ decision later without publishing the private export:
 Decision-record template:
 
 ```text
-Sybil / Pareto economics decision:
+Sybil / reward economics decision:
 Chosen policy: keep current partition | cap/dampen near duplicates | winners-take-most | uncopyable-work first | no scoring-code change
 Decision ready: yes | no
 Reason:
@@ -123,7 +123,7 @@ Evidence reviewed:
 
 Reward/profile changes:
 - Partition defaults:
-- Pareto/scoring changes:
+- Reward/scoring changes:
 - Profile pin fields:
 - Rollout env gates:
 

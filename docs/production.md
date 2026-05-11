@@ -16,9 +16,9 @@ Prerequisites: [getting-started.md](getting-started.md).
 
 ## Scoring policy
 
-A proof must verify in Lean to enter live scoring. Reputation and Pareto
-weighting build the weight map, and same-coldkey hotkeys share that coldkey's
-allocation instead of multiplying it.
+A proof must verify in Lean to enter live scoring. Reputation/credibility may
+adjust eligible entries, and same-coldkey hotkeys share that coldkey's allocation
+instead of multiplying it.
 
 ## Miner payloads
 
@@ -33,11 +33,11 @@ allocation instead of multiplying it.
 
 ## Training export
 
-`LEMMA_TRAINING_EXPORT_JSONL` appends one JSON object per scored miner per epoch. Optional **`LEMMA_TRAINING_EXPORT_PROFILE`** controls whether proof text, proof metrics, and Pareto weights are included — see [training_export.md](training_export.md). For proof-metrics calibration, use `LEMMA_TRAINING_EXPORT_PROFILE=full` with `LEMMA_LEAN_PROOF_METRICS=1`, follow the [operator checklist](training_export.md#collect-proof-metrics-calibration-data), and keep exports private. Lemma does not upload; use cron/systemd and [`scripts/training_export_upload_example.sh`](../scripts/training_export_upload_example.sh) for storage.
+`LEMMA_TRAINING_EXPORT_JSONL` appends one JSON object per scored miner per epoch. Optional **`LEMMA_TRAINING_EXPORT_PROFILE`** controls whether proof text, proof metrics, and the final `pareto_weight` field are included — see [training_export.md](training_export.md). For proof-metrics calibration, use `LEMMA_TRAINING_EXPORT_PROFILE=full` with `LEMMA_LEAN_PROOF_METRICS=1`, follow the [operator checklist](training_export.md#collect-proof-metrics-calibration-data), and keep exports private. Lemma does not upload; use cron/systemd and [`scripts/training_export_upload_example.sh`](../scripts/training_export_upload_example.sh) for storage.
 
 ## Observability
 
-No bundled dashboard. Typical: logs or JSONL to storage + BI ([faq.md](faq.md)).
+No bundled dashboard. Typical: logs or JSONL to storage + BI ([technical-reference.md](technical-reference.md)).
 
 ## Ops
 
