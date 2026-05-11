@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic_settings.sources import PydanticBaseSettingsSource
 
@@ -37,6 +37,11 @@ class LemmaSettings(BaseSettings):
             alias = field.validation_alias
             if isinstance(alias, str):
                 data.setdefault(alias, data[name])
+                data.pop(name)
+                continue
+            choices = getattr(alias, "choices", None)
+            if choices and isinstance(choices[0], str):
+                data.setdefault(choices[0], data[name])
                 data.pop(name)
         super().__init__(**data)
 
@@ -231,8 +236,8 @@ class LemmaSettings(BaseSettings):
         validation_alias="JUDGE_PROVIDER",
         description=(
             "Optional prose-judge provider for one-shot research tooling. ``chutes`` and legacy ``openai`` "
-            "use OpenAI-compatible HTTP; Anthropic is local judge tooling only. Live validator scoring is "
-            "proof-only and does not read this field."
+            "use OpenAI-compatible HTTP; Anthropic is local judge tooling only. Live validator scoring uses "
+            "proof verification and does not read this field."
         ),
     )
     anthropic_api_key: str | None = Field(
@@ -307,10 +312,10 @@ class LemmaSettings(BaseSettings):
     )
     judge_profile_expected_sha256: str | None = Field(
         default=None,
-        validation_alias="JUDGE_PROFILE_SHA256_EXPECTED",
+        validation_alias=AliasChoices("LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED", "JUDGE_PROFILE_SHA256_EXPECTED"),
         description=(
-            "Compatibility env name for the validator profile pin. Validators must set this; startup fails "
-            "unless it matches live `lemma meta`."
+            "Expected validator profile hash. Validators must set this; startup fails unless it matches live "
+            "`lemma meta`."
         ),
     )
     prover_provider: str = Field(
@@ -320,7 +325,7 @@ class LemmaSettings(BaseSettings):
     prover_model: str | None = Field(
         default=None,
         validation_alias="PROVER_MODEL",
-        description="Miner-only model id. Use a capable reasoning model; see docs/models.md.",
+        description="Miner-only model id. Use a capable proof model; see docs/models.md.",
     )
     prover_max_tokens: int = Field(
         default=32_768,
@@ -624,24 +629,27 @@ class LemmaSettings(BaseSettings):
     )
     lemma_judge_profile_attest_enabled: bool = Field(
         default=False,
-        validation_alias="LEMMA_JUDGE_PROFILE_ATTEST_ENABLED",
+        validation_alias=AliasChoices("LEMMA_VALIDATOR_PROFILE_ATTEST_ENABLED", "LEMMA_JUDGE_PROFILE_ATTEST_ENABLED"),
         description=(
-            "Optional validator-profile peer check. Compatibility env/endpoint names use judge_profile; "
-            "see LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS, LEMMA_JUDGE_PROFILE_ATTEST_SKIP, "
-            "`lemma validator judge-attest-serve`, docs/judge-profile-attest.md."
+            "Optional validator-profile peer check. See LEMMA_VALIDATOR_PROFILE_ATTEST_PEER_URLS, "
+            "LEMMA_VALIDATOR_PROFILE_ATTEST_SKIP, `lemma validator profile-attest-serve`, "
+            "docs/validator-profile-attest.md."
         ),
     )
     lemma_judge_profile_attest_peer_urls: str = Field(
         default="",
-        validation_alias="LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS",
+        validation_alias=AliasChoices(
+            "LEMMA_VALIDATOR_PROFILE_ATTEST_PEER_URLS",
+            "LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS",
+        ),
         description=(
-            "Comma-separated GET URLs probed when LEMMA_JUDGE_PROFILE_ATTEST_ENABLED=1 (plaintext hex or JSON "
-            "with judge_profile_sha256)."
+            "Comma-separated GET URLs probed when LEMMA_VALIDATOR_PROFILE_ATTEST_ENABLED=1 "
+            "(plaintext hex or JSON with validator_profile_sha256)."
         ),
     )
     lemma_judge_profile_attest_allow_skip: bool = Field(
         default=False,
-        validation_alias="LEMMA_JUDGE_PROFILE_ATTEST_SKIP",
+        validation_alias=AliasChoices("LEMMA_VALIDATOR_PROFILE_ATTEST_SKIP", "LEMMA_JUDGE_PROFILE_ATTEST_SKIP"),
         description=(
             "When attest is enabled, skip peer HTTP (solo / dev only). Logs as WARN at validator startup — "
             "not for production multi-validator alignment."
@@ -651,8 +659,11 @@ class LemmaSettings(BaseSettings):
         default=15.0,
         ge=1.0,
         le=300.0,
-        validation_alias="LEMMA_JUDGE_PROFILE_ATTEST_HTTP_TIMEOUT_S",
-        description="Per-URL HTTP timeout when LEMMA_JUDGE_PROFILE_ATTEST_ENABLED=1.",
+        validation_alias=AliasChoices(
+            "LEMMA_VALIDATOR_PROFILE_ATTEST_HTTP_TIMEOUT_S",
+            "LEMMA_JUDGE_PROFILE_ATTEST_HTTP_TIMEOUT_S",
+        ),
+        description="Per-URL HTTP timeout when LEMMA_VALIDATOR_PROFILE_ATTEST_ENABLED=1.",
     )
 
     # Miner — resource limits and validator gate

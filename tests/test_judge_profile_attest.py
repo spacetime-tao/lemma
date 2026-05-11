@@ -1,4 +1,4 @@
-"""Tests for optional judge profile peer HTTP attest."""
+"""Tests for optional validator profile peer HTTP attest."""
 
 from __future__ import annotations
 
@@ -23,6 +23,7 @@ def test_parse_peer_judge_hash_plain_and_json() -> None:
     h = "a" * 64
     assert parse_peer_judge_hash(h + "\n") == h
     assert parse_peer_judge_hash(f'0x{h}\n') == h
+    assert parse_peer_judge_hash(f'{{"validator_profile_sha256":"{h}"}}') == h
     assert parse_peer_judge_hash(f'{{"judge_profile_sha256":"{h}"}}') == h
 
 
@@ -46,7 +47,7 @@ def test_attest_no_urls_errors() -> None:
     )
     errs = judge_profile_peer_check_errors(s)
     assert len(errs) == 1
-    assert "LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS" in errs[0]
+    assert "LEMMA_VALIDATOR_PROFILE_ATTEST_PEER_URLS" in errs[0]
 
 
 def test_attest_peer_match_ok() -> None:

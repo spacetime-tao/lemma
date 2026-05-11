@@ -122,10 +122,10 @@ def test_documented_protocol_env_names_work(monkeypatch: pytest.MonkeyPatch, tmp
                 "LEMMA_MINER_VERIFY_ATTEST_ENABLED=1",
                 "LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION=0.25",
                 "LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_SALT=salt",
-                "LEMMA_JUDGE_PROFILE_ATTEST_ENABLED=1",
-                "LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS=http://peer/lemma/judge_profile_sha256",
-                "LEMMA_JUDGE_PROFILE_ATTEST_SKIP=1",
-                "LEMMA_JUDGE_PROFILE_ATTEST_HTTP_TIMEOUT_S=3",
+                "LEMMA_VALIDATOR_PROFILE_ATTEST_ENABLED=1",
+                "LEMMA_VALIDATOR_PROFILE_ATTEST_PEER_URLS=http://peer/lemma/validator_profile_sha256",
+                "LEMMA_VALIDATOR_PROFILE_ATTEST_SKIP=1",
+                "LEMMA_VALIDATOR_PROFILE_ATTEST_HTTP_TIMEOUT_S=3",
             ],
         ),
         encoding="utf-8",
@@ -136,6 +136,28 @@ def test_documented_protocol_env_names_work(monkeypatch: pytest.MonkeyPatch, tmp
     assert s.lemma_miner_verify_attest_enabled is True
     assert s.lemma_miner_verify_attest_spot_verify_fraction == 0.25
     assert s.lemma_miner_verify_attest_spot_verify_salt == "salt"
+    assert s.lemma_judge_profile_attest_enabled is True
+    assert s.lemma_judge_profile_attest_peer_urls == "http://peer/lemma/validator_profile_sha256"
+    assert s.lemma_judge_profile_attest_allow_skip is True
+    assert s.lemma_judge_profile_attest_http_timeout_s == 3.0
+
+
+def test_legacy_judge_profile_attest_aliases_still_work(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    monkeypatch.delenv("LEMMA_PREFER_PROCESS_ENV", raising=False)
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "\n".join(
+            [
+                "LEMMA_JUDGE_PROFILE_ATTEST_ENABLED=1",
+                "LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS=http://peer/lemma/judge_profile_sha256",
+                "LEMMA_JUDGE_PROFILE_ATTEST_SKIP=1",
+                "LEMMA_JUDGE_PROFILE_ATTEST_HTTP_TIMEOUT_S=3",
+            ],
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    s = LemmaSettings(_env_file=str(env_file))
     assert s.lemma_judge_profile_attest_enabled is True
     assert s.lemma_judge_profile_attest_peer_urls == "http://peer/lemma/judge_profile_sha256"
     assert s.lemma_judge_profile_attest_allow_skip is True

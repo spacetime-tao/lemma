@@ -21,7 +21,7 @@ No subnet is perfectly ungameable; the goal is to make the easiest strategy also
 
 One-line mental model: Lemma rewards Lean-valid proofs.
 
-For the proof-verification design, see [proof-only-incentives.md](proof-only-incentives.md). For a **living checklist** of shipped items and known gaps, see [incentive-roadmap.md](incentive-roadmap.md). **Same-coldkey partitioning** is *not* identity verification — see [sybil_economics.md](sybil_economics.md). **Dendrite/Axon + synapse body-hash** — see [transport.md](transport.md).
+For the proof-verification design, see [proof-verification-incentives.md](proof-verification-incentives.md). For a **living checklist** of shipped items and known gaps, see [incentive-roadmap.md](incentive-roadmap.md). **Same-coldkey partitioning** is *not* identity verification — see [sybil_economics.md](sybil_economics.md). **Dendrite/Axon + synapse body-hash** — see [transport.md](transport.md).
 
 ## Validators querying your axon many times
 
@@ -59,13 +59,13 @@ Miners use a separate prover API to generate proofs.
 
 Yes. In [Google AI Studio](https://aistudio.google.com) you can create an API key tied to a normal Google account (subject to Google’s terms and quotas). Gemini exposes an **OpenAI-compatible** HTTP API; see Google’s [OpenAI compatibility](https://ai.google.dev/gemini-api/docs/openai) doc.
 
-For Lemma’s **prover** (miner), use the OpenAI-compatible path: `PROVER_PROVIDER=openai`, set `PROVER_OPENAI_BASE_URL` to Gemini’s OpenAI base URL (see that doc — typically `https://generativelanguage.googleapis.com/v1beta/openai/`), put your Gemini key in **`PROVER_OPENAI_API_KEY`**, and set `PROVER_MODEL` to a Gemini model id (e.g. `gemini-flash-latest` or `gemini-3.1-pro-preview`). Easiest: run **`lemma-cli configure prover`** and choose **`gemini`** — pick vendor first, then API key, then a **tier menu** (Flash / Pro / Lite) or a **custom** Gemini id; the wizard fills in the URL and `PROVER_*`. For other stacks use **Chutes**, **Anthropic**, **OpenAI**, or **custom** (paste base URL) in the same menu. You can still merge keys into `.env` by hand.
+For Lemma’s **prover** (miner), use the OpenAI-compatible path: `PROVER_PROVIDER=openai`, set `PROVER_OPENAI_BASE_URL` to Gemini’s OpenAI base URL (see that doc — typically `https://generativelanguage.googleapis.com/v1beta/openai/`), put your Gemini key in **`PROVER_OPENAI_API_KEY`**, and set `PROVER_MODEL` to a Gemini model id (e.g. `gemini-flash-latest` or `gemini-3.1-pro-preview`). Easiest: run **`uv run lemma-cli configure prover`** and choose **`gemini`** — pick vendor first, then API key, then a **tier menu** (Flash / Pro / Lite) or a **custom** Gemini id; the wizard fills in the URL and `PROVER_*`. For other stacks use **Chutes**, **Anthropic**, **OpenAI**, or **custom** (paste base URL) in the same menu. You can still merge keys into `.env` by hand.
 
-**If you see HTTP 404** mentioning `gen-lang-client-…` or `models/... is not found`, you accidentally used a **Google AI Studio internal id** (or a UI-only string) as `PROVER_MODEL`. Replace it with a **public model name** from the [models](https://ai.google.dev/gemini-api/docs/models) list (e.g. `gemini-2.0-flash`), not a `gen-lang-client-*` value.
+**If you see HTTP 404** mentioning `gen-lang-client-…` or `models/... is not found`, you accidentally used a **Google AI Studio internal id** (or a UI-only string) as `PROVER_MODEL`. Replace it with a **public model name** from the [models](https://ai.google.dev/gemini-api/docs/models) list (e.g. `gemini-2.5-flash`), not a `gen-lang-client-*` value.
 
 ## Prover retries (`LEMMA_PROVER_LLM_RETRY_ATTEMPTS`)
 
-Default is **4** tries per prover call (exponential backoff on 429 / timeouts / 5xx). Change it for **all** runs via `.env` or `lemma-cli configure prover-retries`. For a **single** `lemma-cli try-prover` run, use `--retry-attempts N` (1–32). Higher values use more wall-clock; stay within the validator **forward HTTP wait** for mining.
+Default is **4** tries per prover call (exponential backoff on 429 / timeouts / 5xx). Change it for **all** runs via `.env` or `uv run lemma-cli configure prover-retries`. For a **single** `uv run lemma-cli try-prover` run, use `--retry-attempts N` (1–32). Higher values use more wall-clock; stay within the validator **forward HTTP wait** for mining.
 
 ## How much space does the prover get? What does it see?
 
@@ -75,13 +75,6 @@ Default is **4** tries per prover call (exponential backoff on 429 / timeouts / 
 
 Correctness of the Lean proof is decided by the **kernel** (sandbox). Passing
 proofs can enter live scoring.
-
-## Informal reasoning
-
-Informal reasoning can still be shared off-protocol: writeups, forum posts,
-Mathlib PR notes, benchmark datasets, or human review. Live Lemma scoring does
-not ask validators to parse or grade it. The wire payload is the formal proof
-artifact.
 
 ## Problem modes
 
@@ -216,12 +209,6 @@ Order matters:
    that fails verification cannot receive a reward score.
 
 So repeated “failures” while you believe the proof is right are usually **environment** (Mathlib fetch, Docker network, cold cache, timeout) or **layout/policy**. The proof has to pass Lean before any reward score exists.
-
-## Local prose tooling
-
-Prose evaluation tools may help with debugging, research exports, or human
-review. Subnet scoring uses Lean verification of the submitted proof for the
-published theorem.
 
 ## Miner provenance
 

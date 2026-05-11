@@ -1,10 +1,10 @@
-"""Cross-validator judge profile agreement (optional HTTP peer probe).
+"""Cross-validator profile agreement (optional HTTP peer probe).
 
-When ``LEMMA_JUDGE_PROFILE_ATTEST_ENABLED=1``, the validator HTTP GETs each URL in
-``LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS`` and checks the response parses to the same
-``judge_profile_sha256`` as this process (already pinned via ``JUDGE_PROFILE_SHA256_EXPECTED``).
+When ``LEMMA_VALIDATOR_PROFILE_ATTEST_ENABLED=1``, the validator HTTP GETs each URL in
+``LEMMA_VALIDATOR_PROFILE_ATTEST_PEER_URLS`` and checks the response parses to the same
+validator profile hash as this process.
 
-Peers typically run ``lemma validator judge-attest-serve`` or any endpoint returning the 64-char hex.
+Peers typically run ``lemma validator profile-attest-serve`` or any endpoint returning the 64-char hex.
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ def parse_peer_urls(raw: str | None) -> list[str]:
 
 
 def parse_peer_judge_hash(body: str) -> str | None:
-    """Parse plaintext line or JSON ``{\"judge_profile_sha256\": \"...\"}``."""
+    """Parse plaintext line or JSON ``{\"validator_profile_sha256\": \"...\"}``."""
     text = (body or "").strip()
     if not text:
         return None
@@ -43,7 +43,7 @@ def parse_peer_judge_hash(body: str) -> str | None:
         except (json.JSONDecodeError, TypeError):
             return None
         if isinstance(data, dict):
-            v = data.get("judge_profile_sha256")
+            v = data.get("validator_profile_sha256") or data.get("judge_profile_sha256")
             if v is not None:
                 return _normalize_hash(str(v))
         return None
@@ -71,11 +71,11 @@ def judge_profile_peer_check_errors(settings: LemmaSettings) -> list[str]:
     urls = parse_peer_urls(settings.lemma_judge_profile_attest_peer_urls)
     if not urls:
         return [
-            "LEMMA_JUDGE_PROFILE_ATTEST_ENABLED=1 requires LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS "
+            "LEMMA_VALIDATOR_PROFILE_ATTEST_ENABLED=1 requires LEMMA_VALIDATOR_PROFILE_ATTEST_PEER_URLS "
             "(comma-separated GET URLs; each must return this validator's profile hash). "
-            "Or set LEMMA_JUDGE_PROFILE_ATTEST_SKIP=1 for single-node dev.\n"
-            "Tip: run `lemma validator judge-attest-serve` on peers and point URLs at "
-            "http://HOST:PORT/lemma/judge_profile_sha256",
+            "Or set LEMMA_VALIDATOR_PROFILE_ATTEST_SKIP=1 for single-node dev.\n"
+            "Tip: run `lemma validator profile-attest-serve` on peers and point URLs at "
+            "http://HOST:PORT/lemma/validator_profile_sha256",
         ]
 
     my_hash = judge_profile_sha256(settings).strip().lower()
@@ -112,7 +112,7 @@ def judge_profile_peer_check_errors(settings: LemmaSettings) -> list[str]:
 
 
 def serve_judge_profile_attest_forever(host: str, port: int, settings: LemmaSettings) -> None:
-    """Serve ``GET /lemma/judge_profile_sha256`` (text/plain) and ``GET /health``."""
+    """Serve validator profile hash endpoints and ``GET /health``."""
     from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
     hash_hex = judge_profile_sha256(settings).strip().lower()
@@ -127,7 +127,7 @@ def serve_judge_profile_attest_forever(host: str, port: int, settings: LemmaSett
                 self.send_header("Content-Type", "text/plain; charset=utf-8")
                 self.end_headers()
                 self.wfile.write(b"ok\n")
-            elif path == "/lemma/judge_profile_sha256":
+            elif path in ("/lemma/validator_profile_sha256", "/lemma/judge_profile_sha256"):
                 self.send_response(200)
                 self.send_header("Content-Type", "text/plain; charset=utf-8")
                 self.end_headers()
@@ -140,7 +140,7 @@ def serve_judge_profile_attest_forever(host: str, port: int, settings: LemmaSett
 
     srv = ThreadingHTTPServer((host, port), Handler)
     logger.info(
-        "validator profile attest HTTP on http://{}:{}/lemma/judge_profile_sha256 (GET /health)",
+        "validator profile attest HTTP on http://{}:{}/lemma/validator_profile_sha256 (GET /health)",
         host,
         port,
     )

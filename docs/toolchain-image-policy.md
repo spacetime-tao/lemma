@@ -34,6 +34,6 @@ An immutable version tag is acceptable only when the operator controls the regis
 
 When Lean or Mathlib changes, update the constants, template, Dockerfile assumptions, generated/frozen catalog metadata, and operator image ref together. Then rebuild the sandbox image, rerun the golden test, publish the new immutable image ref, and announce the cutover block or release tag.
 
-The validator profile hash (`judge_profile_sha256` for compatibility) includes the configured sandbox image ref and verification settings. Changing `LEAN_SANDBOX_IMAGE` should therefore change the profile hash operators compare.
+The validator profile hash (`validator_profile_sha256`) includes the configured sandbox image ref and verification settings. Changing `LEAN_SANDBOX_IMAGE` should therefore change the profile hash operators compare.
 
 Host Lean is for local debugging unless the subnet policy explicitly allows it. If enabled, the host `lake` toolchain must match the published sandbox policy.

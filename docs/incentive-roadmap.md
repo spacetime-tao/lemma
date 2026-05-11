@@ -18,7 +18,7 @@ This doc is for **operators and contributors** planning work—not step-by-step 
 - [x] Canonical validator profile pin at validator startup (operator-aligned)
 - [x] Generated template registry SHA pin at startup
 - [x] Synapse body-hash integrity fails closed when `computed_body_hash` is missing/mismatched or `deadline_block` is missing
-- [x] `LEMMA_JUDGE_PROFILE_ATTEST_ENABLED` — HTTP peer check vs local validator profile hash (`judge_profile_sha256` compatibility field; `LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS`, optional `LEMMA_JUDGE_PROFILE_ATTEST_SKIP`); compatibility command: `lemma validator judge-attest-serve`
+- [x] `LEMMA_VALIDATOR_PROFILE_ATTEST_ENABLED` — HTTP peer check vs local validator profile hash (`validator_profile_sha256`; legacy `LEMMA_JUDGE_PROFILE_ATTEST_*` aliases accepted); command: `uv run lemma validator profile-attest-serve`
 
 ---
 
@@ -29,7 +29,7 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 ### Scoring & objective
 
 - [x] **One-sentence objective** — Lemma rewards Lean-valid proofs for published theorem statements. Decision note: [objective-decision.md](objective-decision.md).
-- [x] **Lean verification gate** — Live validators score submitted proofs only after the pinned Lean verifier accepts them for the published theorem. Design: [proof-only-incentives.md](proof-only-incentives.md).
+- [x] **Lean verification gate** — Live validators score submitted proofs only after the pinned Lean verifier accepts them for the published theorem. Design: [proof-verification-incentives.md](proof-verification-incentives.md).
 - [x] **Proof-pass reward entry** — Verified proofs enter live scoring; failed proofs do not.
 - [x] **Proof-only miner payload** — Miner responses are centered on `proof_script`; validators do not require informal reasoning text.
 - [x] **Credibility multiplier** — Per-UID verify-pass EMA persisted in reputation JSON; score uses `(credibility ** LEMMA_REPUTATION_CREDIBILITY_EXPONENT)` after EMA smoothing (`LEMMA_REPUTATION_VERIFY_CREDIBILITY_ALPHA`, default 0.08; set alpha to **0** to freeze credibility updates). Default exponent is **1.0**; the KB `2.5` mention is documented in [credibility-exponent-decision.md](credibility-exponent-decision.md). Credibility is not a Lean-valid padding detector; proof-quality analysis stays under [proof-intrinsic-decision.md](proof-intrinsic-decision.md).
@@ -50,7 +50,7 @@ Ordered roughly by leverage (design risk first). Check boxes when **merged behav
 ### Trust & sybil
 
 - [x] **Sybil economics** — Operator guide [sybil_economics.md](sybil_economics.md): same-coldkey partitioning vs distinct-coldkey sybil realities, UID pressure, offline replay helper, the evidence gate required before Sybil/Pareto scoring changes, the decision-record template, and the policy rubric for interpreting replay results. The replay analyzer now supports `--require-decision-ready` plus concrete `decision_data_gaps` for release checklists. **Still open:** run the replay on real private exports before changing Sybil/tie-break behavior ([`knowledge/sybil.realities.yaml`](../knowledge/sybil.realities.yaml)).
-- [x] **Validator profile / infra trust** — HTTP peer check for **`judge_profile_sha256`** ships (`LEMMA_JUDGE_PROFILE_ATTEST_*`) and is documented as operator coordination, not Byzantine consensus or transport security. Signed/on-chain or k-of-n checks remain a separate design. See [judge-profile-attest.md](judge-profile-attest.md).
+- [x] **Validator profile / infra trust** — HTTP peer check for **`validator_profile_sha256`** ships (`LEMMA_VALIDATOR_PROFILE_ATTEST_*`) and is documented as operator coordination, not Byzantine consensus or transport security. Signed/on-chain or k-of-n checks remain a separate design. See [validator-profile-attest.md](validator-profile-attest.md).
 
 ### Compute placement
 
@@ -87,10 +87,10 @@ Track in issues or refactors as capacity allows: remaining human-friendly CLI wr
 - Implementation map: [incentive_migration.md](incentive_migration.md)
 - Objective decision: [objective-decision.md](objective-decision.md)
 - Proof intrinsic metric decision: [proof-intrinsic-decision.md](proof-intrinsic-decision.md)
-- Proof-only incentive design: [proof-only-incentives.md](proof-only-incentives.md)
+- Proof verification incentives: [proof-verification-incentives.md](proof-verification-incentives.md)
 - Credibility exponent decision: [credibility-exponent-decision.md](credibility-exponent-decision.md)
 - Commit-reveal threat model: [commit-reveal.md](commit-reveal.md)
 - Miner verify attest threat model: [miner-verify-attest.md](miner-verify-attest.md)
-- Validator profile peer attest threat model: [judge-profile-attest.md](judge-profile-attest.md)
+- Validator profile peer attest threat model: [validator-profile-attest.md](validator-profile-attest.md)
 - Scoring entrypoint: `lemma/scoring/rewards.py`, `lemma/scoring/proof_intrinsic.py`
 - Epoch loop: `lemma/validator/epoch.py`

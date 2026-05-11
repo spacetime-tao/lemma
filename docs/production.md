@@ -10,8 +10,8 @@ Prerequisites: [getting-started.md](getting-started.md).
 
 ## Validator profile
 
-- `uv run lemma meta`; distribute `judge_profile_sha256` (compatibility name for the deterministic scoring/cadence/verification policy).
-- `JUDGE_PROFILE_SHA256_EXPECTED` to fail on misconfiguration.
+- `uv run lemma meta`; distribute `validator_profile_sha256`.
+- `LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED` to fail on misconfiguration.
 - Miners: prover can use any operator-chosen host via `PROVER_OPENAI_BASE_URL` / `PROVER_MODEL`; from containers use a host-reachable URL (`host.docker.internal` on macOS/Windows, bridge gateway on Linux).
 
 ## Scoring policy

@@ -30,9 +30,9 @@ The validator profile covers problem cadence, verification policy, live proof sc
 uv run lemma meta
 ```
 
-- `judge_profile_sha256`: current profile hash name for validator scoring policy.
+- `validator_profile_sha256`: current profile hash name for validator scoring policy.
 
-Production: one pinned validator profile; `JUDGE_PROFILE_SHA256_EXPECTED`.
+Production: one pinned validator profile; `LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED`.
 Validators should share the same reward-relevant config.
 
 ## Sybil and multi-account incentives
@@ -55,7 +55,7 @@ Document and distribute: `LEMMA_BLOCK_TIME_SEC_ESTIMATE`,
 `LEMMA_PROBLEM_SEED_MODE`, `LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`,
 `EMPTY_EPOCH_WEIGHTS_POLICY`, `LEAN_SANDBOX_*`, and scoring/partition/reputation
 fields. The main scoring/cadence/verification fields are pinned by
-`judge_profile_sha256`. Nothing here is “per-validator preference.” On-chain
+`validator_profile_sha256`. Nothing here is “per-validator preference.” On-chain
 code does not enforce equality — parity relies on the published policy
 ([faq.md](faq.md)).
 
@@ -63,7 +63,7 @@ code does not enforce equality — parity relies on the published policy
 
 1. Pin one Git tag and one immutable sandbox image ref ([toolchain-image-policy.md](toolchain-image-policy.md)).
 2. Publish a shared env template.
-3. Pin `uv run lemma meta`: `JUDGE_PROFILE_SHA256_EXPECTED`, optional `LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED` (generated mode).
+3. Pin `uv run lemma meta`: `LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED`, optional `LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED` (generated mode).
 4. Announce upgrades with changelog and cutover.
 
 Hashes reduce drift; they do not prove honest validators. Epoch tempo comes from Bittensor; forward HTTP wait per query is derived from block height and shared clamps — not a per-node dial.

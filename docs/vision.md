@@ -4,10 +4,9 @@ Lemma is an **incentivized theorem-proving subnet** for mathematics on **Bittens
 
 **One-sentence objective:** Lemma rewards Lean-valid proofs for published theorem statements.
 
-Informal reasoning belongs outside the live protocol: writeups, human review,
-benchmarks, or publication. The subnet reward axis is proof-only. See
+The subnet reward axis is proof verification. See
 [objective-decision.md](objective-decision.md) and
-[proof-only-incentives.md](proof-only-incentives.md).
+[proof-verification-incentives.md](proof-verification-incentives.md).
 
 **Important distinction:** what the subnet *must* check mechanically is the **proof script against the locked `theorem`**. *How* that script was produced—autonomous model, human mathematician, or a mixed team—is largely **out of band** for Lean. Today’s reference miner is LLM-driven. A planned **bounty / long-horizon lane** (opt-in, higher stakes, offline-friendly) is **not** required at launch—it fits **after** the base economy is healthy (see **Economics v0 → v1** below).
 
@@ -18,10 +17,6 @@ This document is for **contributors and partners** who want the long-term direct
 ## What the subnet produces
 
 Lemma produces **verified formal proofs**.
-
-The digital commodity is not an informal reasoning trace, an essay, or a hidden
-model chain of thought. Those artifacts may still be useful for research,
-debugging, education, or human review, but they are not the live product.
 
 The live product is a theorem/proof pair where the proof script is accepted by
 Lean for the published theorem statement. Put another way: Lemma is a market for
@@ -110,7 +105,7 @@ A live subnet needs a **curated feed** of problems—not only generators, but **
 
 ### 4. Scale & operations
 
-Under load: queueing, timeouts, verification cost, optional prose-evaluation cost, observability, and **runbooks** for stuck verifies, RPC drift, or bad releases.
+Under load: queueing, timeouts, verification cost, observability, and **runbooks** for stuck verifies, RPC drift, or bad releases.
 
 **Goal:** the subnet survives **N miners** without manual firefighting for known failure modes.
 
@@ -135,7 +130,7 @@ After real traffic: consider **partial-progress** or **lemma-submission** tracks
 | [Architecture](architecture.md) | Components and data flow today. |
 | [Governance](governance.md) | Pins, meta, policy. |
 | [Objective decision](objective-decision.md) | One-sentence objective and scoring boundary. |
-| [Proof-only incentives](proof-only-incentives.md) | Long-term proof-only reward design. |
+| [Proof verification incentives](proof-verification-incentives.md) | Long-term proof-only reward design. |
 | [Problem supply policy](problem-supply-policy.md) | Public generated supply boundary and builder promotion checklist. |
 | [Open problem campaigns](open-problem-campaigns.md) | v1+ campaign / bounty lane for faithful open-problem formalization and submit-when-ready proofs. |
 | [Getting started](getting-started.md) | Install and first commands. |

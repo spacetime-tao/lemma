@@ -12,7 +12,7 @@ research heuristic: it strips Lean comments by default, then scores proof text
 length, `by` frequency, and non-empty line count.
 
 The reward design is proof-only. See
-[proof-only-incentives.md](proof-only-incentives.md). A submitted proof must pass
+[proof-verification-incentives.md](proof-verification-incentives.md). A submitted proof must pass
 Lean verification for the published theorem before it can receive score.
 
 ## Problem

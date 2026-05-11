@@ -104,8 +104,8 @@ def meta_cmd(raw: bool) -> None:
         click.echo(f"problem_source={s.problem_source}")
         click.echo(f"generated_registry_sha256={reg_sha}")
         click.echo("generated_registry_json=" + json.dumps(reg, sort_keys=True))
-        click.echo(f"judge_profile_sha256={prof_sha}")
-        click.echo("judge_profile_json=" + json.dumps(prof, sort_keys=True))
+        click.echo(f"validator_profile_sha256={prof_sha}")
+        click.echo("validator_profile_json=" + json.dumps(prof, sort_keys=True))
         return
 
     click.echo(stylize("Subnet fingerprints", fg="cyan", bold=True))
@@ -351,8 +351,7 @@ def validator_start_cmd() -> None:
 @validator_group.command(
     "dry-run",
     help=(
-        "Full proof-only scoring epochs without set_weights (chain + miners + Lean). "
-        "Judge-only smoke test: lemma-cli judge --trace FILE."
+        "Full proof-verification scoring epochs without set_weights (chain + miners + Lean)."
     ),
 )
 def validator_group_dry_run_cmd() -> None:
@@ -360,22 +359,29 @@ def validator_group_dry_run_cmd() -> None:
 
 
 @validator_group.command(
-    "judge-attest-serve",
+    "profile-attest-serve",
     help=(
-        "Tiny HTTP server: GET /lemma/judge_profile_sha256 (text/plain hash for peer quorum). "
-        "Pair with LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS on other validators."
+        "Tiny HTTP server: GET /lemma/validator_profile_sha256 (text/plain hash for peer checks). "
+        "Pair with LEMMA_VALIDATOR_PROFILE_ATTEST_PEER_URLS on other validators."
     ),
 )
 @click.option("--host", default="127.0.0.1", show_default=True)
 @click.option("--port", default=8799, type=int, show_default=True)
-def validator_judge_attest_serve_cmd(host: str, port: int) -> None:
-    """Expose local judge_profile_sha256 for LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS probes."""
+def validator_profile_attest_serve_cmd(host: str, port: int) -> None:
+    """Expose local validator profile hash for peer probes."""
     from lemma.common.logging import setup_logging
     from lemma.validator.judge_profile_attest import serve_judge_profile_attest_forever
 
     settings = LemmaSettings()
     setup_logging(settings.log_level)
     serve_judge_profile_attest_forever(host, port, settings)
+
+
+@validator_group.command("judge-attest-serve", hidden=True)
+@click.option("--host", default="127.0.0.1", show_default=True)
+@click.option("--port", default=8799, type=int, show_default=True)
+def validator_judge_attest_serve_cmd(host: str, port: int) -> None:
+    validator_profile_attest_serve_cmd.callback(host, port)
 
 
 @validator_group.command(
