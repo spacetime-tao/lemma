@@ -1,0 +1,16 @@
+[Unit]
+Description=Lemma validator
+After=network-online.target docker.service
+Wants=network-online.target docker.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/lemma
+Environment=PATH=/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/root/.local/bin/uv run lemma validator start
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
