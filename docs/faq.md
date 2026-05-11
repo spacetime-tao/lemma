@@ -58,7 +58,7 @@ A miner exposes a small network service on a port you choose so validators can s
 
 ### What does a validator do?
 
-Sends challenges to miners, collects replies, runs Lean (often inside Docker so environments match), turns results into scores, and writes those scores on chain. More detail: [validator.md](validator.md).
+Sends challenges to miners, collects replies, verifies submissions with Lean **inside Docker** (the supported validator path uses the pinned sandbox image so every validator matches). More detail: [validator.md](validator.md).
 
 ### What does Bittensor provide?
 
@@ -112,7 +112,11 @@ A passing proof enters Lemma’s scoring rules. Those rules can evolve through g
 
 ### Can validators cheat by changing the theorem?
 
-Validators are expected to follow the same published toolchain, challenge artifacts, and policy profile. Compare hashes with the subnet artifacts when in doubt; see [governance.md](governance.md).
+**Not silently on the wire.** Each challenge includes **`theorem_id`**, the full **`theorem_statement`**, imports, and toolchain pins. Those fields participate in the synapse **body hash**; transport integrity checks reject mismatched hashes, so casual tampering between validator and miner should fail loudly instead of swapping the theorem unnoticed ([transport.md](transport.md), [`lemma/protocol.py`](../lemma/protocol.py)).
+
+**Matching the subnet’s agreed theorem** is a coordination problem, not a chain-enforced proof: validators are supposed to run the same published **problem seed → theorem** mapping and **validator profile** as the operator. A rogue or misconfigured validator could still *send* a different statement than the public registry implies—you could prove *that* statement and pass Lean, but your work would not line up with honest peers using the published `validator_profile_sha256` and registry hashes. Compare operator artifacts with **`uv run lemma meta`**, follow [governance.md](governance.md), and treat drift as misconfiguration or foul play until proven otherwise (published hashes reduce drift; they do not by themselves guarantee honest validators).
+
+**Practical stance:** verify challenges against the subnet’s published pins; do not assume every validator is aligned until you have checked.
 
 ---
 

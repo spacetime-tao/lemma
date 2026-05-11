@@ -98,7 +98,7 @@ Running Lean locally can catch mistakes before submission, but the validator’s
 
 A validator sends challenges to miners, collects responses, verifies each proof with Lean, converts eligible results into scores, and writes those scores on chain.
 
-Production validators typically run Lean inside Docker. The sandbox image pins the toolchain and Mathlib revision so verification results match across machines.
+Validator verification runs Lean **inside Docker**: `lemma validator start` expects Docker and the pinned sandbox image. That pins the toolchain and Mathlib revision so results match across machines.
 
 Validators follow subnet epoch timing: each round includes time for miners to respond and time for Lean verification to finish. Transport details are covered below.
 
