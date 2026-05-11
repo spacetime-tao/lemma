@@ -205,7 +205,8 @@ verification.
 
 ## Codebase Map
 
-The main repo is focused on consensus-critical behavior.
+The main repo owns both consensus-critical behavior and the supported operator
+command surface.
 
 - `lemma/protocol.py` defines the challenge synapse.
 - `lemma/problems/` defines generated and catalog problem sources.
@@ -213,13 +214,10 @@ The main repo is focused on consensus-critical behavior.
 - `lemma/validator/` contains the validator round flow.
 - `lemma/lean/` builds Lean workspaces and runs verification.
 - `lemma/scoring/` turns eligible proofs into weights.
-- `lemma/cli/` keeps minimal core commands.
+- `lemma/cli/` keeps the supported `lemma` command surface.
 - `tools/` and `scripts/` support analysis, catalog work, and CI checks.
 
-Friendly operator UX lives in the separate
-[lemma-cli](https://github.com/spacetime-tao/lemma-cli) repo.
-
-The docs are split the same way. This litepaper gives the overview.
+The docs are split by use. This litepaper gives the overview.
 `getting-started.md` is the action path. `technical-reference.md` is the deep
 behavior reference. Decision docs record why important choices were made.
 

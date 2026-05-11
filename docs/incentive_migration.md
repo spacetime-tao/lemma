@@ -33,7 +33,7 @@ This document tracks **post-audit** mechanism changes in Lemma: proof-centric sc
 
 ## Generated registry
 
-Adding templates changes `generated_registry_sha256`. Operators must run `uv run lemma-cli configure subnet-pins` (or update `LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED`) after upgrading.
+Adding templates changes `generated_registry_sha256`. Operators must run `uv run lemma configure subnet-pins` (or update `LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED`) after upgrading.
 
 ## References
 

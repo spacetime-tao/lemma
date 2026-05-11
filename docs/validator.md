@@ -1,8 +1,8 @@
 # Validator
 
-Walkthrough: [getting-started.md](getting-started.md) — `uv run lemma-cli setup` (validator or both) sets chain, wallet, prover, and `LEAN_SANDBOX_IMAGE` prompts. Production validators should use the subnet-published immutable sandbox ref ([toolchain-image-policy.md](toolchain-image-policy.md)).
+Walkthrough: [getting-started.md](getting-started.md) — `uv run lemma setup` (validator or both) sets chain, wallet, prover, and `LEAN_SANDBOX_IMAGE` prompts. Production validators should use the subnet-published immutable sandbox ref ([toolchain-image-policy.md](toolchain-image-policy.md)).
 
-**Short checklist:** `bash scripts/prebuild_lean_image.sh` → **`uv run lemma-cli rehearsal`** (prover + Lean preview) → `uv run lemma validator-check` until READY → `uv run lemma validator start` (or **validator-check** from `uv run lemma-cli`). Same keys/chain setup as a miner if you run both roles.
+**Short checklist:** `bash scripts/prebuild_lean_image.sh` → **`uv run lemma preview`** (prover + Lean preview) → `uv run lemma validator check` until READY → `uv run lemma validator start`. Same keys/chain setup as a miner if you run both roles.
 
 Validators **always** wait for subnet epoch boundaries before each round — no timer-only mode; every operator shares the same on-chain cadence.
 
@@ -12,17 +12,17 @@ Validator→miner transport uses Bittensor Dendrite/Axon and synapse body-hash i
 
 | What you want | Command |
 | --- | --- |
-| **End-to-end** preview (prover → Lean) on the live theorem | **`uv run lemma-cli rehearsal`** (default Lean on; `--no-verify` to skip) |
-| Exercise **prover** only | `uv run lemma-cli try-prover` (add `--verify` for local Lean) |
+| **End-to-end** preview (prover → Lean) on the live theorem | **`uv run lemma preview`** (default Lean on; `--no-verify` to skip) |
+| Exercise **prover** only | `uv run lemma preview --no-verify` |
 | Rehearse the **full validator** without `set_weights` | `uv run lemma validator dry-run` |
-| Only print validator-related env | `uv run lemma-cli validator-config` (not a scoring run) |
+| Only print validator-related env | `uv run lemma validator config` (not a scoring run) |
 
 Submitted proofs must pass Lean verification for the published theorem before
 they can enter scoring.
 
 ## System requirements (Docker)
 
-- **Docker Engine / Docker Desktop** must be installed and **running** whenever **`LEMMA_USE_DOCKER=1`** (default for `uv run lemma validator start`, `uv run lemma verify`, and **`lemma-cli try-prover --verify`**). Lemma talks to the Docker API to **create** a one-shot container per verification job (unless you use a long-lived **`LEMMA_LEAN_DOCKER_WORKER`**); when the job finishes, that container exits.
+- **Docker Engine / Docker Desktop** must be installed and **running** whenever **`LEMMA_USE_DOCKER=1`** (default for `uv run lemma validator start`, `uv run lemma verify`, and **`lemma preview --verify`**). Lemma talks to the Docker API to **create** a one-shot container per verification job (unless you use a long-lived **`LEMMA_LEAN_DOCKER_WORKER`**); when the job finishes, that container exits.
 
 ### Fast Docker verify (sub‑10s warm, still Docker)
 
@@ -52,7 +52,7 @@ The bundled runtime Docker image is intentionally CLI-light: it talks to the hos
 
 **Warm workspace:** When **`LEAN_SANDBOX_NETWORK=bridge`**, Lemma used to run **`lake exe cache get`** on every verify even if Mathlib was already checked out — slow and redundant. It now **skips** that step when **`.lake/packages/mathlib`** exists (override with **`LEMMA_LEAN_ALWAYS_CACHE_GET=1`**). Optional **`LEMMA_LEAN_WORKSPACE_CACHE_INCLUDE_SUBMISSION_HASH=1`** names cache subdirs from proof text so distinct submissions never share one slot (see `lemma/lean/workspace.py`).
 
-**Docker Desktop (macOS):** Bind-mounted caches pay a large FS tax; **`scripts/start_lean_docker_worker.sh`** uses **`:delegated`** on Darwin. For local iteration, host `lake` ( **`LEMMA_ALLOW_HOST_LEAN=1`** + **`lemma-cli try-prover --host-lean`**) can be faster than Docker on a laptop; production validators should run on **Linux + local SSD** — not Docker Desktop on a Mac — for representative latency.
+**Docker Desktop (macOS):** Bind-mounted caches pay a large FS tax; **`scripts/start_lean_docker_worker.sh`** uses **`:delegated`** on Darwin. For local iteration, host `lake` ( **`LEMMA_ALLOW_HOST_LEAN=1`** + **`lemma preview --host-lean`**) can be faster than Docker on a laptop; production validators should run on **Linux + local SSD** — not Docker Desktop on a Mac — for representative latency.
 
 **Bootstrap helper:** `scripts/start_lean_docker_worker.sh` loads `.env` and starts the worker (requires **`LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR`**). Put **`LEMMA_LEAN_DOCKER_WORKER`** in **`.env`** (Lemma reads it via **`LemmaSettings`** — exporting it in the shell alone is not enough unless **`LEMMA_PREFER_PROCESS_ENV=1`**). Use **`./scripts/start_lean_docker_worker.sh --update-dotenv`** to append the line automatically when missing.
 
@@ -83,7 +83,7 @@ Steady-state cost is **incremental `lake build Submission`**, not “Mathlib fro
 **Profiling:** **`LEMMA_LEAN_VERIFY_TIMING=1`** logs wall time for **`docker_exec`** vs one-shot and the active **`LEAN_NUM_THREADS`**.
 
 - You **do not** need to start or **leave idle containers running** in Docker Desktop’s Containers tab. Old **stopped** containers (from earlier runs) are harmless clutter — you can delete them.
-- Optional: set **`LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR`** to a fast local path so repeat verifies for the **same theorem template** reuse a warm **`.lake`** after the first passing check (see `.env.example`). **`lemma-cli try-prover --verify`** uses **`XDG_CACHE_HOME/lemma-lean-workspace`** by default when unset (override or disable with **`LEMMA_TRY_PROVER_NO_WORKSPACE_CACHE=1`**). That is **on-disk cache**, not “keep a container running all day.” Once primed, Lemma verifies **in the cached slot directory**, so the steady-state cost is mostly **`lake build`** incremental work — on host verify, not Docker startup.
+- Optional: set **`LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR`** to a fast local path so repeat verifies for the **same theorem template** reuse a warm **`.lake`** after the first passing check (see `.env.example`). **`lemma preview --verify`** uses **`XDG_CACHE_HOME/lemma-lean-workspace`** by default when unset (override or disable with **`LEMMA_PREVIEW_NO_WORKSPACE_CACHE=1`**). That is **on-disk cache**, not “keep a container running all day.” Once primed, Lemma verifies **in the cached slot directory**, so the steady-state cost is mostly **`lake build`** incremental work — on host verify, not Docker startup.
 
 ## Lean image
 
@@ -105,7 +105,7 @@ uv run lemma meta
 
 ## Validator profile peer attest (optional)
 
-Validators should **agree with peers on the same validator scoring profile**, not only match an expected hash locally. When **`LEMMA_VALIDATOR_PROFILE_ATTEST_ENABLED=1`**, startup (and **`uv run lemma validator-check`**) HTTP GETs each URL in **`LEMMA_VALIDATOR_PROFILE_ATTEST_PEER_URLS`** and checks the body matches this process’s **`validator_profile_sha256`** (same fingerprint as **`uv run lemma meta`** / **`uv run lemma-cli configure subnet-pins`**). The hash covers subnet-critical verification and scoring policy.
+Validators should **agree with peers on the same validator scoring profile**, not only match an expected hash locally. When **`LEMMA_VALIDATOR_PROFILE_ATTEST_ENABLED=1`**, startup (and **`uv run lemma validator check`**) HTTP GETs each URL in **`LEMMA_VALIDATOR_PROFILE_ATTEST_PEER_URLS`** and checks the body matches this process’s **`validator_profile_sha256`** (same fingerprint as **`uv run lemma meta`** / **`uv run lemma configure subnet-pins`**). The hash covers subnet-critical verification and scoring policy.
 
 | Env | Role |
 | --- | --- |

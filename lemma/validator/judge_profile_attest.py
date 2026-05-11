@@ -62,7 +62,7 @@ def _normalize_hash(s: str) -> str | None:
 
 
 def judge_profile_peer_check_errors(settings: LemmaSettings) -> list[str]:
-    """Return fatal issues for startup / validator-check; empty if OK or feature off."""
+    """Return fatal issues for startup / validator check; empty if OK or feature off."""
     if not settings.lemma_judge_profile_attest_enabled:
         return []
     if settings.lemma_judge_profile_attest_allow_skip:

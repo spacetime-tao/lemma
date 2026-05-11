@@ -94,7 +94,7 @@ class MinerService:
             f"log_forwards={'on' if s.miner_log_forwards else 'off'}",
             f"forward_summary={'on' if s.miner_forward_summary else 'off'}",
         ]
-        logger.info("Miner visibility: {} (set in .env; `lemma-cli miner-observability` for detail)", "  ".join(bits))
+        logger.info("Miner visibility: {} (set in .env; `lemma miner observability` for detail)", "  ".join(bits))
         logger.info(
             "Per forward: my_uid / my_incentive at start; ends with miner answered (+ local_lean= if local verify on)."
         )

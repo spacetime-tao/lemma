@@ -29,11 +29,11 @@ def _print_ready_footer(*, outcome: Literal["ok", "warn"]) -> None:
     )
     if outcome == "warn":
         click.echo(
-            stylize("validator-check: WARN — see above (risky for mainnet scoring)", fg="yellow"),
+            stylize("validator check: WARN — see above (risky for mainnet scoring)", fg="yellow"),
             err=True,
         )
     else:
-        click.echo(stylize("validator-check: OK", fg="green"))
+        click.echo(stylize("validator check: OK", fg="green"))
     click.echo("")
 
 
@@ -65,7 +65,7 @@ def run_validator_check(settings: LemmaSettings) -> int:
     """Print checklist; return 0 if OK to start, 1 if blocking issues."""
     click.echo(stylize("Validator pre-flight", fg="cyan", bold=True))
     click.echo(
-        stylize("(run before `lemma validator start` — not the same as `lemma-cli validator-config`)\n", dim=True),
+        stylize("(run before `lemma validator start` — not the same as `lemma validator config`)\n", dim=True),
         nl=False,
     )
     fatal, warn = validator_startup_issues(settings, dry_run=False)
@@ -314,7 +314,7 @@ def run_validator_check(settings: LemmaSettings) -> int:
     if fatal:
         click.echo(
             stylize(
-                "NOT READY — fix blocking items, then run `lemma validator-check` again.",
+                "NOT READY — fix blocking items, then run `lemma validator check` again.",
                 fg="red",
                 bold=True,
             ),

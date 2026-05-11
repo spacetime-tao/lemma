@@ -17,7 +17,7 @@ That makes Lemma proof mining: similar in spirit to Bitcoin mining, but instead
 of producing valid hashes under a difficulty rule, miners produce valid Lean
 proofs under a theorem rule.
 
-**Status:** The codebase is still largely **proof-of-concept**, but you can **register and run on** **Subnet 467 — Lemma** on **Bittensor testnet** (`--network test`, `NETUID=467` after `uv run lemma-cli configure chain`). **Finney** is Bittensor **mainnet** (a different network).
+**Status:** The codebase is still largely **proof-of-concept**, but you can **register and run on** **Subnet 467 — Lemma** on **Bittensor testnet** (`--network test`, `NETUID=467` after `uv run lemma configure chain`). **Finney** is Bittensor **mainnet** (a different network).
 
 ## Start Here
 
@@ -25,27 +25,22 @@ proofs under a theorem rule.
 2. **Run the setup path:** [docs/getting-started.md](docs/getting-started.md)
 3. **Use the technical reference:** [docs/technical-reference.md](docs/technical-reference.md)
 
-Friendly operator UX lives in
-[lemma-cli](https://github.com/spacetime-tao/lemma-cli).
-
 ## Quick start
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 git clone https://github.com/spacetime-tao/lemma.git
 cd lemma
-uv sync --extra btcli --extra cli
+uv sync --extra btcli
 uv run lemma --help
-uv run lemma-cli --help
 ```
 
 Use one environment and one tool: `uv`. The core Lemma `.venv` owns the subnet
-dependencies, and the `cli` extra installs `lemma-cli` as the friendly operator
-surface (`setup`, `doctor`, `docs`, …). Create wallets with the `btcli`
-command from official [bittensor-cli](https://pypi.org/project/bittensor-cli/);
-install it in this repo with `uv sync --extra btcli --extra cli` (or
-`uv sync --extra dev --extra btcli --extra cli` for development). See
-**getting-started** for PyPI package names vs the `btcli` executable.
+dependencies and the `lemma` command (`setup`, `doctor`, `preview`, miner, and
+validator). Create wallets with the `btcli` command from official
+[bittensor-cli](https://pypi.org/project/bittensor-cli/); install it in this
+repo with `uv sync --extra btcli` (or `uv sync --extra dev --extra btcli` for
+development).
 
 **Validator entrypoint:** use **`lemma validator start`** (or Docker `ENTRYPOINT ["lemma"]` / `CMD ["validator", "start"]`).
 

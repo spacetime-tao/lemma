@@ -56,7 +56,7 @@ class LemmaSettings(BaseSettings):
     ) -> tuple[PydanticBaseSettingsSource, ...]:
         """Prefer ``.env`` over process environment for the same variable name.
 
-        Default pydantic-settings order lets exported shell variables beat values written by ``lemma-cli setup``.
+        Default pydantic-settings order lets exported shell variables beat values written by ``lemma setup``.
         Explicit constructor kwargs still win (handled first). Set ``LEMMA_PREFER_PROCESS_ENV=1`` to restore
         the library default (environment overrides ``.env``) for CI/containers that rely on it.
         """
@@ -165,7 +165,7 @@ class LemmaSettings(BaseSettings):
     validator_wallet_cold: str | None = Field(
         default=None,
         validation_alias="BT_VALIDATOR_WALLET_COLD",
-        description="If set, `lemma validator` / `validator-check` use this coldkey instead of BT_WALLET_COLD.",
+        description="If set, `lemma validator` / `validator check` use this coldkey instead of BT_WALLET_COLD.",
     )
     validator_wallet_hot: str | None = Field(
         default=None,
@@ -226,8 +226,8 @@ class LemmaSettings(BaseSettings):
         default=False,
         validation_alias="LEMMA_ALLOW_HOST_LEAN",
         description=(
-            "If true, allow `lemma verify --host-lean`, `lemma-cli try-prover --host-lean`, and "
-            "`LEMMA_TRY_PROVER_HOST_VERIFY` for local debugging. Production validators should leave this false."
+            "If true, allow `lemma verify --host-lean`, `lemma preview --host-lean`, and "
+            "`LEMMA_PREVIEW_HOST_VERIFY` for local debugging. Production validators should leave this false."
         ),
     )
 

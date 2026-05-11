@@ -16,7 +16,7 @@ So “OpenAI-compatible” is about the **wire format** (how the request/respons
 
 **Anthropic** is different again: it has its own API (`/v1/messages`, separate fields). That SDK is an optional install: use `uv sync --extra anthropic` when `PROVER_PROVIDER=anthropic`.
 
-Interactive setup (`uv run lemma-cli configure prover`): reply with a **row number** or the **backend keyword** (`chutes`, `gemini`, …). You **pick the vendor first** (Chutes, Gemini, Anthropic, hosted OpenAI, or custom OpenAI-compat URL); the next prompts ask for API keys and **`PROVER_MODEL`** (with dim examples in-terminal — preset tiers for Gemini, defaults for Chutes/Anthropic, required string for OpenAI, provider-specific id for custom).
+Interactive setup (`uv run lemma configure prover`): reply with a **row number** or the **backend keyword** (`chutes`, `gemini`, …). You **pick the vendor first** (Chutes, Gemini, Anthropic, hosted OpenAI, or custom OpenAI-compat URL); the next prompts ask for API keys and **`PROVER_MODEL`** (with dim examples in-terminal — preset tiers for Gemini, defaults for Chutes/Anthropic, required string for OpenAI, provider-specific id for custom).
 
 ## Catalog
 
@@ -50,7 +50,7 @@ another prover model you operate reliably.
 
 Set `PROVER_PROVIDER=openai`, **`PROVER_OPENAI_BASE_URL`**, **`PROVER_OPENAI_API_KEY`** (or legacy `OPENAI_API_KEY` fallback), and **`PROVER_MODEL`** (miner-only id; falls back to `OPENAI_MODEL` if unset).
 
-The live miner (`uv run lemma miner start`) starts solving **as soon as** a validator forwards a challenge — no deliberate wait for block ticks. `uv run lemma-cli try-prover` is separate (manual smoke test).
+The live miner (`uv run lemma miner start`) starts solving **as soon as** a validator forwards a challenge — no deliberate wait for block ticks. `uv run lemma preview` is separate (manual smoke test).
 
 Custom **`PROVER_OPENAI_BASE_URL`** / keys for the **prover** are normal (any OpenAI-compatible host you operate).
 

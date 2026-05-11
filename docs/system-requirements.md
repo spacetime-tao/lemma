@@ -8,7 +8,7 @@ Rough guidance for one machine; scale for heavy workloads.
 | -------- | ----- |
 | CPU | Few cores; inference often remote. |
 | RAM | 4–8 GB typical. |
-| Disk | Small checkout + logs; a full local **Lean** toolchain + Mathlib cache only if you prove or verify on-host (e.g. `lemma-cli try-prover --host-lean`, dev workflows). |
+| Disk | Small checkout + logs; a full local **Lean** toolchain + Mathlib cache only if you prove or verify on-host (e.g. `lemma preview --host-lean`, dev workflows). |
 | Network | Inbound `AXON_PORT` (default 8091); outbound to prover API. |
 | Docker | Optional for miners unless you run local verify mirroring validators. |
 

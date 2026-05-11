@@ -35,19 +35,20 @@ The miner’s LLM uses the **fixed in-repo** `PROVER_SYSTEM` in [`lemma/miner/pr
 
 **Proof only:** miner completions center on **`proof_script`**. Informal reasoning is not part of the live protocol payload. Operators can optionally set **`LEMMA_PROVER_MIN_PROOF_SCRIPT_CHARS`** (full `Submission.lean` length; default **off**) to reject overly short scripts — tune so trivial `rfl` goals still pass when unset or low.
 
-## `lemma-cli try-prover --verify` vs real validator scoring
+## `lemma preview` vs real validator scoring
 
-**`lemma-cli try-prover`** is a **local** dry run: it calls **your** prover API and prints output. It does **not** talk to validators or write scores on-chain.
-
-**`lemma-cli rehearsal`** chains the same prover + Lean path (defaults match **`lemma-cli try-prover --verify`**) — still local, still no axon / no `set_weights`, but closer to how a scored forward feels.
+**`lemma preview`** is a **local** dry run: it calls **your** prover API,
+prints the proof script, then runs Lean by default. It does **not** talk to
+validators or write scores on-chain. Use **`--no-verify`** when you only want to
+see model output.
 
 **`--verify`** (after the LLM returns) runs **`lake build`** **on your machine** to check that `Submission.lean` compiles — the same *kind* of kernel check validators use, but **only locally**:
 
 - **`lemma validator start`:** **`lemma validator start` refuses to run** if **`LEMMA_USE_DOCKER=false`** — validators must use Docker. **`lemma verify`** / miners may still use **`LEMMA_USE_DOCKER=false`** where policy allows (local tooling only).
-- **`lemma-cli try-prover --verify`:** Defaults to the **same Docker sandbox** as validators when **`LEMMA_USE_DOCKER=true`**. Host `lake` is opt-in: **`--host-lean`** or **`LEMMA_TRY_PROVER_HOST_VERIFY=1`**, and only if **`LEMMA_ALLOW_HOST_LEAN=1`** in **`.env`**.
+- **`lemma preview --verify`:** Defaults to the **same Docker sandbox** as validators when **`LEMMA_USE_DOCKER=true`**. Host `lake` is opt-in: **`--host-lean`** or **`LEMMA_PREVIEW_HOST_VERIFY=1`**, and only if **`LEMMA_ALLOW_HOST_LEAN=1`** in **`.env`**.
 - **`lemma verify --host-lean`:** Host `lake` only with **`LEMMA_ALLOW_HOST_LEAN=1`**. Otherwise use Docker (default). Still **local**, not on-chain scoring.
 
-To see what validators would sample, use **`lemma-cli status`** / **`lemma-cli problems`**; actual rewards come only when a validator **forwards** to your axon and runs the full round, not from `lemma-cli try-prover` or `lemma-cli rehearsal`.
+To see what validators would sample, use **`lemma status`** / **`lemma problems`**; actual rewards come only when a validator **forwards** to your axon and runs the full round, not from `lemma preview`.
 
 ## Validator pipeline (each round)
 
@@ -61,13 +62,13 @@ Miners use a separate prover API to generate proofs.
 
 Yes. In [Google AI Studio](https://aistudio.google.com) you can create an API key tied to a normal Google account (subject to Google’s terms and quotas). Gemini exposes an **OpenAI-compatible** HTTP API; see Google’s [OpenAI compatibility](https://ai.google.dev/gemini-api/docs/openai) doc.
 
-For Lemma’s **prover** (miner), use the OpenAI-compatible path: `PROVER_PROVIDER=openai`, set `PROVER_OPENAI_BASE_URL` to Gemini’s OpenAI base URL (see that doc — typically `https://generativelanguage.googleapis.com/v1beta/openai/`), put your Gemini key in **`PROVER_OPENAI_API_KEY`**, and set `PROVER_MODEL` to a Gemini model id (e.g. `gemini-flash-latest` or `gemini-3.1-pro-preview`). Easiest: run **`uv run lemma-cli configure prover`** and choose **`gemini`** — pick vendor first, then API key, then a **tier menu** (Flash / Pro / Lite) or a **custom** Gemini id; the wizard fills in the URL and `PROVER_*`. For other stacks use **Chutes**, **Anthropic**, **OpenAI**, or **custom** (paste base URL) in the same menu. You can still merge keys into `.env` by hand.
+For Lemma’s **prover** (miner), use the OpenAI-compatible path: `PROVER_PROVIDER=openai`, set `PROVER_OPENAI_BASE_URL` to Gemini’s OpenAI base URL (see that doc — typically `https://generativelanguage.googleapis.com/v1beta/openai/`), put your Gemini key in **`PROVER_OPENAI_API_KEY`**, and set `PROVER_MODEL` to a Gemini model id (e.g. `gemini-flash-latest` or `gemini-3.1-pro-preview`). Easiest: run **`uv run lemma configure prover`** and choose **`gemini`** — pick vendor first, then API key, then a **tier menu** (Flash / Pro / Lite) or a **custom** Gemini id; the wizard fills in the URL and `PROVER_*`. For other stacks use **Chutes**, **Anthropic**, **OpenAI**, or **custom** (paste base URL) in the same menu. You can still merge keys into `.env` by hand.
 
 **If you see HTTP 404** mentioning `gen-lang-client-…` or `models/... is not found`, you accidentally used a **Google AI Studio internal id** (or a UI-only string) as `PROVER_MODEL`. Replace it with a **public model name** from the [models](https://ai.google.dev/gemini-api/docs/models) list (e.g. `gemini-2.5-flash`), not a `gen-lang-client-*` value.
 
 ## Prover retries (`LEMMA_PROVER_LLM_RETRY_ATTEMPTS`)
 
-Default is **4** tries per prover call (exponential backoff on 429 / timeouts / 5xx). Change it for **all** runs via `.env` or `uv run lemma-cli configure prover-retries`. For a **single** `uv run lemma-cli try-prover` run, use `--retry-attempts N` (1–32). Higher values use more wall-clock; stay within the validator **forward HTTP wait** for mining.
+Default is **4** tries per prover call (exponential backoff on 429 / timeouts / 5xx). Change it for **all** runs via `.env` or `uv run lemma configure prover-retries`. For a **single** `uv run lemma preview` run, use `--retry-attempts N` (1–32). Higher values use more wall-clock; stay within the validator **forward HTTP wait** for mining.
 
 ## How much space does the prover get? What does it see?
 
@@ -124,7 +125,7 @@ So: Lean can usually check a correct, modest submission quickly; the risky cases
 
 ## Why don’t my `.env` changes show up?
 
-Lemma’s settings intentionally load **`.env` after process environment**, so values written by `lemma-cli configure` override stray `export OPENAI_MODEL=...` in your shell. To restore standard pydantic behavior (environment beats `.env`), set `LEMMA_PREFER_PROCESS_ENV=1` (for CI or containers that inject secrets via env only).
+Lemma’s settings intentionally load **`.env` after process environment**, so values written by `lemma configure` override stray `export OPENAI_MODEL=...` in your shell. To restore standard pydantic behavior (environment beats `.env`), set `LEMMA_PREFER_PROCESS_ENV=1` (for CI or containers that inject secrets via env only).
 
 ## Which math areas tend to strain a tight miner deadline?
 
@@ -152,11 +153,11 @@ Within one validator, a round finishes before the code waits for the **next subn
 
 | Command | Purpose |
 | ------- | ------- |
-| `lemma-cli status` | Head, seed mode, resolved seed, theorem id. |
-| `lemma-cli problems` (or `… show --current`) | `Challenge.lean` for **live** chain head — same rotation as validators. |
-| `lemma-cli problems show --block N` | **What-if:** pretend head is `N` (countdown/seed as if at height `N`). |
+| `lemma status` | Head, seed mode, resolved seed, theorem id. |
+| `lemma problems` (or `… show --current`) | `Challenge.lean` for **live** chain head — same rotation as validators. |
+| `lemma problems show --block N` | **What-if:** pretend head is `N` (countdown/seed as if at height `N`). |
 | `lemma meta` | Validator profile and registry hashes. |
-| `lemma-cli problems list` | Frozen catalog only. |
+| `lemma problems list` | Frozen catalog only. |
 
 ## Chutes and billing
 
@@ -183,7 +184,7 @@ Roughly: (challenges answered) × ($/challenge). Measure from logs.
 | `timeout` / `oom` | Resource limits |
 | `docker_error` | Sandbox error |
 
-**`lemma-cli try-prover` says FAIL but the proof is just `rfl` on arithmetic literals:** The LLM answer may still be **mathematically fine**. Logs like `no previous manifest`, `creating one from scratch`, `mathlib: running post-update hooks`, then `error: build failed` usually mean **Lake is building Mathlib** (slow), **post-update hooks** failed, **network blocked** (Docker `network_mode=none`), or **timeout** — not that `rfl` is wrong. Fix the **environment** (prebuilt `LEAN_SANDBOX_IMAGE`, `LEAN_SANDBOX_NETWORK=bridge`, higher `LEAN_VERIFY_TIMEOUT_S`) and retry.
+**`lemma preview` says FAIL but the proof is just `rfl` on arithmetic literals:** The LLM answer may still be **mathematically fine**. Logs like `no previous manifest`, `creating one from scratch`, `mathlib: running post-update hooks`, then `error: build failed` usually mean **Lake is building Mathlib** (slow), **post-update hooks** failed, **network blocked** (Docker `network_mode=none`), or **timeout** — not that `rfl` is wrong. Fix the **environment** (prebuilt `LEAN_SANDBOX_IMAGE`, `LEAN_SANDBOX_NETWORK=bridge`, higher `LEAN_VERIFY_TIMEOUT_S`) and retry.
 
 ## Checking a proof yourself (manual / online)
 
@@ -195,7 +196,7 @@ Roughly: (challenges answered) × ($/challenge). Measure from logs.
 
 That site runs Lean **in the browser**; it is **not** the same as Lemma’s Docker/host sandbox. **`import Mathlib` often fails there** (missing Mathlib on the search path, unknown imports, or confusing errors once imports break). That usually reflects **the playground environment**, not whether your proof would pass Lemma’s **Lake + pinned Mathlib** build.
 
-Use it only for **informal** experimentation. For **subnet parity**, use **`lemma verify`** or **`lemma-cli try-prover --verify`**.
+Use it only for **informal** experimentation. For **subnet parity**, use **`lemma verify`** or **`lemma preview --verify`**.
 
 ### Older community web editor (Lean 3)
 
@@ -233,7 +234,7 @@ Logs: `lemma_epoch_summary`; optional JSONL. No built-in dashboard ([production.
 1. `uv sync --extra btcli`; `.env` with test endpoint, `NETUID`, wallets.
 2. Register (`btcli`).
 3. Miner: reachable axon; prover keys.
-4. Validator: Lean image; `uv run lemma meta`; full rehearsal without weights: `lemma validator dry-run`.
+4. Validator: Lean image; `uv run lemma meta`; full validator run without weights: `lemma validator dry-run`.
 5. Confirm `set_weights` when ready.
 
 ## Throughput

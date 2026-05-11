@@ -31,7 +31,7 @@ It catches common mistakes such as:
 - stale local config after an upgrade.
 
 The current behavior is all-of-N: every configured peer URL must return the same
-hash as this validator, or startup / `lemma validator-check` reports a failure.
+hash as this validator, or startup / `lemma validator check` reports a failure.
 
 ## What It Does Not Protect
 

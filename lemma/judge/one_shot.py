@@ -1,4 +1,4 @@
-"""Single-call judge construction for operator CLIs (``lemma-cli judge``, ``lemma-cli rehearsal``)."""
+"""Single-call judge construction for hidden/local research tooling."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 def build_judge_for_one_shot(settings: LemmaSettings) -> Judge:
-    """Same stack as ``lemma-cli judge``: real judge when keys exist; ``FakeJudge`` when absent or forced."""
+    """Build a local prose judge: real model when keys exist; ``FakeJudge`` when absent or forced."""
     if os.environ.get("LEMMA_FAKE_JUDGE") == "1":
         return FakeJudge()
     key = settings.judge_openai_api_key_resolved()

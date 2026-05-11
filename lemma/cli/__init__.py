@@ -1,1 +1,1 @@
-"""lemma-cli entrypoints."""
+"""Lemma CLI entrypoints."""

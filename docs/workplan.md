@@ -12,9 +12,8 @@ not let parallel checklists drift.
   (`Remove stale judge config from proof-only path`).
 - Live reward direction: proof passes Lean and can enter scoring, or proof
   fails Lean and does not enter scoring.
-- Friendly operator UX belongs in `spacetime-tao/lemma-cli`; core Lemma owns
-  protocol, problem selection, Lean verification, validator scoring, minimal
-  service entrypoints, and consensus tests.
+- Operator UX belongs in the core `lemma` command; consensus policy stays in
+  protocol, problem selection, Lean verification, validator scoring, and tests.
 
 ## What Is Good
 
@@ -27,8 +26,8 @@ not let parallel checklists drift.
   computed.
 - The generated problem registry has 40 builders and a metadata gate covering
   registry reachability/coherence.
-- CLI bloat has been mostly moved to `lemma-cli`; core keeps minimal commands
-  and redirects.
+- Normal operator workflows are consolidated under `lemma`: setup, doctor,
+  status, problem views, preview, miner, and validator entrypoints.
 - Local baseline checks passed after the Hatch metadata fix:
   - `uv sync --extra dev`;
   - `uv run ruff check lemma tests tools`;
@@ -41,11 +40,9 @@ not let parallel checklists drift.
 ## Current Blockers And Gaps
 
 1. **GitHub re-check pending.**
-   `b7088f0` failed before tests because Hatch rejected the `cli` optional
-   dependency direct reference to `lemma-cli`. This working tree adds
-   `tool.hatch.metadata.allow-direct-references = true`, and local
-   `uv sync --extra dev` plus `docker build -f Dockerfile -t
-   lemma-runtime:ci-smoke .` now pass. GitHub Actions still need to be checked
+   `b7088f0` failed before tests because Hatch rejected the old optional CLI
+   dependency direct reference. This simplification removes that optional
+   dependency from the core package. GitHub Actions still need to be checked
    after the fix lands.
 
 2. **Tracker drift.**
@@ -112,7 +109,7 @@ Next VPS testing should measure behavior, not add mechanism code:
 
 ## Next Work Order
 
-1. Land the Hatch direct-reference metadata fix and re-check GitHub Actions.
+1. Land the CLI simplification and re-check GitHub Actions.
 2. Keep this file as the only active audit/work tracker; leave
    `docs/audit-remediation.md` and `docs/incentive-roadmap.md` as pointer stubs.
 3. Keep local checks and Docker runtime build smoke green before pushing.
@@ -128,6 +125,6 @@ Next VPS testing should measure behavior, not add mechanism code:
 - Do not redesign the live reward mechanism in this pass.
 - Do not add proof-efficiency or prose/judge scoring to the live path.
 - Do not deploy, restart, or mutate droplet services in this pass.
-- Do not move validator scoring or consensus policy into `lemma-cli`.
+- Do not move validator scoring or consensus policy into command glue.
 - Do not add more defensive layers where a simpler data model can remove the
   invalid state.
