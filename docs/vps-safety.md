@@ -42,9 +42,12 @@ Good for persistent operation if the host is large enough.
 3. Use Docker and a persistent Lean cache directory.
 4. Prefer a local long-lived Docker worker on the validator host:
    `LEMMA_LEAN_DOCKER_WORKER=lemma-lean-worker`.
-5. If using a remote Lean worker, keep it on a private network or behind TLS and
+5. For systemd, start from
+   [`deploy/systemd/lemma-validator.service`](../deploy/systemd/lemma-validator.service)
+   and adjust paths only if your checkout or `uv` install differs.
+6. If using a remote Lean worker, keep it on a private network or behind TLS and
    `LEMMA_LEAN_VERIFY_REMOTE_BEARER`.
-6. Avoid SSH tunnels for production validator verification. They are fine for
+7. Avoid SSH tunnels for production validator verification. They are fine for
    supervised tests, but one tunnel reset can turn a good miner round into
    `verified=0`.
 
