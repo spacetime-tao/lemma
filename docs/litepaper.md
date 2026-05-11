@@ -1,46 +1,38 @@
 # Lemma Litepaper
 
-**Lemma** is a [Bittensor](https://docs.learnbittensor.org/) subnet. Miners answer published math statements with Lean proof scripts; validators run the same Lean check so everyone shares one pass-or-fail result before any scoring.
+**Lemma** is a [Bittensor](https://docs.learnbittensor.org/) subnet for formal mathematical proof. Miners submit Lean proof scripts for published theorem statements. Validators run those scripts against the same pinned verifier, creating a shared mechanical gate before any scoring or reward policy applies.
 
-This is the core idea:
+The core rule is simple:
 
 > Lemma rewards Lean-valid proofs for published theorem statements.
 
-Everything else should support that rule.
+Everything else in the system exists to make that rule reliable, reproducible, and economically useful.
 
 ## The Short Version
 
-A **theorem** is a precise math claim. A **proof script** is Lean source code that closes that claim. **Lean** is a proof assistant: software that checks each inference mechanically, like a strict compiler for math.
+A **theorem** is a precise mathematical claim. A **proof script** is Lean source code that proves that claim. **Lean** is a proof assistant: software that checks each inference step mechanically, like a strict compiler for mathematics.
 
-On Bittensor, Lemma follows this loop:
+A Lemma round works like this:
 
 1. The subnet publishes a theorem statement.
 2. Miners use models, tools, and compute to search for a proof.
-3. Miners return a `proof_script`.
-4. Validators run Lean on the submission.
-5. If Lean passes, the work can earn score; if it fails, there is nothing to score yet.
+3. Miners submit a `proof_script`.
+4. Validators run Lean on the submission under the pinned toolchain.
+5. Passing proofs become eligible for score; failing proofs are not.
 
-That makes Lemma **proof mining** in the same loose sense as Bitcoin mining: there, each round goes to whoever publishes the next valid block first; here, miners seek Lean-valid proofs that match the published theorem.
+In that limited sense, Lemma is a form of proof mining. Bitcoin miners compete to produce the next valid block. Lemma miners compete to produce Lean-valid proofs for published theorem statements. The analogy is useful, but the work and reward mechanics are different.
 
-## Concrete examples (illustrative)
+## Concrete Examples
 
-These are simplified for readability. Live challenges follow the same pattern—a
-published formal statement, a miner-authored proof artifact, a mechanical check—but
-real tasks pin imports, namespaces, and theorem names to whatever the subnet
-published for that round.
+The examples below are simplified for readability. Live challenges follow the same structure: a published formal statement, a miner-authored proof artifact, and a mechanical Lean check. Real rounds also pin imports, namespaces, theorem names, toolchain versions, and Mathlib revisions.
 
 ### Example A: a small fact about natural numbers
 
-**Theorem (plain English).** For any natural number \(n\), adding zero on the
-right leaves \(n\) unchanged: \(n + 0 = n\). The walk-through below also picks a
-concrete numeral, \(7 + 0 = 7\), as the final claim.
+**Plain-English theorem.** For any natural number \(n\), adding zero on the right leaves \(n\) unchanged: \(n + 0 = n\). The example below also specializes that fact to the concrete statement \(7 + 0 = 7\).
 
-**What the subnet publishes.** A formal Lean version of that claim (plus pinned
-toolchain and Mathlib revision). Everyone aims at the same target: close the
-exact statement the broadcast names, in the module layout the rules require.
+**What the subnet publishes.** A formal Lean statement, together with the pinned toolchain and Mathlib revision. Everyone works against the same target: the exact theorem statement and module layout published for that round.
 
-**What the miner returns.** A `proof_script`—Lean source, usually a
-`Submission.lean`-style file that the challenge specifies.
+**What the miner returns.** A `proof_script`: Lean source code, usually in a challenge-specified file such as `Submission.lean`.
 
 **A real proof (illustrative).** The snippet below is valid Lean 4
 (prelude-style). A **lemma** states the general fact; a **theorem** reuses that
@@ -72,127 +64,113 @@ goals, syntax or import errors, wrong theorem name or statement relative to the
 broadcast, or toolchain mismatch—not “almost correct” prose, because the
 artifact is code, not an explanation.
 
-**Outcome.** Lean rejects the build or leaves a goal open. That submission does
-not earn proof score for that round: there is nothing to score until Lean
-accepts a complete proof.
+**Outcome.** Lean rejects the build or leaves a goal open. Until Lean accepts a complete proof of the published statement, that submission does not earn proof score.
 
-## Verification and rewards
+## Verification and Rewards
 
-The live path stays narrow so validators stay aligned:
+The live verification path is intentionally narrow:
 
-- Publish the formal statement.
-- Receive a proof script.
-- Lean passes or fails under the pinned toolchain.
+- the subnet publishes a formal theorem statement;
+- miners submit proof scripts;
+- validators run Lean under the pinned toolchain;
+- Lean either accepts or rejects the submission.
 
-Lemma does **not** grade natural-language write-ups as the on-chain signal. Essays and chat logs can help people debug or teach; they are not what validators check for rewards.
+Lemma does **not** use natural-language write-ups as the reward-critical artifact. Essays, chat logs, and explanations can help humans debug or learn, but validators reward proof scripts that pass the formal checker.
 
-If Lean accepts the script under policy, the verification pass is real. Length and readability can vary.
+After Lean accepts a submission, Bittensor handles token economics in the usual way: validators publish miner scores, or weights, and payouts follow the subnet’s alpha reward rules. Those scoring rules can evolve through governance, but they should not blur the verification gate.
 
-After that gate, Bittensor handles token economics the usual way: validators publish scores for miners (weights), and payouts follow subnet rules (alpha). Those scoring rules can change with governance; they should not replace or blur the Lean check.
+Lemma separates two questions:
 
-Lemma separates two questions: whether the proof is valid (Lean answers that), and how valid work becomes weights (subnet policy). Extra signals belong in research until the subnet explicitly adopts them with evidence.
+1. **Is the proof valid?** Lean answers this.
+2. **How does valid work become weight?** Lemma’s subnet policy answers this.
+
+Extra signals, such as intrinsic proof metrics, should remain research-only until the subnet explicitly adopts them with evidence.
 
 ## What Miners Do
 
-A miner exposes a network endpoint so validators can send theorem challenges. Bittensor calls that endpoint an **Axon**. When a challenge arrives, the miner tries to produce a Lean `proof_script`.
+A miner exposes a network endpoint so validators can send theorem challenges. Bittensor calls that endpoint an **Axon**. When a challenge arrives, the miner searches for a Lean `proof_script` that closes the published theorem.
 
-The reference miner uses a prover model through an OpenAI-compatible API (Chutes, OpenAI, Gemini’s compatible endpoint, Anthropic with optional extras, or another gateway). The reward-critical artifact is the proof script, not an essay.
+The reference miner uses a prover model through an OpenAI-compatible API, such as Chutes, OpenAI, Gemini’s compatible endpoint, Anthropic with optional extras, or another gateway. Operators may choose their own proving stack. The reward-critical artifact is always the proof script, not a prose explanation.
 
-Optional local Lean runs can catch mistakes early; the validator’s check is what matters for live scoring.
+Running Lean locally can catch mistakes before submission, but the validator’s check is what matters for live scoring.
 
 ## What Validators Do
 
-A validator sends challenges to miners, waits for responses, verifies each proof with Lean, turns results into scores, and writes scores on chain. Production validators typically run Lean in Docker; the sandbox image pins the toolchain and Mathlib revision so checks match across machines.
+A validator sends challenges to miners, collects responses, verifies each proof with Lean, converts eligible results into scores, and writes those scores on chain.
 
-Validators follow subnet epoch timing: each round includes time for miners to respond and time for Lean to finish.
+Production validators typically run Lean inside Docker. The sandbox image pins the toolchain and Mathlib revision so verification results match across machines.
 
-Transport details (how messages move on the wire) are in **Transport** below.
+Validators follow subnet epoch timing: each round includes time for miners to respond and time for Lean verification to finish. Transport details are covered below.
 
 ## Proofs, Scores, And Weights
 
 The live rule is intentionally simple:
 
-- Lean passes: the proof can enter scoring.
-- Lean fails: the proof cannot receive proof score.
+- **Lean passes:** the proof can enter scoring.
+- **Lean fails:** the proof cannot receive proof score.
 
-After Lean passes, Lemma turns eligible miner entries into **weights** (on-chain credit). Each verified proof starts from the same base score; proof length, style, and elegance do not change that base.
+Once Lean accepts a submission, Lemma turns eligible miner entries into **weights**, the on-chain credit validators publish for miners. Each verified proof starts from the same base score. Proof length, style, and elegance do not change that base.
 
-Reputation and credibility settings may adjust entries. **Same-coldkey partitioning** splits one coldkey’s allocation across its hotkeys so running many hotkeys under one coldkey does not multiply share by accident. It does not prove unique humans. Someone can still register many coldkeys if economics allow it.
+Reputation and credibility settings may adjust eligible entries. **Same-coldkey partitioning** splits one coldkey’s allocation across its hotkeys so running multiple hotkeys under one coldkey does not multiply share by accident. This reduces one easy form of overcounting, but it does not prove unique humans. A participant can still register many coldkeys if the economics allow it.
 
 ## Problem Supply
 
-The default live-style problem source is generated templates. A chain-aligned
-seed maps to a generated theorem id such as `gen/<seed>`.
+The default live-style problem source is generated templates. A chain-aligned seed maps deterministically to a generated theorem id such as `gen/<seed>`.
 
-This map is public and deterministic. That is a known tradeoff, not a secret
-evaluation system. Miners may learn repeated shapes over time.
+This mapping is public by design. It is a tradeoff, not a hidden evaluation system. Miners may learn repeated problem shapes over time.
 
-The fix is better supply, not pretending the generator is hidden:
+The answer is better supply, not secrecy:
 
 - add more varied generated builders;
 - coordinate registry upgrades;
 - measure solve and verify time;
 - later add curated or bounty lanes for harder work.
 
-There is also a frozen catalog mode for development and evaluation. It is gated
-on purpose and is not the default production-style source.
+A frozen catalog mode also exists for development and evaluation. It is gated intentionally and is not the default production-style source.
 
-## Models And APIs
+## Models and APIs
 
-Validators do not need an inference model to check proofs. They need the pinned
-Lean sandbox and the shared validator profile.
+Validators do not need an inference model to check proofs. They need the pinned Lean sandbox and the shared validator profile.
 
-Miners need a prover. The repo's prover path expects an API that can return a
-full `Submission.lean` proof script.
+Miners need a proving strategy. The reference prover path expects an API that can return a complete `Submission.lean` proof script.
 
-Model choice is an operator decision. The important question is simple: does the
-model produce proofs that pass Lean inside the validator's time window?
+Model choice is an operator decision. The practical question is simple: can the model produce proofs that pass Lean within the validator’s time window?
 
 ## Transport
 
-Validators send challenges; miners listen on their server. Today that rides Bittensor’s client/server helpers: historically **Dendrite** on the validator side and **Axon** on the miner side. The payload type is `LemmaChallenge`. Responses include body-hash checks; validators drop replies when required hash data is missing or mismatched.
+Validators send challenges; miners listen for them. Today, Lemma uses Bittensor’s client/server helpers: historically **Dendrite** on the validator side and **Axon** on the miner side. The payload type is `LemmaChallenge`.
 
-A future move to plain HTTP plus different signing would be a large migration, not a small toggle.
+Responses include body-hash checks. Validators drop replies when required hash data is missing or mismatched.
 
-## Safety And Operations
+Moving to plain HTTP plus a different signing model would be a major migration, not a small configuration change.
+
+## Safety and Operations
 
 Operators should treat keys carefully.
 
-Coldkeys should stay local or offline. Hotkeys can run on VPS hosts. A miner or
-validator service should not need the coldkey private file on the server.
+Coldkeys should stay local or offline. Hotkeys can run on VPS hosts. A miner or validator service should not need the coldkey private file on the server.
 
-Validators also need reliable Docker and Lean caches. A cold Lean workspace can
-be much slower than a warm one. Production validators should use persistent cache
-directories, pinned images, and realistic Linux hardware before drawing timing
-conclusions.
+Validators also need reliable Docker and warm Lean caches. A cold Lean workspace can be much slower than a warm one. Production validators should use persistent cache directories, pinned images, and realistic Linux hardware before drawing timing conclusions.
 
-Remote Lean workers can move CPU load off the validator host, but they add
-network and auth concerns. Use private networking, bearer auth, and TLS when
-crossing untrusted networks.
+Remote Lean workers can move CPU load away from the validator host, but they add network and authentication risks. Use private networking, bearer authentication, and TLS when crossing untrusted networks.
 
-The practical operator goal is simple: keep services reachable, keep keys safe,
-keep caches warm, and keep validators on the same published profile. A local
-proof pass is useful, but live operation also needs miner forwards, validator
-verification, `set_weights`, and repeated rounds on the actual subnet.
+The practical operator goal is simple: keep services reachable, keep keys safe, keep caches warm, and keep validators on the same published profile. A local proof pass is useful, but live operation also requires miner connectivity, validator verification, `set_weights`, and repeated rounds on the actual subnet.
 
-## Data And Exports
+## Data and Exports
 
 Lemma does not maintain a central public proof database by default.
 
-Validators can write local JSONL exports for research or operations. A `summary`
-profile avoids proof text and reward weights. A `full` profile can include proof
-scripts, labels, proof metrics, and final weight data for private analysis.
+Validators can write local JSONL exports for research or operations. A `summary` profile avoids proof text and reward weights. A `full` profile can include proof scripts, labels, proof metrics, and final weight data for private analysis.
 
-Full exports can leak useful training and gaming signals. Keep them private
-unless they have been reviewed and processed for release.
+Full exports may leak useful training or gaming signals. Keep them private unless they have been reviewed and processed for release.
 
 ## Optional Mechanisms
 
-Extra mechanisms exist for edge cases and governance experiments; they do not replace the Lean gate:
+Several optional mechanisms exist for edge cases and governance experiments. None of them replaces the Lean verification gate:
 
 - **Commit-reveal** reduces certain cheating patterns by committing to a proof hash before sending the full script, at the cost of more round trips.
-- **Miner verify attest** lets a miner sign that it ran local Lean—useful for audits, not hardware attestation.
-- **Validator profile peer attest** helps a group of validators confirm they run the same policy fingerprint.
+- **Miner verify attest** lets a miner sign that it ran local Lean. This is useful for audits, but it is not hardware attestation.
+- **Validator profile peer attest** helps a group of validators confirm they are running the same policy fingerprint.
 - **Proof intrinsic metrics** are research-only and do not drive live rewards.
 
 ## Codebase Map
@@ -212,26 +190,21 @@ Broader docs: this file for overview, [getting-started.md](getting-started.md) t
 
 ## Current Status
 
-Lemma is still proof-of-concept software, but it can run on Bittensor testnet:
+Lemma is proof-of-concept software that can run on Bittensor testnet:
 
 - Network: `test`
 - Subnet: `467`
 - Mainnet name: Finney
 
-The near-term goal is not a complicated reward theory. It is a reliable loop:
-publish theorem, get proof, verify proof, score passing proofs, and operate the
-subnet without special hand-holding.
+The near-term goal is a reliable loop: publish theorem, receive proof, verify proof, score passing proofs, and operate the subnet without special hand-holding.
 
 ## Roadmap
 
 The first lane is steady generated work with predictable verification cost.
 
-Later lanes can add curated theorem sets, Mathlib gaps, or submit-when-ready
-bounties. Those lanes should still use public statements, pinned toolchains,
-clear reward rules, and reproducible verification.
+Later lanes can add curated theorem sets, Mathlib gaps, or submit-when-ready bounties. Those lanes should still use public statements, pinned toolchains, clear reward rules, and reproducible verification.
 
-Long term, Lemma should become a market for verified mathematical progress. The
-first step is keeping the basic rule clear and hard to fake.
+Long term, Lemma should become a market for verified mathematical progress. The first step is keeping the basic rule clear, reproducible, and hard to fake.
 
 ## Start Here
 

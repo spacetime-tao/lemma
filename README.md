@@ -1,25 +1,30 @@
 # Lemma
 
-**Lemma** is a [Bittensor](https://docs.learnbittensor.org/) subnet. Miners work on published math problems; validators check submitted proofs with the same verifier so pass or fail is shared and mechanical.
+**Lemma** is a [Bittensor](https://docs.learnbittensor.org/) subnet for formal mathematical proof. Miners compete to produce Lean proof scripts for published theorem statements. Validators run those submissions through the same pinned verifier, so the first question is mechanical: does the proof check, or does it fail?
 
-Proofs have to be precise enough for software to check—here that means formal proof scripts (Lean). How passing checks turn into token payouts follows Bittensor’s public rules: validators publish miner scores (weights), and rewards use the subnet token (alpha). Details are in the [litepaper](docs/litepaper.md).
+A Lemma round is simple:
 
-Each round Lemma publishes a theorem to prove. Miners send candidates; validators run the checker—often inside Docker so every machine uses the same toolchain.
+1. The subnet publishes a theorem statement.
+2. Miners submit candidate Lean proof scripts.
+3. Validators verify those scripts with the published toolchain.
+4. Passing proofs become eligible for scoring and rewards under Lemma’s subnet rules.
 
-Bitcoin is only a loose analogy: one miner wins each new block there; here many miners can succeed in the same round if their proofs pass—incentives and open participation are in the same family, the work is different.
+The Bitcoin analogy is only loose. Bitcoin miners compete to publish the next valid block; Lemma miners compete to produce Lean-valid proofs for published theorem statements. More than one miner can succeed in the same Lemma round if multiple submissions pass verification.
 
-The repo is still largely proof-of-concept. On testnet, Lemma is **subnet 467** (`--network test`; use `uv run lemma configure chain` to set `NETUID=467`). Mainnet (Finney) is separate: treat rewards and tokens there only if the deployment you follow is registered and active—always match **network** and **netuid** to what you run.
+Lemma is still proof-of-concept software. It currently runs on Bittensor testnet as **subnet 467** (`--network test`; run `uv run lemma configure chain` to set `NETUID=467`). Mainnet, also known as Finney, is separate. Only treat mainnet rewards or tokens as relevant when the deployment you are following is registered, active, and matched to the correct **network** and **netuid**.
+
+For the full mechanism and reward model, start with the [litepaper](docs/litepaper.md).
 
 ## Start Here
 
-1. **Read the litepaper:** [docs/litepaper.md](docs/litepaper.md)
-2. **Skim the FAQ:** [docs/faq.md](docs/faq.md)
-3. **Run the setup path:** [docs/getting-started.md](docs/getting-started.md)
-4. **Use the technical reference:** [docs/technical-reference.md](docs/technical-reference.md)
+1. **Understand the mechanism:** [docs/litepaper.md](docs/litepaper.md)
+2. **Get plain-language answers:** [docs/faq.md](docs/faq.md)
+3. **Install and run Lemma:** [docs/getting-started.md](docs/getting-started.md)
+4. **Check implementation details:** [docs/technical-reference.md](docs/technical-reference.md)
 
 ## Quick start
 
-If you only want to try the CLI locally, run the commands below. Docker and host networking notes are under **Operators**.
+To try the CLI locally:
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -35,9 +40,9 @@ Use one environment and one tool: `uv`. The Lemma `.venv` holds subnet dependenc
 
 ### Operators
 
-The sample [`docker-compose.yml`](docker-compose.yml) runs services in containers and mounts **`/var/run/docker.sock`** so a validator can spawn **other** containers for proof checking. That is high privilege—lock down the host (see [production.md](docs/production.md)).
+The sample [`docker-compose.yml`](docker-compose.yml) runs Lemma services in containers. It also mounts **`/var/run/docker.sock`** so validators can spawn isolated proof-checking containers. That socket is high privilege. Lock down the host before using this setup in production; see [production.md](docs/production.md).
 
-In miner docs, **axon** is Bittensor’s name for the network address and port your miner listens on for validator traffic—open it on purpose in firewalls and cloud security groups.
+In the miner docs, **axon** is Bittensor’s term for the network address and port where your miner listens for validator traffic. Open that port intentionally in firewalls and cloud security groups.
 
 ## Short Docs Index
 

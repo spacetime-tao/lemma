@@ -1,16 +1,16 @@
 # Lemma FAQ
 
-Plain-language answers. For depth see [litepaper.md](litepaper.md); for setup see [getting-started.md](getting-started.md).
+Plain-language answers about Lemma, Lean proofs, Bittensor roles, rewards, and operational risks. For the full mechanism, read the [litepaper](litepaper.md). To run the software, start with [getting-started.md](getting-started.md).
 
 ---
 
 ## What is Lemma?
 
-**Lemma** is a [Bittensor](https://docs.learnbittensor.org/) subnet. Miners try to solve published math problems with answers a computer can check (see *Foundations* below). Validators use the same checker, so pass or fail is mechanical—not opinion.
+**Lemma** is a [Bittensor](https://docs.learnbittensor.org/) subnet for formal mathematical proof. Miners try to solve published theorem statements by submitting proof scripts that Lean can check. Validators run those submissions through the same pinned verifier, so acceptance is mechanical rather than subjective.
 
-Tokens and payouts follow normal Bittensor rules: validators publish scores for miners (weights), and miners earn the subnet reward token (alpha) under Lemma’s published scoring. Formulas and policy live in the [litepaper](litepaper.md) and [technical-reference.md](technical-reference.md).
+Rewards follow Bittensor’s normal flow: validators publish miner scores, also called weights, and miners earn the subnet reward token, alpha, according to Lemma’s scoring rules. The formulas and policy details are in the [litepaper](litepaper.md) and [technical reference](technical-reference.md).
 
-**Rough analogy to Bitcoin:** open competition and fixed rules, but the job is finding a correct proof for a published statement, not racing to publish the next chain block. Only one miner wins each Bitcoin block; on Lemma, many miners can pass the same round if their proofs check out.
+A rough analogy is Bitcoin mining: open participation, fixed rules, and competition for rewards. The work is different. Bitcoin miners compete to produce the next valid block; Lemma miners search for Lean-valid proofs for a published theorem. Multiple Lemma miners can pass the same round.
 
 ---
 
@@ -18,27 +18,27 @@ Tokens and payouts follow normal Bittensor rules: validators publish scores for 
 
 ### What is formal mathematics?
 
-It is mathematics built in a fully specified logical language: definitions, axioms, and which inference steps are allowed are fixed up front. If you write a proof in that language, software can check it line by line—each step either matches the rules or it does not.
+Formal mathematics is mathematics written in a fully specified logical language. The definitions, axioms, and allowed inference steps are fixed in advance. Because the rules are explicit, software can check a proof line by line.
 
 ### What is a theorem?
 
-A **theorem** is a precise claim: “given these assumptions, this conclusion holds.” Lemma broadcasts that claim in a formal language so everyone proves the same statement.
+A **theorem** is a precise claim: under these assumptions, this conclusion follows. Lemma broadcasts theorem statements in a formal language so every miner works on the same target.
 
 ### What is a proof?
 
-A **proof** is a correct argument for the theorem. Here it has to be written so a checker can follow it—no gaps justified only in prose.
+A **proof** is a correct argument for a theorem. In Lemma, the proof must be written as code that a checker can verify. Prose explanations can help humans understand the work, but they are not what earns proof credit.
 
 ### What is a proof script?
 
-The **`proof_script`** is the **actual file** (source code) the miner submits—the proof written in the formal language the subnet expects.
+A **`proof_script`** is the source file a miner submits. It contains the proof written in the formal language Lemma expects.
 
 ### What does a proof assistant do?
 
-A **proof assistant** (**Lean**, for Lemma) reads the proof script and says whether the logic closes: yes if every step checks out, no otherwise—like a compiler that returns errors until the proof is complete.
+A **proof assistant** checks whether a proof script follows the rules of the formal system. Lemma uses **Lean**. If every step is valid, Lean accepts the proof; if something is missing or incorrect, Lean rejects it, much like a compiler reporting errors.
 
 ### Is this “Bitcoin for math”?
 
-Only as an analogy. Bitcoin miners compete for each new block; Lemma miners compete to produce proofs that pass the checker. Both involve networks and tokens; the work and the economics are different.
+Only as an analogy. Bitcoin miners compete to produce the next valid block; Lemma miners compete to produce Lean-valid proofs for published theorem statements. Both involve networks and tokens; the work and reward mechanics are different.
 
 ---
 
@@ -46,7 +46,7 @@ Only as an analogy. Bitcoin miners compete for each new block; Lemma miners comp
 
 ### Why Lean?
 
-**Lean** is the proof assistant the subnet standardizes on so every validator runs the same checker against the same pinned toolchain—no human grading prose.
+**Lean** is the proof assistant the subnet standardizes on so every validator runs the same pinned Lean verifier against the same toolchain—no human grading prose.
 
 ---
 
@@ -54,7 +54,7 @@ Only as an analogy. Bitcoin miners compete for each new block; Lemma miners comp
 
 ### What does a miner do?
 
-A miner exposes a small network service on a port you choose so validators can send challenges (theorem plus pinned Lean toolchain details). Bittensor calls that service an **Axon**. The miner searches for a **`proof_script`** that satisfies the broadcast. More detail: [miner.md](miner.md).
+A miner exposes a small network service on a port you choose so validators can send challenges (theorem plus pinned toolchain details). Bittensor calls that service an **Axon**. The miner searches for a **`proof_script`** that satisfies the broadcast. More detail: [miner.md](miner.md).
 
 ### What does a validator do?
 
@@ -66,19 +66,19 @@ Wallet accounts (**coldkey** / **hotkey**), a shared view of who is registered, 
 
 ---
 
-## Rewards (high level)
+## Rewards at a high level
 
 ### Do miners earn alpha?
 
-Yes. **Alpha** is the subnet’s reward token; miners receive it when their work earns score under Lemma’s rules, starting from proofs that pass Lean. How scores map to payouts: [litepaper — Proofs, Scores, And Weights](litepaper.md#proofs-scores-and-weights).
+Yes. **Alpha** is the subnet reward token. Miners can earn alpha when their submissions receive score under Lemma’s rules. The first gate is Lean verification: if a proof does not pass Lean, it is not eligible for proof score. See [Proofs, Scores, And Weights](litepaper.md#proofs-scores-and-weights).
 
-### Testnet vs mainnet?
+### What is the difference between testnet and mainnet?
 
-Lemma runs on Bittensor testnet at a published netuid (see [litepaper — Current Status](litepaper.md#current-status)). Mainnet (Finney) is different—only trust rewards there if the Lemma deployment you follow is registered and live.
+Lemma currently runs on Bittensor testnet at the netuid listed in [Current Status](litepaper.md#current-status). Mainnet, also called Finney, is separate. Only rely on mainnet rewards if the Lemma deployment you are following is registered, live, and configured for the correct network and netuid.
 
 ### What costs should I expect?
 
-Miners often pay for API calls (e.g. LLM provers), servers, and registration fees. Validators pay for hardware, Docker, disk, and uptime. Estimate before you scale.
+Miners may pay for prover APIs, servers, and registration fees. Validators may pay for hardware, Docker storage, disk, and uptime. Estimate costs before scaling.
 
 ---
 
@@ -90,7 +90,7 @@ Leaked keys or sloppy hosting can drain accounts or hurt reputation scores. See 
 
 ### What operational failures are common?
 
-Closed firewall ports (validators cannot reach your miner’s listen port), full disks, cold caches, wrong pinned toolchain settings, or drifting Docker images. See [production.md](production.md).
+Closed firewall ports (validators cannot reach your miner’s listen port), full disks, cold caches, mismatched pinned toolchain, or drifting Docker images. See [production.md](production.md).
 
 ---
 
@@ -104,15 +104,15 @@ Lemma is still largely proof-of-concept software. Expect rough edges—try testn
 
 ### Who decides if my proof is accepted?
 
-**Lean** returns pass or fail on whether your **proof script** proves the exact broadcast statement under the pinned toolchain. There is no style ranking before that.
+Lean decides whether the submitted **`proof_script`** proves the exact theorem statement under the pinned toolchain. Validators do not grade style or prose before this Lean verification gate.
 
 ### What happens after Lean accepts?
 
-Passing work feeds into Lemma’s scoring rules (see the litepaper). Those rules sit after the Lean gate; they can change with governance but do not replace verification.
+A passing proof enters Lemma’s scoring rules. Those rules can evolve through governance, but they sit after the Lean verification gate; they do not replace it.
 
 ### Can validators cheat by changing the theorem?
 
-Everyone is supposed to follow the same published toolchain and artifacts ([governance.md](governance.md)). Compare hashes with the subnet when in doubt.
+Validators are expected to follow the same published toolchain, challenge artifacts, and policy profile. Compare hashes with the subnet artifacts when in doubt; see [governance.md](governance.md).
 
 ---
 
