@@ -1,7 +1,7 @@
 """Blacklist / priority using metagraph stake (optional production gate)."""
 
 import time
-from typing import Tuple  # noqa: UP035 — Axon signature check expects ``typing.Tuple``, not ``tuple``
+from typing import Any, Tuple, cast  # noqa: UP035 — Axon signature check expects ``typing.Tuple``, not ``tuple``
 
 import bittensor as bt
 from loguru import logger
@@ -48,7 +48,7 @@ def metagraph_incentive_for_hotkey(
         return uid, None
     raw = mg.I[uid]
     try:
-        inc = float(raw.item())  # type: ignore[union-attr]
+        inc = float(cast(Any, raw).item())
     except Exception:
         inc = float(raw)
     return uid, inc
@@ -64,7 +64,7 @@ def _uid_for_hotkey(metagraph: bt.Metagraph, hotkey: str) -> int | None:
 def _float_stake(metagraph: bt.Metagraph, uid: int) -> float:
     raw = metagraph.S[uid]
     try:
-        return float(raw.item())  # type: ignore[union-attr]
+        return float(cast(Any, raw).item())
     except Exception:
         return float(raw)
 
@@ -73,7 +73,7 @@ def _bool_tensor(metagraph: bt.Metagraph, name: str, uid: int) -> bool:
     tensor = getattr(metagraph, name)
     try:
         v = tensor[uid]
-        return bool(v.item())  # type: ignore[union-attr]
+        return bool(cast(Any, v).item())
     except Exception:
         return bool(v)
 

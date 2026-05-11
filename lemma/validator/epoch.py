@@ -46,6 +46,29 @@ if TYPE_CHECKING:
     from lemma.common.config import LemmaSettings
 
 
+def _validator_broadcast_challenge(
+    problem: Problem,
+    *,
+    seed_k: int,
+    deadline_block: int | None,
+    forward_wait_s: float,
+    commit_reveal_phase: str,
+) -> LemmaChallenge:
+    """Build the validator→miner synapse for one broadcast (commit/reveal/off)."""
+    return LemmaChallenge(
+        theorem_id=problem.id,
+        theorem_statement=problem.challenge_source(),
+        imports=list(problem.imports),
+        lean_toolchain=problem.lean_toolchain,
+        mathlib_rev=problem.mathlib_rev,
+        deadline_unix=int(time.time()) + int(forward_wait_s),
+        deadline_block=deadline_block,
+        metronome_id=str(seed_k),
+        timeout=float(forward_wait_s),
+        commit_reveal_phase=commit_reveal_phase,
+    )
+
+
 def _coldkey_for_uid(metagraph: object, uid: int) -> str:
     return _coldkey_for_uid_or_none(metagraph, uid) or f"uid:{uid}"
 
@@ -60,7 +83,8 @@ def _coldkey_for_uid_or_none(metagraph: object, uid: int) -> str | None:
             v = v.item()
         s = str(v).strip()
         return s or None
-    except Exception:
+    except Exception as e:
+        logger.debug("metagraph coldkey lookup failed uid={}: {}", uid, e)
         return None
 
 
@@ -73,7 +97,8 @@ def _hotkey_ss58_for_uid(metagraph: object, uid: int) -> str | None:
         if hasattr(v, "item"):
             return str(v.item())
         return str(v)
-    except Exception:
+    except Exception as e:
+        logger.debug("metagraph hotkey lookup failed uid={}: {}", uid, e)
         return None
 
 
@@ -199,10 +224,12 @@ async def _run_verify_batch(
         return_exceptions=True,
     )
     verified: list[VerifyItem] = []
-    for idx, ((uid, _resp), result) in enumerate(zip(verify_inputs, results, strict=True)):
-        if isinstance(result, Exception):
-            logger.warning("uid={} verify task failed: {}", uid, result)
+    for idx, ((uid, _resp), raw) in enumerate(zip(verify_inputs, results, strict=True)):
+        if isinstance(raw, BaseException):
+            if isinstance(raw, Exception):
+                logger.warning("uid={} verify task failed: {}", uid, raw)
             continue
+        result: VerifyItem | None = raw
         if result is not None:
             if groups is None:
                 verified.append(result)
@@ -302,22 +329,16 @@ async def run_epoch(
                 wait_scale=wait_scale,
             )
 
-            base_syn: dict[str, object] = {
-                "theorem_id": problem.id,
-                "theorem_statement": problem.challenge_source(),
-                "imports": list(problem.imports),
-                "lean_toolchain": problem.lean_toolchain,
-                "mathlib_rev": problem.mathlib_rev,
-                "deadline_unix": int(time.time()) + int(forward_wait_s),
-                "deadline_block": deadline_block,
-                "metronome_id": str(seed_k),
-                "timeout": forward_wait_s,
-            }
-
             axons = [metagraph.axons[uid] for uid in uids]
             commits_by_uid: dict[int, str] = {}
             if settings.lemma_commit_reveal_enabled:
-                syn_commit = LemmaChallenge(**base_syn, commit_reveal_phase="commit")
+                syn_commit = _validator_broadcast_challenge(
+                    problem,
+                    seed_k=seed_k,
+                    deadline_block=deadline_block,
+                    forward_wait_s=float(forward_wait_s),
+                    commit_reveal_phase="commit",
+                )
                 responses_commit = await dendrite(
                     axons,
                     syn_commit,
@@ -331,10 +352,22 @@ async def run_epoch(
                     norm_commit = normalize_commitment_hex(hx)
                     if norm_commit is not None:
                         commits_by_uid[uid_c] = norm_commit
-                synapse = LemmaChallenge(**base_syn, commit_reveal_phase="reveal")
+                synapse = _validator_broadcast_challenge(
+                    problem,
+                    seed_k=seed_k,
+                    deadline_block=deadline_block,
+                    forward_wait_s=float(forward_wait_s),
+                    commit_reveal_phase="reveal",
+                )
                 responses = await dendrite(axons, synapse, timeout=forward_wait_s, run_async=True)
             else:
-                synapse = LemmaChallenge(**base_syn, commit_reveal_phase="off")
+                synapse = _validator_broadcast_challenge(
+                    problem,
+                    seed_k=seed_k,
+                    deadline_block=deadline_block,
+                    forward_wait_s=float(forward_wait_s),
+                    commit_reveal_phase="off",
+                )
                 responses = await dendrite(axons, synapse, timeout=forward_wait_s, run_async=True)
             # Dendrite returns a batch, not a trusted per-response receipt block. Enforce the response deadline
             # conservatively at the block observed after the batch returns.
@@ -491,13 +524,16 @@ async def run_epoch(
                             resp,
                             VerifyResult(passed=True, reason="attest_trusted"),
                         )
+                proof_src = resp.proof_script
+                if proof_src is None:
+                    return None
                 async with _sem:
                     vr = await asyncio.to_thread(
                         run_lean_verify,
                         settings,
                         verify_timeout_s=_vto,
                         problem=_prob,
-                        proof_script=resp.proof_script,
+                        proof_script=proof_src,
                     )
                 if not vr.passed:
                     logger.debug("uid={} verify failed: {}", uid, vr.reason)

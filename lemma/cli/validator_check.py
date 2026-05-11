@@ -8,6 +8,7 @@ from typing import Literal
 
 import bittensor as bt
 import click
+from loguru import logger
 
 from lemma.cli.style import finish_cli_output, stylize
 from lemma.common.config import LemmaSettings
@@ -44,8 +45,8 @@ def _docker_image_available(image: str) -> bool:
         client = docker.from_env()
         client.images.get(image)
         return True
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("docker SDK image check failed for {}: {}", image, e)
 
     if not shutil.which("docker"):
         return False

@@ -16,7 +16,15 @@ jobs:
       - name: Sync
         run: uv sync --extra dev
       - name: Ruff
-        run: uv run ruff check lemma tests
+        run: uv run ruff check lemma tests tools
+      - name: Mypy
+        run: uv run mypy lemma
+      - name: Pip-audit
+        continue-on-error: true
+        run: uv run pip-audit
+      - name: Bandit
+        continue-on-error: true
+        run: uv run bandit -q -r lemma
       - name: Pytest
         # Docker golden runs only in docker-lean-sandbox (needs image + disk).
         run: uv run pytest tests/ -q --ignore=tests/test_docker_golden.py

@@ -19,22 +19,54 @@ from lemma.common.logging import setup_logging
 from lemma.problems.factory import resolve_problem
 
 
-@click.group(invoke_without_command=True, context_settings={"max_content_width": 100})
+@click.group(
+    name="lemma",
+    invoke_without_command=True,
+    context_settings={"max_content_width": 100},
+)
 @click.pass_context
 @click.version_option(version=__version__)
 def main(ctx: click.Context) -> None:
-    """Lemma subnet — Lean proofs (Bittensor).
-
-    \b
-    Common commands:
-      lemma setup            Configure .env for a miner or validator
-      lemma doctor           Check local config, keys, chain, and timeouts
-      lemma preview          Live theorem -> prover -> optional Lean verify
-      lemma miner start      Run the miner axon
-      lemma validator start  Run validator scoring rounds
-    """
+    """Machine-checked formal proofs on Bittensor (Lean). See docs/litepaper.md."""
     if ctx.invoked_subcommand is None:
         _show_home(ctx)
+
+
+def _home_help_commands(ctx: click.Context, *, include_usage: bool) -> None:
+    """Print Usage (optional) + Commands + Options with the same palette as Quick start."""
+    root = ctx.command
+    name = root.name or "lemma"
+    if include_usage:
+        click.echo(stylize("Usage:", fg="cyan", bold=True) + f" {name} [OPTIONS] COMMAND [ARGS]...")
+        click.echo("")
+    click.echo(stylize("Commands:", fg="cyan", bold=True))
+    for sub_name in sorted(root.commands):
+        sub = root.commands[sub_name]
+        h = sub.short_help or ""
+        if not h and sub.help:
+            h = sub.help.split("\n")[0].strip()
+        h_one = (h or "—").strip().replace("\n", " ")
+        if len(h_one) > 72:
+            h_one = h_one[:69] + "..."
+        pad = max(1, 18 - len(sub_name))
+        click.echo(
+            "  "
+            + stylize(sub_name, fg="green", bold=True)
+            + (" " * pad)
+            + stylize(h_one, dim=True),
+        )
+    click.echo("")
+    click.echo(stylize("Options:", fg="cyan", bold=True))
+    click.echo(
+        "  "
+        + stylize("--version", fg="yellow", bold=True)
+        + stylize("  Show the version and exit.", dim=True),
+    )
+    click.echo(
+        "  "
+        + stylize("--help", fg="yellow", bold=True)
+        + stylize("     Show this message and exit.", dim=True),
+    )
 
 
 def _show_home(ctx: click.Context) -> None:
@@ -42,11 +74,13 @@ def _show_home(ctx: click.Context) -> None:
         stylize("Lemma ", fg="cyan", bold=True)
         + stylize(__version__, dim=True)
         + stylize("  —  ", dim=True)
-        + stylize("Lean proof subnet\n", dim=True),
+        + stylize("Machine-checked math proofs on Bittensor\n", fg="white"),
         nl=False,
     )
-    click.echo(ctx.get_help(), color=colors_enabled())
-    click.echo(stylize("Typical paths", fg="cyan", bold=True))
+    name = ctx.command.name or "lemma"
+    click.echo(stylize("Usage:", fg="cyan", bold=True) + f" {name} [OPTIONS] COMMAND [ARGS]...")
+    click.echo("")
+    click.echo(stylize("Quick start", fg="cyan", bold=True))
     click.echo(
         "  "
         + stylize("Setup", fg="yellow", bold=True)
@@ -77,7 +111,11 @@ def _show_home(ctx: click.Context) -> None:
         + stylize(" -> ", dim=True)
         + stylize("lemma validator start", fg="green"),
     )
-    click.echo(stylize("  Docs: docs/litepaper.md -> docs/getting-started.md\n", dim=True))
+    click.echo(
+        stylize("  Docs  docs/litepaper.md  ·  docs/faq.md  ·  docs/getting-started.md\n", dim=True),
+        nl=False,
+    )
+    _home_help_commands(ctx, include_usage=False)
 
 
 def _env_path(env_path: Path | None) -> Path:
@@ -226,7 +264,10 @@ def status_cmd() -> None:
 def problems_group(ctx: click.Context) -> None:
     """Inspect catalog or print Challenge.lean."""
     if ctx.invoked_subcommand is None:
-        show_cmd = ctx.command.get_command(ctx, "show")
+        grp = ctx.command
+        if not isinstance(grp, click.Group):
+            raise click.ClickException("problems command group misconfigured.")
+        show_cmd = grp.get_command(ctx, "show")
         if show_cmd is None:
             raise click.ClickException("problems show command missing.")
         ctx.invoke(show_cmd, problem_id=None, current=True, block=None)
@@ -273,7 +314,12 @@ def problems_show_cmd(problem_id: str | None, current: bool, block: int | None) 
 
     if current or block is not None:
         subtensor = get_subtensor(settings)
-        head = int(subtensor.get_current_block()) if current else int(block)
+        if current:
+            head = int(subtensor.get_current_block())
+        else:
+            if block is None:
+                raise click.UsageError("Expected --block N when --current is not set.")
+            head = int(block)
         slack_b = int(settings.lemma_problem_seed_chain_head_slack_blocks or 0)
         seed_head = effective_chain_head_for_problem_seed(head, slack_b)
         seed, tag = resolve_problem_seed(
@@ -293,7 +339,8 @@ def problems_show_cmd(problem_id: str | None, current: bool, block: int | None) 
         click.echo(p.challenge_source())
         return
 
-    assert problem_id is not None
+    if problem_id is None:
+        raise click.UsageError("problem_id is required unless using --current or --block.")
     p = resolve_problem(settings, problem_id.strip())
     click.echo(stylize(f"lemma problems show {problem_id.strip()}", fg="cyan", bold=True))
     click.echo("")

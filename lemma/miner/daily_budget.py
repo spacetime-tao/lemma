@@ -6,6 +6,7 @@ import json
 import threading
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any, cast
 
 _STATE_VERSION = 1
 _lock = threading.Lock()
@@ -51,7 +52,7 @@ def _allow_daily_forward_locked(max_per_day: int, state_path: Path | None) -> bo
         data = {"version": _STATE_VERSION}
 
     stored_day = data.get("day")
-    count = int(data.get("count") or 0)
+    count = int(cast(Any, data.get("count")) or 0)
     if stored_day != day:
         stored_day = day
         count = 0

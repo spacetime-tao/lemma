@@ -9,6 +9,7 @@ import secrets
 import threading
 import time
 
+import bittensor as bt
 from loguru import logger
 
 from lemma.common.config import LemmaSettings
@@ -118,7 +119,7 @@ def make_forward(
     *,
     metagraph_cache: MetagraphCache | None = None,
     miner_hotkey_ss58: str | None = None,
-    wallet: object | None = None,
+    wallet: bt.Wallet | None = None,
     commit_reveal_cache: CommitRevealCache | None = None,
 ):
     sem = asyncio.Semaphore(max(1, settings.miner_max_concurrent_forwards))
@@ -170,11 +171,11 @@ def make_forward(
                 logger.debug("miner forward incentive snapshot skipped: {}", e)
 
         if settings.miner_forward_timeline:
-            head = _optional_chain_head(settings)
+            chain_head = _optional_chain_head(settings)
             dbv = synapse.deadline_block
             bleft: int | str = "?"
-            if head is not None and dbv is not None and int(dbv) > 0:
-                bleft = max(0, int(dbv) - int(head))
+            if chain_head is not None and dbv is not None and int(dbv) > 0:
+                bleft = max(0, int(dbv) - int(chain_head))
             budget = float(getattr(synapse, "timeout", 0) or 0)
             du = int(synapse.deadline_unix) if synapse.deadline_unix else 0
             wall_deadline_in = max(0.0, float(du) - time.time()) if du else 0.0
@@ -188,7 +189,7 @@ def make_forward(
                 synapse.theorem_id,
                 synapse.metronome_id,
                 dbv if dbv is not None else None,
-                head,
+                chain_head,
                 bleft,
                 budget,
                 wall_deadline_in,
@@ -217,6 +218,7 @@ def make_forward(
         solve_s = 0.0
         proof = ""
         if phase == "reveal":
+            assert cr_key is not None
             cached = cr_cache.pop(cr_key)
             if cached is None:
                 return reject_synopsis(
@@ -353,6 +355,7 @@ def make_forward(
             )
 
         if phase == "commit":
+            assert cr_key is not None
             if settings.miner_local_verify and local_lean_status != "PASS":
                 return reject_synopsis(
                     synapse,

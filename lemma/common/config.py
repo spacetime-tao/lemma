@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -29,7 +29,7 @@ class LemmaSettings(BaseSettings):
         populate_by_name=False,
     )
 
-    def __init__(self, **data: object) -> None:
+    def __init__(self, **data: Any) -> None:
         """Accept Python field-name kwargs without accepting field-name env vars."""
         for name, field in type(self).model_fields.items():
             if name not in data:

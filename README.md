@@ -22,8 +22,9 @@ proofs under a theorem rule.
 ## Start Here
 
 1. **Read the litepaper:** [docs/litepaper.md](docs/litepaper.md)
-2. **Run the setup path:** [docs/getting-started.md](docs/getting-started.md)
-3. **Use the technical reference:** [docs/technical-reference.md](docs/technical-reference.md)
+2. **Skim the FAQ:** [docs/faq.md](docs/faq.md)
+3. **Run the setup path:** [docs/getting-started.md](docs/getting-started.md)
+4. **Use the technical reference:** [docs/technical-reference.md](docs/technical-reference.md)
 
 ## Quick start
 
@@ -44,11 +45,14 @@ development).
 
 **Validator entrypoint:** use **`lemma validator start`** (or Docker `ENTRYPOINT ["lemma"]` / `CMD ["validator", "start"]`).
 
+**Docker Compose:** the sample [`docker-compose.yml`](docker-compose.yml) mounts the host **`/var/run/docker.sock`** into the validator service so it can run Lean in Docker. That is powerful—compromise of the validator workload can pivot to the Docker daemon and thus the host. Treat the machine like production infrastructure: firewall the axon, patch Docker, and limit who can reach the API (see [production.md](docs/production.md)).
+
 ## Short Docs Index
 
 | Topic | File |
 | ----- | ---- |
 | Litepaper | [litepaper.md](docs/litepaper.md) |
+| FAQ (lay readers) | [faq.md](docs/faq.md) |
 | Install & operator checklist | [getting-started.md](docs/getting-started.md) |
 | Vision & roadmap | [vision.md](docs/vision.md) |
 | Components | [architecture.md](docs/architecture.md) |

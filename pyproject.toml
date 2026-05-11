@@ -34,6 +34,8 @@ dev = [
     "ruff>=0.6,<1",
     "mypy>=1.11,<2",
     "types-docker>=7.1,<8",
+    "pip-audit>=2.7,<3",
+    "bandit[toml]>=1.7,<2",
 ]
 wandb = ["wandb>=0.17,<1"]
 

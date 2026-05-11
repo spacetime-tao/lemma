@@ -11,7 +11,7 @@ import threading
 import time
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from loguru import logger
 from pydantic import BaseModel
@@ -92,7 +92,7 @@ def docker_worker_container_path(work: Path, host_root: Path, mount_point: Path)
     return str((mount_point / rel).as_posix())
 
 
-def _docker_container_logs_text(container: object) -> str:
+def _docker_container_logs_text(container: Any) -> str:
     """Merge stdout+stderr from ``container.logs()`` (Lake often prints failures to stdout)."""
     raw = container.logs(stdout=True, stderr=True, timestamps=False)
     if isinstance(raw, tuple):
@@ -102,7 +102,7 @@ def _docker_container_logs_text(container: object) -> str:
             + "\n"
             + (err_b or b"").decode("utf-8", errors="replace")
         )
-    return raw.decode("utf-8", errors="replace")
+    return str(raw.decode("utf-8", errors="replace"))
 
 
 VerifyReason = Literal[

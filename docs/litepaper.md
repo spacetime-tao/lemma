@@ -29,6 +29,55 @@ Lemma turns that into a subnet:
 That makes Lemma proof mining. Bitcoin miners produce valid hashes under a
 difficulty rule. Lemma miners produce valid Lean proofs under a theorem rule.
 
+## Concrete examples (illustrative)
+
+These are simplified for readability. Live challenges follow the same pattern—a
+published formal statement, a miner-authored proof artifact, a mechanical check—but
+real tasks pin imports, namespaces, and theorem names to whatever the subnet
+published for that round.
+
+### Example A: a small arithmetic fact
+
+**Theorem (plain English).** If \(a\) and \(b\) are even natural numbers, then
+\(a + b\) is even.
+
+**What the subnet publishes.** A formal Lean statement of that claim (plus pinned
+toolchain and Mathlib revision). Everyone sees the same target: prove *this*
+statement, not a paraphrase.
+
+**What the miner returns.** A `proof_script`: Lean source that fills in the
+proof—typically a complete `Submission.lean` module that imports what the
+challenge requires and closes the theorem Lean expects.
+
+**What “proof” means here.** It is not an essay and not a chat reply. It is code
+Lean typechecks against the statement. Conceptually the miner fills in a proof
+body for the exact theorem the validator broadcast—imports, namespace, and name
+come from the live challenge rules. A toy shape (not a real challenge layout)
+looks like:
+
+```lean
+-- Illustrative only — names/imports are dictated by the broadcast.
+theorem published_claim : True := trivial
+```
+
+Real submissions replace `published_claim` and `True` with the actual statement
+and a real proof script (`by …`) Lean accepts.
+
+Validators do not grade style or elegance first—they check whether Lean accepts
+the proof under policy.
+
+### Example B: when no reward is earned
+
+**Theorem (plain English).** Same published statement as above.
+
+**Bad submission.** The miner returns a script that uses `sorry`, skips a goal,
+imports the wrong module, or diverges from the published statement.
+
+**Outcome.** Lean rejects the proof. That round cannot earn proof score from that
+submission, regardless of how plausible the underlying idea sounds.
+
+That separation—mechanical pass/fail before subjective judgment—is deliberate.
+
 ## What Lemma Is Not
 
 Lemma is not a chat benchmark. It is not trying to reward the best explanation
@@ -250,3 +299,5 @@ To run Lemma, go to [getting-started.md](getting-started.md).
 
 For deeper behavior details, use
 [technical-reference.md](technical-reference.md).
+
+Lay questions and quick answers: [faq.md](faq.md).

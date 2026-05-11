@@ -22,6 +22,8 @@ from __future__ import annotations
 
 from typing import Literal
 
+from loguru import logger
+
 ProblemSeedMode = Literal["quantize", "subnet_epoch"]
 
 # Rough wall-clock hint for operators (Finney-style; actual slot timing varies).
@@ -72,8 +74,8 @@ def blocks_until_challenge_may_change(
             bu = bu_fn(netuid)
             if bu is not None:
                 return max(1, int(bu)), "subnet_epoch"
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("blocks_until_next_epoch failed netuid={}: {}", netuid, e)
 
     rem = blocks_until_quantize_boundary(chain_head_block, quantize_blocks)
     return rem, "quantize_estimate"

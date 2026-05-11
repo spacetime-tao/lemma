@@ -5,13 +5,16 @@ from __future__ import annotations
 import re
 import subprocess
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 from pydantic import BaseModel, Field
 
-PROOF_METRICS_SOURCE_V1 = "print_decl_pp_all_v1"
-PROOF_METRICS_SOURCE = "print_decl_pp_all_v2"
-PROOF_METRICS_SOURCES = (PROOF_METRICS_SOURCE_V1, PROOF_METRICS_SOURCE)
+PROOF_METRICS_SOURCE_V1: Literal["print_decl_pp_all_v1"] = "print_decl_pp_all_v1"
+PROOF_METRICS_SOURCE: Literal["print_decl_pp_all_v2"] = "print_decl_pp_all_v2"
+PROOF_METRICS_SOURCES: tuple[Literal["print_decl_pp_all_v1", "print_decl_pp_all_v2"], ...] = (
+    PROOF_METRICS_SOURCE_V1,
+    PROOF_METRICS_SOURCE,
+)
 PROOF_METRICS_MARKER = "LEMMA_PROOF_METRICS"
 PROOF_METRICS_FILE = "ProofMetrics.lean"
 
@@ -80,10 +83,11 @@ def parse_proof_metrics_line(text: str) -> LeanProofMetrics | None:
     source = m.group("source")
     if source not in PROOF_METRICS_SOURCES:
         return None
+    source_t = cast(Literal["print_decl_pp_all_v1", "print_decl_pp_all_v2"], source)
     delimiters = m.group("delimiters")
     max_depth = m.group("max_depth")
     return LeanProofMetrics(
-        source=source,
+        source=source_t,
         proof_declaration_bytes=int(m.group("bytes")),
         proof_declaration_lines=int(m.group("lines")),
         probe_exit_code=int(m.group("exit")),

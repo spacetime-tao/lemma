@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import Protocol, TypeVar
+from typing import Any, Protocol, TypeVar, cast
 
 import httpx
 from loguru import logger
@@ -110,7 +110,7 @@ class LLMProver:
 
         async def _openai_call() -> str:
             async with httpx.AsyncClient(timeout=t_out) as http:
-                okw: dict[str, object] = {"api_key": key, "http_client": http}
+                okw: dict[str, Any] = {"api_key": key, "http_client": http}
                 if base_url:
                     okw["base_url"] = base_url
                 client = AsyncOpenAI(**okw)
@@ -163,16 +163,16 @@ class LLMProver:
         )
 
 
-def _extract_json_obj(text: str) -> dict:
+def _extract_json_obj(text: str) -> dict[str, Any]:
     start = text.find("{")
     end = text.rfind("}")
     if start < 0 or end < start:
         raise ValueError("no json object")
-    return json.loads(text[start : end + 1])
+    return cast(dict[str, Any], json.loads(text[start : end + 1]))
 
 
 def _normalize_prover_payload(
-    data: dict,
+    data: dict[str, Any],
     settings: LemmaSettings | None = None,
 ) -> str:
     """Normalize prover JSON to the proof artifact used by live scoring."""

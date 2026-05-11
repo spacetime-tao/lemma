@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from loguru import logger
+
 from lemma.common.config import LemmaSettings
 from lemma.common.problem_seed import (
     blocks_until_quantize_boundary,
@@ -49,8 +51,8 @@ def compute_forward_deadline_and_wait(
                 deadline = cb + bu_i
                 raw = bu_i * bt * ws
                 return deadline, _clamp_forward_wait_s(settings, raw)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("blocks_until_next_epoch in deadline calc failed: {}", e)
 
     rem = blocks_until_quantize_boundary(cb, settings.problem_seed_quantize_blocks)
     deadline = cb + rem

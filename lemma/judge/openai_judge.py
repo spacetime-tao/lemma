@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from openai import AsyncOpenAI
 
 from lemma.common.async_llm_retry import TRANSIENT_OPENAI_COMPAT, async_llm_retry
@@ -23,7 +25,7 @@ class OpenAIJudge:
         timeout: float | None = None,
         retry_attempts: int = 4,
     ) -> None:
-        kwargs: dict[str, object] = {"api_key": api_key}
+        kwargs: dict[str, Any] = {"api_key": api_key}
         if base_url:
             kwargs["base_url"] = base_url
         if timeout is not None:

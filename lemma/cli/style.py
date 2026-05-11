@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import sys
+from typing import Any
 
 import click
 
@@ -13,7 +14,7 @@ def colors_enabled() -> bool:
     return sys.stdout.isatty() and "NO_COLOR" not in os.environ
 
 
-def stylize(text: str, **kwargs: object) -> str:
+def stylize(text: str, **kwargs: Any) -> str:
     if not colors_enabled():
         return text
     return click.style(text, **kwargs)

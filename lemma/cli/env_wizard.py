@@ -40,7 +40,7 @@ LEMMA_TESTNET_NETUID = 467
 
 
 def _require_secret(prompt: str) -> str:
-    key = click.prompt(prompt, hide_input=True).strip()
+    key = str(click.prompt(prompt, hide_input=True)).strip()
     if not key:
         raise click.UsageError("Value is required.")
     return key
@@ -253,10 +253,10 @@ def _prompt_gemini_prover_model() -> str:
         ).strip()
         if not mid:
             raise click.UsageError("Gemini model id cannot be empty.")
-        return mid
+        return str(mid)
     for num, mid, _blurb in _GEMINI_PRESET_ROWS:
         if choice == num:
-            return mid
+            return str(mid)
     raise click.UsageError(f"Unexpected Gemini model choice: {choice!r}")
 
 
