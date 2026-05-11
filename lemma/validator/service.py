@@ -24,6 +24,16 @@ _DOCKER_REQUIRED_ERROR = (
 )
 
 
+def epoch_sleep_seconds(blocks_until_epoch: int, block_time_sec_estimate: float) -> float:
+    """Poll near epoch boundaries instead of trusting rough wall-clock estimates."""
+    bu = int(blocks_until_epoch)
+    if bu <= 1:
+        return 0.0
+    if bu <= 3:
+        return 1.0
+    return min(12.0, max(1.0, float(bu) * float(block_time_sec_estimate) * 0.25))
+
+
 def _require_docker_for_validator(settings: LemmaSettings) -> None:
     """Validators must use Docker for Lean — no host-lake escape hatch."""
     if settings.lean_use_docker:
@@ -124,8 +134,8 @@ class ValidatorService:
                     logger.exception("epoch failed: {}", e)
                 await asyncio.sleep(2)
                 continue
-            wait_s = min(float(bu) * 12.0, 600.0)
-            logger.info("Sleeping {:.0f}s (~{} blocks to epoch)", wait_s, bu)
+            wait_s = epoch_sleep_seconds(bu, s.block_time_sec_estimate)
+            logger.debug("Waiting {:.0f}s (~{} blocks to epoch)", wait_s, bu)
             await asyncio.sleep(wait_s)
 
     def run_blocking(self) -> None:
