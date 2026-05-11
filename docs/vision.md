@@ -15,6 +15,31 @@ This document is for **contributors and partners** who want the long-term direct
 
 ---
 
+## What the subnet produces
+
+Lemma produces **verified formal proofs**.
+
+The digital commodity is not an informal reasoning trace, an essay, or a hidden
+model chain of thought. Those artifacts may still be useful for research,
+debugging, education, or human review, but they are not the live product.
+
+The live product is a theorem/proof pair where the proof script is accepted by
+Lean for the published theorem statement. Put another way: Lemma is a market for
+proof search. The subnet publishes formal theorem statements; miners use AI and
+compute to search for proofs; validators mechanically verify the submissions;
+accepted proofs become the produced work.
+
+That keeps the base story simple: Bitcoin miners produce valid hashes under a
+difficulty rule. Lemma miners produce valid Lean proofs under a theorem rule.
+
+For the current v0 generated lane, this is best understood as **proof capacity**:
+the network is measuring whether miners and validators can reliably find,
+submit, verify, and weight proofs. In later off-cadence lanes, the same mechanism
+can point at curated theorem campaigns, Mathlib gaps, benchmark queues, or
+human-requested theorem work.
+
+---
+
 ## Why Lean as the gate
 
 Lean gives an **objective, binary check** at the kernel: either the proof type-checks against the stated `theorem`, or it does not. There is no partial credit inside the proof assistant itself. That property is what makes a decentralized grading story credible: the “grader” is not a human curve, it is **mechanical verification**.
