@@ -51,7 +51,7 @@ Reason: the product center is simple, reproducible proof acceptance.
 ## Relevant Docs
 
 - Proof-verification reward design: `docs/objective-decision.md`,
-  `docs/proof-only-incentives.md`, `docs/faq.md`.
+  `docs/proof-verification-incentives.md`, `docs/faq.md`.
 - VPS/operator guidance: `docs/production.md`, `docs/system-requirements.md`,
   `docs/miner.md`, `docs/validator.md`.
 - Validator throughput: `docs/validator_lean_load.md`, `docs/workplan.md`.

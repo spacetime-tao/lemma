@@ -1,4 +1,4 @@
-# Proof-Only Incentive Design
+# Proof Verification Incentives
 
 Lemma's reward axis is formal proof validity: miners earn for producing
 Lean-valid proofs for published theorem statements.
@@ -30,10 +30,8 @@ accepts the proof or rejects it.
 The live validator path is intentionally simple: a submitted proof either passes
 Lean verification for the published theorem and enters scoring, or it does not.
 
-## What Not To Reward
+## Out Of Scope For Rewards
 
-- Longer prose explanations.
-- Rubric-shaped writing.
 - Rewriting the theorem in an easier form.
 - Comment or whitespace padding.
 - Proof scripts that pass only by adding unsound assumptions.

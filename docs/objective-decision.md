@@ -16,7 +16,7 @@ The reward path should be proof-only:
 - **Out of band:** informal reasoning can help humans, datasets, and debugging,
   but it is not a reward axis.
 
-See [proof-only-incentives.md](proof-only-incentives.md) for the concrete design.
+See [proof-verification-incentives.md](proof-verification-incentives.md) for the concrete design.
 
 ## Why This Matters
 
@@ -31,6 +31,6 @@ Every reward change should preserve this test:
 > or more economically useful?
 
 If the answer is no, the change should not be part of the core incentive path.
-See [proof-only-incentives.md](proof-only-incentives.md) and
+See [proof-verification-incentives.md](proof-verification-incentives.md) and
 [proof-intrinsic-decision.md](proof-intrinsic-decision.md) for the scoring
 design gates.

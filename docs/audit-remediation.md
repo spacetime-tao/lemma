@@ -45,7 +45,7 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 
 1. Delete or replace **`proof_intrinsic_score`** (elaborator-backed metric vs length heuristic). **Bounded:** live scoring no longer calls the heuristic; compare-only Lean metrics remain for calibration.
 2. Decide **`LEMMA_REPUTATION_CREDIBILITY_EXPONENT`** default vs KB **2.5** target. **Done:** divergence documented; default is `1.0`.
-3. **Expand `judge_profile_sha256`** (or sibling hash) to cover subnet-critical knobs currently outside the pin (~18 fields in Round 3). **Done.**
+3. **Expand `validator_profile_sha256`** to cover subnet-critical knobs currently outside the pin (~18 fields in Round 3). **Done.**
 4. **Fail closed** when `computed_body_hash` missing — remove fail-open in `synapse_miner_response_integrity_ok`; update/remove tests that codify bypass. **Done.**
 5. **Per-validator salt** in attest spot-verify selection hash (reduces predictable skip + UID grinding). **Done/partial:** salt shipped; residual UID-grinding economics remain design-level.
 6. **Sybil / Pareto:** same-coldkey partitioning limits one-coldkey multi-hotkey multiplication; distinct-coldkey economics still need replay data before adding another scoring layer. **Bounded next step:** [sybil_economics.md](sybil_economics.md) records the replay/economics evidence gate; replay tooling exists, but real export data is still required.
@@ -73,8 +73,8 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 
 | ID | Issue | Source § | Priority | Remediation direction |
 |----|--------|----------|----------|------------------------|
-| **O1** | Reward objective must stay tied to kernel-verifiable proof | R3 §2, §11 | P4 / product | **Target chosen:** rewards are proof-only: a submitted proof must pass Lean verification for the published theorem. See [proof-only-incentives.md](proof-only-incentives.md). |
-| **O2** | `primary_design_axis` / one-sentence rule in KB violated by current honest description | R3 §2.3 | P4 | **Done/bounded:** objective pinned as Lean-valid proofs; proof-verification design documented in [proof-only-incentives.md](proof-only-incentives.md). |
+| **O1** | Reward objective must stay tied to kernel-verifiable proof | R3 §2, §11 | P4 / product | **Target chosen:** rewards are proof-only: a submitted proof must pass Lean verification for the published theorem. See [proof-verification-incentives.md](proof-verification-incentives.md). |
+| **O2** | `primary_design_axis` / one-sentence rule in KB violated by current honest description | R3 §2.3 | P4 | **Done/bounded:** objective pinned as Lean-valid proofs; proof-verification design documented in [proof-verification-incentives.md](proof-verification-incentives.md). |
 | **O3** | Pareto + same-coldkey partitioning still allow distinct-coldkey sybil farming per R3 math | R3 §2.2, §8, §12 | P2/P4 | **Needs-design:** economic modeling; not fixable by parser alone. [sybil_economics.md](sybil_economics.md) records the minimum replay/economics gate plus the keep / cap / stronger-mechanism / no-change rubric; `tools/sybil_replay_analyze.py` provides offline replay summaries and concrete readiness gaps from private full exports. |
 
 ---
@@ -102,7 +102,7 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 | **A4** | On spot skip, theorem/proof mismatch not caught by verify | R3 §3.3 | P1 | **Done:** validator rejects responses whose challenge fields do not match the current theorem/metronome before attest trust or scoring. | `lemma/validator/epoch.py`, `tests/test_validator_challenge_binding.py` |
 | **A5** | “TEE” naming vs actual user-space Docker attest | R3 §3.4 | P3 | **Done:** docs state miner verify attest is a hotkey signature over a local Lean claim, not hardware remote attestation. | `docs/miner-verify-attest.md` |
 
-**2026-05 progress:** A1/A2/A3/A4/A5 and P4 patched/documented: attest-trusted spot skips remain scoreable, but no longer improve verify credibility. Credibility only increases from validator Lean verification; full-verify failures still lower it. Spot selection now accepts `LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_SALT`; `judge_profile_sha256` pins its SHA-256 without exposing the salt. Validators reject responses whose theorem, challenge source, toolchain pins, metronome id, or deadline block do not match the current challenge before attest trust or scoring. The v2 attest preimage binds validator hotkey, theorem, metronome, toolchain pins, and proof hash, and [miner-verify-attest.md](miner-verify-attest.md) records the non-TEE threat model.
+**2026-05 progress:** A1/A2/A3/A4/A5 and P4 patched/documented: attest-trusted spot skips remain scoreable, but no longer improve verify credibility. Credibility only increases from validator Lean verification; full-verify failures still lower it. Spot selection now accepts `LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_SALT`; `validator_profile_sha256` pins its SHA-256 without exposing the salt. Validators reject responses whose theorem, challenge source, toolchain pins, metronome id, or deadline block do not match the current challenge before attest trust or scoring. The v2 attest preimage binds validator hotkey, theorem, metronome, toolchain pins, and proof hash, and [miner-verify-attest.md](miner-verify-attest.md) records the non-TEE threat model.
 
 ---
 
@@ -127,9 +127,9 @@ From audit §19 — **not all are agreed team policy**; use as a prioritized deb
 | **J1** | HTTP plaintext / no auth; MITM | R3 §5.1 | P2 | **Done:** documented as operator-controlled transport; use TLS/private network/auth outside this helper. |
 | **J2** | All-of-N flaky; no Byzantine resistance | R3 §5.1 | P2 | **Done:** documented current all-of-N behavior and non-Byzantine limits; stronger k-of-n/on-chain design deferred. |
 | **J3** | Hash omits many subnet-critical env vars | R3 §5.3 | P2 | **Done:** profile hash broadened into validator scoring profile. |
-| **J4** | `LEMMA_JUDGE_PROFILE_ATTEST_SKIP` foot-gun | R3 §5.1 | P3 | **Done:** docs and validator-check wording label skip as solo/dev only, not production alignment. |
+| **J4** | `LEMMA_VALIDATOR_PROFILE_ATTEST_SKIP` foot-gun | R3 §5.1 | P3 | **Done:** docs and validator-check wording label skip as solo/dev only, not production alignment. |
 
-**2026-05 progress:** J1/J2/J3/J4 patched/documented. `judge_profile_sha256` is now a validator scoring profile covering deterministic problem cadence, verification timeout/image policy, proof scoring, same-coldkey partition/reputation settings, and protocol hooks that affect response acceptance. [judge-profile-attest.md](judge-profile-attest.md) records the HTTP peer check as operator coordination, not Byzantine consensus or transport security.
+**2026-05 progress:** J1/J2/J3/J4 patched/documented. `validator_profile_sha256` is now a validator scoring profile covering deterministic problem cadence, verification timeout/image policy, proof scoring, same-coldkey partition/reputation settings, and protocol hooks that affect response acceptance. [validator-profile-attest.md](validator-profile-attest.md) records the HTTP peer check as operator coordination, not Byzantine consensus or transport security.
 
 ---
 
@@ -297,7 +297,7 @@ Extraction note: `lemma-cli` now owns the friendly `start` surface; the core rep
   `BT_VALIDATOR_WALLET_COLD` / `BT_VALIDATOR_WALLET_HOT` env names and drop the unused `LEMMA_*` aliases.
 - **`common/env_file.py`** moved to `lemma-cli`; `.env` merging is operator setup UX, not core consensus logic.
 - Reserved protocol toggles default **False** but many Fields persist — documented `LEMMA_*` env names remain;
-  undocumented lowercase env aliases were removed from the commit-reveal, miner-attest, and judge-attest switches.
+  undocumented lowercase env aliases were removed from the commit-reveal, miner-attest, and validator-profile-attest switches.
 - Timeout-split / prover self-rejection knobs — documented uppercase env names remain; undocumented lowercase
   env aliases were removed. Timeout-split stays validator policy; the proof-script minimum stays a miner-only retry policy.
 - Settings env aliases now accept documented uppercase names only; lowercase field-name env aliases were removed
@@ -334,7 +334,7 @@ Abbreviated; see `knowledge/` for full YAML. Status reflects the current remedia
 
 | Invariant | KB pointer | Current remediation status |
 |-----------|------------|----------------------|
-| One-sentence primary design axis | `subnet.invariants.yaml` | Current objective pinned in `docs/objective-decision.md` and `docs/proof-only-incentives.md` |
+| One-sentence primary design axis | `subnet.invariants.yaml` | Current objective pinned in `docs/objective-decision.md` and `docs/proof-verification-incentives.md` |
 | Validator-only development | `subnet.invariants.yaml#architecture.validator_only_development` | Still violated by bundled reference miner; boundary documented as minimal Axon compatibility, not a place for competitive strategy |
 | Single-file validator pattern | `validator.contract.yaml` | Still violated by package layout; root `validator.py` stub removed |
 | Push compute to miners | `subnet.invariants.yaml#compute_distribution` | Still violated |

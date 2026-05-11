@@ -73,7 +73,7 @@ def run_validator_check(settings: LemmaSettings) -> int:
 
     click.echo(
         stylize(
-            "INFO scoring  proof_only=1  "
+            "INFO scoring  proof_verification=1  "
             f"LEMMA_REPUTATION_EMA_ALPHA={settings.lemma_reputation_ema_alpha}  "
             f"LEMMA_REPUTATION_VERIFY_CREDIBILITY_ALPHA={settings.lemma_reputation_verify_credibility_alpha}  "
             f"LEMMA_REPUTATION_CREDIBILITY_EXPONENT={settings.lemma_reputation_credibility_exponent}  "
@@ -84,7 +84,7 @@ def run_validator_check(settings: LemmaSettings) -> int:
             "LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_SALT_SET="
             f"{int(bool((settings.lemma_miner_verify_attest_spot_verify_salt or '').strip()))}  "
             f"LEMMA_COMMIT_REVEAL_ENABLED={int(settings.lemma_commit_reveal_enabled)}  "
-            f"LEMMA_JUDGE_PROFILE_ATTEST_ENABLED={int(settings.lemma_judge_profile_attest_enabled)}  "
+            f"LEMMA_VALIDATOR_PROFILE_ATTEST_ENABLED={int(settings.lemma_judge_profile_attest_enabled)}  "
             "(docs/incentive_migration.md)",
             dim=True,
         ),
@@ -134,7 +134,7 @@ def run_validator_check(settings: LemmaSettings) -> int:
         if actual_j != exp_j:
             click.echo(
                 stylize(
-                    "FAIL profile pin  JUDGE_PROFILE_SHA256_EXPECTED mismatch vs live `lemma meta`",
+                    "FAIL profile pin  LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED mismatch vs live `lemma meta`",
                     fg="red",
                     bold=True,
                 ),
@@ -145,7 +145,7 @@ def run_validator_check(settings: LemmaSettings) -> int:
     else:
         click.echo(
             stylize(
-                "FAIL profile pin  JUDGE_PROFILE_SHA256_EXPECTED required for validators",
+                "FAIL profile pin  LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED required for validators",
                 fg="red",
                 bold=True,
             ),
@@ -178,12 +178,12 @@ def run_validator_check(settings: LemmaSettings) -> int:
                 err=True,
             )
 
-    # --- Validator profile peer attest (optional; env names are compatibility) ---
+    # --- Validator profile peer attest ---
     if settings.lemma_judge_profile_attest_enabled:
         if settings.lemma_judge_profile_attest_allow_skip:
             click.echo(
                 stylize(
-                    "WARN profile attest  LEMMA_JUDGE_PROFILE_ATTEST_SKIP=1 — peer URLs not checked "
+                    "WARN profile attest  LEMMA_VALIDATOR_PROFILE_ATTEST_SKIP=1 — peer URLs not checked "
                     "(solo/dev only; not production alignment)",
                     fg="yellow",
                 ),
@@ -191,7 +191,7 @@ def run_validator_check(settings: LemmaSettings) -> int:
         attest_errs = [
             msg
             for msg in startup_fatal
-            if msg.startswith("validator profile attest:") or msg.startswith("LEMMA_JUDGE_PROFILE_ATTEST_ENABLED")
+            if msg.startswith("validator profile attest:") or msg.startswith("LEMMA_VALIDATOR_PROFILE_ATTEST_ENABLED")
         ]
         if attest_errs:
             click.echo(

@@ -1,8 +1,8 @@
 # Validator
 
-Walkthrough: [getting-started.md](getting-started.md) — `lemma-cli setup` (validator or both) sets chain, wallet, prover, and `LEAN_SANDBOX_IMAGE` prompts. Production validators should use the subnet-published immutable sandbox ref ([toolchain-image-policy.md](toolchain-image-policy.md)).
+Walkthrough: [getting-started.md](getting-started.md) — `uv run lemma-cli setup` (validator or both) sets chain, wallet, prover, and `LEAN_SANDBOX_IMAGE` prompts. Production validators should use the subnet-published immutable sandbox ref ([toolchain-image-policy.md](toolchain-image-policy.md)).
 
-**Short checklist:** `bash scripts/prebuild_lean_image.sh` → **`lemma-cli rehearsal`** (prover + Lean preview) → `uv run lemma validator-check` until READY → `uv run lemma validator start` (or **validator-check** from `lemma-cli`). Same keys/chain setup as a miner if you run both roles.
+**Short checklist:** `bash scripts/prebuild_lean_image.sh` → **`uv run lemma-cli rehearsal`** (prover + Lean preview) → `uv run lemma validator-check` until READY → `uv run lemma validator start` (or **validator-check** from `uv run lemma-cli`). Same keys/chain setup as a miner if you run both roles.
 
 Validators **always** wait for subnet epoch boundaries before each round — no timer-only mode; every operator shares the same on-chain cadence.
 
@@ -12,10 +12,10 @@ Validator→miner transport uses Bittensor Dendrite/Axon and synapse body-hash i
 
 | What you want | Command |
 | --- | --- |
-| **End-to-end** preview (prover → Lean) on the live theorem | **`lemma-cli rehearsal`** (default Lean on; `--no-verify` to skip) |
-| Exercise **prover** only | `lemma-cli try-prover` (add `--verify` for local Lean) |
+| **End-to-end** preview (prover → Lean) on the live theorem | **`uv run lemma-cli rehearsal`** (default Lean on; `--no-verify` to skip) |
+| Exercise **prover** only | `uv run lemma-cli try-prover` (add `--verify` for local Lean) |
 | Rehearse the **full validator** without `set_weights` | `uv run lemma validator dry-run` |
-| Only print validator-related env | `lemma-cli validator-config` (not a scoring run) |
+| Only print validator-related env | `uv run lemma-cli validator-config` (not a scoring run) |
 
 Submitted proofs must pass Lean verification for the published theorem before
 they can enter scoring.
@@ -105,21 +105,21 @@ uv run lemma meta
 
 ## Validator profile peer attest (optional)
 
-Validators should **agree with peers on the same validator scoring profile**, not only match an expected hash locally. When **`LEMMA_JUDGE_PROFILE_ATTEST_ENABLED=1`**, startup (and **`uv run lemma validator-check`**) HTTP GETs each URL in **`LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS`** and checks the body matches this process’s **`judge_profile_sha256`** (same fingerprint as **`uv run lemma meta`** / **`lemma-cli configure subnet-pins`**). The env names still use `JUDGE` for compatibility, but the hash covers subnet-critical verification and scoring policy.
+Validators should **agree with peers on the same validator scoring profile**, not only match an expected hash locally. When **`LEMMA_VALIDATOR_PROFILE_ATTEST_ENABLED=1`**, startup (and **`uv run lemma validator-check`**) HTTP GETs each URL in **`LEMMA_VALIDATOR_PROFILE_ATTEST_PEER_URLS`** and checks the body matches this process’s **`validator_profile_sha256`** (same fingerprint as **`uv run lemma meta`** / **`uv run lemma-cli configure subnet-pins`**). The hash covers subnet-critical verification and scoring policy.
 
 | Env | Role |
 | --- | --- |
-| **`LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS`** | Comma-separated GET URLs. Response: plain **64-char hex** on the first line, or JSON **`{"judge_profile_sha256":"..."}`**. |
-| **`LEMMA_JUDGE_PROFILE_ATTEST_SKIP=1`** | Skip peer HTTP (solo / dev). Logs a **WARN** at validator startup — not for production alignment across validators. |
-| **`LEMMA_JUDGE_PROFILE_ATTEST_HTTP_TIMEOUT_S`** | Timeout per URL (default **15**). |
+| **`LEMMA_VALIDATOR_PROFILE_ATTEST_PEER_URLS`** | Comma-separated GET URLs. Response: plain **64-char hex** on the first line, or JSON **`{"validator_profile_sha256":"..."}`**. |
+| **`LEMMA_VALIDATOR_PROFILE_ATTEST_SKIP=1`** | Skip peer HTTP (solo / dev). Logs a **WARN** at validator startup — not for production alignment across validators. |
+| **`LEMMA_VALIDATOR_PROFILE_ATTEST_HTTP_TIMEOUT_S`** | Timeout per URL (default **15**). |
 
 **Expose your hash** for other operators to list in their peer URLs:
 
 ```bash
-lemma validator judge-attest-serve --host 0.0.0.0 --port 8799
+uv run lemma validator profile-attest-serve --host 0.0.0.0 --port 8799
 ```
 
-Serves **`GET /lemma/judge_profile_sha256`** (`text/plain` hash) and **`GET /health`**. This is operator coordination, not Byzantine consensus or transport security; see [judge-profile-attest.md](judge-profile-attest.md), [.env.example](../.env.example), and [incentive_migration.md](incentive_migration.md).
+Serves **`GET /lemma/validator_profile_sha256`** (`text/plain` hash) and **`GET /health`**. This is operator coordination, not Byzantine consensus or transport security; see [validator-profile-attest.md](validator-profile-attest.md), [.env.example](../.env.example), and [incentive_migration.md](incentive_migration.md).
 
 ## Compose
 

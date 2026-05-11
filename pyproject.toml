@@ -25,6 +25,9 @@ anthropic = [
 btcli = [
     "bittensor[cli]==10.3.0",
 ]
+cli = [
+    "lemma-cli @ git+https://github.com/spacetime-tao/lemma-cli.git",
+]
 catalog = [
     "datasets>=2.14,<4",
 ]

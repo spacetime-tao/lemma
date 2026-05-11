@@ -2,7 +2,7 @@
 
 Lemma's live reward objective is proof verification: a submitted proof must pass
 the pinned Lean verifier for the published theorem before it can receive score. See
-[proof-only-incentives.md](proof-only-incentives.md).
+[proof-verification-incentives.md](proof-verification-incentives.md).
 
 ## Live Reward Path
 
