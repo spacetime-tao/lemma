@@ -9,8 +9,6 @@ A Lemma round is simple:
 3. Validators verify those scripts with the published toolchain.
 4. Passing proofs become eligible for scoring and rewards under Lemma’s subnet rules.
 
-The Bitcoin analogy is only loose. Bitcoin miners compete to publish the next valid block; Lemma miners compete to produce Lean-valid proofs for published theorem statements. More than one miner can succeed in the same Lemma round if multiple submissions pass verification.
-
 Lemma is still proof-of-concept software. It currently runs on Bittensor testnet as **subnet 467** (`--network test`; run `uv run lemma configure chain` to set `NETUID=467`). Mainnet, also known as Finney, is separate. Only treat mainnet rewards or tokens as relevant when the deployment you are following is registered, active, and matched to the correct **network** and **netuid**.
 
 For the full mechanism and reward model, start with the [litepaper](docs/litepaper.md).
