@@ -21,7 +21,7 @@ No subnet is perfectly ungameable; the goal is to make the easiest strategy also
 
 One-line mental model: Lemma rewards Lean-valid proofs.
 
-For the proof-verification design, see [proof-verification-incentives.md](proof-verification-incentives.md). For a **living checklist** of shipped items and known gaps, see [incentive-roadmap.md](incentive-roadmap.md). **Same-coldkey partitioning** is *not* identity verification — see [sybil_economics.md](sybil_economics.md). **Dendrite/Axon + synapse body-hash** — see [transport.md](transport.md).
+For the proof-verification design, see [proof-verification-incentives.md](proof-verification-incentives.md). For the active work tracker, see [workplan.md](workplan.md). **Same-coldkey partitioning** is *not* identity verification — see [sybil_economics.md](sybil_economics.md). **Dendrite/Axon + synapse body-hash** — see [transport.md](transport.md).
 
 ## Validators querying your axon many times
 

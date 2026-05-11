@@ -1,146 +1,133 @@
-# Lemma core workplan
+# Lemma Core Workplan
 
-This is the non-overlapping work map for making Lemma smaller, clearer, and safer.
-The rule of thumb is: keep the subnet repository focused on consensus-critical behavior, and move operator convenience into a separate CLI package.
+This is the single active tracker for audit findings, current blockers, testing,
+and next work. Keep decision records and threat-model docs as evidence, but do
+not let parallel checklists drift.
 
-## Repositories
+## Current Baseline
 
-| Repo | Owns | Does not own |
-| --- | --- | --- |
-| `spacetime-tao/lemma` | Protocol, problem selection, Lean verification, validator scoring, minimal validator service, reference miner compatibility path, tests for consensus behavior. | Guided setup screens, shell activation helpers, docs openers, colored menus, broad onboarding UX, competitive miner strategy. |
-| `spacetime-tao/lemma-cli` | Human-friendly setup, doctor checks, guided miner/validator flows, docs shortcuts, local rehearsal wrappers. | Scoring rules, Bittensor weight logic, Lean proof acceptance policy, generated problem registry. |
+- Repository: `spacetime-tao/lemma`, local checkout `LOCAL_WORKSPACE/lemma`.
+- Current head during this audit:
+  `b7088f00295fe0e23ad4a856ac43799b9acd8882`
+  (`Remove stale judge config from proof-only path`).
+- Live reward direction: proof passes Lean and can enter scoring, or proof
+  fails Lean and does not enter scoring.
+- Friendly operator UX belongs in `spacetime-tao/lemma-cli`; core Lemma owns
+  protocol, problem selection, Lean verification, validator scoring, minimal
+  service entrypoints, and consensus tests.
 
-Splitting the CLI is possible, but it should be done in stages. The core repo currently exposes the `lemma` console command, and operators use it for both core actions and onboarding. A hard cut would break workflows; a staged cut keeps the subnet usable while the code gets leaner.
+## What Is Good
 
-## Workstreams
+- The live miner payload is centered on `proof_script`; informal reasoning is
+  not reward-critical protocol data.
+- Validators mechanically verify submitted proofs with the pinned Lean sandbox
+  before scoring.
+- Identical verified proofs are no longer dropped from live rewards; same-coldkey
+  partitioning limits one-coldkey multi-hotkey multiplication after weights are
+  computed.
+- The generated problem registry has 40 builders and a metadata gate covering
+  registry reachability/coherence.
+- CLI bloat has been mostly moved to `lemma-cli`; core keeps minimal commands
+  and redirects.
+- Local baseline checks passed after the Hatch metadata fix:
+  - `uv sync --extra dev`;
+  - `uv run ruff check lemma tests tools`;
+  - `uv run pytest tests/ -q --ignore=tests/test_docker_golden.py`
+    (`255 passed, 1 skipped, 12 warnings`);
+  - generated-template metadata gate for 40 builders;
+  - Docker golden Lean verify (`1 passed in 210.60s`);
+  - runtime Docker build smoke (`lemma-runtime:ci-smoke`).
 
-### 1. Local Source Of Truth
+## Current Blockers And Gaps
 
-Use `LOCAL_WORKSPACE/lemma` as the working checkout. It is clean and synced with `main`.
+1. **GitHub re-check pending.**
+   `b7088f0` failed before tests because Hatch rejected the `cli` optional
+   dependency direct reference to `lemma-cli`. This working tree adds
+   `tool.hatch.metadata.allow-direct-references = true`, and local
+   `uv sync --extra dev` plus `docker build -f Dockerfile -t
+   lemma-runtime:ci-smoke .` now pass. GitHub Actions still need to be checked
+   after the fix lands.
 
-Do not keep editing the temporary Codex snapshot. It was useful for inspection only.
+2. **Tracker drift.**
+   `local handoff note`, `docs/workplan.md`, `docs/audit-remediation.md`, and
+   `docs/incentive-roadmap.md` all contained overlapping status. This file is
+   now the active tracker; `local handoff note` is only the short chat-freeze
+   handoff.
 
-### 2. Core Safety Fixes
+3. **Typing quality gap.**
+   `uv run mypy lemma` currently reports `70 errors in 11 files`. This is not a
+   CI blocker today, but it is a good hardening track after package/CI health is
+   restored.
 
-These stay in `spacetime-tao/lemma` because they affect scoring agreement.
+4. **Ops version drift.**
+   Both known droplets are alive and services are active, but `/opt/lemma` is
+   deployed at `82bba8d`, one commit behind `b7088f0`. Record only for this
+   pass; do not deploy or restart services here.
 
-1. Fail closed when response body hash is missing or mismatched in production. **Done.**
-2. Reject missing `deadline_block` on responses that were sent with a deadline. **Done.**
-3. Make generated registry hashes cover the real template body and RNG version tag, not only names/order. **Done.**
-4. Fix generated problem documentation so the builder count matches code. **Done.**
-5. Expand the validator scoring/profile pin to cover subnet-critical settings beyond optional prose-evaluator settings. **Done.**
-6. Remove FakeJudge from the live validator path. **Done:** live scoring is proof-only; FakeJudge remains only in optional one-shot prose tooling.
-7. Document production Lean/toolchain image pinning so local `latest` stays a dev-only convenience. **Done:** [toolchain-image-policy.md](toolchain-image-policy.md).
-8. Document the public deterministic problem-supply boundary and builder promotion checklist. **Done:** [problem-supply-policy.md](problem-supply-policy.md).
-9. Expand the generated template registry with a small non-arithmetic batch. **Done:** 40 builders total; list, set, order, logic, and finite-set templates added.
+5. **Real subnet evidence still matters.**
+   Local proof PASS is necessary but not enough. The subnet still needs measured
+   miner response time, prover latency, validator Lean verification time, scored
+   miner count, timeout/fail reasons, set-weights behavior, and emission changes
+   from live runs.
 
-### 3. Future Problem Supply
+## Testing Matrix
 
-These are product and governance tracks, not v0 launch blockers.
+Run these before claiming the repo is locally healthy:
 
-1. Keep generated easy / medium / hard traffic as the launch lane. It gives the network steady work, predictable verification cost, and simple operator expectations.
-2. Treat open-problem campaigns as a later campaign / bounty lane: reviewed Lean statements, faithfulness certificates, dependency graphs, and submit-when-ready proofs. **Tracked:** [open-problem-campaigns.md](open-problem-campaigns.md).
-3. Do not put large open-problem libraries in this core repo during v0. A future `LemmaOpenProblems`-style repo can own campaign Lean files, registries, faithfulness docs, and roadmaps; core should add protocol support only when the lane is ready.
+```bash
+uv sync --extra dev
+uv run ruff check lemma tests tools
+uv run pytest tests/ -q --ignore=tests/test_docker_golden.py
+uv run python scripts/ci_verify_generated_templates.py
+RUN_DOCKER_LEAN=1 LEAN_SANDBOX_IMAGE=lemma/lean-sandbox:latest \
+  uv run pytest tests/test_docker_golden.py -v --tb=short
+docker build -f Dockerfile -t lemma-runtime:ci-smoke .
+```
 
-### 4. Scoring Simplification
+Optional quality frontier:
 
-These stay in the core repo, but should be handled as product decisions, not tiny patches.
+```bash
+uv run mypy lemma
+```
 
-1. Make the reward path proof-only. **Live default flipped:** a Lean-valid proof now enters scoring with live cost `0`.
-2. Keep `proof_intrinsic_score` out of live scoring. Length is a weak proxy for mathematical value and the current heuristic rewards bulk. Lean verification stays the v0 rule.
-3. Keep Lean verification as the objective floor. **Done:** [objective-decision.md](objective-decision.md) pins the objective as Lean-valid proofs.
-4. Sybil/Pareto scoring changes need evidence first. **Tooling ready:** private full exports now carry enough public challenge/coldkey context for `tools/sybil_replay_analyze.py` to compare dedup modes and K-miner clone pressure, report concrete `decision_data_gaps`, and [sybil_economics.md](sybil_economics.md) now includes the policy rubric for interpreting that replay. **Still open:** collect real exports and choose a policy before changing Sybil/Pareto defaults.
-5. Avoid adding more scoring layers until the primary objective stays one sentence in code and docs. The current product taste is intentionally Bitcoin-like: publish work, verify it mechanically, and pay for valid work.
+Do not treat `mypy` as passing until its existing errors are fixed. Do not treat
+GitHub as fixed until the latest Actions runs for `main` are checked directly.
 
-### 5. Experimental Protocol Hooks
+## VPS Status
 
-These should be either hardened or removed from the default mental model.
+Current record-only state from the 2026-05-11 audit:
 
-1. Miner verify attest: keep full validator Lean verify as default; do not let attest-only paths inflate credibility. **Done for optional usable path: verify batch isolates per-UID verifier exceptions; attest-trusted responses must still match current challenge fields; v2 signatures bind validator hotkey; docs state this is not hardware remote attestation.**
-2. Commit-reveal: keep active, with bounded cache, validator identity binding, shared commitment hex normalization, and an explicit same-round threat model. **Done for optional usable path; stronger public fairness would be a separate design.**
-3. Validator profile peer attest: treat as operator coordination, not strong security. **Done: threat model documents all-of-N HTTP limits and skip as solo/dev only.**
-4. Wire transport: keep current Dendrite/Axon path until a major-release HTTP + Epistula migration is explicitly chosen. **Bounded:** [transport.md](transport.md) now records the migration gate and decision template.
-5. Reference miner: keep the bundled miner minimal and compatibility-focused while the shipping protocol remains Axon-based. **Bounded:** [miner.md](miner.md) records that richer miner UX belongs in `lemma-cli` and miner-artifact/container designs are separate protocol work.
+| Host | IP | Deployed commit | Running Lemma services |
+| --- | --- | --- | --- |
+| `lemma-lean-worker-1` | `<validator-host>` | `82bba8d` | `lemma-lean-worker-http.service`, `lemma-validator.service` |
+| `lemma-miner-1` | `<miner-host>` | `82bba8d` | `lemma-miner.service`, `lemma-miner3.service`, `lemma-miner4.service`, `lemma-miner5.service`, `lemma-miner6.service`, `lemma-miner7.service` |
 
-### 5a. Validator Throughput And Cadence
+Next VPS testing should measure behavior, not add mechanism code:
 
-This is the path toward shorter theorem windows without making validators fall
-behind. Treat each item as a measured step, not a promise that 5-minute windows
-are safe on every machine.
+- miner forward response time per UID/model;
+- prover API latency and retry/timeout reasons;
+- validator Lean verify time, cold and warm;
+- remote worker versus local Docker worker reliability;
+- set-weights, commit-reveal delay, and emission movement after reveal.
 
-1. Reuse identical Lean verification payloads within an epoch. **Done:** one
-   Lean check is copied to miners that submitted the exact same theorem/proof
-   payload before scoring.
-2. Avoid duplicate cold-cache warmups for the same template. **Done:** concurrent
-   same-template proofs now singleflight through one cold warmup, then reuse the
-   published warm workspace.
-3. Measure a remote Lean worker pool on Linux hardware. **Next:** this should be
-   the first real scaling path before trusting 5-minute cadence assumptions.
-4. Revisit miner local-verify attest only after miners reliably run local Lean
-   and validators keep a nonzero spot-check rate.
-5. Consider 50-block (~10 minute) windows before 25-block (~5 minute) windows
-   unless real validator timing data clears the smaller budget.
+## Next Work Order
 
-Proof-only changes the throughput plan by removing judge latency and API cost
-from rewards. It does not remove the Lean budget. The next experiments should
-therefore measure warm-cache Lean verification, remote worker throughput, miner
-LLM response time, and one-droplet-vs-many-droplet placement under the same
-published validator profile. Do not treat cold Mathlib startup as the steady
-state; measure persistent workspace cache plus a long-lived Docker worker first.
+1. Land the Hatch direct-reference metadata fix and re-check GitHub Actions.
+2. Keep this file as the only active audit/work tracker; leave
+   `docs/audit-remediation.md` and `docs/incentive-roadmap.md` as pointer stubs.
+3. Keep local checks and Docker runtime build smoke green before pushing.
+4. Re-check GitHub Actions after the fix lands.
+5. Only after CI/package health is restored, choose the next work slice:
+   - typing hardening for the `mypy` errors;
+   - VPS timing/observability run;
+   - measured Lean worker throughput;
+   - sybil/Pareto replay on real private exports.
 
-### 6. CLI Extraction
+## Non-Goals
 
-This is the `lemma-cli` repo track.
-
-Status: `spacetime-tao/lemma-cli` exists as a thin public wrapper. The first core trim moved the guided `start` surface out of the subnet repo. Later trims moved the `.env` setup/configure wizard, docs/glossary helpers, local try-prover/rehearsal previews, theorem status/problem inspection, one-shot judge preview, and validator config summary to `lemma-cli`, leaving redirect shims in core. The remaining core `lemma meta` command now prints concise hashes by default and keeps full canonical JSON in `--raw`.
-
-Move first:
-
-1. Guided menu and start screen. **Done as a core trim; rebuild richer UX in `lemma-cli` only.**
-2. Environment wizard. **Moved to `lemma-cli`; core has redirects only.**
-3. Docs opener/glossary. **Moved to `lemma-cli`; core has redirects only.**
-4. Shell activation helpers. **Removed from core; docs use standard `uv run` commands or explicit `.venv` activation.**
-5. Local try-prover/rehearsal wrappers. **Moved to `lemma-cli`; core has redirects only.**
-6. Theorem status/problem inspection. **Moved to `lemma-cli`; core has redirects only.**
-7. One-shot judge preview on saved files. **Moved to `lemma-cli`; core has redirects only.**
-8. Validator config summary. **Moved to `lemma-cli`; core has redirects only.**
-9. Human-friendly doctor/validator-check wrappers, once the core repo exposes stable machine-readable checks. **In progress:** `lemma-cli doctor` and `lemma-cli miner-observability` own the friendly views; moved-command redirects now share one small compatibility helper; core `validator-check` exits after READY / NOT READY and shares startup gates with `lemma validator start`; richer guided handoff belongs in `lemma-cli`.
-
-Keep temporarily in core:
-
-1. Minimal `lemma validator start`.
-2. Minimal `lemma miner start`.
-3. Minimal `lemma verify`.
-4. Minimal `lemma meta` (hashes by default; full JSON via `--raw`).
-5. Reference miner internals required by the current Axon protocol path.
-
-The split is safe if `lemma-cli` depends on `lemma` as a Python package instead of copying consensus code.
-
-### 7. Core Cleanup After CLI Split
-
-Once `lemma-cli` exists and can call core functions:
-
-Current `wc -l` snapshot after cleanup: `lemma/` is **7 842** Python lines across **63** files, down from the Round 3 cited **12 630**. `lemma/cli/` is **885** lines across **4** files, down from **5 398** lines across **16** files. Tests/docs grew because the remediation work added safety coverage, analyzer guards, and decision records.
-
-1. Delete duplicate dry-run aliases. **Done: canonicalized to `miner dry-run` and `validator dry-run`; validator config summary moved to `lemma-cli validator-config`.**
-2. Thin or remove no-op glue like `validator/query.py` and `validator/protocol_migration.py`. **Done: removed both; epoch calls `bt.Dendrite` directly and no longer keeps a single-use UID helper.**
-3. Move catalog-building helpers out of runtime package if only scripts/tests use them. **Done: builder/parser helpers moved to `tools/catalog`; runtime keeps `lemma/catalog/constants.py`.**
-4. Remove root stubs and unused assets once docs no longer point at them. **Root cleanup done: removed `validator.py`, `voibes.jpeg`, obsolete `env.example`, superseded `scripts/load_minif2f.py`, the old `scripts/lemma-run` wrapper, stale local-loop example, and legacy burn validator demo. Comparator docs now match default-off behavior; `tiktoken` was removed, `anthropic` and `btcli` are optional, and the runtime Docker image no longer installs the full Docker engine. Larger misc items remain.**
-5. Keep tests focused on proof acceptance, scoring, protocol integrity, and deterministic problem selection. **Ongoing:** added coverage for optional multi-theorem seed mixing; removed the low-value problem-view title-case test.
-6. Simplify small glue APIs when an audit item has a single unused path. **Ongoing:** removed the unused third return from `apply_ema_to_entries`; added same-coldkey partitioning in the scoring path; removed unused scoring package re-exports; removed duplicate `ScoredEntry.composite`; removed stale trace-length scoring; removed the dead validator judge-concurrency knob; inlined miner default priority; removed the single-use validator UID helper; inlined the single-use split-timeout multiplier and topic-label formatter; kept package imports light by removing unused re-exports; removed unused strict-judge and problem-seed label helpers; moved `.env` merge helper to `lemma-cli`; added direct verified-proof entry assembly coverage.
-
-## First PR Sequence
-
-1. Add this workplan and agree on repo split boundaries. **Done.**
-2. Patch generated problem count docs and registry hash contents. **Done.**
-3. Patch response integrity/deadline fail-closed behavior with tests. **Done.**
-4. Patch live validator FakeJudge fail-closed behavior. **Done.**
-5. Scaffold `lemma-cli` as a separate repo and move only non-consensus UI code first. **Started.**
-6. Remove migrated CLI code from core after `lemma-cli` can install and run against it. **Mostly done; keep minimal core commands.**
-
-## Non-Goals For Now
-
-- Do not redesign the entire subnet in one pass.
-- Do not move validator scoring into the CLI repo.
-- Do not add more config knobs to solve unclear incentives.
-- Do not make commit-reveal or attest more central than their documented threat models justify.
+- Do not redesign the live reward mechanism in this pass.
+- Do not add proof-efficiency or prose/judge scoring to the live path.
+- Do not deploy, restart, or mutate droplet services in this pass.
+- Do not move validator scoring or consensus policy into `lemma-cli`.
+- Do not add more defensive layers where a simpler data model can remove the
+  invalid state.

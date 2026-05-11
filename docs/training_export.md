@@ -181,4 +181,4 @@ privacy, post-process or aggregate before publication. The old
 - Implementation: [`lemma/validator/training_export.py`](../lemma/validator/training_export.py), epoch hook in [`lemma/validator/epoch.py`](../lemma/validator/epoch.py).
 - Offline proof-metrics analyzer: [`tools/proof_metrics_analyze.py`](../tools/proof_metrics_analyze.py).
 - Offline sybil/Pareto replay analyzer: [`tools/sybil_replay_analyze.py`](../tools/sybil_replay_analyze.py).
-- Backlog context: [incentive-roadmap.md](incentive-roadmap.md) (training export item).
+- Backlog context: [workplan.md](workplan.md).
