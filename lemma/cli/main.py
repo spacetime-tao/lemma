@@ -35,6 +35,8 @@ def main(ctx: click.Context) -> None:
 def _home_help_commands(ctx: click.Context, *, include_usage: bool) -> None:
     """Print Usage (optional) + Commands + Options with the same palette as Quick start."""
     root = ctx.command
+    if not isinstance(root, click.Group):
+        raise click.ClickException("internal: expected a command group")
     name = root.name or "lemma"
     if include_usage:
         click.echo(stylize("Usage:", fg="cyan", bold=True) + f" {name} [OPTIONS] COMMAND [ARGS]...")
