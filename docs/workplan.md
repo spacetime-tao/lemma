@@ -7,10 +7,9 @@ not let parallel checklists drift.
 ## Current Baseline
 
 - Repository: `spacetime-tao/lemma`, local checkout `LOCAL_WORKSPACE/lemma`.
-- Current head before the remote worker safe-default fix:
-  `f06ab1ad1a94a9787c07ee39169f1e089fc2f939`
-  (`Refresh audit next steps after proof cap`).
-- That head had already been pushed to GitHub before this follow-up fix began.
+- Current local/GitHub `main` head after the audit-fix sequence:
+  `00e18051933b76b3d097956b79adeec236088711`
+  (`Clarify proof eligibility versus allocation`).
 - Live reward direction: proof passes Lean and can enter scoring, or proof
   fails Lean and does not enter scoring.
 - Operator UX belongs in the core `lemma` command; consensus policy stays in
@@ -42,6 +41,12 @@ not let parallel checklists drift.
   - `.venv/bin/bandit -q -r lemma -ll`;
   - `.venv/bin/pip-audit --ignore-vuln PYSEC-2025-49 --ignore-vuln PYSEC-2022-42969`
     (`No known vulnerabilities found, 3 ignored`).
+- GitHub Actions CI run
+  [`25691630114`](https://github.com/spacetime-tao/lemma/actions/runs/25691630114)
+  passed on `00e1805`, including the `test` job and `docker-lean-sandbox`
+  job with Docker golden Lean verify and generated-template lake build.
+- Docker image publish passed on code commit `551b217`. The final `00e1805`
+  commit was docs-only, so no image-publish run was needed for it.
 
 ## Recently Closed
 
@@ -60,11 +65,11 @@ not let parallel checklists drift.
    low-severity subprocess, seeded RNG, `assert`, and cleanup-exception items.
    Only fix these when the change removes ambiguity or code.
 
-2. **Real subnet evidence still matters.**
-   Local proof PASS is necessary but not enough. The subnet still needs measured
-   miner response time, prover latency, validator Lean verification time, scored
-   miner count, timeout/fail reasons, set-weights behavior, and emission changes
-   from live runs.
+2. **Live subnet/VPS evidence still matters.**
+   Local and GitHub CI proof PASS are necessary but not enough. The subnet still
+   needs measured miner response time, prover latency, validator Lean
+   verification time, scored miner count, timeout/fail reasons, set-weights
+   behavior, and emission changes from live runs.
 
 ## Testing Matrix
 
@@ -106,9 +111,7 @@ Next VPS testing should measure behavior, not add mechanism code:
 
 ## Next Work Order
 
-1. Re-run Docker-backed Lean golden and runtime Docker build smoke when Docker
-   is available.
-2. Then choose the next evidence slice:
+1. Choose the next live evidence slice:
    - VPS timing/observability run;
    - measured Lean worker throughput;
    - sybil/reward replay on real private exports;
