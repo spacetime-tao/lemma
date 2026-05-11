@@ -1,12 +1,12 @@
 # Lemma
 
-**Lemma** is a [Bittensor](https://docs.learnbittensor.org/) subnet that rewards miners who solve **published math problems**. You respond with **machine-checkable solutions**—**i.e., a proof**: each step is explicit enough that software can verify the whole argument and return a clear yes or no. That is different from winning on rhetoric or intuition alone.
+**Lemma** is a [Bittensor](https://docs.learnbittensor.org/) **subnet**—an application-specific layer on the Bittensor network with its own reward rules. It rewards miners who solve **published math problems** with **machine-checkable solutions**—**i.e., a proof** where each step is explicit enough that software can verify the whole thing and return yes or no. That is not the same as winning on rhetoric or intuition alone.
 
-Each round the subnet **publishes** a statement to prove. Miners **submit** candidate proofs. **Validators** run the same automated checker so everyone gets the same pass-or-fail answer. That verification runs in **Docker** so different machines agree. Subnet policy maps accepted proofs to **weights** and **alpha**.
+Each round the subnet **publishes** a statement to prove. **Miners** send candidate proofs. **Validators** run the same **automated checker** so every node gets the same pass-or-fail result. The checker runs in **Docker**—**containers** that bundle the verifier so it behaves the same on different machines. **Weights** are the scores validators assign to miners; **alpha** is the subnet’s **reward token** on Bittensor—passing proofs feed into that reward flow through the network’s public rules (details in the [litepaper](docs/litepaper.md)).
 
-**Bitcoin** is an analogy people already know: miners compete under fixed rules for block rewards. Lemma uses the same broad shape—open competition, shared rules, on-chain incentives—but the job is to produce a **correct proof** of the published problem, not to grind hashes.
+**Bitcoin** is a familiar comparison: there, miners compete to satisfy a hash rule; here, miners compete to supply a **correct proof** of the published problem—open competition and chain incentives, different task.
 
-**Status:** Software is still largely **proof-of-concept**. Lemma runs on **Bittensor testnet** as **Subnet 467** (`--network test`, `NETUID=467` after `uv run lemma configure chain`). **Alpha on testnet** follows testnet emissions; **mainnet (Finney) alpha** only applies if a Lemma deployment is registered there with live emissions—verify network and netuid for your deployment.
+**Status:** Software is still largely **proof-of-concept**. Lemma runs on **Bittensor testnet** as **Subnet 467** (`--network test`, `NETUID=467` after `uv run lemma configure chain`). **Reward behavior** depends on testnet parameters and registration; **mainnet** (**Finney**) is separate—tokens and rules there only apply if a Lemma deployment is **registered on mainnet**. Always confirm **network** and **netuid**.
 
 ## Start Here
 
@@ -34,7 +34,7 @@ development).
 
 **Validator entrypoint:** use **`lemma validator start`** (or Docker `ENTRYPOINT ["lemma"]` / `CMD ["validator", "start"]`).
 
-**Docker Compose:** the sample [`docker-compose.yml`](docker-compose.yml) mounts the host **`/var/run/docker.sock`** into the validator service so it can run Lean in Docker. That is powerful—compromise of the validator workload can pivot to the Docker daemon and thus the host. Treat the machine like production infrastructure: firewall the axon, patch Docker, and limit who can reach the API (see [production.md](docs/production.md)).
+**Docker Compose:** the sample [`docker-compose.yml`](docker-compose.yml) runs services in containers and mounts the host **`/var/run/docker.sock`** so the validator can start **other** containers for proof checking—high privilege; lock down the host (see [production.md](docs/production.md)). In miner docs, **axon** means the **network endpoint your miner listens on** for validator requests (Bittensor’s term—open the port deliberately).
 
 ## Short Docs Index
 

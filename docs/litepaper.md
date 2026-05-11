@@ -1,10 +1,6 @@
 # Lemma Litepaper
 
-Lemma is a Bittensor subnet for formal math proofs.
-
-Miners submit Lean proof scripts for published theorem statements. Validators
-check those scripts with Lean. A proof that passes can enter scoring. A proof
-that fails cannot.
+**Lemma** is a **subnet** on [Bittensor](https://docs.learnbittensor.org/)—a network with its own incentive rules layered on the shared chain. It rewards **formal proofs**: miners answer published math statements with **Lean** proof scripts; **validators** rerun **Lean** so everyone agrees pass/fail before scoring.
 
 This is the core idea:
 
@@ -14,10 +10,9 @@ Everything else should support that rule.
 
 ## The Short Version
 
-A theorem is a precise math claim. A proof script is Lean code that tries to
-prove that claim. Lean is a proof assistant: it checks the proof mechanically.
+A **theorem** is a precise math claim. A **proof script** is **Lean** source code that closes that claim. **Lean** is a **proof assistant**: software that checks each inference mechanically—like a strict compiler for math.
 
-Lemma turns that into a subnet:
+Lemma wires that into Bittensor:
 
 1. The subnet publishes a theorem statement.
 2. Miners use models, tools, and compute to search for a proof.
@@ -26,8 +21,7 @@ Lemma turns that into a subnet:
 5. Passing proofs can receive score.
 6. Failing proofs receive no proof score.
 
-That makes Lemma proof mining. Bitcoin miners produce valid hashes under a
-difficulty rule. Lemma miners produce valid Lean proofs under a theorem rule.
+That makes Lemma **proof mining** in the same broad sense as Bitcoin **mining**: there, miners seek hashes under a difficulty rule; here, miners seek **Lean-valid proofs** under a theorem rule.
 
 ## Concrete examples (illustrative)
 
@@ -86,24 +80,25 @@ accepts a complete proof.
 ## What Lemma Is Not
 
 The live path is **machine-checked**: publish statement → proof script → Lean
-pass or fail → subnet policy maps passes into weights. Lemma does **not** define
-the live reward around natural-language grading of explanations.
+pass or fail → scoring maps passes into **weights** (validator-assigned credit)
+and **alpha** (the subnet token). Lemma does **not** grade natural-language
+write-ups as the live reward signal.
 
-Useful questions for operators:
+Useful checks:
 
 - Was the theorem exactly the one the subnet published?
 - Did the miner return a proof script?
 - Did Lean accept it under the pinned toolchain and policy?
-- Does subnet policy let that pass contribute to weights?
+- Do this subnet’s scoring rules count that pass toward rewards?
 
 That narrow pipeline keeps verification repeatable across validators.
 
 ## Why Lean Matters
 
 Lean gives Lemma a single, shared gate: the proof either typechecks against the
-published theorem under the rules or it does not. **Emissions follow subnet
-policy** for work that passes that gate—keyed to the proof script, not to
-off-chain opinion about how the math “ought to” be argued.
+published theorem under the rules or it does not. **Rewards** for miners flow from
+Bittensor’s weight-and-token machinery **after** that gate—based on the proof
+script, not on off-chain opinion about how the math “ought to” be argued.
 
 Explanations, chat logs, and heuristics can help people **debug** or **teach**,
 but they are not the on-chain pass/fail check. Proof length, style, and
@@ -113,8 +108,9 @@ adopts them with evidence.
 
 ## What Miners Do
 
-A miner runs a Bittensor Axon service. When a validator sends a challenge, the
-miner tries to produce a Lean proof script.
+A miner runs an **Axon**—Bittensor’s name for the **server endpoint** the miner
+exposes so validators can deliver challenges. When a validator sends a challenge,
+the miner tries to produce a Lean proof script.
 
 The reference miner uses a prover model through an OpenAI-compatible API. That
 could be Chutes, OpenAI, Gemini through its OpenAI-compatible endpoint, Anthropic
@@ -129,8 +125,11 @@ scoring.
 
 ## What Validators Do
 
-A validator sends theorem challenges to miners, waits for responses, checks each
-proof with Lean, scores eligible proofs, and writes weights on chain.
+A validator sends theorem challenges to miners (using Bittensor’s request path—
+historically **Dendrite** on the validator side talking to the miner’s **Axon**),
+waits for responses, checks each proof with Lean, scores eligible proofs, and
+writes **weights** on chain. **Weights** are how validators say how much credit
+each miner deserves; those feed into **alpha** payouts per Bittensor rules.
 
 Production validators use Docker for Lean verification. The sandbox image pins
 the Lean toolchain and Mathlib revision so validators check proofs the same way.
@@ -145,7 +144,8 @@ The live rule is intentionally simple:
 - Lean passes: the proof can enter scoring.
 - Lean fails: the proof cannot receive proof score.
 
-After Lean passes, Lemma turns eligible miner entries into weights.
+After Lean passes, Lemma turns eligible miner entries into **weights**
+(on-chain credit scores for miners).
 Reputation/credibility policy may adjust a miner's entry. Same-coldkey
 partitioning may split one coldkey's allocation across its successful hotkeys.
 Proof length, style, and elegance do not change the live proof score.
@@ -194,8 +194,9 @@ model produce proofs that pass Lean inside the validator's time window?
 
 ## Transport
 
-Lemma currently uses Bittensor's Dendrite to Axon path. The synapse type is
-`LemmaChallenge`.
+Lemma currently uses Bittensor’s **Dendrite → Axon** path: roughly speaking,
+**validators send** challenges (**Dendrite** client) and **miners receive** them
+on their **Axon** server. The payload type is `LemmaChallenge`.
 
 The synapse includes body-hash integrity checks. Validators drop responses when
 required hash data is missing or does not match.
