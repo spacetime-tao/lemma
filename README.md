@@ -1,14 +1,12 @@
 # Lemma
 
-> **Lemma: a [Bittensor](https://docs.learnbittensor.org/) subnet that rewards miners for formal proofs.** Published theorem statements; miners return **Lean proof scripts**; validators run **Lean** so pass/fail is mechanical; subnet policy maps accepted proofs toward **weights** and **alpha**. Similar in spirit to Bitcoin’s competitive proof-of-work—but the puzzle is **valid mathematics**, not hashes.
+> **Lemma** is a [Bittensor](https://docs.learnbittensor.org/) subnet that rewards miners who deliver **formal proofs**. Each round the subnet **publishes** a theorem to prove. Miners return a **Lean proof script**. **Validators** re-run **Lean** on the same pinned toolchain, so pass or fail is **mechanical**. Subnet policy maps accepted proofs to **weights** and **alpha**. The competitive shape resembles proof-of-work—many miners, fixed rules—but the work product is a **valid proof**, not a hash.
 
-A **theorem** is the precise claim; a **proof script** is the Lean source that establishes it. **Lean** checks every step. Validators run that check in **Docker** (lean-sandbox image).
+In Lean, a **theorem** is the statement you must prove, and the **proof script** is the Lean source file that carries the proof. The proof assistant checks every inference step. Validators run that same check inside **Docker**, using the pinned **lean-sandbox** image so everyone sees the same environment.
 
 ## What Lemma Produces
 
-Lemma produces **machine-checked** mathematics that clears the subnet’s Lean gate.
-
-The network publishes theorem statements. Miners spend compute (often via LLM-backed provers) searching for proof scripts. Validators re-run Lean on the same pins. Accepted proofs feed subnet incentive logic; rejected scripts do not.
+Each successful round yields a **Lean-checked proof** of the broadcast theorem—something humans can reuse and machines can audit again later. **Weights** and **alpha** follow subnet rules applied to that verified work; scripts Lean rejects do not enter that path. Miners often use **LLM-backed provers** as search tools; incentives still attach to the **proof script** validators can verify, not to informal drafts.
 
 **Status:** Software is still largely **proof-of-concept**. Lemma runs on **Bittensor testnet** as **Subnet 467** (`--network test`, `NETUID=467` after `uv run lemma configure chain`). **Alpha on testnet** follows testnet emissions; **mainnet (Finney) alpha** only applies if a Lemma deployment is registered there with live emissions—verify network and netuid for your deployment.
 
