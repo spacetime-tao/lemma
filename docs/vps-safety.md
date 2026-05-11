@@ -61,6 +61,9 @@ Useful when validator CPU or disk is the bottleneck.
 
 Use a separate coldkey only when you want to test independent economic identity.
 For simple throughput testing, multiple hotkeys under one coldkey are enough.
+If you create a second miner hotkey, it can run on the same miner VPS as another
+service with its own wallet hotkey, axon port, log file, and systemd unit. Keep
+the second coldkey local just like the first one.
 
 Create the wallet locally:
 
