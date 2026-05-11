@@ -1,10 +1,10 @@
 # Lemma
 
-**Lemma** is a [Bittensor](https://docs.learnbittensor.org/) **subnet**—an application-specific layer on the Bittensor network with its own reward rules. It rewards miners who solve **published math problems** with **machine-checkable solutions**—**i.e., a proof** where each step is explicit enough that software can verify the whole thing and return yes or no. That is not the same as winning on rhetoric or intuition alone.
+**Lemma** is a [Bittensor](https://docs.learnbittensor.org/) **subnet**. It rewards miners who solve **published math problems** with **machine-checkable proofs**—each step stated clearly enough that software can verify the whole thing and return yes or no.
 
-Each round the subnet **publishes** a statement to prove. **Miners** send candidate proofs. **Validators** run the same **automated checker** so every node gets the same pass-or-fail result. The checker runs in **Docker**—**containers** that bundle the verifier so it behaves the same on different machines. **Weights** are the scores validators assign to miners; **alpha** is the subnet’s **reward token** on Bittensor—passing proofs feed into that reward flow through the network’s public rules (details in the [litepaper](docs/litepaper.md)).
+Each round Lemma **publishes** a statement to prove. **Miners** send candidate proofs. **Validators** run the same **automated checker** so every node gets the same pass-or-fail result. The checker runs in **Docker**—**containers** that bundle the verifier so it behaves the same on different machines. **Weights** are scores validators assign to miners; **alpha** is the reward token—passing proofs feed into payouts through Bittensor’s public rules (details in the [litepaper](docs/litepaper.md)).
 
-**Bitcoin** is a familiar comparison: there, miners compete to satisfy a hash rule; here, miners compete to supply a **correct proof** of the published problem—open competition and chain incentives, different task.
+**Bitcoin** is a loose comparison: one miner wins each new block; here the competition is about supplying a **correct proof** for the published problem—same broad idea of incentives and open participation, different job.
 
 **Status:** Software is still largely **proof-of-concept**. Lemma runs on **Bittensor testnet** as **Subnet 467** (`--network test`, `NETUID=467` after `uv run lemma configure chain`). **Reward behavior** depends on testnet parameters and registration; **mainnet** (**Finney**) is separate—tokens and rules there only apply if a Lemma deployment is **registered on mainnet**. Always confirm **network** and **netuid**.
 

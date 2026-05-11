@@ -1,6 +1,6 @@
 # Lemma Litepaper
 
-**Lemma** is a **subnet** on [Bittensor](https://docs.learnbittensor.org/)—a network with its own incentive rules layered on the shared chain. It rewards **formal proofs**: miners answer published math statements with **Lean** proof scripts; **validators** rerun **Lean** so everyone agrees pass/fail before scoring.
+**Lemma** is a [Bittensor](https://docs.learnbittensor.org/) **subnet**. It rewards **formal proofs**: miners answer published math statements with **Lean** proof scripts; **validators** rerun **Lean** so everyone agrees pass/fail before scoring.
 
 This is the core idea:
 
@@ -21,7 +21,7 @@ Lemma wires that into Bittensor:
 5. Passing proofs can receive score.
 6. Failing proofs receive no proof score.
 
-That makes Lemma **proof mining** in the same broad sense as Bitcoin **mining**: there, miners seek hashes under a difficulty rule; here, miners seek **Lean-valid proofs** under a theorem rule.
+That makes Lemma **proof mining** in the same broad sense as Bitcoin **mining**: there, each round goes to whoever publishes the next valid block first; here, miners seek **Lean-valid proofs** that match the published theorem.
 
 ## Concrete examples (illustrative)
 

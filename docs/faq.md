@@ -6,11 +6,11 @@ Plain-language answers. For the full picture see [litepaper.md](litepaper.md); f
 
 ## What is Lemma?
 
-**Lemma** is a **[Bittensor](https://docs.learnbittensor.org/) subnet**—an application with its own reward rules that runs on top of the shared Bittensor network. It **rewards miners who solve published math problems** with answers a **computer can check** (see *Foundations* below). **Validators** run the same checker as everyone else, so **pass or fail** is not a matter of taste.
+**Lemma** is a [Bittensor](https://docs.learnbittensor.org/) **subnet**. It **rewards miners who solve published math problems** with answers a **computer can check** (see *Foundations* below). **Validators** run the same checker as everyone else, so **pass or fail** is not a matter of taste.
 
 When proofs pass, **how credit turns into tokens** is handled by Bittensor’s usual machinery: validators publish **weights** (scores for each miner), and miners earn **alpha**, the subnet’s **reward token**. The exact formulas live with the subnet parameters—start with the [litepaper](litepaper.md), then [technical-reference.md](technical-reference.md) if you need numbers.
 
-**Analogy:** Bitcoin miners compete to find hashes under a rule; Lemma miners compete to find **correct proofs** of a statement someone published. Open competition, shared rules, different puzzle. One more difference: for each Bitcoin **block**, only **one** miner wins that round. On Lemma, **any** miner whose proof **passes the checker** for that round is in the “winning” set; it is not only-one-wins the way a block race is (how much **alpha** each passing miner gets still follows the subnet’s **weight** rules).
+**Analogy:** Same rough shape as Bitcoin—open competition, fixed rules—but the work is finding a **correct proof** of a published statement, not racing for the next chain block. One difference: for each Bitcoin **block**, only **one** miner wins that round. On Lemma, **any** miner whose proof **passes the checker** for that round counts as passing the gate (how much **alpha** each one gets still follows **weight** rules).
 
 ---
 
