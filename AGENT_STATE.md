@@ -27,10 +27,9 @@ Reason: the product center is simple, reproducible proof acceptance.
   audit-remediation can stay detailed agent/internal maps.
 - Keep `lemma-cli` and core Lemma aligned so operator setup feels like one
   simple path, not two overlapping tools.
-- After the current same-coldkey split-weight test reveals cleanly, remind the
-  user to create a second coldkey/hotkey locally if independent-identity testing
-  is the next goal. The new miner hotkey can run on `lemma-miner-1` as another
-  service; keep the coldkey local.
+- User created and registered the second coldkey/hotkey test identity
+  `codex` / `codexhot` on testnet subnet `467` as UID `7`. The new miner hotkey
+  can run on `lemma-miner-1` as another service; keep the coldkey local.
 - Continue VPS deployment testing:
   - miner hotkeys on one droplet or several droplets;
   - validator on a separate droplet;
@@ -65,8 +64,8 @@ Reason: the product center is simple, reproducible proof acceptance.
   path is stable.
 - Multiple miner hotkeys on one VPS need separate wallet hotkeys, axon ports,
   logs, and service units.
-- A second coldkey/hotkey pair is only needed when testing a separate economic
-  identity. It is not needed for the current same-coldkey partition test.
+- UID `7` is the separate economic identity test. Run it beside UIDs `2`-`6`
+  to compare one same-coldkey group against one separate coldkey/hotkey.
 - Multiple hotkeys under one coldkey are okay for testing. Current scoring
   partitions one coldkey's allocation among its successful hotkeys instead of
   multiplying the allocation.
@@ -80,10 +79,10 @@ Reason: the product center is simple, reproducible proof acceptance.
 
 ## Latest Baseline Status
 
-- Core Lemma `main` pushed through `fb2fef2`
-  (`Record VPS partition test status`).
-- `lemma-cli` `main` pushed through `022a779` (CLI proof-verification
-  messaging).
+- Core Lemma `main` pushed through `154572f`
+  (`Record second identity testing reminder`).
+- `lemma-cli` `main` pushed through `b27e81e` (CLI proof-verification
+  wording).
 - Local verification before VPS testing:
   - core `uv run pytest`: 250 passed, 2 skipped;
   - core `uv run ruff check lemma tests`: passed;
@@ -173,6 +172,13 @@ Reason: the product center is simple, reproducible proof acceptance.
   - post-run chain query at block `7094268` still showed old revealed weights
     `1 -> 2` plus a new timelocked commit from validator hotkey at block
     `7094223`; commit-reveal had not yet exposed the new split weights.
+- Next independent-identity test:
+  - add UID `7` (`codexhot`) to `lemma-miner-1` on the next free axon port;
+  - run a validator dry-run first and confirm UIDs `2`-`7` respond before the
+    deadline and verify;
+  - run one live epoch only after dry-run timing is clean;
+  - expected equal-proof shape: UIDs `2`-`6` share one coldkey allocation, while
+    UID `7` keeps its separate coldkey allocation.
 
 ## Notes For Future Agents
 
