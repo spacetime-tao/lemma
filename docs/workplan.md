@@ -8,12 +8,17 @@ not let parallel checklists drift.
 
 - Repository: `spacetime-tao/lemma`, local checkout `LOCAL_WORKSPACE/lemma`.
 - Current head during this audit:
-  `b7088f00295fe0e23ad4a856ac43799b9acd8882`
-  (`Remove stale judge config from proof-only path`).
+  `28bbbfc8c747c46ff5d6c5b0e015e5451aeb4e58`
+  (`Docs: add cursor-audit.md; CI gate pip-audit/bandit; production security note; README index`).
+- Local `main` matched GitHub `main` during the Codex audit via
+  `git ls-remote origin HEAD refs/heads/main`.
 - Live reward direction: proof passes Lean and can enter scoring, or proof
   fails Lean and does not enter scoring.
 - Operator UX belongs in the core `lemma` command; consensus policy stays in
   protocol, problem selection, Lean verification, validator scoring, and tests.
+- Current audit docs:
+  - [`cursor-audit.md`](cursor-audit.md): Cursor-assisted rating `7.5 / 10`.
+  - [`codex-audit.md`](codex-audit.md): Codex rating `7.2 / 10`.
 
 ## What Is Good
 
@@ -28,38 +33,39 @@ not let parallel checklists drift.
   registry reachability/coherence.
 - Normal operator workflows are consolidated under `lemma`: setup, doctor,
   status, problem views, preview, miner, and validator entrypoints.
-- Local baseline checks passed after the Hatch metadata fix:
-  - `uv sync --extra dev`;
-  - `uv run ruff check lemma tests tools`;
-  - `uv run pytest tests/ -q --ignore=tests/test_docker_golden.py`
-    (`255 passed, 1 skipped, 12 warnings`);
+- Local baseline checks from the Codex audit:
+  - `.venv/bin/ruff check lemma tests tools`;
+  - `.venv/bin/mypy lemma`
+    (`Success: no issues found in 68 source files`);
+  - `.venv/bin/pytest tests -q`
+    (`254 passed, 2 skipped, 12 warnings`);
   - generated-template metadata gate for 40 builders;
-  - Docker golden Lean verify (`1 passed in 210.60s`);
-  - runtime Docker build smoke (`lemma-runtime:ci-smoke`).
+  - `.venv/bin/bandit -q -r lemma -ll`;
+  - `.venv/bin/pip-audit --ignore-vuln PYSEC-2025-49 --ignore-vuln PYSEC-2022-42969`
+    (`No known vulnerabilities found, 3 ignored`).
 
 ## Current Blockers And Gaps
 
-1. **GitHub re-check pending.**
-   `b7088f0` failed before tests because Hatch rejected the old optional CLI
-   dependency direct reference. This simplification removes that optional
-   dependency from the core package. GitHub Actions still need to be checked
-   after the fix lands.
+1. **Validator inbound proof-size boundary.**
+   Miner-side response limits enforce `SYNAPSE_MAX_PROOF_CHARS`, but the
+   validator epoch path should reject oversized `resp.proof_script` payloads
+   before scheduling Lean verification.
 
-2. **Tracker drift.**
-   `local handoff note`, `docs/workplan.md`, `docs/audit-remediation.md`, and
-   `docs/incentive-roadmap.md` all contained overlapping status. This file is
-   now the active tracker; `local handoff note` is only the short chat-freeze
-   handoff.
+2. **Remote Lean worker safe default.**
+   `lemma lean-worker` allows unauthenticated `/verify` when
+   `LEMMA_LEAN_VERIFY_REMOTE_BEARER` is unset. Docs warn operators, but the code
+   should make unauthenticated non-loopback serving an explicit dev choice.
 
-3. **Typing quality gap.**
-   `uv run mypy lemma` currently reports `70 errors in 11 files`. This is not a
-   CI blocker today, but it is a good hardening track after package/CI health is
-   restored.
+3. **Binary proof eligibility versus downstream allocation policy.**
+   Verified proofs enter with `score=1.0`, but reputation/credibility EMA,
+   Pareto layering, and same-coldkey partitioning still alter final weights.
+   Keep documentation precise: proof verification is binary; final allocation
+   is additional policy.
 
-4. **Ops version drift.**
-   Both known droplets are alive and services are active, but `/opt/lemma` is
-   deployed at `82bba8d`, one commit behind `b7088f0`. Record only for this
-   pass; do not deploy or restart services here.
+4. **Full Bandit low-severity cleanup.**
+   CI's medium/high Bandit gate passes. A full Bandit run still reports
+   low-severity subprocess, seeded RNG, `assert`, and cleanup-exception items.
+   Only fix these when the change removes ambiguity or code.
 
 5. **Real subnet evidence still matters.**
    Local proof PASS is necessary but not enough. The subnet still needs measured
@@ -72,27 +78,25 @@ not let parallel checklists drift.
 Run these before claiming the repo is locally healthy:
 
 ```bash
-uv sync --extra dev
-uv run ruff check lemma tests tools
-uv run pytest tests/ -q --ignore=tests/test_docker_golden.py
-uv run python scripts/ci_verify_generated_templates.py
+.venv/bin/ruff check lemma tests tools
+.venv/bin/mypy lemma
+.venv/bin/pytest tests -q
+.venv/bin/python scripts/ci_verify_generated_templates.py
+.venv/bin/bandit -q -r lemma -ll
+.venv/bin/pip-audit --ignore-vuln PYSEC-2025-49 --ignore-vuln PYSEC-2022-42969
 RUN_DOCKER_LEAN=1 LEAN_SANDBOX_IMAGE=lemma/lean-sandbox:latest \
-  uv run pytest tests/test_docker_golden.py -v --tb=short
+  .venv/bin/pytest tests/test_docker_golden.py -v --tb=short
 docker build -f Dockerfile -t lemma-runtime:ci-smoke .
 ```
 
-Optional quality frontier:
-
-```bash
-uv run mypy lemma
-```
-
-Do not treat `mypy` as passing until its existing errors are fixed. Do not treat
-GitHub as fixed until the latest Actions runs for `main` are checked directly.
+Docker-backed checks require a running Docker daemon and the Lean sandbox image.
+Do not treat GitHub Actions as fixed-current unless the latest Actions runs for
+`main` are checked directly.
 
 ## VPS Status
 
-Current record-only state from the 2026-05-11 audit:
+No VPS check was performed during the Codex audit doc pass. The last recorded
+state below may be stale and should be refreshed before any deployment claim:
 
 | Host | IP | Deployed commit | Running Lemma services |
 | --- | --- | --- | --- |
@@ -109,16 +113,17 @@ Next VPS testing should measure behavior, not add mechanism code:
 
 ## Next Work Order
 
-1. Land the CLI simplification and re-check GitHub Actions.
-2. Keep this file as the only active audit/work tracker; leave
-   `docs/audit-remediation.md` and `docs/incentive-roadmap.md` as pointer stubs.
-3. Keep local checks and Docker runtime build smoke green before pushing.
-4. Re-check GitHub Actions after the fix lands.
-5. Only after CI/package health is restored, choose the next work slice:
-   - typing hardening for the `mypy` errors;
+1. Add validator-side proof response size enforcement before Lean verify.
+2. Tighten `lemma lean-worker` startup around unauthenticated non-loopback binds.
+3. Keep binary proof eligibility language precise in docs that mention
+   reputation, credibility, Pareto weighting, or same-coldkey partitioning.
+4. Re-run Docker-backed Lean golden and runtime Docker build smoke when Docker
+   is available.
+5. Then choose the next evidence slice:
    - VPS timing/observability run;
    - measured Lean worker throughput;
-   - sybil/reward replay on real private exports.
+   - sybil/reward replay on real private exports;
+   - low-severity Bandit cleanup where it removes code or ambiguity.
 
 ## Non-Goals
 
