@@ -1,8 +1,6 @@
 # Audit Remediation
 
-This detailed tracker has been consolidated into
-[`workplan.md`](workplan.md).
+This tracker moved to [workplan.md](workplan.md).
 
-Use `workplan.md` as the single active source for audit status, current
-blockers, testing, VPS state, and next work. Keep the repository history for the
-older long-form Round 3 audit mapping when verbatim provenance is needed.
+Use `workplan.md` for current audit status, blockers, tests, VPS state, and next
+work. Use git history only when you need the older long-form audit mapping.

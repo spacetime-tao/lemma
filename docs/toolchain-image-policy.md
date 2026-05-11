@@ -1,39 +1,53 @@
-# Toolchain and image pinning
+# Toolchain And Image Pinning
 
-Lemma verifies miner proofs with a specific Lean toolchain, Mathlib revision, and sandbox image. These pins affect consensus-facing behavior, so production operators should treat them as release artifacts, not local preferences.
+Lemma verifies proofs with a specific Lean toolchain, Mathlib revision, and
+sandbox image.
 
-## Sources of truth
+These pins affect rewards. Treat them as release artifacts, not local choices.
+
+## Sources Of Truth
 
 | Item | Source |
-| ---- | ------ |
+| --- | --- |
 | Default Lean toolchain | [`lemma/catalog/constants.py`](../lemma/catalog/constants.py) |
 | Default Mathlib revision | [`lemma/catalog/constants.py`](../lemma/catalog/constants.py) |
 | Lean template toolchain file | [`lemma/lean/template/lean-toolchain`](../lemma/lean/template/lean-toolchain) |
-| Sandbox image build recipe | [`compose/lean.Dockerfile`](../compose/lean.Dockerfile) |
-| Runtime sandbox image ref | `LEAN_SANDBOX_IMAGE` |
+| Sandbox image recipe | [`compose/lean.Dockerfile`](../compose/lean.Dockerfile) |
+| Runtime image ref | `LEAN_SANDBOX_IMAGE` |
 
-The local default `lemma/lean-sandbox:latest` is only a developer convenience for images built on the same machine. It is not an immutable production pin.
+`lemma/lean-sandbox:latest` is a local dev tag. It is not a production pin.
 
-## Production policy
+## Production Policy
 
 1. Build the sandbox image from the release checkout.
-2. Smoke-test it with the Docker golden test.
-3. Publish the image under an immutable tag or digest.
-4. Set `LEAN_SANDBOX_IMAGE` to that immutable reference on validators, miners that local-verify, and remote Lean workers.
-5. Publish the same `.env` template and validator profile hash for the validator set.
+2. Run the Docker golden test.
+3. Publish the image with an immutable tag or digest.
+4. Set `LEAN_SANDBOX_IMAGE` to that ref on validators, local-verify miners, and
+   Lean workers.
+5. Publish the same `.env` template and validator profile hash.
 
-Prefer a digest when your registry workflow supports it:
+Prefer a digest:
 
 ```text
 LEAN_SANDBOX_IMAGE=registry.example/lemma/lean-sandbox@sha256:<digest>
 ```
 
-An immutable version tag is acceptable only when the operator controls the registry policy and will not retag it.
+An immutable version tag is acceptable only if the operator controls the
+registry and will not retag it.
 
-## Updating pins
+## Updating Pins
 
-When Lean or Mathlib changes, update the constants, template, Dockerfile assumptions, generated/frozen catalog metadata, and operator image ref together. Then rebuild the sandbox image, rerun the golden test, publish the new immutable image ref, and announce the cutover block or release tag.
+When Lean or Mathlib changes, update these together:
 
-The validator profile hash (`validator_profile_sha256`) includes the configured sandbox image ref and verification settings. Changing `LEAN_SANDBOX_IMAGE` should therefore change the profile hash operators compare.
+- constants;
+- Lean template;
+- Dockerfile assumptions;
+- catalog metadata;
+- operator image ref.
 
-Host Lean is for local debugging unless the subnet policy explicitly allows it. If enabled, the host `lake` toolchain must match the published sandbox policy.
+Then rebuild the sandbox image, rerun the golden test, publish the image, and
+announce the cutover block or release tag.
+
+Changing `LEAN_SANDBOX_IMAGE` should change `validator_profile_sha256`.
+
+Host Lean is for local debugging unless subnet policy explicitly allows it.

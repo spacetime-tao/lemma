@@ -1,36 +1,41 @@
 # Objective Decision
 
-This note pins the current one-sentence objective so the mechanism does not drift
-into rewarding whatever the latest scoring layer happens to measure.
+This note pins the reward objective.
 
-## One-Sentence Objective
+## Objective
 
 Lemma rewards Lean-valid proofs for published theorem statements.
 
 ## Incentive Boundary
 
-The reward path should be proof-only:
+The live reward path is proof-only:
 
-- **Eligibility:** Lean accepts the submitted proof for the locked theorem.
-- **Scoring:** an eligible proof enters scoring with live cost `0`.
-- **Out of band:** informal reasoning can help humans, datasets, and debugging,
-  but it is not a reward axis.
+- Lean accepts the proof for the locked theorem: it can enter scoring.
+- Lean rejects the proof: it cannot receive proof score.
 
-See [proof-verification-incentives.md](proof-verification-incentives.md) for the concrete design.
+Informal reasoning can help humans and datasets. It is not a live reward axis.
 
 ## Why This Matters
 
-Lean verification is objective and reproducible. The live scoring path keeps the
-v0 game simple: publish work, verify work mechanically, pay for valid work.
+Lean verification is objective and reproducible.
+
+The live game stays simple:
+
+1. publish work;
+2. verify work mechanically;
+3. pay for valid work.
 
 ## Boundary Check
 
-Every reward change should preserve this test:
+Every reward change should answer yes to at least one question:
 
-> Does this make Lean-valid theorem proving easier to measure, harder to game,
-> or more economically useful?
+- Does this make Lean-valid theorem proving easier to measure?
+- Does this make it harder to game?
+- Does this make the work more useful?
 
-If the answer is no, the change should not be part of the core incentive path.
-See [proof-verification-incentives.md](proof-verification-incentives.md) and
-[proof-intrinsic-decision.md](proof-intrinsic-decision.md) for the scoring
-design gates.
+If not, keep it out of the core reward path.
+
+Related:
+
+- [proof-verification-incentives.md](proof-verification-incentives.md)
+- [proof-intrinsic-decision.md](proof-intrinsic-decision.md)

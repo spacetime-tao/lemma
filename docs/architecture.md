@@ -1,21 +1,35 @@
 # Architecture
 
+Lemma has one main loop:
+
+1. Validator sends a theorem to miners.
+2. Miners return `proof_script`.
+3. Validator checks each proof with Lean.
+4. Passing proofs enter scoring.
+5. Validator writes weights.
+
+## Main Parts
+
 | Area | Role |
-| ---- | ---- |
-| [`LemmaChallenge`](../lemma/protocol.py) | Synapse: validator sends theorem; miner returns `proof_script` plus optional metadata. |
-| [`lemma/problems/`](../lemma/problems/) | `ProblemSource`. Generated templates ([generated-problems.md](generated-problems.md)); optional frozen JSON ([catalog-sources.md](catalog-sources.md)). |
-| [`lemma/lean/`](../lemma/lean/) | Workspace materialization; `LeanSandbox` runs `lake build` + axiom driver. |
-| [`lemma/judge/`](../lemma/judge/) | Local file-based prose utilities outside validator scoring. |
-| [`lemma/scoring/`](../lemma/scoring/) | Lean-verified proof entries, reputation, Pareto, and same-coldkey partitioning → weights. |
-| [`lemma/miner/`](../lemma/miner/) | Reference Axon service + `LLMProver` compatibility path; keep competitive strategy and friendly UX out of core ([miner.md](miner.md)). |
-| [`lemma/validator/`](../lemma/validator/) | Dendrite broadcast → verify → score → `set_weights`. |
+| --- | --- |
+| [`LemmaChallenge`](../lemma/protocol.py) | The Bittensor synapse. It carries the theorem and returned proof. |
+| [`lemma/problems/`](../lemma/problems/) | Problem sources: generated templates and optional frozen JSON. |
+| [`lemma/lean/`](../lemma/lean/) | Builds Lean workspaces and runs `lake build`. |
+| [`lemma/scoring/`](../lemma/scoring/) | Turns passing proofs into weights. |
+| [`lemma/miner/`](../lemma/miner/) | Reference miner service and prover client. |
+| [`lemma/validator/`](../lemma/validator/) | Broadcasts challenges, checks proofs, scores, and calls `set_weights`. |
+| [`lemma/judge/`](../lemma/judge/) | Local prose utilities. Not live validator scoring. |
 
-[governance.md](governance.md).
+## Trust Model
 
-## Trust model (v1)
+Lean is the proof gate. Around it, Lemma also checks:
 
-- Cheat scan ([`cheats.py`](../lemma/lean/cheats.py)).
-- Mathlib axiom allowlist from `#print axioms`.
+- banned proof tokens in [`cheats.py`](../lemma/lean/cheats.py);
+- allowed axioms from `#print axioms`;
+- fixed problem and registry pins;
+- shared validator profile hashes.
+
+More policy detail: [governance.md](governance.md).
 
 ## References
 

@@ -1,57 +1,96 @@
-# Inference models
+# Inference Models
 
-Lemma uses OpenAI-compatible HTTP (`/v1/chat/completions`). [Chutes](https://chutes.ai/) is the default documented host.
+Miners use a prover model to write Lean. Validators do not need an inference
+model to check proofs.
 
-## What “OpenAI-compatible” means
+Lemma's prover client uses OpenAI-compatible HTTP at `/v1/chat/completions`.
 
-Many providers (Chutes, **official OpenAI**, Google’s **Gemini OpenAI shim**, vLLM, LiteLLM, local gateways) expose the **same HTTP shape** that OpenAI’s Chat Completions API made standard:
+## What OpenAI-Compatible Means
 
-- **Request:** JSON with a `model` id and a `messages` array (roles + text).
-- **Response:** JSON with the assistant’s text in a **Chat Completions**-style structure.
-- **Transport:** the client appends paths like **`/v1/chat/completions`** to a **base URL** you configure (e.g. `https://llm.chutes.ai/v1` or `https://api.openai.com/v1`).
+OpenAI-compatible means the request and response use the Chat Completions shape:
 
-So “OpenAI-compatible” is about the **wire format** (how the request/response is packed), not about which company’s *weights* you are running. The same logical model could be offered behind different bases; Lemma’s prover uses the **OpenAI-compatible** client path for those hosts.
+- request: `model` plus `messages`;
+- response: assistant text in a Chat Completions-style object;
+- base URL: the client appends `/v1/chat/completions`.
 
-**Not the same thing:** Google’s **native** Gemini REST API under `…/v1beta/models/…:generateContent` uses a **different** JSON schema (`contents` / `parts`, etc.). Lemma does **not** use that path today for the main prover; it uses the **OpenAI-compatible** base `https://generativelanguage.googleapis.com/v1beta/openai/` so the same `AsyncOpenAI` code can talk to Gemini. See Google’s [OpenAI compatibility](https://ai.google.dev/gemini-api/docs/openai) docs.
+This describes the wire format, not the company running the model.
 
-**Anthropic** is different again: it has its own API (`/v1/messages`, separate fields). That SDK is an optional install: use `uv sync --extra anthropic` when `PROVER_PROVIDER=anthropic`.
+Examples include Chutes, OpenAI, Gemini's OpenAI-compatible endpoint, vLLM,
+LiteLLM, and custom gateways.
 
-Interactive setup (`uv run lemma-cli configure prover`): reply with a **row number** or the **backend keyword** (`chutes`, `gemini`, …). You **pick the vendor first** (Chutes, Gemini, Anthropic, hosted OpenAI, or custom OpenAI-compat URL); the next prompts ask for API keys and **`PROVER_MODEL`** (with dim examples in-terminal — preset tiers for Gemini, defaults for Chutes/Anthropic, required string for OpenAI, provider-specific id for custom).
+Gemini's native `generateContent` API is different. Lemma uses Gemini through
+Google's OpenAI-compatible base URL.
 
-## Catalog
+Anthropic uses a different API. Install it with:
+
+```bash
+uv sync --extra anthropic
+```
+
+## Setup
+
+Use the wizard:
+
+```bash
+uv run lemma-cli configure prover
+```
+
+Pick a provider, enter the API key, and choose `PROVER_MODEL`.
+
+For OpenAI-compatible providers, set:
+
+- `PROVER_PROVIDER=openai`
+- `PROVER_OPENAI_BASE_URL`
+- `PROVER_OPENAI_API_KEY`
+- `PROVER_MODEL`
+
+`OPENAI_API_KEY` and `OPENAI_MODEL` are legacy fallbacks.
+
+## Chutes Catalog
 
 ```bash
 curl -sS https://llm.chutes.ai/v1/models | jq '.data[] | {id, pricing}'
 ```
 
-Use `id` as `PROVER_MODEL`.
+Use the returned `id` as `PROVER_MODEL`.
 
 ## Validators
 
-Validators do not need an inference model to check Lean proofs. They need the pinned Lean sandbox, verifier policy, problem cadence, and proof-scoring policy. Miners use `PROVER_*` and may call any prover model the operator runs.
+Validators need:
 
-One pinned validator scoring profile per subnet: `uv run lemma meta` →
-`validator_profile_sha256` → optional
-`LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED`. The profile covers deterministic
-scoring, cadence, and verification knobs that affect weights.
+- pinned Lean sandbox;
+- verifier policy;
+- problem cadence;
+- proof-scoring policy.
 
-After changing scoring knobs, problem cadence, or verifier policy, rerun `uv run lemma meta` and redistribute hashes.
+They do not need a prover model for proof scoring.
 
-## Miners (prover)
+After changing verifier or scoring policy, run:
 
-Use a model that writes valid `Submission.lean` reliably. Recommended baseline
-on Chutes: a capable proof model such as `deepseek-ai/DeepSeek-V3.2-TEE`, or
-another prover model you operate reliably.
+```bash
+uv run lemma meta
+```
 
-| Goal | Examples |
-| ---- | -------- |
-| Strong theorem-proving baseline | `deepseek-ai/DeepSeek-V3.2-TEE` |
-| Other reasoning options | Other DeepSeek / Qwen / frontier reasoning listings on Chutes |
+Share the new `validator_profile_sha256` with validators. Operators may set
+`LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED` to fail fast on drift.
 
-Set `PROVER_PROVIDER=openai`, **`PROVER_OPENAI_BASE_URL`**, **`PROVER_OPENAI_API_KEY`** (or legacy `OPENAI_API_KEY` fallback), and **`PROVER_MODEL`** (miner-only id; falls back to `OPENAI_MODEL` if unset).
+## Miners
 
-The live miner (`uv run lemma miner start`) starts solving **as soon as** a validator forwards a challenge — no deliberate wait for block ticks. `uv run lemma-cli try-prover` is separate (manual smoke test).
+Use a model that reliably writes valid `Submission.lean`.
 
-Custom **`PROVER_OPENAI_BASE_URL`** / keys for the **prover** are normal (any OpenAI-compatible host you operate).
+The live miner starts solving as soon as a validator forwards a challenge. It
+does not wait for block ticks.
 
-Anthropic prover support is optional. Install it with `uv sync --extra anthropic`, then set `PROVER_PROVIDER=anthropic`, `ANTHROPIC_API_KEY`, and `PROVER_MODEL` or `ANTHROPIC_MODEL`.
+`uv run lemma-cli try-prover` is only a manual smoke test.
+
+For Anthropic:
+
+```bash
+uv sync --extra anthropic
+```
+
+Then set:
+
+- `PROVER_PROVIDER=anthropic`
+- `ANTHROPIC_API_KEY`
+- `PROVER_MODEL` or `ANTHROPIC_MODEL`

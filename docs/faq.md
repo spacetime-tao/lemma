@@ -1,247 +1,255 @@
 # FAQ
 
-> **New here:** follow [getting-started](getting-started.md) first (install, keys, miner, validator). This file is long-form reference: scoring, timeouts, seeds, policy.
+New here? Start with [getting-started.md](getting-started.md).
+
+This page answers common questions about scoring, timing, proofs, and local
+checks.
 
 ## Scoring
 
-Current live path:
+The live path is:
 
-1. Lean must typecheck (kernel gate).
-2. A passing proof enters scoring; a failing proof does not.
-3. Validators turn eligible proofs into weights using the published scoring rules.
-4. Same-coldkey hotkeys share that coldkey's allocation instead of multiplying it.
+1. Miner returns `proof_script`.
+2. Validator checks it with Lean.
+3. Passing proofs enter scoring.
+4. Failing proofs do not enter scoring.
+5. Same-coldkey hotkeys share that coldkey's allocation.
 
-## Known gameability surfaces (plain language)
+One-line model: Lemma rewards Lean-valid proofs.
 
-No subnet is perfectly ungameable; the goal is to make the easiest strategy also the useful one.
+More detail: [proof-verification-incentives.md](proof-verification-incentives.md).
 
-- **Predictable problem selection:** if the pool is tiny/static, miners can pre-solve. Mitigation: rotate/expand templates and keep registry upgrades coordinated ([problem-supply-policy.md](problem-supply-policy.md)).
-- **Latency and infra advantages:** warm caches and faster hardware can win ties. Mitigation: this is visible/expected operational competition, and correctness still requires Lean.
-- **Config drift across validators:** mismatched verifier/scoring config breaks fairness. Mitigation: publish one canonical validator profile and shared env template.
+## What Can Be Gamed?
 
-One-line mental model: Lemma rewards Lean-valid proofs.
+No subnet is perfectly hard to game. Lemma tries to make useful work the easiest
+way to earn.
 
-For the proof-verification design, see [proof-verification-incentives.md](proof-verification-incentives.md). For the active work tracker, see [workplan.md](workplan.md). **Same-coldkey partitioning** is *not* identity verification — see [sybil_economics.md](sybil_economics.md). **Dendrite/Axon + synapse body-hash** — see [transport.md](transport.md).
+Known risks:
 
-## Validators querying your axon many times
+- Small problem pools can be pre-solved. Keep problem supply growing.
+- Warm caches and fast hardware can help. That is expected operations work.
+- Validators with different configs can be unfair. Publish one profile.
 
-Each forward is its own response. **Rewards are not a lifetime XP total.** They come from how you **rank in validator rounds where your answer is actually scored** and validators run **`set_weights`**. Doing well in **several** scored rounds can matter across **those** rounds; repeating the same success **offline** does not by itself stack on-chain.
+Same-coldkey partitioning is not identity proof. See
+[sybil_economics.md](sybil_economics.md).
 
-## Prover system prompt (miners)
+## Why Do Validators Query My Axon Many Times?
 
-The miner’s LLM uses the **fixed in-repo** `PROVER_SYSTEM` in [`lemma/miner/prover.py`](../lemma/miner/prover.py) for every prover call (JSON shape and Lean contract). There is **no** env-based append — subnet answers are defined by that prompt plus the challenge text you receive from the protocol.
+Each query is one chance to answer one round.
 
-**Proof only:** miner completions center on **`proof_script`**. Informal reasoning is not part of the live protocol payload. Operators can optionally set **`LEMMA_PROVER_MIN_PROOF_SCRIPT_CHARS`** (full `Submission.lean` length; default **off**) to reject overly short scripts — tune so trivial `rfl` goals still pass when unset or low.
+Rewards are not lifetime points. They come from validator rounds where your
+answer is scored and validators run `set_weights`.
 
-## `lemma-cli try-prover --verify` vs real validator scoring
+## What Prompt Does The Miner Use?
 
-**`lemma-cli try-prover`** is a **local** dry run: it calls **your** prover API and prints output. It does **not** talk to validators or write scores on-chain.
+The miner uses the fixed `PROVER_SYSTEM` in
+[`lemma/miner/prover.py`](../lemma/miner/prover.py).
 
-**`lemma-cli rehearsal`** chains the same prover + Lean path (defaults match **`lemma-cli try-prover --verify`**) — still local, still no axon / no `set_weights`, but closer to how a scored forward feels.
+There is no `.env` prompt append.
 
-**`--verify`** (after the LLM returns) runs **`lake build`** **on your machine** to check that `Submission.lean` compiles — the same *kind* of kernel check validators use, but **only locally**:
+The live payload centers on `proof_script`. Informal reasoning is not part of
+live reward scoring.
 
-- **`lemma validator start`:** **`lemma validator start` refuses to run** if **`LEMMA_USE_DOCKER=false`** — validators must use Docker. **`lemma verify`** / miners may still use **`LEMMA_USE_DOCKER=false`** where policy allows (local tooling only).
-- **`lemma-cli try-prover --verify`:** Defaults to the **same Docker sandbox** as validators when **`LEMMA_USE_DOCKER=true`**. Host `lake` is opt-in: **`--host-lean`** or **`LEMMA_TRY_PROVER_HOST_VERIFY=1`**, and only if **`LEMMA_ALLOW_HOST_LEAN=1`** in **`.env`**.
-- **`lemma verify --host-lean`:** Host `lake` only with **`LEMMA_ALLOW_HOST_LEAN=1`**. Otherwise use Docker (default). Still **local**, not on-chain scoring.
+## Is `lemma-cli try-prover --verify` Real Scoring?
 
-To see what validators would sample, use **`lemma-cli status`** / **`lemma-cli problems`**; actual rewards come only when a validator **forwards** to your axon and runs the full round, not from `lemma-cli try-prover` or `lemma-cli rehearsal`.
+No.
 
-## Validator pipeline (each round)
+`lemma-cli try-prover` is a local prover test. It does not talk to validators and
+does not write weights.
 
-1. Query miners (`proof_script`).
-2. Docker sandbox: `lake build`, axiom policy.
-3. If Lean passes: deterministic scoring and weighting.
+`lemma-cli rehearsal` runs the local prover plus Lean path. It is closer to a
+real round, but it is still local.
 
-Miners use a separate prover API to generate proofs.
+Live rewards only happen when a validator forwards to your axon and scores the
+round.
 
-## Can I use Google Gemini with my personal Google account?
+## What Does `--verify` Do?
 
-Yes. In [Google AI Studio](https://aistudio.google.com) you can create an API key tied to a normal Google account (subject to Google’s terms and quotas). Gemini exposes an **OpenAI-compatible** HTTP API; see Google’s [OpenAI compatibility](https://ai.google.dev/gemini-api/docs/openai) doc.
+After the model returns, `--verify` checks `Submission.lean` on your machine.
 
-For Lemma’s **prover** (miner), use the OpenAI-compatible path: `PROVER_PROVIDER=openai`, set `PROVER_OPENAI_BASE_URL` to Gemini’s OpenAI base URL (see that doc — typically `https://generativelanguage.googleapis.com/v1beta/openai/`), put your Gemini key in **`PROVER_OPENAI_API_KEY`**, and set `PROVER_MODEL` to a Gemini model id (e.g. `gemini-flash-latest` or `gemini-3.1-pro-preview`). Easiest: run **`uv run lemma-cli configure prover`** and choose **`gemini`** — pick vendor first, then API key, then a **tier menu** (Flash / Pro / Lite) or a **custom** Gemini id; the wizard fills in the URL and `PROVER_*`. For other stacks use **Chutes**, **Anthropic**, **OpenAI**, or **custom** (paste base URL) in the same menu. You can still merge keys into `.env` by hand.
+It uses the same kind of Lean check validators use. It is still local.
 
-**If you see HTTP 404** mentioning `gen-lang-client-…` or `models/... is not found`, you accidentally used a **Google AI Studio internal id** (or a UI-only string) as `PROVER_MODEL`. Replace it with a **public model name** from the [models](https://ai.google.dev/gemini-api/docs/models) list (e.g. `gemini-2.5-flash`), not a `gen-lang-client-*` value.
+Production validators must use Docker. Host Lean is only for local debugging
+when policy allows it.
 
-## Prover retries (`LEMMA_PROVER_LLM_RETRY_ATTEMPTS`)
+## Can I Use Gemini?
 
-Default is **4** tries per prover call (exponential backoff on 429 / timeouts / 5xx). Change it for **all** runs via `.env` or `uv run lemma-cli configure prover-retries`. For a **single** `uv run lemma-cli try-prover` run, use `--retry-attempts N` (1–32). Higher values use more wall-clock; stay within the validator **forward HTTP wait** for mining.
+Yes. Gemini has an OpenAI-compatible API.
 
-## How much space does the prover get? What does it see?
+Use:
 
-- **Completion budget:** `LEMMA_PROVER_MAX_TOKENS` caps one JSON response containing the full `Submission.lean`. Default is **32,768** tokens (raise in `.env` if models allow it and your forward HTTP window can tolerate long generations).
-- **Prompt contents:** the **user** message to the prover is literally two blocks: a line `Imports hint:` followed by the challenge’s import list (e.g. `["Mathlib"]`), then `Theorem block:` and the full Lean `theorem_statement` string. The **system** message is Lemma’s fixed `PROVER_SYSTEM` (style + JSON contract). There are no other validator-supplied solution steps or hints.
-- **Anthropic path:** provider output may still be capped near **8192** tokens per their API for many Claude models even if `LEMMA_PROVER_MAX_TOKENS` is higher.
+- `PROVER_PROVIDER=openai`
+- `PROVER_OPENAI_BASE_URL` set to Gemini's OpenAI-compatible URL
+- `PROVER_OPENAI_API_KEY` set to your Gemini key
+- `PROVER_MODEL` set to a public Gemini model id
 
-Correctness of the Lean proof is decided by the **kernel** (sandbox). Passing
-proofs can enter live scoring.
+The easiest path is:
 
-## Problem modes
+```bash
+uv run lemma-cli configure prover
+```
 
-| Mode | Behavior |
-| ---- | -------- |
-| `LEMMA_PROBLEM_SOURCE=generated` | Block seed → templates ([`generated.py`](../lemma/problems/generated.py)). |
-| `frozen` | Rows from `minif2f_frozen.json` — opt-in via **`LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`** (see [catalog-sources.md](catalog-sources.md)). |
+Do not use Google AI Studio internal ids such as `gen-lang-client-*`. Use public
+model names from Google's model list.
 
-Template or catalog changes need coordinated upgrades ([governance.md](governance.md)).
+## Prover Retries
+
+`LEMMA_PROVER_LLM_RETRY_ATTEMPTS` defaults to `4`.
+
+Retries help with 429s, timeouts, and 5xx errors. More retries use more
+wall-clock time. Keep them inside the validator forward wait.
+
+For one local run:
+
+```bash
+uv run lemma-cli try-prover --retry-attempts N
+```
+
+## What Does The Prover See?
+
+The user message has two blocks:
+
+- `Imports hint:`
+- `Theorem block:`
+
+The response must contain the full `Submission.lean`.
+
+`LEMMA_PROVER_MAX_TOKENS` caps the response size. The default is `32768`.
+
+## Problem Modes
+
+| Mode | Meaning |
+| --- | --- |
+| `generated` | Block seed maps to generated templates. |
+| `frozen` | Rows from `minif2f_frozen.json`; dev opt-in only. |
+
+Template and catalog changes need coordinated upgrades. See
+[governance.md](governance.md).
 
 ## Timeouts
 
 | Variable | Meaning |
-| -------- | ------- |
-| `LEMMA_BLOCK_TIME_SEC_ESTIMATE` | Rough seconds per chain block; validators derive **forward HTTP wait** = blocks until the next problem-seed edge × this value (then clamped). |
-| `LEMMA_FORWARD_WAIT_MIN_S` / `LEMMA_FORWARD_WAIT_MAX_S` | Floor and ceiling for that derived forward HTTP wait (validator client timeout per miner query). |
-| `LEMMA_LLM_HTTP_TIMEOUT_S` | HTTP read timeout for one prover completion — must fit within a round’s forward wait at typical chain heads. |
-| `LEAN_VERIFY_TIMEOUT_S` | Sandbox `lake build` budget **per miner proof** (default 300 s). |
+| --- | --- |
+| `LEMMA_BLOCK_TIME_SEC_ESTIMATE` | Rough seconds per block. |
+| `LEMMA_FORWARD_WAIT_MIN_S` / `LEMMA_FORWARD_WAIT_MAX_S` | Bounds for miner response wait. |
+| `LEMMA_LLM_HTTP_TIMEOUT_S` | Timeout for one prover completion. |
+| `LEAN_VERIFY_TIMEOUT_S` | Lean sandbox time per proof. |
 
-Validator **round cadence** is not configurable in Lemma: each validator waits for **subnet epoch boundaries** before running `run_epoch` — no wall-clock interval mode.
+Validator cadence follows subnet epoch boundaries. It is not a local timer.
 
-Timeout values are subnet policy: the operator publishes a single canonical `.env` (or equivalent) and every validator is expected to run that same configuration. Individual validators do not choose different budgets; drift breaks fairness and comparability ([governance.md](governance.md)). Forward HTTP wait follows **block height** (same edge as the next seed rotation), not a single operator-chosen wall-clock cap. If the operator’s published policy includes per-split multipliers (`LEMMA_TIMEOUT_SCALE_BY_SPLIT`, `LEMMA_TIMEOUT_SPLIT_*_MULT`), that is still one policy for the whole subnet, not a per-node setting.
+Timeouts are subnet policy. Validators should use the same values.
 
-## Miner deadlines vs validator processing (plain English)
+## Miner Deadline vs Validator Work
 
-**Miners** have an explicit **response** deadline: the synapse **`timeout`** / forward HTTP wait (derived from blocks until the next seed edge × `LEMMA_BLOCK_TIME_SEC_ESTIMATE`, then clamped). If your axon does not complete the HTTP response in time, that round does not count as a successful candidate answer from you.
+Miners have a response deadline: the synapse `timeout`.
 
-**Validators** do **not** get a matching global rule like “finish verifying and scoring **every** successful miner before block *N* or before the next theorem.” Lemma picks **one** theorem when `run_epoch` **starts** and runs forward → verify → score for that round; advancing blocks do **not** swap the theorem mid-batch or void in-flight scoring. There is **no** separate “validator batch clock” in addition to the per-proof limits below. You still want fast hardware and tuning so each epoch completes in reasonable wall-clock time and stays competitive with other validators.
+Validators do not throw away an in-flight batch just because blocks advanced.
+They finish the round they started.
 
-**What happens if one proof hits `LEAN_VERIFY_TIMEOUT_S`?** That miner’s Lean step **fails** (verify reason `timeout`). They are **not** verified for the round, so they get **no** proof score and **no** Pareto weight from that proof. Other miners in the same round are unaffected.
+If one proof hits `LEAN_VERIFY_TIMEOUT_S`, that proof fails for that round. Other
+miners in the round are not affected.
 
-Concurrency caps such as **`LEMMA_LEAN_VERIFY_MAX_CONCURRENT`** limit how many proofs are processed at once; extra work **queues**, it is not dropped because the chain moved. With miner attest enabled, **`LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION`** trades CPU vs trust — see [validator_lean_load.md](validator_lean_load.md).
+Concurrency caps limit how many proofs run at once. Extra proof checks queue.
 
-## What can exceed the defaults?
+## What Can Exceed The Defaults?
 
-Two different clocks:
+Two clocks matter:
 
-1. **Forward HTTP wait** (miner → validator)  
-   Time the validator’s client will wait for your axon to return the full synapse. It is derived from remaining blocks to the next seed edge × `LEMMA_BLOCK_TIME_SEC_ESTIMATE`, then clamped. This is usually where hard problems burn wall-clock: search, long tactic scripts, retries. Catalog difficulty (easy/medium/hard templates) mostly affects this phase.
+1. Miner response wait: finding and returning the proof.
+2. Lean verify timeout: checking the returned script.
 
-2. `LEAN_VERIFY_TIMEOUT_S` (validator sandbox)  
-   Time for `lake build` plus axiom/cheat checks on the returned script. The Lean kernel checks proof terms quickly relative to “finding” the proof; elaboration can still be slow when proofs are huge, automation expands large terms, or typeclass inference does heavy work (see the [mathlib overview](https://leanprover-community.github.io/mathlib-overview.html) for topic breadth — e.g. dense algebra, category theory, bundled structures). The first build in a cold Docker layer can also spend minutes downloading or elaborating Mathlib; warm caches behave much better.
+Slow cases include large scripts, hard elaboration, cold Docker caches, and heavy
+Mathlib work.
 
-So: Lean can usually check a correct, modest submission quickly; the risky cases are enormous scripts, pathological elaboration, or cold-cache sandbox cost — not “kernel verification is inherently slow for topology.”
+## Why Don't My `.env` Changes Show Up?
 
-## Why don’t my `.env` changes show up?
+Lemma loads `.env` after process environment by default. This lets
+`lemma-cli configure` override stray shell exports.
 
-Lemma’s settings intentionally load **`.env` after process environment**, so values written by `lemma-cli configure` override stray `export OPENAI_MODEL=...` in your shell. To restore standard pydantic behavior (environment beats `.env`), set `LEMMA_PREFER_PROCESS_ENV=1` (for CI or containers that inject secrets via env only).
+To make process environment win, set:
 
-## Which math areas tend to strain a tight miner deadline?
+```bash
+LEMMA_PREFER_PROCESS_ENV=1
+```
 
-Rough guide for generation time (model writing tactics), not a statement that Mathlib cannot formalize these topics:
+## Which Math Areas Are Hard Under Short Deadlines?
 
-- Combinatorics / graph theory / Ramsey-style arguments — many cases, constructions, or lemmas chained in one proof.
-- Inequalities and estimates (analysis, special functions) — long `calc` or `linarith` / `nlinarith` chains; epsilon–delta bookkeeping.
-- Algebra / field theory / Galois-style arguments — multi-step non-routine steps unless the template guides the skeleton.
-- Number theory (beyond short congruence tricks) — longer intermediate lemmas.
-- Heavy imports and abstraction — algebraic geometry (schemes, spectral spaces), representation theory, homological algebra can slow elaboration if the generated proof pulls in big libraries and large proof terms.
+Often harder:
 
-Often easier under a short miner clock: small linear algebra exercises, single-lemma group or ring facts, one-off analysis goals that automation handles (`norm_num`, decidability, short `calc` chains), when the template matches those tactics.
+- combinatorics and graph theory;
+- long inequalities;
+- non-routine algebra;
+- number theory beyond short congruence tricks;
+- heavy imports and abstraction.
 
-Subnet policy and catalog design decide what appears in challenges; the operator balances difficulty against the published block-time / forward-wait clamps and `LEAN_VERIFY_TIMEOUT_S`.
+Often easier:
 
-## Sync across validators
+- short linear algebra;
+- single-lemma group or ring facts;
+- small arithmetic goals;
+- proofs handled by `norm_num`, `linarith`, or short `calc` chains.
 
-One validator, one round: every queried miner gets the same synapse.
+Subnet policy decides which problems appear.
 
-Across validators: default `LEMMA_PROBLEM_SEED_MODE=quantize` rotates the shared theorem every `LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS` (default **100** blocks; at ~12 s/block that is about **20 minutes** per theorem). Subnet operators may switch to `subnet_epoch` to follow on-chain Tempo instead. Same code, problem source, registry hashes, and consistent RPC matter.
+## Sync Across Validators
 
-Within one validator, a round finishes before the code waits for the **next subnet epoch boundary**.
+One validator round sends the same synapse to every queried miner.
 
-## CLI: current theorem and fingerprints
+Across validators, the default `LEMMA_PROBLEM_SEED_MODE=quantize` rotates the
+shared theorem every `LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`.
+
+Validators should share code, problem source, registry hashes, and RPC policy.
+
+## Useful CLI Commands
 
 | Command | Purpose |
-| ------- | ------- |
-| `lemma-cli status` | Head, seed mode, resolved seed, theorem id. |
-| `lemma-cli problems` (or `… show --current`) | `Challenge.lean` for **live** chain head — same rotation as validators. |
-| `lemma-cli problems show --block N` | **What-if:** pretend head is `N` (countdown/seed as if at height `N`). |
+| --- | --- |
+| `lemma-cli status` | Head, seed mode, seed, theorem id. |
+| `lemma-cli problems` | Current live theorem. |
+| `lemma-cli problems show --block N` | What would be live at block `N`. |
 | `lemma meta` | Validator profile and registry hashes. |
 | `lemma-cli problems list` | Frozen catalog only. |
 
-## Chutes and billing
+## Data Retention
 
-[Chutes](https://chutes.ai/) is OpenAI-compatible HTTP. Forward HTTP wait / `LEMMA_LLM_HTTP_TIMEOUT_S` are not the same as provider billing.
+- There is no central proof repository.
+- Validator responses live in memory unless exported.
+- The chain stores weights, not full proofs.
+- `LEMMA_TRAINING_EXPORT_JSONL` can write local JSONL.
 
-## Inference cost (approximate)
+See [training_export.md](training_export.md).
 
-Roughly: (challenges answered) × ($/challenge). Measure from logs.
+## Lean Verification Failures
 
-## Data retention
+| Reason | Meaning |
+| --- | --- |
+| `compile_error` | `lake build` failed or axiom check could not run. |
+| `axiom_violation` | Disallowed axioms. |
+| `cheat_token` | Banned constructs. |
+| `timeout` / `oom` | Resource limits. |
+| `docker_error` | Sandbox error. |
 
-- No central proof repository.
-- Validator responses are in-memory for the round unless exported.
-- Chain stores weights, not full proofs.
-- `LEMMA_TRAINING_EXPORT_JSONL`: optional local JSONL ([`training_export.py`](../lemma/validator/training_export.py)); **`LEMMA_TRAINING_EXPORT_PROFILE`** controls proof, optional labels, and weights ([training_export.md](training_export.md)).
+If a simple proof fails while Mathlib is building, the environment may be the
+problem. Prebuild the Lean image, use a warm cache, and retry.
 
-## Lean verification failures
+## Checking A Proof Yourself
 
-| `VerifyResult.reason` | Meaning |
-| --------------------- | ------- |
-| `compile_error` | `lake build` did not succeed or Lean could not run axiom check — **often** Mathlib fetch/build or sandbox limits, not a bad tactic |
-| `axiom_violation` | Disallowed axioms |
-| `cheat_token` | Banned constructs |
-| `timeout` / `oom` | Resource limits |
-| `docker_error` | Sandbox error |
+Use Lemma's verifier when possible:
 
-**`lemma-cli try-prover` says FAIL but the proof is just `rfl` on arithmetic literals:** The LLM answer may still be **mathematically fine**. Logs like `no previous manifest`, `creating one from scratch`, `mathlib: running post-update hooks`, then `error: build failed` usually mean **Lake is building Mathlib** (slow), **post-update hooks** failed, **network blocked** (Docker `network_mode=none`), or **timeout** — not that `rfl` is wrong. Fix the **environment** (prebuilt `LEAN_SANDBOX_IMAGE`, `LEAN_SANDBOX_NETWORK=bridge`, higher `LEAN_VERIFY_TIMEOUT_S`) and retry.
+```bash
+lemma verify --problem <theorem-id> --submission path/to/Submission.lean
+```
 
-## Checking a proof yourself (manual / online)
+This uses Lemma's Lake workspace, Lean toolchain, and Mathlib pin.
 
-- **Same setup as Lemma (recommended):** Save your `Submission.lean` to a file and run  
-  `lemma verify --problem <theorem-id> --submission path/to/Submission.lean`  
-  (e.g. `gen/7037400`). That uses the same Lake workspace + toolchain + Mathlib pin as validators — **no manual Lake setup**.
+Lean 4 Web is useful for experiments, but it is not the same as Lemma's sandbox.
+The old Lean web editor is Lean 3 and should not be used for Lemma proofs.
 
-### [Lean 4 Web](https://live.lean-lang.org/) (“Lean in the browser”)
+## Validator Pipeline
 
-That site runs Lean **in the browser**; it is **not** the same as Lemma’s Docker/host sandbox. **`import Mathlib` often fails there** (missing Mathlib on the search path, unknown imports, or confusing errors once imports break). That usually reflects **the playground environment**, not whether your proof would pass Lemma’s **Lake + pinned Mathlib** build.
+1. Lean sandbox checks `proof_script` as `Submission.lean`.
+2. A passing proof enters scoring.
+3. A failing proof receives no proof score.
 
-Use it only for **informal** experimentation. For **subnet parity**, use **`lemma verify`** or **`lemma-cli try-prover --verify`**.
-
-### Older community web editor (Lean 3)
-
-The URL **`leanprover-community.github.io/lean-web-editor`** is a **Lean 3** editor. Lemma uses **Lean 4** + **Mathlib 4**. Paste Lean 4 syntax there and you will get misleading errors — **avoid it** for checking Lemma proofs.
-
-## Validator pipeline
-
-Order matters:
-
-1. **Lean sandbox** — Validators run **`lake build`** on your **`proof_script`** (as `Submission.lean`) together with the challenge, then axiom checks.
-
-2. **Proof scoring** — Only responses that pass Lean enter scoring. A proof
-   that fails verification cannot receive a reward score.
-
-So repeated “failures” while you believe the proof is right are usually **environment** (Mathlib fetch, Docker network, cold cache, timeout) or **layout/policy**. The proof has to pass Lean before any reward score exists.
-
-## Miner provenance
-
-Optional `model_card` on the synapse can label a custom prover stack for exports; the built-in miner leaves it unset.
-
-## Validator isolation
-
-Each validator queries miners independently; proofs are not merged across miners.
-
-## Observability
-
-Logs: `lemma_epoch_summary`; optional JSONL. No built-in dashboard ([production.md](production.md)).
-
-## CI templates
-
-[`scripts/ci_verify_generated_templates.py`](../scripts/ci_verify_generated_templates.py) runs `lake build` on templates.
-
-## Testnet checklist
-
-1. `uv sync --extra btcli`; `.env` with test endpoint, `NETUID`, wallets.
-2. Register (`btcli`).
-3. Miner: reachable axon; prover keys.
-4. Validator: Lean image; `uv run lemma meta`; full rehearsal without weights: `lemma validator dry-run`.
-5. Confirm `set_weights` when ready.
-
-## Throughput
-
-One sampled problem per validator round. The forward HTTP wait (block-derived) bounds one miner response; the next round starts after the **next subnet epoch boundary**.
-
-## `lemma --help` and Bittensor
-
-`bittensor` loads lazily so top-level help stays normal Click output.
-
-## Stricter Lean Isolation
-
-Core: `lake build` + axiom allowlist + cheat scan. Stricter isolation may follow [lean-eval](https://github.com/leanprover/lean-eval) once there is a pinned subnet policy.
+Most confusing failures are environment, cache, timeout, or policy issues. The
+proof still has to pass Lean before any reward score exists.

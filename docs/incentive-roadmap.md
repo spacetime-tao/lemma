@@ -1,10 +1,12 @@
 # Incentive Roadmap
 
-This former living checklist has been consolidated into
-[`workplan.md`](workplan.md).
+This checklist moved to [workplan.md](workplan.md).
 
-Use `workplan.md` as the single active source for shipped mechanism status,
-known gaps, testing, VPS state, and next work. Decision records such as
-[`objective-decision.md`](objective-decision.md),
-[`proof-verification-incentives.md`](proof-verification-incentives.md), and
-[`sybil_economics.md`](sybil_economics.md) remain the supporting evidence.
+Use `workplan.md` for current mechanism status, known gaps, tests, VPS state, and
+next work.
+
+Use decision docs for evidence:
+
+- [objective-decision.md](objective-decision.md)
+- [proof-verification-incentives.md](proof-verification-incentives.md)
+- [sybil_economics.md](sybil_economics.md)

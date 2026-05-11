@@ -1,78 +1,53 @@
 # Lemma Core Workplan
 
-This is the single active tracker for audit findings, current blockers, testing,
-and next work. Keep decision records and threat-model docs as evidence, but do
-not let parallel checklists drift.
+This is the single active tracker for audit findings, blockers, tests, and next
+work.
+
+Keep decision records as evidence. Do not let parallel checklists drift.
 
 ## Current Baseline
 
-- Repository: `spacetime-tao/lemma`, local checkout `LOCAL_WORKSPACE/lemma`.
-- Current head during this audit:
-  `b7088f00295fe0e23ad4a856ac43799b9acd8882`
-  (`Remove stale judge config from proof-only path`).
-- Live reward direction: proof passes Lean and can enter scoring, or proof
-  fails Lean and does not enter scoring.
-- Friendly operator UX belongs in `spacetime-tao/lemma-cli`; core Lemma owns
-  protocol, problem selection, Lean verification, validator scoring, minimal
-  service entrypoints, and consensus tests.
+- Repo: `spacetime-tao/lemma`.
+- Local checkout: `LOCAL_WORKSPACE/lemma`.
+- Current `main`:
+  `67dfd477c1a274e613b1ea5f01f80af24c2822ee`
+  (`Fix Hatch direct refs and consolidate tracker docs`).
+- GitHub CI run `25650611350` for `67dfd47`: passed.
+- Live reward rule: proof passes Lean and can enter scoring, or proof fails Lean
+  and cannot receive proof score.
+- `lemma-cli` owns friendly operator UX. Core Lemma owns protocol, problem
+  selection, Lean verification, validator scoring, service entrypoints, and
+  consensus tests.
 
 ## What Is Good
 
-- The live miner payload is centered on `proof_script`; informal reasoning is
-  not reward-critical protocol data.
-- Validators mechanically verify submitted proofs with the pinned Lean sandbox
-  before scoring.
-- Identical verified proofs are no longer dropped from live rewards; same-coldkey
-  partitioning limits one-coldkey multi-hotkey multiplication after weights are
-  computed.
-- The generated problem registry has 40 builders and a metadata gate covering
-  registry reachability/coherence.
-- CLI bloat has been mostly moved to `lemma-cli`; core keeps minimal commands
-  and redirects.
-- Local baseline checks passed after the Hatch metadata fix:
-  - `uv sync --extra dev`;
-  - `uv run ruff check lemma tests tools`;
-  - `uv run pytest tests/ -q --ignore=tests/test_docker_golden.py`
-    (`255 passed, 1 skipped, 12 warnings`);
-  - generated-template metadata gate for 40 builders;
-  - Docker golden Lean verify (`1 passed in 210.60s`);
-  - runtime Docker build smoke (`lemma-runtime:ci-smoke`).
+- Miner payload centers on `proof_script`.
+- Informal reasoning is not live reward data.
+- Validators check proofs with the pinned Lean sandbox before scoring.
+- Identical verified proofs are no longer dropped from live rewards.
+- Same-coldkey partitioning limits one coldkey from multiplying rewards through
+  many hotkeys.
+- Generated problem registry has 40 builders and a metadata gate.
+- CLI bloat mostly moved to `lemma-cli`.
+- Hatch direct-reference metadata is fixed on `main`.
+- Local checks and GitHub CI pass for the package/CI fix.
 
-## Current Blockers And Gaps
+## Current Gaps
 
-1. **GitHub re-check pending.**
-   `b7088f0` failed before tests because Hatch rejected the `cli` optional
-   dependency direct reference to `lemma-cli`. This working tree adds
-   `tool.hatch.metadata.allow-direct-references = true`, and local
-   `uv sync --extra dev` plus `docker build -f Dockerfile -t
-   lemma-runtime:ci-smoke .` now pass. GitHub Actions still need to be checked
-   after the fix lands.
-
-2. **Tracker drift.**
-   `local handoff note`, `docs/workplan.md`, `docs/audit-remediation.md`, and
-   `docs/incentive-roadmap.md` all contained overlapping status. This file is
-   now the active tracker; `local handoff note` is only the short chat-freeze
-   handoff.
-
-3. **Typing quality gap.**
-   `uv run mypy lemma` currently reports `70 errors in 11 files`. This is not a
-   CI blocker today, but it is a good hardening track after package/CI health is
-   restored.
-
-4. **Ops version drift.**
-   Both known droplets are alive and services are active, but `/opt/lemma` is
-   deployed at `82bba8d`, one commit behind `b7088f0`. Record only for this
-   pass; do not deploy or restart services here.
-
-5. **Real subnet evidence still matters.**
-   Local proof PASS is necessary but not enough. The subnet still needs measured
-   miner response time, prover latency, validator Lean verification time, scored
-   miner count, timeout/fail reasons, set-weights behavior, and emission changes
-   from live runs.
+1. **Typing.** `uv run mypy lemma` reports `70 errors in 11 files`. This is not
+   a CI blocker today, but it is a clear hardening track.
+2. **Ops drift.** Both known droplets were alive and services were active, but
+   `/opt/lemma` was deployed at `82bba8d`, behind current `main`. Record only
+   unless the user asks for deploy/restart.
+3. **Live subnet evidence.** Local PASS is not enough. We still need measured
+   miner response time, prover latency, Lean verify time, scored miner count,
+   timeout reasons, `set_weights` behavior, and emission movement.
+4. **Docs readability.** This pass rewrites Markdown in plain language. Keep the
+   same style in future docs.
 
 ## Testing Matrix
 
-Run these before claiming the repo is locally healthy:
+Run these before claiming local health:
 
 ```bash
 uv sync --extra dev
@@ -84,50 +59,47 @@ RUN_DOCKER_LEAN=1 LEAN_SANDBOX_IMAGE=lemma/lean-sandbox:latest \
 docker build -f Dockerfile -t lemma-runtime:ci-smoke .
 ```
 
-Optional quality frontier:
+Optional quality check:
 
 ```bash
 uv run mypy lemma
 ```
 
-Do not treat `mypy` as passing until its existing errors are fixed. Do not treat
-GitHub as fixed until the latest Actions runs for `main` are checked directly.
+Do not call `mypy` passing until the existing errors are fixed.
 
 ## VPS Status
 
-Current record-only state from the 2026-05-11 audit:
+Last checked during the 2026-05-11 audit:
 
 | Host | IP | Deployed commit | Running Lemma services |
 | --- | --- | --- | --- |
 | `lemma-lean-worker-1` | `<validator-host>` | `82bba8d` | `lemma-lean-worker-http.service`, `lemma-validator.service` |
 | `lemma-miner-1` | `<miner-host>` | `82bba8d` | `lemma-miner.service`, `lemma-miner3.service`, `lemma-miner4.service`, `lemma-miner5.service`, `lemma-miner6.service`, `lemma-miner7.service` |
 
-Next VPS testing should measure behavior, not add mechanism code:
+Next VPS testing should measure behavior:
 
-- miner forward response time per UID/model;
-- prover API latency and retry/timeout reasons;
-- validator Lean verify time, cold and warm;
+- miner response time by UID/model;
+- prover API latency and retry reasons;
+- validator Lean time, cold and warm;
 - remote worker versus local Docker worker reliability;
-- set-weights, commit-reveal delay, and emission movement after reveal.
+- `set_weights`, commit-reveal delay, and emission movement.
 
 ## Next Work Order
 
-1. Land the Hatch direct-reference metadata fix and re-check GitHub Actions.
-2. Keep this file as the only active audit/work tracker; leave
-   `docs/audit-remediation.md` and `docs/incentive-roadmap.md` as pointer stubs.
-3. Keep local checks and Docker runtime build smoke green before pushing.
-4. Re-check GitHub Actions after the fix lands.
-5. Only after CI/package health is restored, choose the next work slice:
-   - typing hardening for the `mypy` errors;
-   - VPS timing/observability run;
-   - measured Lean worker throughput;
-   - sybil/Pareto replay on real private exports.
+1. Finish and verify the plain-language Markdown pass.
+2. Keep this file as the only active work tracker.
+3. Keep `local handoff note` as the short chat-freeze handoff.
+4. Choose one next slice:
+   - fix `mypy` errors;
+   - run VPS timing and observability tests;
+   - measure Lean worker throughput;
+   - run Sybil/Pareto replay on real private exports.
 
 ## Non-Goals
 
-- Do not redesign the live reward mechanism in this pass.
+- Do not redesign live rewards in this pass.
 - Do not add proof-efficiency or prose/judge scoring to the live path.
 - Do not deploy, restart, or mutate droplet services in this pass.
-- Do not move validator scoring or consensus policy into `lemma-cli`.
-- Do not add more defensive layers where a simpler data model can remove the
-  invalid state.
+- Do not move validator scoring into `lemma-cli`.
+- Do not add defensive layers when simpler data flow can remove the invalid
+  state.
