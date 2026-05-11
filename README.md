@@ -1,6 +1,6 @@
 # Lemma
 
-**Lemma** is a [Bittensor](https://docs.learnbittensor.org/) subnet for formal mathematical proof. Miners compete to produce Lean proof scripts for published theorem statements. Validators run those submissions through the same pinned verifier, so the first question is mechanical: does the proof check, or does it fail?
+**Lemma** is a [Bittensor](https://docs.learnbittensor.org/) subnet where miners write Lean proofs for theorem statements published by the subnet. Validators run each submitted `proof_script` through the same pinned Lean verifier. If Lean accepts the proof, it can enter scoring; if Lean rejects it, it cannot.
 
 A Lemma round is simple:
 
@@ -59,6 +59,7 @@ In the miner docs, **axon** is Bittensor’s term for the network address and po
 | Models / APIs | [models.md](docs/models.md) |
 | Production / ops | [production.md](docs/production.md) |
 | VPS safety / key custody | [vps-safety.md](docs/vps-safety.md) |
+| DigitalOcean Droplet runbook | [droplet-operations.md](docs/droplet-operations.md) |
 | Governance / pins | [governance.md](docs/governance.md) |
 | Toolchain / image pinning | [toolchain-image-policy.md](docs/toolchain-image-policy.md) |
 | Tests | [testing.md](docs/testing.md) |
@@ -78,3 +79,7 @@ Sybil/reward policy, proof metrics, commit-reveal, and attest behavior.
 ## License
 
 Apache-2.0
+
+## Original Contributors
+
+Spaceτime, Maciej Kula, and Infinitao.

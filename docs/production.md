@@ -69,7 +69,8 @@ the risk profile.
 For production, prefer: coldkey private material offline/local, only hotkeys on
 servers, explicit `AXON_EXTERNAL_IP`, explicit firewall rules, systemd or another
 supervisor, and regular log review. For a simple operator checklist, see
-[vps-safety.md](vps-safety.md).
+[vps-safety.md](vps-safety.md). For a step-by-step DigitalOcean guide, see
+[droplet-operations.md](droplet-operations.md).
 
 ## VPS baseline test sequence
 
