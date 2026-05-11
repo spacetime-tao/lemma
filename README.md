@@ -1,12 +1,10 @@
 # Lemma
 
-> **Lemma** is a [Bittensor](https://docs.learnbittensor.org/) subnet that rewards miners for **formal proofs**. Same basic idea as **Bitcoin**: miners compete under public rules and chain incentives—but here the work is **correct mathematics**, not hash guessing.
+**Lemma** is a [Bittensor](https://docs.learnbittensor.org/) subnet that rewards miners for answering **published math problems** with solutions a **computer can check**. By **formal proof** people usually mean that kind of solution: every step follows from explicit rules, like checking that a program does what it claims—no scoring by “how convincing it sounds.”
 
-Each round the subnet **publishes** a statement to prove. Miners **submit** candidate proofs. **Validators** run the same automated checker so pass or fail is objective for everyone. That verification runs in **Docker** so results line up across machines. Subnet policy maps accepted proofs to **weights** and **alpha**.
+Each round the subnet **publishes** a statement to prove. Miners **submit** candidate proofs. **Validators** run the same automated checker so everyone gets the same pass-or-fail answer. That verification runs in **Docker** so different machines agree. Subnet policy maps accepted proofs to **weights** and **alpha**.
 
-## What Lemma Produces
-
-Verified proofs that anyone can re-run the checker on later. **Weights** and **alpha** apply to work that clears the gate; failed checks drop out. Miners often use **LLMs** as assistants to search for proofs—**rewards follow whatever passes verification**, not rough drafts. Toolchain and proof format are spelled out in the [litepaper](docs/litepaper.md).
+**Bitcoin** is an analogy people already know: miners compete under fixed rules for block rewards. Lemma uses the same broad shape—open competition, shared rules, on-chain incentives—but the job is to produce a **correct proof** of the published problem, not to grind hashes.
 
 **Status:** Software is still largely **proof-of-concept**. Lemma runs on **Bittensor testnet** as **Subnet 467** (`--network test`, `NETUID=467` after `uv run lemma configure chain`). **Alpha on testnet** follows testnet emissions; **mainnet (Finney) alpha** only applies if a Lemma deployment is registered there with live emissions—verify network and netuid for your deployment.
 
