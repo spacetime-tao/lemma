@@ -4,6 +4,19 @@
 
 A **theorem** is the precise claim to establish; a **proof** is the formal, machine-checkable argument that shows it. **Lean** is a proof assistant (and language): it checks those proofs mechanically, line by line. Validators run that check in **Docker** (lean-sandbox image).
 
+## What Lemma Produces
+
+Lemma produces verified formal proofs.
+
+The network publishes theorem statements. Miners spend AI compute searching for
+Lean proof scripts. Validators mechanically check those scripts against the
+published theorem. If Lean accepts the proof, that theorem/proof pair is the
+work product.
+
+That makes Lemma proof mining: similar in spirit to Bitcoin mining, but instead
+of producing valid hashes under a difficulty rule, miners produce valid Lean
+proofs under a theorem rule.
+
 **Status:** The codebase is still largely **proof-of-concept**, but you can **register and run on** **Subnet 467 — Lemma** on **Bittensor testnet** (`--network test`, `NETUID=467` after `lemma-cli configure chain`). **Finney** is Bittensor **mainnet** (a different network). Full copy-paste flow: [getting-started](docs/getting-started.md). Economics, security, and long-term direction: [vision](docs/vision.md).
 
 **First-time path:** [docs/getting-started.md](docs/getting-started.md) — install, keys, `lemma-cli setup`, miner, validator (copy-paste blocks). Friendly operator UX lives in [lemma-cli](https://github.com/spacetime-tao/lemma-cli).
