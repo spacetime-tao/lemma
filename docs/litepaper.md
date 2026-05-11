@@ -1,6 +1,6 @@
 # Lemma Litepaper
 
-**Lemma** is a [Bittensor](https://docs.learnbittensor.org/) **subnet**. It rewards **formal proofs**: miners answer published math statements with **Lean** proof scripts; **validators** rerun **Lean** so everyone agrees pass/fail before scoring.
+**Lemma** is a [Bittensor](https://docs.learnbittensor.org/) subnet. Miners answer published math statements with Lean proof scripts; validators run the same Lean check so everyone shares one pass-or-fail result before any scoring.
 
 This is the core idea:
 
@@ -10,18 +10,17 @@ Everything else should support that rule.
 
 ## The Short Version
 
-A **theorem** is a precise math claim. A **proof script** is **Lean** source code that closes that claim. **Lean** is a **proof assistant**: software that checks each inference mechanically—like a strict compiler for math.
+A **theorem** is a precise math claim. A **proof script** is Lean source code that closes that claim. **Lean** is a proof assistant: software that checks each inference mechanically, like a strict compiler for math.
 
-Lemma wires that into Bittensor:
+On Bittensor, Lemma follows this loop:
 
 1. The subnet publishes a theorem statement.
 2. Miners use models, tools, and compute to search for a proof.
 3. Miners return a `proof_script`.
-4. Validators run Lean against the submitted proof.
-5. Passing proofs can receive score.
-6. Failing proofs receive no proof score.
+4. Validators run Lean on the submission.
+5. If Lean passes, the work can earn score; if it fails, there is nothing to score yet.
 
-That makes Lemma **proof mining** in the same broad sense as Bitcoin **mining**: there, each round goes to whoever publishes the next valid block first; here, miners seek **Lean-valid proofs** that match the published theorem.
+That makes Lemma **proof mining** in the same loose sense as Bitcoin mining: there, each round goes to whoever publishes the next valid block first; here, miners seek Lean-valid proofs that match the published theorem.
 
 ## Concrete examples (illustrative)
 
@@ -77,65 +76,37 @@ artifact is code, not an explanation.
 not earn proof score for that round: there is nothing to score until Lean
 accepts a complete proof.
 
-## What Lemma Is Not
+## Verification and rewards
 
-The live path is **machine-checked**: publish statement → proof script → Lean
-pass or fail → scoring maps passes into **weights** (validator-assigned credit)
-and **alpha** (the subnet token). Lemma does **not** grade natural-language
-write-ups as the live reward signal.
+The live path stays narrow so validators stay aligned:
 
-Useful checks:
+- Publish the formal statement.
+- Receive a proof script.
+- Lean passes or fails under the pinned toolchain.
 
-- Was the theorem exactly the one the subnet published?
-- Did the miner return a proof script?
-- Did Lean accept it under the pinned toolchain and policy?
-- Do this subnet’s scoring rules count that pass toward rewards?
+Lemma does **not** grade natural-language write-ups as the on-chain signal. Essays and chat logs can help people debug or teach; they are not what validators check for rewards.
 
-That narrow pipeline keeps verification repeatable across validators.
+If Lean accepts the script under policy, the verification pass is real. Length and readability can vary.
 
-## Why Lean Matters
+After that gate, Bittensor handles token economics the usual way: validators publish scores for miners (weights), and payouts follow subnet rules (alpha). Those scoring rules can change with governance; they should not replace or blur the Lean check.
 
-Lean gives Lemma a single, shared gate: the proof either typechecks against the
-published theorem under the rules or it does not. **Rewards** for miners flow from
-Bittensor’s weight-and-token machinery **after** that gate—based on the proof
-script, not on off-chain opinion about how the math “ought to” be argued.
-
-Explanations, chat logs, and heuristics can help people **debug** or **teach**,
-but they are not the on-chain pass/fail check. Proof length, style, and
-readability can vary; if Lean accepts the script, the pass is real. Any extra
-signals belong in research or out-of-band analysis until the subnet explicitly
-adopts them with evidence.
+Lemma separates two questions: whether the proof is valid (Lean answers that), and how valid work becomes weights (subnet policy). Extra signals belong in research until the subnet explicitly adopts them with evidence.
 
 ## What Miners Do
 
-A miner runs an **Axon**—Bittensor’s name for the **server endpoint** the miner
-exposes so validators can deliver challenges. When a validator sends a challenge,
-the miner tries to produce a Lean proof script.
+A miner exposes a network endpoint so validators can send theorem challenges. Bittensor calls that endpoint an **Axon**. When a challenge arrives, the miner tries to produce a Lean `proof_script`.
 
-The reference miner uses a prover model through an OpenAI-compatible API. That
-could be Chutes, OpenAI, Gemini through its OpenAI-compatible endpoint, Anthropic
-with the optional extra, or another compatible gateway.
+The reference miner uses a prover model through an OpenAI-compatible API (Chutes, OpenAI, Gemini’s compatible endpoint, Anthropic with optional extras, or another gateway). The reward-critical artifact is the proof script, not an essay.
 
-The miner's job is not to write an essay. Its reward-critical answer is
-`proof_script`.
-
-Miners can also run local Lean verification before answering. That can catch bad
-proofs early, but the validator's check is still the one that matters for live
-scoring.
+Optional local Lean runs can catch mistakes early; the validator’s check is what matters for live scoring.
 
 ## What Validators Do
 
-A validator sends theorem challenges to miners (using Bittensor’s request path—
-historically **Dendrite** on the validator side talking to the miner’s **Axon**),
-waits for responses, checks each proof with Lean, scores eligible proofs, and
-writes **weights** on chain. **Weights** are how validators say how much credit
-each miner deserves; those feed into **alpha** payouts per Bittensor rules.
+A validator sends challenges to miners, waits for responses, verifies each proof with Lean, turns results into scores, and writes scores on chain. Production validators typically run Lean in Docker; the sandbox image pins the toolchain and Mathlib revision so checks match across machines.
 
-Production validators use Docker for Lean verification. The sandbox image pins
-the Lean toolchain and Mathlib revision so validators check proofs the same way.
+Validators follow subnet epoch timing: each round includes time for miners to respond and time for Lean to finish.
 
-Validators wait for subnet epoch boundaries. Each round has a forward wait for
-miner responses and a Lean timeout for proof checking.
+Transport details (how messages move on the wire) are in **Transport** below.
 
 ## Proofs, Scores, And Weights
 
@@ -144,24 +115,9 @@ The live rule is intentionally simple:
 - Lean passes: the proof can enter scoring.
 - Lean fails: the proof cannot receive proof score.
 
-After Lean passes, Lemma turns eligible miner entries into **weights**
-(on-chain credit scores for miners).
-Reputation/credibility policy may adjust a miner's entry. Same-coldkey
-partitioning may split one coldkey's allocation across its successful hotkeys.
-Proof length, style, and elegance do not change the live proof score.
+After Lean passes, Lemma turns eligible miner entries into **weights** (on-chain credit). Each verified proof starts from the same base score; proof length, style, and elegance do not change that base.
 
-Same-coldkey partitioning means one operator cannot multiply one coldkey's
-allocation just by running many hotkeys under it. It does not prove unique human
-identity. An attacker can still use many coldkeys if registration cost and subnet
-economics make that worthwhile.
-
-This means Lemma separates two questions:
-
-- Is this submitted proof valid?
-- How should valid work become weights?
-
-The first question is mechanical. Lean answers it. The second question is subnet
-policy. That policy can evolve, but it should not muddy the proof gate.
+Reputation and credibility settings may adjust entries. **Same-coldkey partitioning** splits one coldkey’s allocation across its hotkeys so running many hotkeys under one coldkey does not multiply share by accident. It does not prove unique humans. Someone can still register many coldkeys if economics allow it.
 
 ## Problem Supply
 
@@ -194,15 +150,9 @@ model produce proofs that pass Lean inside the validator's time window?
 
 ## Transport
 
-Lemma currently uses Bittensor’s **Dendrite → Axon** path: roughly speaking,
-**validators send** challenges (**Dendrite** client) and **miners receive** them
-on their **Axon** server. The payload type is `LemmaChallenge`.
+Validators send challenges; miners listen on their server. Today that rides Bittensor’s client/server helpers: historically **Dendrite** on the validator side and **Axon** on the miner side. The payload type is `LemmaChallenge`. Responses include body-hash checks; validators drop replies when required hash data is missing or mismatched.
 
-The synapse includes body-hash integrity checks. Validators drop responses when
-required hash data is missing or does not match.
-
-Future subnet designs may move toward HTTP plus Epistula signing, but that would
-be a major migration. It is not a small config switch.
+A future move to plain HTTP plus different signing would be a large migration, not a small toggle.
 
 ## Safety And Operations
 
@@ -238,36 +188,27 @@ unless they have been reviewed and processed for release.
 
 ## Optional Mechanisms
 
-Some mechanisms are available but not the main story:
+Extra mechanisms exist for edge cases and governance experiments; they do not replace the Lean gate:
 
-- Commit-reveal can bind a miner to a proof before reveal, at the cost of more
-  round trips.
-- Miner verify attest lets a miner sign that it ran local Lean, but it is not
-  hardware attestation.
-- Validator profile peer attest helps a known validator group check that profile
-  hashes match.
-- Proof intrinsic metrics are research-only and do not drive live rewards.
-
-These tools should not blur the core rule: the live path starts with Lean proof
-verification.
+- **Commit-reveal** reduces certain cheating patterns by committing to a proof hash before sending the full script, at the cost of more round trips.
+- **Miner verify attest** lets a miner sign that it ran local Lean—useful for audits, not hardware attestation.
+- **Validator profile peer attest** helps a group of validators confirm they run the same policy fingerprint.
+- **Proof intrinsic metrics** are research-only and do not drive live rewards.
 
 ## Codebase Map
 
-The main repo owns both consensus-critical behavior and the supported operator
-command surface.
+Use this when you already know what Lemma does and need to find code:
 
-- `lemma/protocol.py` defines the challenge synapse.
-- `lemma/problems/` defines generated and catalog problem sources.
-- `lemma/miner/` contains the reference miner and prover path.
-- `lemma/validator/` contains the validator round flow.
-- `lemma/lean/` builds Lean workspaces and runs verification.
-- `lemma/scoring/` turns eligible proofs into weights.
-- `lemma/cli/` keeps the supported `lemma` command surface.
-- `tools/` and `scripts/` support analysis, catalog work, and CI checks.
+- `lemma/protocol.py` — challenge synapse types.
+- `lemma/problems/` — generated and catalog problem sources.
+- `lemma/miner/` — reference miner and prover path.
+- `lemma/validator/` — validator round flow.
+- `lemma/lean/` — Lean workspaces and verification.
+- `lemma/scoring/` — from eligible proofs to weights.
+- `lemma/cli/` — supported `lemma` commands.
+- `tools/` and `scripts/` — analysis, catalog work, CI.
 
-The docs are split by use. This litepaper gives the overview.
-`getting-started.md` is the action path. `technical-reference.md` is the deep
-behavior reference. Decision docs record why important choices were made.
+Broader docs: this file for overview, [getting-started.md](getting-started.md) to run, [technical-reference.md](technical-reference.md) for behavior detail. Decision docs explain major choices.
 
 ## Current Status
 

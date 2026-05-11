@@ -1,16 +1,16 @@
 # Lemma FAQ
 
-Plain-language answers. For the full picture see [litepaper.md](litepaper.md); for setup see [getting-started.md](getting-started.md).
+Plain-language answers. For depth see [litepaper.md](litepaper.md); for setup see [getting-started.md](getting-started.md).
 
 ---
 
 ## What is Lemma?
 
-**Lemma** is a [Bittensor](https://docs.learnbittensor.org/) **subnet**. It **rewards miners who solve published math problems** with answers a **computer can check** (see *Foundations* below). **Validators** run the same checker as everyone else, so **pass or fail** is not a matter of taste.
+**Lemma** is a [Bittensor](https://docs.learnbittensor.org/) subnet. Miners try to solve published math problems with answers a computer can check (see *Foundations* below). Validators use the same checker, so pass or fail is mechanical—not opinion.
 
-When proofs pass, **how credit turns into tokens** is handled by Bittensor’s usual machinery: validators publish **weights** (scores for each miner), and miners earn **alpha**, the subnet’s **reward token**. The exact formulas live with the subnet parameters—start with the [litepaper](litepaper.md), then [technical-reference.md](technical-reference.md) if you need numbers.
+Tokens and payouts follow normal Bittensor rules: validators publish scores for miners (weights), and miners earn the subnet reward token (alpha) under Lemma’s published scoring. Formulas and policy live in the [litepaper](litepaper.md) and [technical-reference.md](technical-reference.md).
 
-**Analogy:** Same rough shape as Bitcoin—open competition, fixed rules—but the work is finding a **correct proof** of a published statement, not racing for the next chain block. One difference: for each Bitcoin **block**, only **one** miner wins that round. On Lemma, **any** miner whose proof **passes** can earn that round; the checker gives every passing proof the **same base score** (it does not rank “better” proofs). **Weights** and **alpha** still flow through Bittensor—subnet rules like smoothing, credibility, and same-coldkey handling can shift **relative** shares, so payouts are **not strictly identical** for every passer every time.
+**Rough analogy to Bitcoin:** open competition and fixed rules, but the job is finding a correct proof for a published statement, not racing to publish the next chain block. Only one miner wins each Bitcoin block; on Lemma, many miners can pass the same round if their proofs check out.
 
 ---
 
@@ -22,7 +22,7 @@ It is mathematics built in a fully specified logical language: definitions, axio
 
 ### What is a theorem?
 
-A **theorem** is a precise claim: “given these assumptions, this conclusion holds.” Lemma **broadcasts** that claim in a formal language so everyone proves the **same** statement.
+A **theorem** is a precise claim: “given these assumptions, this conclusion holds.” Lemma broadcasts that claim in a formal language so everyone proves the same statement.
 
 ### What is a proof?
 
@@ -34,11 +34,11 @@ The **`proof_script`** is the **actual file** (source code) the miner submits—
 
 ### What does a proof assistant do?
 
-A **proof assistant** (**Lean**, for Lemma) is a program that reads the proof script and says whether the logic closes: yes if every step checks out, no otherwise—like a compiler that returns **errors** until the proof is complete.
+A **proof assistant** (**Lean**, for Lemma) reads the proof script and says whether the logic closes: yes if every step checks out, no otherwise—like a compiler that returns errors until the proof is complete.
 
 ### Is this “Bitcoin for math”?
 
-**Only as an analogy.** Bitcoin’s miners race on hash puzzles; Lemma’s miners race on **finding proofs**. Both use decentralized networks and tokens, but the work and the assets are different systems.
+Only as an analogy. Bitcoin miners compete for each new block; Lemma miners compete to produce proofs that pass the checker. Both involve networks and tokens; the work and the economics are different.
 
 ---
 
@@ -46,7 +46,7 @@ A **proof assistant** (**Lean**, for Lemma) is a program that reads the proof sc
 
 ### Why Lean?
 
-**Lean** is the proof assistant the subnet standardizes on so **every validator runs the same checker** on the same pins—no human jury scoring paragraphs.
+**Lean** is the proof assistant the subnet standardizes on so every validator runs the same checker against the same pinned toolchain—no human grading prose.
 
 ---
 
@@ -54,15 +54,15 @@ A **proof assistant** (**Lean**, for Lemma) is a program that reads the proof sc
 
 ### What does a miner do?
 
-A miner runs an **Axon**—Bittensor’s word for the **network service your miner exposes** so validators can send it challenges (theorem + environment pins). You choose a **port**; validators connect to it like any server. The miner searches for a **`proof_script`** that matches the broadcast. More detail: [miner.md](miner.md).
+A miner exposes a small network service on a port you choose so validators can send challenges (theorem plus pinned Lean toolchain details). Bittensor calls that service an **Axon**. The miner searches for a **`proof_script`** that satisfies the broadcast. More detail: [miner.md](miner.md).
 
 ### What does a validator do?
 
-Sends challenges to miners, collects replies, **runs Lean** (often inside **Docker** so the environment matches), computes scores, and participates in **weight-setting** on the chain. More detail: [validator.md](validator.md).
+Sends challenges to miners, collects replies, runs Lean (often inside Docker so environments match), turns results into scores, and writes those scores on chain. More detail: [validator.md](validator.md).
 
 ### What does Bittensor provide?
 
-**Wallet keys** (coldkey / hotkey accounts on the chain), **discovery** (who is registered on the subnet), and **settlement** (recording weights and distributing **alpha**). You still run **Lemma’s software** locally (`lemma miner …`, `lemma validator …`).
+Wallet accounts (**coldkey** / **hotkey**), a shared view of who is registered, and on-chain recording of scores and token flows. You still run Lemma locally (`lemma miner …`, `lemma validator …`).
 
 ---
 
@@ -70,15 +70,15 @@ Sends challenges to miners, collects replies, **runs Lean** (often inside **Dock
 
 ### Do miners earn alpha?
 
-**Yes.** **Alpha** is the subnet’s reward token on Bittensor; miners receive it when their submitted proofs contribute under Lemma’s scoring and weight rules (starting from proofs that **pass Lean**). Details: [litepaper — Proofs, Scores, And Weights](litepaper.md#proofs-scores-and-weights).
+Yes. **Alpha** is the subnet’s reward token; miners receive it when their work earns score under Lemma’s rules, starting from proofs that pass Lean. How scores map to payouts: [litepaper — Proofs, Scores, And Weights](litepaper.md#proofs-scores-and-weights).
 
 ### Testnet vs mainnet?
 
-Lemma has run on **Bittensor testnet** with a published **netuid** (see [litepaper — Current Status](litepaper.md#current-status)). **Mainnet** (**Finney**) is separate: rewards there only exist if this subnet (or a fork you trust) is **registered there**. Always confirm **network**, **RPC endpoint**, and **netuid**.
+Lemma runs on Bittensor testnet at a published netuid (see [litepaper — Current Status](litepaper.md#current-status)). Mainnet (Finney) is different—only trust rewards there if the Lemma deployment you follow is registered and live.
 
 ### What costs should I expect?
 
-Miners often pay for **API calls** (e.g. LLM provers), **servers**, and **registration** fees. Validators pay for **hardware**, **Docker**, **disk**, and **uptime**. Estimate before you scale.
+Miners often pay for API calls (e.g. LLM provers), servers, and registration fees. Validators pay for hardware, Docker, disk, and uptime. Estimate before you scale.
 
 ---
 
@@ -86,17 +86,17 @@ Miners often pay for **API calls** (e.g. LLM provers), **servers**, and **regist
 
 ### What key and VPS mistakes hurt the most?
 
-Leaked keys or sloppy hosting can drain accounts or get you slashed in reputation. See [vps-safety.md](vps-safety.md).
+Leaked keys or sloppy hosting can drain accounts or hurt reputation scores. See [vps-safety.md](vps-safety.md).
 
 ### What operational failures are common?
 
-Closed **firewall** ports (validators cannot reach your **Axon**), full disks, cold caches, wrong **pins**, or drifting Docker images. See [production.md](production.md).
+Closed firewall ports (validators cannot reach your miner’s listen port), full disks, cold caches, wrong pinned toolchain settings, or drifting Docker images. See [production.md](production.md).
 
 ---
 
 ## Software maturity
 
-Lemma is still largely **proof-of-concept** software. Expect rough edges—**try testnet first**, **pin versions**, and **back up keys** and config.
+Lemma is still largely proof-of-concept software. Expect rough edges—try testnet first, pin versions, and back up keys and config.
 
 ---
 
@@ -104,15 +104,15 @@ Lemma is still largely **proof-of-concept** software. Expect rough edges—**try
 
 ### Who decides if my proof is accepted?
 
-**Lean** returns **pass/fail** on whether your **proof script** proves the **exact broadcast statement** under the pinned toolchain. There is no separate “beauty contest” before that.
+**Lean** returns pass or fail on whether your **proof script** proves the exact broadcast statement under the pinned toolchain. There is no style ranking before that.
 
 ### What happens after Lean accepts?
 
-The subnet’s **scoring rules** (documented in the litepaper) turn passing work into **weights** and thus **alpha**. Those rules can change with governance; they sit **after** the Lean gate, not instead of it.
+Passing work feeds into Lemma’s scoring rules (see the litepaper). Those rules sit after the Lean gate; they can change with governance but do not replace verification.
 
 ### Can validators cheat by changing the theorem?
 
-Everyone is supposed to follow the same **published pins** and artifacts ([governance.md](governance.md)). Compare hashes with the subnet when in doubt.
+Everyone is supposed to follow the same published toolchain and artifacts ([governance.md](governance.md)). Compare hashes with the subnet when in doubt.
 
 ---
 
@@ -120,5 +120,5 @@ Everyone is supposed to follow the same **published pins** and artifacts ([gover
 
 ### Where do I start?
 
-1. [litepaper.md](litepaper.md)  
+1. [litepaper.md](litepaper.md)
 2. [getting-started.md](getting-started.md)
