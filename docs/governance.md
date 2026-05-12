@@ -2,16 +2,20 @@
 
 Lean verification is objective; validator scoring must stay deterministic and coordinated. Coordinate visible behavior off-chain.
 
-## Generated templates (`LEMMA_PROBLEM_SOURCE=generated`)
+## Hybrid problem supply (`LEMMA_PROBLEM_SOURCE=hybrid`)
 
-Validators map block seed → theorem via [`generated.py`](../lemma/problems/generated.py). Consensus needs the same registry and release. The map is public and precomputable; [problem-supply-policy.md](problem-supply-policy.md) records that this is a supply/governance boundary, not a secrecy mechanism.
+Validators map block seed → theorem via [`hybrid.py`](../lemma/problems/hybrid.py), generated builders, and the curated catalog pack. Consensus needs the same registry, weights, catalog, and release. The map is public and precomputable; [problem-supply-policy.md](problem-supply-policy.md) records that this is a supply/governance boundary, not a secrecy mechanism.
 
 ```bash
 uv run lemma meta
 ```
 
-Publish `generated_registry_sha256`; validators may set `LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED`. The current generated registry has 72 builders with explicit 10% / 35% / 55% easy / medium / hard split weights. Difficulty mix: [generated-problems.md](generated-problems.md). Builder promotion checklist: [problem-supply-policy.md](problem-supply-policy.md).
-Use the release and rotation checklist in [problem-supply-policy.md](problem-supply-policy.md#release-and-rotation-checklist) before changing the live generated registry or cadence.
+Publish `problem_supply_registry_sha256`; validators set `LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED`. The current hybrid source defaults to 60% generated templates and 40% curated catalog rows. The generated registry has 80 builders with explicit 10% / 35% / 55% easy / medium / hard split weights. Difficulty mix: [generated-problems.md](generated-problems.md). Builder/catalog promotion checklist: [problem-supply-policy.md](problem-supply-policy.md).
+Use the release and rotation checklist in [problem-supply-policy.md](problem-supply-policy.md#release-and-rotation-checklist) before changing the live supply, generated registry, catalog, weights, or cadence.
+
+## Generated templates only (`LEMMA_PROBLEM_SOURCE=generated`)
+
+Generated-only mode remains available for rollback or focused testing. Validators in this mode pin `generated_registry_sha256` with `LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED`.
 
 ## Frozen catalog (`LEMMA_PROBLEM_SOURCE=frozen`)
 
@@ -63,7 +67,7 @@ code does not enforce equality — parity relies on the published policy
 
 1. Pin one Git tag and one immutable sandbox image ref ([toolchain-image-policy.md](toolchain-image-policy.md)).
 2. Publish a shared env template.
-3. Pin `uv run lemma meta`: `LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED`, optional `LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED` (generated mode).
+3. Pin `uv run lemma meta`: `LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED` and `LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED` (hybrid mode).
 4. Announce upgrades with changelog and cutover.
 
 Hashes reduce drift; they do not prove honest validators. Epoch tempo comes from Bittensor; forward HTTP wait per query is derived from block height and shared clamps — not a per-node dial.

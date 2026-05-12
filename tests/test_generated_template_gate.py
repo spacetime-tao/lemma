@@ -2,6 +2,7 @@
 
 import pytest
 from lemma.problems.base import Problem
+from lemma.problems.generated import generated_registry_canonical_dict
 from scripts.ci_verify_generated_templates import (
     _run_docker_multiplex,
     _sample_all_builders,
@@ -12,13 +13,16 @@ from scripts.ci_verify_generated_templates import (
 
 def test_generated_template_gate_covers_every_builder() -> None:
     samples = _sample_all_builders()
+    builder_count = int(generated_registry_canonical_dict()["builder_count"])
     builder_indices = [builder_index for builder_index, _, _ in samples]
     theorem_names = [p.theorem_name for _, _, p in samples]
 
-    assert builder_indices == list(range(72))
+    assert builder_indices == list(range(builder_count))
     assert len(set(theorem_names)) == len(theorem_names)
     assert all(p.extra.get("template_fn", "").startswith("_b_") for _, _, p in samples)
     assert all(isinstance(p.extra.get("witness_proof"), str) for _, _, p in samples)
+    assert all(isinstance(p.extra.get("informal_statement"), str) for _, _, p in samples)
+    assert all(p.extra.get("source_lane") == "generated" for _, _, p in samples)
 
 
 def test_generated_template_gate_rejects_bad_challenge_wiring() -> None:
@@ -33,6 +37,8 @@ def test_generated_template_gate_rejects_bad_challenge_wiring() -> None:
             "builder_index": 0,
             "template_fn": "_b_bad",
             "challenge_full": "theorem other_name : True := by\n  sorry",
+            "informal_statement": "Prove that True holds.",
+            "source_lane": "generated",
         },
     )
 
@@ -58,6 +64,8 @@ def test_generated_template_gate_rejects_incomplete_witness() -> None:
             "solution_full": "import Mathlib\nimport Submission\n\ntheorem LemmaSubmissionBridge : True := by\n"
             "  exact Submission.expected_name\n",
             "witness_proof": "by\n  sorry",
+            "informal_statement": "Prove that True holds.",
+            "source_lane": "generated",
         },
     )
 

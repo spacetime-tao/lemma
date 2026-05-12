@@ -47,6 +47,7 @@ def test_generated_public_statement_uses_template_family_text() -> None:
     statement = public_statement_for_problem(problem)
 
     assert statement == "Prove that filtering a finite range cannot increase its cardinality."
+    assert statement == problem.extra["informal_statement"]
     assert "∀" not in statement
     assert "DecidablePred" not in statement
     assert "medium" not in statement.lower()
@@ -69,6 +70,7 @@ def test_every_generated_builder_has_non_raw_public_statement() -> None:
         statement = public_statement_for_problem(_problem_for_builder_index(123, builder_index))
         assert statement
         assert statement != "Prove the displayed generated Lean theorem."
+        assert statement == _problem_for_builder_index(123, builder_index).extra["informal_statement"]
         assert "∀" not in statement
         assert "DecidablePred" not in statement
         assert "statement:" not in statement.lower()
@@ -222,4 +224,4 @@ def test_explain_theorem_and_render_sortable_table() -> None:
 
 
 def test_public_dashboard_schema_version_tracks_current_contract() -> None:
-    assert PUBLIC_DASHBOARD_SCHEMA_VERSION == 2
+    assert PUBLIC_DASHBOARD_SCHEMA_VERSION == 3

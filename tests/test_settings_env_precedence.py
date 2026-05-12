@@ -191,6 +191,31 @@ def test_documented_timeout_and_prover_policy_env_names_work(
     assert s.prover_min_proof_script_chars == 500
 
 
+def test_hybrid_problem_supply_env_names_work(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    monkeypatch.delenv("LEMMA_PREFER_PROCESS_ENV", raising=False)
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "\n".join(
+            [
+                "LEMMA_PROBLEM_SOURCE=hybrid",
+                "LEMMA_HYBRID_GENERATED_WEIGHT=55",
+                "LEMMA_HYBRID_CATALOG_WEIGHT=45",
+                "LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED=" + ("a" * 64),
+            ],
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    s = LemmaSettings(_env_file=str(env_file))
+    assert s.problem_source == "hybrid"
+    assert s.lemma_hybrid_generated_weight == 55
+    assert s.lemma_hybrid_catalog_weight == 45
+    assert s.problem_supply_registry_expected_sha256 == "a" * 64
+
+
 def test_documented_lean_worker_dev_override_env_name_works(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,

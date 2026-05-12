@@ -4,6 +4,7 @@ import pytest
 from lemma.common.config import LemmaSettings
 from lemma.judge.profile import judge_profile_sha256
 from lemma.problems.generated import generated_registry_sha256
+from lemma.problems.hybrid import problem_supply_registry_sha256
 from lemma.validator.service import _require_docker_for_validator, validator_startup_issues
 
 
@@ -34,6 +35,20 @@ def test_validator_ok_when_docker_on() -> None:
 def test_validator_startup_issues_accept_ready_settings(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("LEMMA_FAKE_JUDGE", raising=False)
     fatal, warn = validator_startup_issues(_ready_settings(), dry_run=False)
+    assert fatal == []
+    assert warn == []
+
+
+def test_validator_startup_issues_accept_ready_hybrid_settings(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("LEMMA_FAKE_JUDGE", raising=False)
+    settings = LemmaSettings(
+        _env_file=None,
+        lean_use_docker=True,
+        problem_source="hybrid",
+        problem_supply_registry_expected_sha256=problem_supply_registry_sha256(),
+    )
+    settings = settings.model_copy(update={"judge_profile_expected_sha256": judge_profile_sha256(settings)})
+    fatal, warn = validator_startup_issues(settings, dry_run=False)
     assert fatal == []
     assert warn == []
 

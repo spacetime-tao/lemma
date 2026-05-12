@@ -1,16 +1,22 @@
 # Catalog sources
 
-## Generated templates (default)
+## Hybrid supply (default)
 
-**`LEMMA_PROBLEM_SOURCE=generated`** expands a **chain-aligned integer seed** into one theorem per round (`gen/<seed>` ids). Validators agree because they share head + seed mode + registry pin.
+**`LEMMA_PROBLEM_SOURCE=hybrid`** is the default live supply. It deterministically mixes seed-generated templates with a bundled curated catalog using published weights: **60 generated / 40 catalog**.
 
-Template selection uses a **deterministic SHA256 mix** of that seed before `random.Random` (see [`generated.py`](../lemma/problems/generated.py)). That decorrelates **adjacent** chain seeds (same window still shares one `problem_seed` in quantize mode). It does **not** remove the public, deterministic map from seed → problem: anyone can still precompute. This is documented as an accepted supply boundary in [problem-supply-policy.md](problem-supply-policy.md). To match an **older** Lemma release’s expansion exactly, set **`LEMMA_GENERATED_LEGACY_PLAIN_RNG=1`** (rollback only).
+Validators agree because they share head + seed mode + hybrid weights + registry pins. `uv run lemma meta --raw` prints `problem_supply_registry_sha256`, which covers the generated registry hash, curated catalog hash, and hybrid weights. Validators set `LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED` from that value.
+
+The curated live pack lives in [`lemma/problems/curated_catalog.json`](../lemma/problems/curated_catalog.json). Each row carries the formal Lean theorem data plus authored dashboard text in `informal_statement`.
+
+## Generated templates
+
+**`LEMMA_PROBLEM_SOURCE=generated`** keeps only the generated-template lane (`gen/<seed>` ids). Template selection uses a **deterministic SHA256 mix** of that seed before `random.Random` (see [`generated.py`](../lemma/problems/generated.py)). That decorrelates **adjacent** chain seeds (same window still shares one `problem_seed` in quantize mode). It does **not** remove the public, deterministic map from seed → problem: anyone can still precompute. This is documented as an accepted supply boundary in [problem-supply-policy.md](problem-supply-policy.md). To match an **older** Lemma release’s expansion exactly, set **`LEMMA_GENERATED_LEGACY_PLAIN_RNG=1`** (rollback only).
 
 **RPC head slack:** Optional **`LEMMA_PROBLEM_SEED_CHAIN_HEAD_SLACK_BLOCKS`** (default **0**) subtracts that many blocks from the RPC head **before** `resolve_problem_seed` and forward HTTP deadline math (validators, `lemma status`, `lemma preview`, `lemma problems show`). Setting **`1`** often removes **one-block** disagreements on `get_current_block()` at quantize boundaries (e.g. head **199** vs **200** with `quantize_blocks=100` can disagree without slack; both map to the same seed with slack **1**).
 
 ## Frozen catalog (`frozen` mode)
 
-**Production-style deployments:** use **`LEMMA_PROBLEM_SOURCE=generated`**. The frozen catalog is a **public eval set** — enable only on purpose.
+**Production-style deployments:** use **`LEMMA_PROBLEM_SOURCE=hybrid`**. The frozen catalog is a **public eval set** — enable only on purpose.
 
 To use frozen JSON, set **`LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`** in `.env` together with **`LEMMA_PROBLEM_SOURCE=frozen`**. Without this flag, `get_problem_source`, direct frozen-id `resolve_problem` calls, and `lemma validator check` reject frozen mode.
 

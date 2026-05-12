@@ -488,9 +488,16 @@ def collect_subnet_pin_updates(settings: LemmaSettings) -> dict[str, str]:
     """Expected-hash pins matching **current** `lemma meta`."""
     from lemma.judge.profile import judge_profile_sha256
     from lemma.problems.generated import generated_registry_sha256
+    from lemma.problems.hybrid import problem_supply_registry_sha256
 
     out: dict[str, str] = {"LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED": judge_profile_sha256(settings).strip().lower()}
-    if (settings.problem_source or "").strip().lower() == "generated":
+    source = (settings.problem_source or "").strip().lower()
+    if source == "hybrid":
+        out["LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED"] = problem_supply_registry_sha256(
+            generated_weight=settings.lemma_hybrid_generated_weight,
+            catalog_weight=settings.lemma_hybrid_catalog_weight,
+        ).strip().lower()
+    elif source == "generated":
         out["LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED"] = generated_registry_sha256().strip().lower()
     return out
 

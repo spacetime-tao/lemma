@@ -80,17 +80,31 @@ class LemmaSettings(BaseSettings):
 
     netuid: int = Field(default=0, ge=0, validation_alias="NETUID")
 
-    problem_source: Literal["generated", "frozen"] = Field(
-        default="generated",
+    problem_source: Literal["hybrid", "generated", "frozen"] = Field(
+        default="hybrid",
         validation_alias="LEMMA_PROBLEM_SOURCE",
-        description="generated = seed-expanded templates; frozen = minif2f_frozen.json catalog.",
+        description="hybrid = generated + curated catalog; generated = templates only; frozen = dev eval catalog.",
+    )
+    lemma_hybrid_generated_weight: int = Field(
+        default=60,
+        ge=0,
+        le=10_000,
+        validation_alias="LEMMA_HYBRID_GENERATED_WEIGHT",
+        description="Deterministic hybrid source weight for generated templates.",
+    )
+    lemma_hybrid_catalog_weight: int = Field(
+        default=40,
+        ge=0,
+        le=10_000,
+        validation_alias="LEMMA_HYBRID_CATALOG_WEIGHT",
+        description="Deterministic hybrid source weight for bundled curated catalog problems.",
     )
     lemma_dev_allow_frozen_problem_source: bool = Field(
         default=False,
         validation_alias="LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE",
         description=(
             "Allow LEMMA_PROBLEM_SOURCE=frozen (bundled public-eval catalog). Default false — "
-            "subnet-like deployments should use generated templates."
+            "subnet-like deployments should use hybrid supply."
         ),
     )
     problem_seed_quantize_blocks: int = Field(
@@ -135,6 +149,14 @@ class LemmaSettings(BaseSettings):
         description=(
             "Validators with LEMMA_PROBLEM_SOURCE=generated must set this; startup fails unless it matches "
             "the live generated-registry hash (`lemma meta`)."
+        ),
+    )
+    problem_supply_registry_expected_sha256: str | None = Field(
+        default=None,
+        validation_alias="LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED",
+        description=(
+            "Validators with LEMMA_PROBLEM_SOURCE=hybrid must set this; startup fails unless it matches "
+            "the live hybrid supply hash (`lemma meta`)."
         ),
     )
     lemma_generated_legacy_plain_rng: bool = Field(

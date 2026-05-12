@@ -16,12 +16,14 @@ from lemma.common.config import LemmaSettings
 def judge_profile_dict(settings: LemmaSettings) -> dict[str, object]:
     """Stable dict for hashing proof-only validator policy (no API keys)."""
     out: dict[str, object] = {
-        "profile_schema": "lemma_validator_profile_v5",
+        "profile_schema": "lemma_validator_profile_v6",
         "problem_policy": {
             "problem_source": (settings.problem_source or "").strip().lower(),
             "problem_seed_mode": settings.problem_seed_mode,
             "problem_seed_quantize_blocks": int(settings.problem_seed_quantize_blocks),
             "problem_seed_chain_head_slack_blocks": int(settings.lemma_problem_seed_chain_head_slack_blocks),
+            "hybrid_generated_weight": int(settings.lemma_hybrid_generated_weight),
+            "hybrid_catalog_weight": int(settings.lemma_hybrid_catalog_weight),
         },
         "verification_policy": {
             "lean_sandbox_image": (settings.lean_sandbox_image or "").strip(),

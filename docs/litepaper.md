@@ -118,16 +118,17 @@ Reputation and credibility settings may adjust eligible entries. **Same-coldkey 
 
 ## Problem Supply
 
-The default live-style problem source is generated templates. A chain-aligned seed maps deterministically to a generated theorem id such as `gen/<seed>`.
+The default live-style problem source is hybrid: generated templates plus a curated catalog lane. A chain-aligned seed maps deterministically to a public theorem id such as `gen/<seed>` or `curated/...`.
 
 This mapping is public by design. It is a tradeoff, not a hidden evaluation system. Miners may learn repeated problem shapes over time.
 
 The answer is better supply, not secrecy:
 
 - add more varied generated builders;
-- coordinate registry upgrades;
+- add reviewed curated catalog rows with authored informal statements;
+- coordinate supply registry upgrades;
 - measure solve and verify time;
-- later add curated or bounty lanes for harder work.
+- later add campaign or bounty lanes for harder work.
 
 A frozen catalog mode also exists for development and evaluation. It is gated intentionally and is not the default production-style source.
 

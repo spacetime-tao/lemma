@@ -173,7 +173,7 @@ def run_doctor() -> int:
     click.echo(
         stylize(
             "\n5  Next commands\n"
-            "     lemma meta             - validator profile + template hashes\n"
+            "     lemma meta             - validator profile + supply hashes\n"
             "     lemma validator check  - before `lemma validator start`\n"
             "     lemma preview          - prover + Lean proof preview\n"
             "     lemma configure --help\n",

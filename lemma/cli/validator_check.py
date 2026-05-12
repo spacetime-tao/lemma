@@ -15,6 +15,7 @@ from lemma.common.config import LemmaSettings
 from lemma.common.subtensor import get_subtensor
 from lemma.judge.profile import judge_profile_sha256
 from lemma.problems.generated import generated_registry_sha256
+from lemma.problems.hybrid import problem_supply_registry_sha256
 from lemma.validator.service import validator_startup_issues
 
 
@@ -153,7 +154,35 @@ def run_validator_check(settings: LemmaSettings) -> int:
             err=True,
         )
 
-    if (settings.problem_source or "").strip().lower() == "generated":
+    if (settings.problem_source or "").strip().lower() == "hybrid":
+        exp_h = (settings.problem_supply_registry_expected_sha256 or "").strip().lower()
+        if exp_h:
+            actual_h = problem_supply_registry_sha256(
+                generated_weight=settings.lemma_hybrid_generated_weight,
+                catalog_weight=settings.lemma_hybrid_catalog_weight,
+            ).strip().lower()
+            if actual_h != exp_h:
+                click.echo(
+                    stylize(
+                        "FAIL supply pin  LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED mismatch vs current code",
+                        fg="red",
+                        bold=True,
+                    ),
+                    err=True,
+                )
+            else:
+                click.echo(stylize("OK supply pin matches problem_supply_registry_sha256", fg="green"))
+        else:
+            click.echo(
+                stylize(
+                    "FAIL supply pin  LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED required when "
+                    "LEMMA_PROBLEM_SOURCE=hybrid",
+                    fg="red",
+                    bold=True,
+                ),
+                err=True,
+            )
+    elif (settings.problem_source or "").strip().lower() == "generated":
         exp_g = (settings.generated_registry_expected_sha256 or "").strip().lower()
         if exp_g:
             actual_g = generated_registry_sha256().strip().lower()

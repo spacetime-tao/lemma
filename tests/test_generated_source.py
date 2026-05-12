@@ -34,6 +34,8 @@ def test_sample_stable_across_calls() -> None:
     assert isinstance(a.extra.get("builder_index"), int)
     assert a.extra.get("template_fn", "").startswith("_b_")
     assert isinstance(a.extra.get("witness_proof"), str)
+    assert isinstance(a.extra.get("informal_statement"), str)
+    assert a.extra.get("source_lane") == "generated"
 
 
 def test_get_matches_sample() -> None:

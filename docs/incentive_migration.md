@@ -15,6 +15,7 @@ This document tracks **post-audit** mechanism changes in Lemma: proof-centric sc
 | Verify credibility | `LEMMA_REPUTATION_VERIFY_CREDIBILITY_ALPHA` (default **0.08**) — EMA toward 1.0 on Lean verify pass, 0.0 on fail; persisted with reputation JSON. Applied as `(credibility ** LEMMA_REPUTATION_CREDIBILITY_EXPONENT)` after EMA smoothing. The default exponent is **1.0**; exponent **0** disables the multiplier. See [credibility-exponent-decision.md](credibility-exponent-decision.md). |
 | Proof-only live score | A Lean-verified proof enters scoring; a failed proof does not. |
 | Multi-theorem epochs | `LEMMA_EPOCH_PROBLEM_COUNT` (default **1**) — sequential challenges per epoch. |
+| Hybrid problem supply | `LEMMA_PROBLEM_SOURCE=hybrid` (default) — deterministic 60 / 40 mix of generated templates and curated catalog rows; validators pin `LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED`. |
 | Judge hardening | Fenced miner blocks + strict single-object JSON rubric parse (anchored rubric spans + skip-invalid candidates when multiple `{...}` fragments appear; repeated valid rubric occurrences fail closed even when identical). |
 | Empty-epoch uniform | Validator UID excluded from uniform weights when possible. |
 | Response deadline | Miner responses without `deadline_block` fail the integrity gate; responses with `deadline_block` set are dropped if chain head is already at or past that block after the forward returns. |
@@ -31,9 +32,9 @@ This document tracks **post-audit** mechanism changes in Lemma: proof-centric sc
 | Validator Lean load (documentation) | **`LEMMA_LEAN_VERIFY_MAX_CONCURRENT`**, optional **`LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION`** when attest on — see [validator_lean_load.md](validator_lean_load.md). |
 | Transport (documentation) | Dendrite/Axon + **`LemmaChallenge`** body-hash integrity vs **`computed_body_hash`**; miner responses fail closed when the hash header or deadline block is missing — see [transport.md](transport.md). [`knowledge/subnet.invariants.yaml`](../knowledge/subnet.invariants.yaml) deprecates Axon-first **new** designs in favor of HTTP + Epistula. |
 
-## Generated registry
+## Problem supply registry
 
-Adding templates changes `generated_registry_sha256`. Operators must run `uv run lemma configure subnet-pins` (or update `LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED`) after upgrading.
+Changing hybrid weights, curated rows, or generated templates changes `problem_supply_registry_sha256`. Operators must run `uv run lemma configure subnet-pins` (or update `LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED`) after upgrading. Generated-only rollback mode still pins `generated_registry_sha256`.
 
 ## References
 

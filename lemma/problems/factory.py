@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from lemma.problems.base import Problem, ProblemSource
 from lemma.problems.generated import GeneratedProblemSource
+from lemma.problems.hybrid import CuratedCatalogSource, HybridProblemSource
 from lemma.problems.minif2f import MiniF2FSource
 
 if TYPE_CHECKING:
@@ -13,13 +14,19 @@ if TYPE_CHECKING:
 
 
 def get_problem_source(settings: LemmaSettings) -> ProblemSource:
-    """Return generated (default) or frozen JSON catalog backend."""
-    mode = (settings.problem_source or "generated").strip().lower()
+    """Return hybrid default, generated-only rollback, or gated frozen backend."""
+    mode = (settings.problem_source or "hybrid").strip().lower()
+    if mode == "hybrid":
+        return HybridProblemSource(
+            generated=GeneratedProblemSource(legacy_plain_rng=settings.lemma_generated_legacy_plain_rng),
+            generated_weight=settings.lemma_hybrid_generated_weight,
+            catalog_weight=settings.lemma_hybrid_catalog_weight,
+        )
     if mode == "frozen":
         if not settings.lemma_dev_allow_frozen_problem_source:
             raise ValueError(
                 "LEMMA_PROBLEM_SOURCE=frozen is disabled by default (public miniF2F-style catalog). "
-                "Use LEMMA_PROBLEM_SOURCE=generated for subnet traffic, or set "
+                "Use LEMMA_PROBLEM_SOURCE=hybrid for subnet traffic, or set "
                 "LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1 for local benchmarking only "
                 "(see docs/catalog-sources.md).",
             )
@@ -35,10 +42,12 @@ def resolve_problem(settings: LemmaSettings, problem_id: str) -> Problem:
         return GeneratedProblemSource(
             legacy_plain_rng=settings.lemma_generated_legacy_plain_rng,
         ).get(problem_id)
+    if problem_id.startswith("curated/"):
+        return CuratedCatalogSource().get(problem_id)
     if not settings.lemma_dev_allow_frozen_problem_source:
         raise ValueError(
             "Frozen catalog problem ids are disabled by default (public miniF2F-style catalog). "
-            "Use gen/<seed> ids for subnet traffic, or set LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1 "
+            "Use gen/<seed> or curated/<id> ids for subnet traffic, or set LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1 "
             "for local benchmarking only (see docs/catalog-sources.md).",
         )
     return MiniF2FSource(settings.minif2f_catalog_path).get(problem_id)

@@ -3,7 +3,7 @@
 | Area | Role |
 | ---- | ---- |
 | [`LemmaChallenge`](../lemma/protocol.py) | Synapse: validator sends theorem; miner returns `proof_script` plus optional metadata. |
-| [`lemma/problems/`](../lemma/problems/) | `ProblemSource`. Generated templates ([generated-problems.md](generated-problems.md)); optional frozen JSON ([catalog-sources.md](catalog-sources.md)). |
+| [`lemma/problems/`](../lemma/problems/) | `ProblemSource`. Default hybrid supply ([catalog-sources.md](catalog-sources.md)); generated templates ([generated-problems.md](generated-problems.md)); optional frozen JSON. |
 | [`lemma/lean/`](../lemma/lean/) | Workspace materialization; `LeanSandbox` runs `lake build` + axiom driver. |
 | [`lemma/judge/`](../lemma/judge/) | Local file-based prose utilities outside validator scoring. |
 | [`lemma/scoring/`](../lemma/scoring/) | Lean-verified proof entries, reputation/credibility, and same-coldkey partitioning -> weights. |

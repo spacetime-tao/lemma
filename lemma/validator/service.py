@@ -16,6 +16,7 @@ from lemma.common.subtensor import get_subtensor
 from lemma.judge.profile import judge_profile_sha256
 from lemma.problems.factory import get_problem_source
 from lemma.problems.generated import generated_registry_sha256
+from lemma.problems.hybrid import problem_supply_registry_sha256
 from lemma.validator.judge_profile_attest import judge_profile_peer_check_errors
 
 _DOCKER_REQUIRED_ERROR = (
@@ -66,7 +67,26 @@ def validator_startup_issues(settings: LemmaSettings, *, dry_run: bool) -> tuple
             )
 
     problem_source = (settings.problem_source or "").strip().lower()
-    if problem_source == "generated":
+    if problem_source == "hybrid":
+        if not (settings.problem_supply_registry_expected_sha256 or "").strip():
+            fatal.append(
+                "lemma validator requires LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED when "
+                "LEMMA_PROBLEM_SOURCE=hybrid (run `lemma configure subnet-pins`).",
+            )
+        else:
+            actual = problem_supply_registry_sha256(
+                generated_weight=settings.lemma_hybrid_generated_weight,
+                catalog_weight=settings.lemma_hybrid_catalog_weight,
+            )
+            expected = (settings.problem_supply_registry_expected_sha256 or "").strip()
+            if actual.strip().lower() != expected.lower():
+                fatal.append(
+                    f"problem supply mismatch: expected LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED={expected!r} "
+                    f"but current code hashes to {actual!r}.\n"
+                    "Use the same lemma commit as the subnet, then `lemma configure subnet-pins` "
+                    "(or update the supply pin from `lemma meta --raw`).",
+                )
+    elif problem_source == "generated":
         if not (settings.generated_registry_expected_sha256 or "").strip():
             fatal.append(
                 "lemma validator requires LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED when "
@@ -85,7 +105,7 @@ def validator_startup_issues(settings: LemmaSettings, *, dry_run: bool) -> tuple
     elif problem_source == "frozen" and not settings.lemma_dev_allow_frozen_problem_source:
         fatal.append(
             "LEMMA_PROBLEM_SOURCE=frozen requires LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1 "
-            "(public eval catalog). Use generated for subnet traffic — see docs/catalog-sources.md",
+            "(public eval catalog). Use hybrid for subnet traffic — see docs/catalog-sources.md",
         )
 
     if settings.lemma_judge_profile_attest_enabled and settings.lemma_judge_profile_attest_allow_skip:
@@ -114,7 +134,15 @@ class ValidatorService:
             logger.warning(msg)
         if fatal:
             raise SystemExit(fatal[0])
-        if (s.problem_source or "").strip().lower() == "generated":
+        if (s.problem_source or "").strip().lower() == "hybrid":
+            logger.info(
+                "problem_supply_registry_sha256={}",
+                problem_supply_registry_sha256(
+                    generated_weight=s.lemma_hybrid_generated_weight,
+                    catalog_weight=s.lemma_hybrid_catalog_weight,
+                ),
+            )
+        elif (s.problem_source or "").strip().lower() == "generated":
             logger.info("generated_registry_sha256={}", generated_registry_sha256())
         subtensor = get_subtensor(s)
         source = get_problem_source(s)

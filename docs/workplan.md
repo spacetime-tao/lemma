@@ -27,9 +27,11 @@ not let parallel checklists drift.
 - Identical verified proofs are no longer dropped from live rewards; same-coldkey
   partitioning limits one-coldkey multi-hotkey multiplication after weights are
   computed.
-- The generated problem registry has 72 builders with explicit 10% / 35% /
-  55% easy / medium / hard split weights, template-owned topics, and a
-  metadata/witness gate covering registry reachability/coherence.
+- Default problem supply is hybrid: generated templates plus a curated catalog
+  lane with authored dashboard statements. The generated registry has 80
+  builders with explicit 10% / 35% / 55% easy / medium / hard split weights,
+  template-owned topics, and a metadata/witness gate covering registry
+  reachability/coherence.
 - Normal operator workflows are consolidated under `lemma`: setup, doctor,
   status, problem views, preview, miner, and validator entrypoints.
 - Local baseline checks after generated supply hardening:
@@ -37,9 +39,9 @@ not let parallel checklists drift.
   - `.venv/bin/mypy lemma`
     (`Success: no issues found in 69 source files`);
   - `.venv/bin/pytest -q`
-    (`280 passed, 2 skipped, 12 warnings`);
+    (`280 passed, 2 skipped, 12 warnings`; pre-hybrid baseline);
   - `.venv/bin/python scripts/ci_verify_generated_templates.py`
-    (`OK: generated template metadata/witness gate covered 72 builders`);
+    (`OK: generated template metadata/witness gate covered 80 builders`);
 - Prior security hygiene checks from the remote worker safe-default pass:
   - `.venv/bin/bandit -q -r lemma -ll`;
   - `.venv/bin/pip-audit --ignore-vuln PYSEC-2025-49 --ignore-vuln PYSEC-2022-42969`
@@ -73,6 +75,9 @@ not let parallel checklists drift.
   `.venv/bin/python scripts/ci_verify_generated_templates.py`
   (`OK: generated template metadata/witness gate covered 72 builders`).
   Docker witness-proof evidence still requires a Docker-capable CI/host.
+- Hybrid supply design: default source is now generated + curated catalog with
+  deterministic 60 / 40 lane weights, authored `informal_statement` metadata,
+  and `problem_supply_registry_sha256` for validator pinning.
 
 ## Current Blockers And Gaps
 

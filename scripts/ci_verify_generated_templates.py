@@ -95,6 +95,13 @@ def _template_sample_errors(builder_index: int, seed: int, p: Problem) -> list[s
     template_fn = p.extra.get("template_fn")
     if not isinstance(template_fn, str) or not template_fn.startswith("_b_"):
         errors.append(f"{prefix}: missing extra.template_fn")
+    informal = p.extra.get("informal_statement")
+    if not isinstance(informal, str) or not informal.strip():
+        errors.append(f"{prefix}: missing extra.informal_statement")
+    elif informal == "Prove the displayed generated Lean theorem.":
+        errors.append(f"{prefix}: informal_statement uses dashboard fallback text")
+    if p.extra.get("source_lane") != "generated":
+        errors.append(f"{prefix}: missing/mismatched extra.source_lane")
     if p.split not in _VALID_SPLITS:
         errors.append(f"{prefix}: invalid split {p.split!r}")
     if not p.theorem_name.strip():

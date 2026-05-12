@@ -3,6 +3,7 @@
 from lemma.common.config import LemmaSettings
 from lemma.judge.profile import judge_profile_sha256
 from lemma.problems.generated import generated_registry_sha256
+from lemma.problems.hybrid import problem_supply_registry_sha256
 from lemma.validator.service import validator_startup_issues
 
 
@@ -10,6 +11,7 @@ def _pinned_settings(**updates: object) -> LemmaSettings:
     base = LemmaSettings(
         _env_file=None,
         generated_registry_expected_sha256=generated_registry_sha256(),
+        problem_supply_registry_expected_sha256=problem_supply_registry_sha256(),
         **updates,
     )
     return base.model_copy(update={"judge_profile_expected_sha256": judge_profile_sha256(base)})

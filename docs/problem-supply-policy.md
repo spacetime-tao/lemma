@@ -1,27 +1,28 @@
 # Problem Supply Policy
 
-Lemma's default problem source is public, deterministic generated templates. This is a deliberate consensus tradeoff, not a secrecy mechanism.
+Lemma's default problem source is public, deterministic hybrid supply: generated templates plus a curated catalog lane. This is a deliberate consensus tradeoff, not a secrecy mechanism.
 
 ## Current boundary
 
-Generated mode maps a chain-aligned seed to one theorem with code in [`lemma/problems/generated.py`](../lemma/problems/generated.py). The SHA256 seed mix decorrelates adjacent seeds, but it does not hide the seed-to-theorem map. Anyone with the release can precompute future generated challenges once they know the relevant chain height.
+Hybrid mode maps a chain-aligned seed to one theorem using code in [`lemma/problems/hybrid.py`](../lemma/problems/hybrid.py), generated builders in [`lemma/problems/generated.py`](../lemma/problems/generated.py), and the bundled curated pack in [`lemma/problems/curated_catalog.json`](../lemma/problems/curated_catalog.json). SHA256 seed mixing decorrelates adjacent seeds, but it does not hide the seed-to-theorem map. Anyone with the release can precompute future challenges once they know the relevant chain height.
 
 That means:
 
-- Do not describe generated templates as secret evaluation.
+- Do not describe hybrid supply or generated templates as secret evaluation.
 - Do not rely on validator-held hidden problem sets; validator secrets are expected to leak ([trust assumptions](../knowledge/trust.assumptions.yaml)).
 - Do not treat SHA256 mixing as anti-precompute security.
-- Do use `generated_registry_sha256` to keep validators on the same public generator.
+- Do use `problem_supply_registry_sha256` to keep validators on the same public hybrid supply.
 
-The current generated lane is a steady traffic lane: it gives validators deterministic, Lean-checkable challenges with known template families. The live registry has 72 builders and explicit 10% / 35% / 55% easy / medium / hard split weights. It is not a complete difficulty market for all of mathematics.
+The current hybrid lane is steady traffic: deterministic, Lean-checkable challenges with known generated families and a reviewed curated catalog. The generated registry has 80 builders and explicit 10% / 35% / 55% easy / medium / hard split weights; hybrid source weights default to 60% generated and 40% catalog. It is not a complete difficulty market for all of mathematics.
 
 ## Accepted risk
 
-Public deterministic supply is acceptable only if the operator is explicit about the risk: miners may recognize repeated shapes, build warm caches, and pre-solve common families. That is not a transport or hashing bug. It is a problem-supply limitation.
+Public deterministic supply is acceptable only if the operator is explicit about the risk: miners may recognize repeated shapes, build warm caches, and pre-solve common families. The curated lane increases breadth; it is still public supply, not hidden evaluation.
 
 Mitigation comes from breadth and governance:
 
 - add more generated builders with varied proof shapes;
+- add reviewed curated catalog rows with authored informal statements;
 - rotate releases with announced registry hashes;
 - use curated public catalog lanes only when intentionally enabled;
 - later add a separate bounty/curation lane for harder formalization work.
@@ -38,7 +39,7 @@ New generated builders should enter the live registry only after they pass the s
 6. `docs/generated-problems.md` and operator release notes describe the changed mix.
 7. Operators publish the new `generated_registry_sha256` and cutover release together.
 
-The local/CI gate is [`scripts/ci_verify_generated_templates.py`](../scripts/ci_verify_generated_templates.py). It always checks that every builder is reachable and has coherent registry metadata plus a public witness proof. With `RUN_DOCKER_LEAN_TEMPLATES=1`, it also materializes all generated templates into Lean workspaces and runs both the `sorry` stub build and the complete witness-proof build with axiom checks.
+The local/CI gate is [`scripts/ci_verify_generated_templates.py`](../scripts/ci_verify_generated_templates.py). It always checks that every builder is reachable and has coherent registry metadata, an authored `informal_statement`, and a public witness proof. With `RUN_DOCKER_LEAN_TEMPLATES=1`, it also materializes all generated templates into Lean workspaces and runs both the `sorry` stub build and the complete witness-proof build with axiom checks.
 
 Do not add low-value templates merely to increase the builder count. A small set of honest, varied templates is better than a large set of brittle near-duplicates.
 
@@ -62,7 +63,7 @@ is a new security model.
      uv run python scripts/ci_verify_generated_templates.py
    ```
 
-3. Record the old and new `generated_registry_sha256` from `uv run lemma meta`.
+3. Record the old and new `problem_supply_registry_sha256` and `generated_registry_sha256` from `uv run lemma meta`.
 4. Summarize the old and new builder counts by split.
 5. Check whether any new builder family is a near-duplicate of an existing one.
 6. Confirm verification costs fit the published timeout policy.

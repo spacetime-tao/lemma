@@ -86,7 +86,8 @@ proofs can enter live scoring.
 
 | Mode | Behavior |
 | ---- | -------- |
-| `LEMMA_PROBLEM_SOURCE=generated` | Block seed → templates ([`generated.py`](../lemma/problems/generated.py)). |
+| `LEMMA_PROBLEM_SOURCE=hybrid` | Default: deterministic mix of generated templates and curated catalog rows ([catalog-sources.md](catalog-sources.md)). |
+| `generated` | Block seed → templates only ([`generated.py`](../lemma/problems/generated.py)). |
 | `frozen` | Rows from `minif2f_frozen.json` — opt-in via **`LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`** (see [catalog-sources.md](catalog-sources.md)). |
 
 Template or catalog changes need coordinated upgrades ([governance.md](governance.md)).
@@ -163,7 +164,7 @@ Within one validator, a round finishes before the code waits for the **next subn
 | `lemma problems` (or `… show --current`) | `Challenge.lean` for **live** chain head — same rotation as validators. |
 | `lemma problems show --block N` | **What-if:** pretend head is `N` (countdown/seed as if at height `N`). |
 | `lemma meta` | Validator profile and registry hashes. |
-| `lemma problems list` | Frozen catalog only. |
+| `lemma problems list` | Enumerable rows for hybrid/frozen sources; generated-only has no finite list. |
 
 ## Chutes and billing
 

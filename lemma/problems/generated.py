@@ -78,6 +78,86 @@ class GeneratedTemplate:
     build: TemplateBuilder
 
 
+GENERATED_FAMILY_STATEMENTS: dict[str, str] = {
+    "truth": "Prove that True holds.",
+    "nat_arithmetic": "Prove that the displayed natural-number addition equals its computed value.",
+    "nat_order": "Prove that the displayed natural-number inequality holds.",
+    "booleans": "Prove the displayed Boolean identity.",
+    "list_length": "Prove the displayed list has the stated length.",
+    "list_reverse_length": "Prove that reversing a list preserves its length.",
+    "real_arithmetic": "Prove that the displayed real-number addition equals its computed value.",
+    "finset_range_card": "Prove that the displayed finite range has the stated cardinality.",
+    "reflexive_order": "Prove that every natural number is at most itself.",
+    "nat_commutativity": "Prove that addition of natural numbers commutes.",
+    "nat_associativity": "Prove the displayed associativity identity for natural-number multiplication.",
+    "real_polynomial_identity": "Prove the displayed polynomial identity over the real numbers.",
+    "implication": "Prove the displayed elementary implication about propositions.",
+    "odd_numbers": "Prove that every number of the form two times n plus one is odd.",
+    "divisibility_trans": "Prove that divisibility is transitive for natural numbers.",
+    "set_subset": "Prove the displayed subset fact for sets of natural numbers.",
+    "finset_sum_range": "Prove the displayed identity for sums over finite ranges.",
+    "matrix_det_identity": "Prove that the displayed identity matrix has determinant one.",
+    "real_abs_triangle": "Prove the displayed triangle inequality for absolute value.",
+    "continuous_identity": "Prove that the identity function on real numbers is continuous.",
+    "prime_witness": "Prove that there is a prime number dividing two.",
+    "infinite_primes": "Prove that for every bound there is a prime number at least that large.",
+    "sqrt_two_irrational": "Prove that the square root of two is irrational.",
+    "finset_union_card": "Prove the displayed cardinality bound for a union of finite sets.",
+    "set_distributivity": "Prove the displayed distributive law for set intersection and union.",
+    "nat_distributivity_instance": "Prove the displayed concrete distributive identity for natural numbers.",
+    "real_square_nonneg": "Prove that the square of any real number is nonnegative.",
+    "integer_abs_triangle": "Prove the displayed triangle inequality for integer absolute value.",
+    "finset_filter_card": "Prove that filtering a finite range cannot increase its cardinality.",
+    "nat_power_identity": "Prove the displayed power identity for natural numbers.",
+    "finset_insert": "Prove that inserting one natural number into the empty finite set gives cardinality one.",
+    "logic_commutativity": "Prove that conjunction of propositions is commutative.",
+    "nat_min_order": "Prove that the minimum of two natural numbers is at most the first number.",
+    "finset_subset_card": "Prove that a finite subset has cardinality at most the larger finite set.",
+    "list_append_length": "Prove that appending two lists adds their lengths.",
+    "set_union_subset": "Prove that a set is contained in its union with another set.",
+    "set_antisymmetry": "Prove set equality from mutual subset containment.",
+    "real_affine_identity": "Prove the displayed affine identity over the real numbers.",
+    "integer_monotonicity": "Prove that adding the same integer to both sides preserves order.",
+    "nat_distributivity": "Prove distributivity of multiplication over addition for natural numbers.",
+    "set_subset_trans": "Prove that subset containment is transitive.",
+    "function_composition": "Prove associativity of function composition on natural-number functions.",
+    "finset_range_membership": "Prove that a natural number belongs to the finite range ending at its successor.",
+    "demorgan": "Prove the displayed De Morgan law for propositions.",
+    "absolute_value": "Prove that the absolute value of a real number is nonnegative.",
+    "real_cubic_identity": "Prove the displayed cubic expansion over the real numbers.",
+    "integer_square_identity": "Prove the displayed difference-of-squares identity over the integers.",
+    "nat_square_identity": "Prove the displayed square expansion for natural numbers.",
+    "quadratic_inequality": "Prove the displayed quadratic inequality over the real numbers.",
+    "sum_squares_nonneg": "Prove that the displayed sum of real squares is nonnegative.",
+    "square_difference_nonneg": "Prove that the square of a real-number difference is nonnegative.",
+    "set_union_inter_distrib": "Prove the displayed distributive law for set union and intersection.",
+    "set_difference": "Prove the displayed identity for set difference over a union.",
+    "image_preimage": "Prove that a set is contained in the preimage of its image under a function.",
+    "logic_curry": "Prove the displayed currying equivalence for propositions.",
+    "contrapositive": "Prove the displayed contrapositive implication.",
+    "divisibility_sum_squares": "Prove that divisibility is preserved by the displayed sum of squares.",
+    "divisibility_linear_combo": "Prove that divisibility is preserved by the displayed symmetric linear combination.",
+    "prime_beyond_shift": "Prove that beyond every shifted bound there is a prime number.",
+    "list_reverse_append": "Prove that reversing an appended list reverses the parts in opposite order.",
+    "list_map_reverse": "Prove that mapping over a list commutes with reversing it.",
+    "list_replicate_append": "Prove the displayed length identity for appended replicated lists.",
+    "finset_range_subset": "Prove that a smaller finite range is contained in a larger finite range.",
+    "finset_card_range": "Prove the displayed cardinality identity for a finite range.",
+    "matrix_transpose": "Prove that transposing a matrix twice gives the original matrix.",
+    "matrix_add_zero": "Prove that adding zero to the displayed matrix gives the same matrix.",
+    "continuous_polynomial": "Prove that the displayed polynomial function over real numbers is continuous.",
+    "group_inverse": "Prove the inverse-of-product identity in any group.",
+    "nat_add_zero_induction": "Prove by induction that adding zero on the right leaves a natural number unchanged.",
+    "list_append_nil_induction": "Prove by induction that appending the empty list leaves a list unchanged.",
+    "nat_mod_concrete": "Prove the displayed concrete modular-arithmetic identity.",
+    "predicate_exists": "Prove that a universally true predicate holds for at least one natural number.",
+    "symmetric_relation": "Prove that a symmetric relation can be used in the reversed direction.",
+    "nat_rec_counter": "Prove that a simple recursive natural-number counter returns its input.",
+    "set_image_mono": "Prove that image preserves subset containment under a function.",
+    "real_quadratic_param": "Prove the displayed parameterized quadratic identity over the real numbers.",
+}
+
+
 def expand_seed_for_problem_rng(seed: int) -> int:
     """Deterministic 64-bit stir for ``random.Random``."""
     digest = hashlib.sha256(f"{RNG_MIX_TAG}|{seed}".encode()).digest()
@@ -134,6 +214,8 @@ theorem {SOLUTION_BRIDGE_THEOREM} : {instance.type_expr} := by
         "witness_proof": instance.witness_proof,
         "topic": topic,
         "family": family,
+        "informal_statement": GENERATED_FAMILY_STATEMENTS[family],
+        "source_lane": "generated",
         "generator": "lemma.problems.generated",
         "seed": seed,
     }
@@ -642,6 +724,63 @@ def _b_group_inv_mul_hard(rng: random.Random) -> TemplateInstance:
     )
 
 
+def _b_nat_add_zero_induction_medium(rng: random.Random) -> TemplateInstance:
+    return _inst(
+        "∀ n : Nat, n + 0 = n",
+        "by\n  intro n\n  induction n with\n  | zero => rfl\n  | succ n ih => simp [ih]",
+    )
+
+
+def _b_list_append_nil_induction_medium(rng: random.Random) -> TemplateInstance:
+    return _inst(
+        "∀ xs : List Nat, xs ++ [] = xs",
+        "by\n  intro xs\n  induction xs with\n  | nil => rfl\n  | cons x xs ih => simp [ih]",
+    )
+
+
+def _b_nat_mod_concrete_medium(rng: random.Random) -> TemplateInstance:
+    modulus = rng.randint(3, 17)
+    value = rng.randint(20, 400)
+    return _inst(f"({value} : Nat) % {modulus} = {value % modulus}", "by\n  norm_num")
+
+
+def _b_predicate_exists_medium(rng: random.Random) -> TemplateInstance:
+    return _inst(
+        "∀ P : Nat → Prop, (∀ n : Nat, P n) → ∃ n : Nat, P n",
+        "by\n  intro P h\n  exact ⟨0, h 0⟩",
+    )
+
+
+def _b_symmetric_relation_medium(rng: random.Random) -> TemplateInstance:
+    return _inst(
+        "∀ R : Nat → Nat → Prop, (∀ a b : Nat, R a b → R b a) → ∀ a b : Nat, R a b → R b a",
+        "by\n  intro R h a b hab\n  exact h a b hab",
+    )
+
+
+def _b_nat_rec_counter_hard(rng: random.Random) -> TemplateInstance:
+    return _inst(
+        "∀ n : Nat, Nat.rec 0 (fun _ acc => acc + 1) n = n",
+        "by\n  intro n\n  induction n with\n  | zero => rfl\n  | succ n ih => simp [ih]",
+    )
+
+
+def _b_set_image_mono_hard(rng: random.Random) -> TemplateInstance:
+    return _inst(
+        "∀ (f : Nat → Nat) (A B : Set Nat), A ⊆ B → f '' A ⊆ f '' B",
+        "by\n  intro f A B h y hy\n  rcases hy with ⟨x, hx, rfl⟩\n  exact ⟨x, h hx, rfl⟩",
+    )
+
+
+def _b_real_quadratic_param_hard(rng: random.Random) -> TemplateInstance:
+    a = rng.randint(1, 7)
+    b = rng.randint(1, 7)
+    return _inst(
+        f"∀ x : ℝ, (x + {a}) * (x + {b}) = x ^ 2 + ({a + b} : ℝ) * x + ({a * b} : ℝ)",
+        "by\n  intro x\n  ring",
+    )
+
+
 _RAW_BUILDERS: tuple[GeneratedTemplate, ...] = (
     GeneratedTemplate("easy", "logic.propositional", "truth", _b_true_easy),
     GeneratedTemplate("easy", "algebra.basic", "nat_arithmetic", _b_nat_add_norm_easy),
@@ -725,6 +864,19 @@ _RAW_BUILDERS: tuple[GeneratedTemplate, ...] = (
     GeneratedTemplate("hard", "linear_algebra.matrix", "matrix_det_identity", _b_matrix_det_identity_three_hard),
     GeneratedTemplate("hard", "analysis.continuity", "continuous_polynomial", _b_continuous_polynomial_hard),
     GeneratedTemplate("hard", "abstract_algebra.group_laws", "group_inverse", _b_group_inv_mul_hard),
+    GeneratedTemplate("medium", "foundations.recursion", "nat_add_zero_induction", _b_nat_add_zero_induction_medium),
+    GeneratedTemplate(
+        "medium",
+        "foundations.recursion",
+        "list_append_nil_induction",
+        _b_list_append_nil_induction_medium,
+    ),
+    GeneratedTemplate("medium", "number_theory.mod_arith", "nat_mod_concrete", _b_nat_mod_concrete_medium),
+    GeneratedTemplate("medium", "logic.predicates", "predicate_exists", _b_predicate_exists_medium),
+    GeneratedTemplate("medium", "graph_theory.discrete", "symmetric_relation", _b_symmetric_relation_medium),
+    GeneratedTemplate("hard", "foundations.recursion", "nat_rec_counter", _b_nat_rec_counter_hard),
+    GeneratedTemplate("hard", "set_theory.finite_sets", "set_image_mono", _b_set_image_mono_hard),
+    GeneratedTemplate("hard", "algebra.polynomial_light", "real_quadratic_param", _b_real_quadratic_param_hard),
 )
 
 
@@ -800,6 +952,7 @@ def generated_registry_canonical_dict() -> dict[str, object]:
                 "split": template.split,
                 "topic": template.topic,
                 "family": template.family,
+                "informal_statement": GENERATED_FAMILY_STATEMENTS[template.family],
                 "fn": template.build.__name__,
                 "source_sha256": _template_source_sha256(template),
             }

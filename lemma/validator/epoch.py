@@ -26,6 +26,7 @@ from lemma.lean.sandbox import VerifyResult
 from lemma.lean.verify_runner import run_lean_verify
 from lemma.problems.base import Problem, ProblemSource
 from lemma.problems.generated import generated_registry_sha256
+from lemma.problems.hybrid import problem_supply_registry_sha256
 from lemma.protocol import LemmaChallenge, synapse_miner_response_integrity_ok
 from lemma.protocol_attest import (
     attest_spot_should_full_verify,
@@ -288,6 +289,10 @@ async def run_epoch(
             "lemma_version": __version__,
             "judge_profile_sha256": judge_profile_sha256(settings),
             "generated_registry_sha256": generated_registry_sha256(),
+            "problem_supply_registry_sha256": problem_supply_registry_sha256(
+                generated_weight=settings.lemma_hybrid_generated_weight,
+                catalog_weight=settings.lemma_hybrid_catalog_weight,
+            ),
         }
         if export_path
         else None

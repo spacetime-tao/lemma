@@ -258,7 +258,7 @@ def status_cmd() -> None:
     click.echo(stylize("Next commands", fg="cyan"))
     click.echo(f"  {stylize('lemma problems', fg='green')}  " + stylize("full Challenge.lean", dim=True))
     click.echo(f"  {stylize('lemma preview', fg='green')}  " + stylize("(bills prover API)", fg="yellow", bold=True))
-    click.echo(f"  {stylize('lemma meta', fg='green')}  " + stylize("validator profile + template hashes", dim=True))
+    click.echo(f"  {stylize('lemma meta', fg='green')}  " + stylize("validator profile + supply hashes", dim=True))
 
 
 @main.group("problems", invoke_without_command=True)
@@ -480,21 +480,32 @@ def configure_subnet_pins_cmd(env_path: Path | None, yes: bool) -> None:
     help="Compact key=value lines (best for scripts and copy-paste diffs).",
 )
 def meta_cmd(raw: bool) -> None:
-    """Canonical fingerprints: generated templates + validator scoring profile."""
+    """Canonical fingerprints: problem supply + validator scoring profile."""
     import json
 
     from lemma.judge.profile import judge_profile_dict, judge_profile_sha256
     from lemma.problems.generated import generated_registry_canonical_dict, generated_registry_sha256
+    from lemma.problems.hybrid import problem_supply_registry_canonical_dict, problem_supply_registry_sha256
 
     s = LemmaSettings()
     reg_sha = generated_registry_sha256()
+    supply_sha = problem_supply_registry_sha256(
+        generated_weight=s.lemma_hybrid_generated_weight,
+        catalog_weight=s.lemma_hybrid_catalog_weight,
+    )
     prof = judge_profile_dict(s)
     prof_sha = judge_profile_sha256(s)
 
     if raw:
         reg = generated_registry_canonical_dict()
+        supply = problem_supply_registry_canonical_dict(
+            generated_weight=s.lemma_hybrid_generated_weight,
+            catalog_weight=s.lemma_hybrid_catalog_weight,
+        )
         click.echo(f"lemma_version={__version__}")
         click.echo(f"problem_source={s.problem_source}")
+        click.echo(f"problem_supply_registry_sha256={supply_sha}")
+        click.echo("problem_supply_registry_json=" + json.dumps(supply, sort_keys=True))
         click.echo(f"generated_registry_sha256={reg_sha}")
         click.echo("generated_registry_json=" + json.dumps(reg, sort_keys=True))
         click.echo(f"validator_profile_sha256={prof_sha}")
@@ -506,6 +517,8 @@ def meta_cmd(raw: bool) -> None:
     click.echo(stylize("\nRelease\n", fg="cyan"))
     click.echo(f"  lemma_version     {__version__}")
     click.echo(f"  problem_source    {s.problem_source}")
+    click.echo(stylize("\nHybrid problem supply registry\n", fg="cyan"))
+    click.echo(stylize(f"  SHA256  {supply_sha}", dim=False))
     click.echo(stylize("\nGenerated problem registry\n", fg="cyan"))
     click.echo(stylize(f"  SHA256  {reg_sha}", dim=False))
     click.echo(stylize("\nValidator scoring profile (your environment)\n", fg="cyan"))
