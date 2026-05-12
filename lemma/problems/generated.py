@@ -258,7 +258,8 @@ def _b_sum_range_medium(rng: random.Random) -> TemplateInstance:
     return _inst(
         f"(∑ i ∈ Finset.range {n}, (i : Nat)) + ({n} : Nat) = "
         f"(∑ i ∈ Finset.range ({n} + 1), (i : Nat))",
-        "by\n  simp",
+        "by\n  exact (Finset.sum_range_succ (fun i : Nat => (i : Nat)) "
+        f"{n}).symm",
     )
 
 
@@ -290,8 +291,9 @@ def _b_det_unit_medium(rng: random.Random) -> TemplateInstance:
 def _b_metric_triangle_medium(rng: random.Random) -> TemplateInstance:
     return _inst(
         "∀ x y z : ℝ, |x - z| ≤ |x - y| + |y - z|",
-        "by\n  intro x y z\n  simpa [sub_eq_add_neg, add_assoc, add_comm, add_left_comm] "
-        "using abs_add (x - y) (y - z)",
+        "by\n  intro x y z\n  have h : x - z = (x - y) + (y - z) := by\n    ring\n  "
+        "calc\n    |x - z| = |(x - y) + (y - z)| := by rw [h]\n    "
+        "_ ≤ |x - y| + |y - z| := abs_add_le (x - y) (y - z)",
     )
 
 
@@ -328,7 +330,7 @@ def _b_sq_nonneg_real_medium(rng: random.Random) -> TemplateInstance:
 def _b_abs_triangle_int_medium(rng: random.Random) -> TemplateInstance:
     return _inst(
         "∀ x y : ℤ, |x + y| ≤ |x| + |y|",
-        "by\n  intro x y\n  exact abs_add x y",
+        "by\n  intro x y\n  exact abs_add_le x y",
     )
 
 
@@ -347,7 +349,8 @@ def _b_sum_range_succ_nat_medium(rng: random.Random) -> TemplateInstance:
     return _inst(
         f"(∑ i ∈ Finset.range ({n} + 1), (i : Nat)) = "
         f"(∑ i ∈ Finset.range {n}, (i : Nat)) + ({n} : Nat)",
-        "by\n  simp",
+        "by\n  exact Finset.sum_range_succ (fun i : Nat => (i : Nat)) "
+        f"{n}",
     )
 
 
