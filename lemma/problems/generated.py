@@ -235,7 +235,7 @@ def _b_implication_true_medium(rng: random.Random) -> TemplateInstance:
 def _b_odd_square_odd_medium(rng: random.Random) -> TemplateInstance:
     return _inst(
         "∀ n : Nat, Odd (2 * n + 1)",
-        "by\n  intro n\n  use n\n  ring",
+        "by\n  intro n\n  use n",
     )
 
 
