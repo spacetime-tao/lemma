@@ -1,0 +1,9 @@
+[Unit]
+Description=Publish Lemma public dashboard after validator summary export changes
+
+[Path]
+PathChanged=/var/lib/lemma/public-summary.jsonl
+Unit=lemma-public-dashboard.service
+
+[Install]
+WantedBy=multi-user.target

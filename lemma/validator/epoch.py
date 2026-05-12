@@ -40,7 +40,7 @@ from lemma.scoring.dedup import partition_same_coldkey_weights
 from lemma.scoring.pareto import ScoredEntry, pareto_weights
 from lemma.scoring.reputation import apply_ema_to_entries, load_reputation, save_reputation
 from lemma.scoring.rewards import entry_from_verified_proof
-from lemma.validator.training_export import append_epoch_jsonl, training_record
+from lemma.validator.training_export import append_epoch_jsonl, round_summary_record, training_record
 from lemma.validator.weights_policy import build_full_weights
 
 if TYPE_CHECKING:
@@ -623,15 +623,24 @@ async def run_epoch(
         k_problems,
     )
 
-    if export_path and training_rows:
+    if export_path and last_problem:
+        export_rows = [
+            *training_rows,
+            round_summary_record(
+                block=cur_block,
+                theorem_id=last_problem.id,
+                passed_uids={e.uid for e in scored},
+                export_context=export_context,
+            ),
+        ]
         append_epoch_jsonl(
             export_path,
-            training_rows,
+            export_rows,
             weights_by_uid,
             include_pareto_weights=(export_profile == "full"),
         )
         logger.debug(
-            "training_export appended {} rows to {}",
+            "training_export appended {} proof rows and 1 round summary to {}",
             len(training_rows),
             export_path,
         )

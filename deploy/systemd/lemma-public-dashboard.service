@@ -1,0 +1,14 @@
+[Unit]
+Description=Publish Lemma public dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/lemma
+Environment=PATH=/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=PYTHONUNBUFFERED=1
+Environment=NETUID=467
+Environment=SUBTENSOR_NETWORK=test
+Environment=SUBTENSOR_CHAIN_ENDPOINT=wss://test.finney.opentensor.ai:443
+ExecStart=/bin/bash -lc '/root/.local/bin/uv run python -m tools.public_dashboard --summary-jsonl /var/lib/lemma/public-summary.jsonl --json-out /srv/lemmasub.net/data/public-dashboard.json --html-out /private/tmp/lemma-public-dashboard.html && cd /srv/lemmasub.net && if ! git diff --quiet -- data/public-dashboard.json; then git add data/public-dashboard.json && git commit -m "Refresh public dashboard data" && git push origin main; fi'

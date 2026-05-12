@@ -33,7 +33,15 @@ instead of multiplying it.
 
 ## Training export
 
-`LEMMA_TRAINING_EXPORT_JSONL` appends one JSON object per scored miner per epoch. Optional **`LEMMA_TRAINING_EXPORT_PROFILE`** controls whether proof text, proof metrics, and the final `pareto_weight` field are included — see [training_export.md](training_export.md). For proof-metrics calibration, use `LEMMA_TRAINING_EXPORT_PROFILE=full` with `LEMMA_LEAN_PROOF_METRICS=1`, follow the [operator checklist](training_export.md#collect-proof-metrics-calibration-data), and keep exports private. Lemma does not upload; use cron/systemd and [`scripts/training_export_upload_example.sh`](../scripts/training_export_upload_example.sh) for storage.
+`LEMMA_TRAINING_EXPORT_JSONL` appends scored miner rows and one round summary
+marker per epoch. Optional **`LEMMA_TRAINING_EXPORT_PROFILE`** controls whether
+proof text, proof metrics, and the final `pareto_weight` field are included —
+see [training_export.md](training_export.md). For proof-metrics calibration, use
+`LEMMA_TRAINING_EXPORT_PROFILE=full` with `LEMMA_LEAN_PROOF_METRICS=1`, follow
+the [operator checklist](training_export.md#collect-proof-metrics-calibration-data),
+and keep exports private. Lemma does not upload private exports; use cron/systemd
+and [`scripts/training_export_upload_example.sh`](../scripts/training_export_upload_example.sh)
+for private storage.
 
 ## Observability
 
@@ -44,6 +52,18 @@ published. For a public page, use [`tools/public_dashboard.py`](../tools/public_
 to render only the deterministic theorem triplet and public miner fields. Do
 not serve raw validator logs, private exports, Droplet details, proof scripts,
 wallet files, or Lean worker endpoints.
+
+For the public website, use a dedicated summary export:
+
+```bash
+LEMMA_TRAINING_EXPORT_JSONL=/var/lib/lemma/public-summary.jsonl
+LEMMA_TRAINING_EXPORT_PROFILE=summary
+```
+
+Install the systemd path/service templates in [`deploy/systemd`](../deploy/systemd)
+on the validator host to publish `lemmasub.net` after each summary export change.
+That keeps the public dashboard aligned to validator rounds without putting Git
+publishing inside the scoring path.
 
 ## Ops
 

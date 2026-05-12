@@ -129,6 +129,18 @@ def test_latest_round_proofs_can_ignore_stale_summary_rows(tmp_path: Path) -> No
     assert latest_round_proofs(path, min_block=min_block).passed_uids is None
 
 
+def test_latest_round_proofs_uses_round_summary_for_zero_pass_round(tmp_path: Path) -> None:
+    path = tmp_path / "summary.jsonl"
+    rows = [
+        {"block": 1000, "theorem_id": "old", "uid": 2},
+        {"block": 1100, "theorem_id": "latest", "record_type": "round_summary", "passed_uids": []},
+    ]
+    path.write_text("\n".join(json.dumps(r) for r in rows), encoding="utf-8")
+
+    assert latest_round_proofs(path).count == 0
+    assert latest_round_proofs(path).passed_uids == frozenset()
+
+
 def test_public_miner_rows_are_sorted_by_score() -> None:
     metagraph = SimpleNamespace(
         n=2,

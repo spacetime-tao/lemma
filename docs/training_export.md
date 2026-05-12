@@ -1,13 +1,17 @@
 # Training export (validator JSONL)
 
-Validators optionally append one JSON object per scored miner response each epoch when **`LEMMA_TRAINING_EXPORT_JSONL`** is set. Lemma **does not upload** files; operators rotate or ship logs themselves ([`scripts/training_export_upload_example.sh`](../scripts/training_export_upload_example.sh), [production.md](production.md)).
+Validators optionally append one JSON object per scored miner response plus one
+round summary marker each epoch when **`LEMMA_TRAINING_EXPORT_JSONL`** is set.
+Lemma **does not upload** files; operators rotate or ship logs themselves
+([`scripts/training_export_upload_example.sh`](../scripts/training_export_upload_example.sh),
+[production.md](production.md)).
 
 ## Profiles (`LEMMA_TRAINING_EXPORT_PROFILE`)
 
 | Profile | Schema | Contents | Use when |
 | --- | --- | --- | --- |
 | **`full`** (default) | `schema_version` **1** | `theorem_statement`, `proof_script`, public `coldkey` when available from the metagraph, optional labels when enabled, optional `proof_metrics` when `LEMMA_LEAN_PROOF_METRICS=1`, non-secret `export_context` hashes, plus final **`pareto_weight`** after weights are computed | Internal research, calibration, full offline replay |
-| **`summary`** | `schema_version` **2** | `block`, `theorem_id`, `uid`, `model_card`, non-secret `export_context` hashes; **no** proof text, **no** labels, **no** `proof_metrics`, **no** `pareto_weight` | Lightweight operational provenance without solution leakage |
+| **`summary`** | `schema_version` **2** | Scored rows with `block`, `theorem_id`, `uid`, `model_card`, non-secret `export_context` hashes; **no** proof text, **no** labels, **no** `proof_metrics`, **no** `pareto_weight` | Lightweight operational provenance without solution leakage |
 
 Set in `.env`:
 
@@ -178,6 +182,14 @@ privacy, post-process or aggregate before publication. The old
 - **`export_profile`**: `"summary"`.
 - **`export_context`**: same non-secret provenance hashes as `full`.
 - No **`proof_script`**, labels, **`proof_metrics`**, or **`pareto_weight`**.
+
+### Round summary marker (`schema_version` 2)
+
+- **`record_type`**: `"round_summary"`.
+- Written once per exported epoch in every profile, including rounds where no UID
+  passed.
+- Includes **`block`**, **`theorem_id`**, and **`passed_uids`**.
+- Contains no proof text or private validator data.
 
 ## References
 

@@ -5,7 +5,7 @@ from pathlib import Path
 from lemma.judge.base import RubricScore
 from lemma.lean.proof_metrics import LeanProofMetrics
 from lemma.protocol import LemmaChallenge
-from lemma.validator.training_export import append_epoch_jsonl, training_record
+from lemma.validator.training_export import append_epoch_jsonl, round_summary_record, training_record
 
 
 def test_training_record_roundtrip_fields(tmp_path: Path) -> None:
@@ -102,6 +102,29 @@ def test_training_record_summary_no_scores(tmp_path: Path) -> None:
     line = out.read_text(encoding="utf-8").strip()
     assert "pareto_weight" not in line
     assert "proof_metrics" not in line
+
+
+def test_round_summary_record_exports_zero_pass_round(tmp_path: Path) -> None:
+    row = round_summary_record(
+        block=10,
+        theorem_id="gen/10",
+        passed_uids=set(),
+        export_context={"lemma_version": "0.1.0"},
+    )
+
+    assert row == {
+        "schema_version": 2,
+        "record_type": "round_summary",
+        "block": 10,
+        "theorem_id": "gen/10",
+        "passed_uids": [],
+        "export_context": {"lemma_version": "0.1.0"},
+    }
+
+    out = tmp_path / "summary.jsonl"
+    append_epoch_jsonl(out, [row], {3: 0.5})
+    line = out.read_text(encoding="utf-8").strip()
+    assert "pareto_weight" not in line
 
 
 def test_training_record_legacy_reasoning_only_alias_is_summary() -> None:

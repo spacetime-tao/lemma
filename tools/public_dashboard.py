@@ -409,15 +409,24 @@ def latest_round_proofs(path: Path | None, *, min_block: int | None = None) -> L
             obj = json.loads(line)
         except json.JSONDecodeError:
             continue
-        uid = _as_int(obj.get("uid"))
         block = _as_int(obj.get("block"))
         theorem_id = str(obj.get("theorem_id") or "")
-        if uid is None or block is None or not theorem_id:
+        if block is None or not theorem_id:
             continue
         if min_block is not None and block < min_block:
             continue
         key = (block, theorem_id)
-        by_round[key].add(uid)
+        if obj.get("record_type") == "round_summary":
+            by_round[key].update(
+                uid
+                for uid in (_as_int(raw) for raw in obj.get("passed_uids", []))
+                if uid is not None
+            )
+        else:
+            uid = _as_int(obj.get("uid"))
+            if uid is None:
+                continue
+            by_round[key].add(uid)
         if latest_key is None or key > latest_key:
             latest_key = key
     if latest_key is None:

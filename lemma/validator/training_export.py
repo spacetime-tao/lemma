@@ -14,6 +14,26 @@ from lemma.protocol import LemmaChallenge
 TrainingExportProfile = Literal["full", "summary", "reasoning_only"]
 
 
+def round_summary_record(
+    *,
+    block: int,
+    theorem_id: str,
+    passed_uids: list[int] | set[int] | frozenset[int],
+    export_context: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """One round marker, including zero-pass rounds."""
+    row: dict[str, Any] = {
+        "schema_version": 2,
+        "record_type": "round_summary",
+        "block": block,
+        "theorem_id": theorem_id,
+        "passed_uids": sorted(int(uid) for uid in passed_uids),
+    }
+    if export_context:
+        row["export_context"] = dict(export_context)
+    return row
+
+
 def training_record(
     *,
     block: int,
@@ -74,9 +94,9 @@ def append_epoch_jsonl(
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as f:
         for row in rows:
-            uid = int(row["uid"])
             out = dict(row)
-            if include_pareto_weights:
-                out["pareto_weight"] = float(weights_by_uid.get(uid, 0.0))
+            uid = out.get("uid")
+            if include_pareto_weights and uid is not None:
+                out["pareto_weight"] = float(weights_by_uid.get(int(uid), 0.0))
             f.write(json.dumps(out, ensure_ascii=False) + "\n")
         f.flush()
