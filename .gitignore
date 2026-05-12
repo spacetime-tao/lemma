@@ -17,6 +17,9 @@ wheels/
 Thumbs.db
 uv.lock
 validator-data/
+ops-dashboard.html
+public-dashboard.html
+public-dashboard.json
 wallets/
 .bittensor/
 .idea/

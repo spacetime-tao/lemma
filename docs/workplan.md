@@ -27,17 +27,19 @@ not let parallel checklists drift.
 - Identical verified proofs are no longer dropped from live rewards; same-coldkey
   partitioning limits one-coldkey multi-hotkey multiplication after weights are
   computed.
-- The generated problem registry has 40 builders and a metadata gate covering
-  registry reachability/coherence.
+- The generated problem registry has 72 builders with explicit 10% / 35% /
+  55% easy / medium / hard split weights, template-owned topics, and a
+  metadata/witness gate covering registry reachability/coherence.
 - Normal operator workflows are consolidated under `lemma`: setup, doctor,
   status, problem views, preview, miner, and validator entrypoints.
-- Local baseline checks after the remote worker safe-default fix:
+- Local baseline checks after generated supply hardening:
   - `.venv/bin/ruff check lemma tests tools`;
   - `.venv/bin/mypy lemma`
     (`Success: no issues found in 69 source files`);
   - `.venv/bin/pytest tests -q`
-    (`261 passed, 2 skipped, 12 warnings`);
-  - generated-template metadata gate for 40 builders;
+    (`273 passed, 2 skipped, 12 warnings`);
+  - generated-template metadata/witness gate for 72 builders;
+- Prior security hygiene checks from the remote worker safe-default pass:
   - `.venv/bin/bandit -q -r lemma -ll`;
   - `.venv/bin/pip-audit --ignore-vuln PYSEC-2025-49 --ignore-vuln PYSEC-2022-42969`
     (`No known vulnerabilities found, 3 ignored`).
@@ -57,6 +59,17 @@ not let parallel checklists drift.
   lean-worker` binds now fail unless the explicit dev-only override is set.
 - Binary proof eligibility docs: high-traffic docs now separate the binary Lean
   eligibility gate from downstream allocation policy.
+- Generated problem supply hardening: registry expanded from 40 builders
+  (10 easy, 22 medium, 8 hard) to 72 builders (10 easy, 30 medium, 32 hard);
+  default split selection now targets 10% / 35% / 55% easy / medium / hard.
+  Old registry SHA:
+  `e7446626f8d05748fc72b7d8ad41f271d7e688e84d398be0b1d5f3f8974a4dbe`.
+  New registry SHA:
+  `4824b9dd028b5cd6af01ff9e32386e716b1c12c1ef96bd992efd69e7ba38e2d7`.
+  Local cheap evidence passed:
+  `.venv/bin/python scripts/ci_verify_generated_templates.py`
+  (`OK: generated template metadata/witness gate covered 72 builders`).
+  Docker witness-proof evidence still requires a Docker-capable CI/host.
 
 ## Current Blockers And Gaps
 

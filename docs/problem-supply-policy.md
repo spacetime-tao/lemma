@@ -13,7 +13,7 @@ That means:
 - Do not treat SHA256 mixing as anti-precompute security.
 - Do use `generated_registry_sha256` to keep validators on the same public generator.
 
-The current generated lane is a steady traffic lane: it gives validators deterministic, Lean-checkable challenges with known template families. It is not a complete difficulty market for all of mathematics.
+The current generated lane is a steady traffic lane: it gives validators deterministic, Lean-checkable challenges with known template families. The live registry has 72 builders and explicit 10% / 35% / 55% easy / medium / hard split weights. It is not a complete difficulty market for all of mathematics.
 
 ## Accepted risk
 
@@ -31,14 +31,14 @@ Mitigation comes from breadth and governance:
 New generated builders should enter the live registry only after they pass the same checks operators expect from production traffic:
 
 1. The statement is Lean-valid after replacing the miner proof with `sorry`.
-2. At least one known proof passes the sandbox on the pinned Lean/Mathlib image.
+2. At least one public witness proof passes the sandbox on the pinned Lean/Mathlib image and axiom check.
 3. The expected split is honest (`easy`, `medium`, `hard`) and not based only on proof text length.
 4. Cold-cache and warm-cache verification costs fit the published timeout policy.
 5. The builder has a stable source hash in `generated_registry_sha256`.
 6. `docs/generated-problems.md` and operator release notes describe the changed mix.
 7. Operators publish the new `generated_registry_sha256` and cutover release together.
 
-The local/CI gate is [`scripts/ci_verify_generated_templates.py`](../scripts/ci_verify_generated_templates.py). It always checks that every builder is reachable and has coherent registry metadata. With `RUN_DOCKER_LEAN_TEMPLATES=1`, it also materializes all generated templates into a Lean workspace and runs `lake build`.
+The local/CI gate is [`scripts/ci_verify_generated_templates.py`](../scripts/ci_verify_generated_templates.py). It always checks that every builder is reachable and has coherent registry metadata plus a public witness proof. With `RUN_DOCKER_LEAN_TEMPLATES=1`, it also materializes all generated templates into Lean workspaces and runs both the `sorry` stub build and the complete witness-proof build with axiom checks.
 
 Do not add low-value templates merely to increase the builder count. A small set of honest, varied templates is better than a large set of brittle near-duplicates.
 
@@ -85,10 +85,12 @@ Builder mix:
 - easy:
 - medium:
 - hard:
+- split weights:
 
 Evidence:
 - Cheap template gate:
 - Docker Lean template gate:
+- Docker witness-proof gate:
 - Verify-cost notes:
 - Duplicate/near-duplicate review:
 

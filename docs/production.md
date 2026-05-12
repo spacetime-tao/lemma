@@ -37,7 +37,13 @@ instead of multiplying it.
 
 ## Observability
 
-No bundled dashboard. Typical: logs or JSONL to storage + BI ([technical-reference.md](technical-reference.md)).
+The lightweight local dashboard lives in [`tools/ops_dashboard.py`](../tools/ops_dashboard.py)
+and writes a static HTML snapshot from SSH-readable Droplet state. It is
+read-only operator tooling, not a scoring component, and should not be
+published. For a public page, use [`tools/public_dashboard.py`](../tools/public_dashboard.py)
+to render only the deterministic theorem triplet and public miner fields. Do
+not serve raw validator logs, private exports, Droplet details, proof scripts,
+wallet files, or Lean worker endpoints.
 
 ## Ops
 

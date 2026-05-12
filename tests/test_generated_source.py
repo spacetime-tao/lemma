@@ -1,6 +1,12 @@
 """Deterministic generated problem source."""
 
-from lemma.problems.generated import GeneratedProblemSource, expand_seed_for_problem_rng
+import pytest
+from lemma.problems.generated import (
+    DEFAULT_SPLIT_WEIGHTS,
+    GeneratedProblemSource,
+    _problem_for_builder_index,
+    expand_seed_for_problem_rng,
+)
 
 
 def test_expand_seed_deterministic() -> None:
@@ -27,6 +33,7 @@ def test_sample_stable_across_calls() -> None:
     assert a.challenge_source() == b.challenge_source()
     assert isinstance(a.extra.get("builder_index"), int)
     assert a.extra.get("template_fn", "").startswith("_b_")
+    assert isinstance(a.extra.get("witness_proof"), str)
 
 
 def test_get_matches_sample() -> None:
@@ -47,6 +54,26 @@ def test_split_filters_only_easy_or_medium_or_hard() -> None:
     for spl in ("easy", "medium", "hard"):
         p = src.sample(99991, split=spl)
         assert p.split == spl
+
+
+def test_invalid_split_rejected() -> None:
+    with pytest.raises(ValueError, match="unknown generated problem split"):
+        GeneratedProblemSource().sample(1, split="demo")
+
+
+def test_default_split_weights_are_explicit() -> None:
+    assert DEFAULT_SPLIT_WEIGHTS == {"easy": 10, "medium": 35, "hard": 55}
+    src = GeneratedProblemSource()
+    picks = [src.sample(seed).split for seed in range(100)]
+    assert picks == [src.sample(seed).split for seed in range(100)]
+    assert {"easy", "medium", "hard"}.issubset(set(picks))
+
+
+def test_template_topics_are_not_random_labels() -> None:
+    a = _problem_for_builder_index(123, 48)
+    b = _problem_for_builder_index(456, 48)
+    assert a.extra["topic"] == b.extra["topic"] == "algebra.ring"
+    assert a.extra["family"] == b.extra["family"] == "real_cubic_identity"
 
 
 def test_legacy_plain_rng_opt_in() -> None:
