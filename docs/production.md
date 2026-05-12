@@ -60,10 +60,11 @@ LEMMA_TRAINING_EXPORT_JSONL=/var/lib/lemma/public-summary.jsonl
 LEMMA_TRAINING_EXPORT_PROFILE=summary
 ```
 
-Install the systemd path/service templates in [`deploy/systemd`](../deploy/systemd)
-on the validator host to publish `lemmasub.net` after each summary export change.
-That keeps the public dashboard aligned to validator rounds without putting Git
-publishing inside the scoring path.
+Install [`deploy/scripts/lemma-refresh-public-dashboard`](../deploy/scripts/lemma-refresh-public-dashboard)
+and the systemd path/timer/service templates in [`deploy/systemd`](../deploy/systemd)
+on the validator host to publish `lemmasub.net` after each summary export change,
+with a 3-minute timer fallback. That keeps the public dashboard aligned to
+validator rounds without putting Git publishing inside the scoring path.
 
 ## Ops
 

@@ -111,13 +111,19 @@ LEMMA_TRAINING_EXPORT_JSONL=/var/lib/lemma/public-summary.jsonl
 LEMMA_TRAINING_EXPORT_PROFILE=summary
 ```
 
-Then install `deploy/systemd/lemma-public-dashboard.path` and
-`deploy/systemd/lemma-public-dashboard.service` on the validator host. The path
-unit watches the summary JSONL, so the public dashboard publish job runs after
-each validator round writes its summary marker.
+Then install `deploy/scripts/lemma-refresh-public-dashboard` and the
+`deploy/systemd/lemma-public-dashboard.*` units on the validator host. The path
+unit watches the summary JSONL, and the timer is a 3-minute fallback, so the
+public dashboard publish job keeps running even if one trigger is missed.
+
+If the validator checkout is intentionally pinned to an older generated-registry
+hash, run the script with `LEMMA_SRC` pointing at that pinned validator checkout
+and `EXPORTER_SRC` pointing at a newer checkout that contains
+`tools/public_dashboard.py`. The exporter imports Lemma from `LEMMA_SRC` first,
+so theorem generation still matches the live validator pin.
 
 ## Next Useful Additions
 
-1. Install the public dashboard systemd path/service on the validator host.
+1. Install the public dashboard script and systemd path/timer/service on the validator host.
 2. Upload only the generated public files to static hosting.
 3. Add a tiny historical cache only if one-snapshot-at-a-time stops being useful.
