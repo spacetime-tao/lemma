@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 SECONDS_PER_HOUR = 3600.0
-FORALL_RE = re.compile(r"^forall\s+(.+?)\s+:\s+([A-Za-z0-9_.]+),\s+(.+)$")
+FORALL_RE = re.compile(r"^(?:forall|∀)\s+(.+?)\s+:\s+(.+?),\s+(.+)$")
 TOPIC_LABELS = {
     "nat": "natural-number arithmetic",
     "prop": "propositional logic",
@@ -34,6 +34,7 @@ class PublicTheorem:
     split: str
     topic: str
     type_expr: str
+    plain_english: str
     explanation: str
 
     def as_dict(self) -> dict[str, Any]:
@@ -45,6 +46,7 @@ class PublicTheorem:
             "split": self.split,
             "topic": self.topic,
             "type_expr": self.type_expr,
+            "plain_english": self.plain_english,
             "explanation": self.explanation,
         }
 
@@ -56,6 +58,7 @@ class PublicMiner:
     hotkey: str
     score: float | None
     correct_theorems_24h: int
+    passed_prior_round: bool | None = None
     uid_url: str = ""
     coldkey_url: str = ""
     hotkey_url: str = ""
@@ -67,10 +70,17 @@ class PublicMiner:
             "hotkey": self.hotkey,
             "score": self.score,
             "correct_theorems_24h": self.correct_theorems_24h,
+            "passed_prior_round": self.passed_prior_round,
             "uid_url": self.uid_url,
             "coldkey_url": self.coldkey_url,
             "hotkey_url": self.hotkey_url,
         }
+
+
+@dataclass(frozen=True)
+class LatestRoundProofs:
+    count: int | None
+    passed_uids: frozenset[int] | None
 
 
 def main() -> None:
@@ -109,10 +119,11 @@ def main() -> None:
         seconds_per_block=float(settings.block_time_sec_estimate),
         hours=float(args.lookback_hours),
     )
-    prior_round_count = latest_round_proof_count(export_path)
+    latest_round = latest_round_proofs(export_path)
     miners = public_miner_rows(
         subtensor.metagraph(settings.netuid),
         correct_counts,
+        passed_prior_round_uids=latest_round.passed_uids,
         network=settings.subtensor_network,
         netuid=settings.netuid,
         uid_url_template=args.uid_url_template,
@@ -133,7 +144,7 @@ def main() -> None:
         "problem_seed_tag": seed_tag,
         "score_source": "metagraph_incentive",
         "correct_count_window_hours": float(args.lookback_hours),
-        "proofs_passed_prior_round": prior_round_count,
+        "proofs_passed_prior_round": latest_round.count,
         "theorems": {t.label: t.as_dict() for t in theorems},
         "miners": [m.as_dict() for m in miners],
     }
@@ -186,6 +197,7 @@ def _public_theorem(label: str, seed: int, problem: Any) -> PublicTheorem:
     split = str(getattr(problem, "split", ""))
     topic = str(extra.get("topic") or "")
     type_expr = str(getattr(problem, "type_expr", ""))
+    plain_english = explain_theorem(type_expr=type_expr)
     return PublicTheorem(
         label=label,
         seed=int(seed),
@@ -194,27 +206,26 @@ def _public_theorem(label: str, seed: int, problem: Any) -> PublicTheorem:
         split=split,
         topic=topic,
         type_expr=type_expr,
-        explanation=explain_theorem(type_expr=type_expr, split=split, topic=topic),
+        plain_english=plain_english,
+        explanation=plain_english,
     )
 
 
-def explain_theorem(*, type_expr: str, split: str, topic: str) -> str:
-    topic_text = human_topic(topic)
-    difficulty = (split or "generated").strip().lower()
-    article = "an" if difficulty[:1] in {"a", "e", "i", "o", "u"} else "a"
+def explain_theorem(*, type_expr: str, split: str = "", topic: str = "") -> str:
+    """Compatibility name for the public plain-English theorem text."""
     plain = englishish_lean(type_expr)
-    return f"{article.capitalize()} {difficulty} {topic_text} statement: prove that {plain}."
+    return f"Prove that {plain}."
 
 
 def human_topic(topic: str) -> str:
     raw = (topic or "generated theorem").strip()
     if not raw:
         return "generated theorem"
-    parts = [p for p in raw.replace("_", " ").split(".") if p]
-    key = raw.split(".")[-1]
+    parts = [p for p in raw.split(".") if p]
+    key = re.sub(r"_(?:light|lite)$", "", parts[-1] if parts else raw, flags=re.IGNORECASE)
     if key in TOPIC_LABELS:
         return TOPIC_LABELS[key]
-    return parts[-1] if parts else raw
+    return key.replace("_", " ") if key else raw
 
 
 def englishish_lean(type_expr: str) -> str:
@@ -256,8 +267,13 @@ def englishish_lean(type_expr: str) -> str:
 def _lean_type_noun(type_name: str) -> str:
     return {
         "Nat": "natural number",
+        "Set Nat": "set of natural numbers",
+        "Finset Nat": "finite set of natural numbers",
+        "List Nat": "list of natural numbers",
         "Int": "integer",
+        "ℤ": "integer",
         "Real": "real number",
+        "ℝ": "real number",
         "Prop": "proposition",
         "Type": "type",
     }.get(type_name, type_name)
@@ -289,9 +305,9 @@ def correct_theorem_counts(
     return {uid: len(theorem_ids) for uid, theorem_ids in seen.items()}
 
 
-def latest_round_proof_count(path: Path | None) -> int | None:
+def latest_round_proofs(path: Path | None) -> LatestRoundProofs:
     if path is None or not path.exists():
-        return None
+        return LatestRoundProofs(None, None)
     latest_key: tuple[int, str] | None = None
     by_round: dict[tuple[int, str], set[int]] = defaultdict(set)
     for line in path.read_text(encoding="utf-8").splitlines():
@@ -308,13 +324,21 @@ def latest_round_proof_count(path: Path | None) -> int | None:
         by_round[key].add(uid)
         if latest_key is None or key > latest_key:
             latest_key = key
-    return None if latest_key is None else len(by_round[latest_key])
+    if latest_key is None:
+        return LatestRoundProofs(None, None)
+    passed_uids = frozenset(by_round[latest_key])
+    return LatestRoundProofs(len(passed_uids), passed_uids)
+
+
+def latest_round_proof_count(path: Path | None) -> int | None:
+    return latest_round_proofs(path).count
 
 
 def public_miner_rows(
     metagraph: Any,
     correct_counts: dict[int, int],
     *,
+    passed_prior_round_uids: frozenset[int] | set[int] | None = None,
     network: str = "",
     netuid: int = 0,
     uid_url_template: str = "",
@@ -333,6 +357,7 @@ def public_miner_rows(
                 hotkey=hotkey,
                 score=_as_float(_sequence_value(score_values, uid)),
                 correct_theorems_24h=correct_counts.get(uid, 0),
+                passed_prior_round=None if passed_prior_round_uids is None else uid in passed_prior_round_uids,
                 uid_url=_format_url(uid_url_template, uid=uid, netuid=netuid, network=network),
                 coldkey_url=_format_url(account_url_template, address=coldkey, netuid=netuid, network=network),
                 hotkey_url=_format_url(account_url_template, address=hotkey, netuid=netuid, network=network),
@@ -346,7 +371,7 @@ def render_public_html(payload: dict[str, Any]) -> str:
     miners = payload.get("miners") or []
     generated_at = _esc(str(payload.get("generated_at") or ""))
     score_source = _esc(str(payload.get("score_source") or ""))
-    rows = "\n".join(_miner_row(m) for m in miners) or '<tr><td colspan="5">No miners found.</td></tr>'
+    rows = "\n".join(_miner_row(m) for m in miners) or '<tr><td colspan="6">No miners found.</td></tr>'
     rubric = _rubric_html()
     return f"""<!doctype html>
 <html lang="en">
@@ -501,6 +526,7 @@ def render_public_html(payload: dict[str, Any]) -> str:
           <th><button type="button" data-sort="text">Coldkey</button></th>
           <th><button type="button" data-sort="text">Hotkey</button></th>
           <th><button type="button" data-sort="number">Miner Score</button></th>
+          <th><button type="button" data-sort="number">Passed Previous Round</button></th>
           <th><button type="button" data-sort="number">Correct Theorems 24h</button></th>
         </tr>
       </thead>
@@ -543,7 +569,7 @@ def _theorem_card(obj: Any, label: str) -> str:
         <h3>{_esc(str(obj.get("theorem_id") or ""))}</h3>
         <p>{_esc(str(obj.get("name") or ""))} - {_esc(str(obj.get("split") or ""))}</p>
         <div class="goal">{_esc(str(obj.get("type_expr") or ""))}</div>
-        <p class="explain">{_esc(str(obj.get("explanation") or ""))}</p>
+        <p class="explain">{_esc(str(obj.get("plain_english") or obj.get("explanation") or ""))}</p>
       </article>"""
 
 
@@ -555,6 +581,9 @@ def _miner_row(obj: Any) -> str:
     uid = int(obj.get("uid") or 0)
     score_value = "" if score is None else str(float(score))
     correct = int(obj.get("correct_theorems_24h") or 0)
+    passed = obj.get("passed_prior_round")
+    passed_value = "" if passed is None else ("1" if passed else "0")
+    passed_text = "?" if passed is None else ("&#10003;" if passed else "&times;")
     coldkey = str(obj.get("coldkey") or "")
     hotkey = str(obj.get("hotkey") or "")
     coldkey_link = _link_or_text(coldkey, str(obj.get("coldkey_url") or ""))
@@ -564,6 +593,7 @@ def _miner_row(obj: Any) -> str:
           <td class="addr" data-value="{_esc(coldkey)}">{coldkey_link}</td>
           <td class="addr" data-value="{_esc(hotkey)}">{hotkey_link}</td>
           <td data-value="{_esc(score_value)}">{_esc(score_text)}</td>
+          <td data-value="{_esc(passed_value)}">{passed_text}</td>
           <td data-value="{correct}">{correct}</td>
         </tr>"""
 

@@ -7,6 +7,7 @@ from tools.public_dashboard import (
     correct_theorem_counts,
     explain_theorem,
     latest_round_proof_count,
+    latest_round_proofs,
     public_miner_rows,
     render_public_html,
 )
@@ -33,6 +34,8 @@ def test_build_theorem_triplet_uses_quantize_step() -> None:
 
     assert [r.label for r in rows] == ["previous", "current", "next"]
     assert [r.theorem_id for r in rows] == ["gen/100", "gen/200", "gen/300"]
+    assert rows[1].plain_english == "Prove that 200 equals 200."
+    assert rows[1].explanation == rows[1].plain_english
 
 
 def test_correct_theorem_counts_deduplicates_within_window(tmp_path: Path) -> None:
@@ -69,6 +72,7 @@ def test_latest_round_proof_count_uses_latest_round_not_24h_total(tmp_path: Path
 
     assert sum(counts.values()) == 37
     assert latest_round_proof_count(path) == 6
+    assert latest_round_proofs(path).passed_uids == frozenset({2, 3, 4, 5, 6, 7})
 
 
 def test_public_miner_rows_are_sorted_by_score() -> None:
@@ -82,6 +86,7 @@ def test_public_miner_rows_are_sorted_by_score() -> None:
     rows = public_miner_rows(
         metagraph,
         {1: 3},
+        passed_prior_round_uids=frozenset({1}),
         network="finney",
         netuid=1,
         uid_url_template="https://example.invalid/subnet/{netuid}/uid/{uid}",
@@ -93,6 +98,8 @@ def test_public_miner_rows_are_sorted_by_score() -> None:
     assert rows[0].coldkey == "cold-1"
     assert rows[0].score == 0.9
     assert rows[0].correct_theorems_24h == 3
+    assert rows[0].passed_prior_round is True
+    assert rows[1].passed_prior_round is False
     assert rows[0].uid_url == "https://example.invalid/subnet/1/uid/1"
     assert rows[0].hotkey_url == "https://example.invalid/account/hot-1"
 
@@ -105,6 +112,8 @@ def test_explain_theorem_and_render_sortable_table() -> None:
     )
     assert "natural number" in explanation
     assert "times" in explanation
+    assert "easy" not in explanation
+    assert "statement" not in explanation
 
     html = render_public_html(
         {
@@ -119,6 +128,7 @@ def test_explain_theorem_and_render_sortable_table() -> None:
                     "name": "t_1",
                     "split": "easy",
                     "type_expr": "True",
+                    "plain_english": "Prove that True.",
                     "explanation": "A true statement.",
                 },
             },
@@ -128,6 +138,7 @@ def test_explain_theorem_and_render_sortable_table() -> None:
                     "coldkey": "cold",
                     "hotkey": "hot",
                     "score": 0.5,
+                    "passed_prior_round": True,
                     "correct_theorems_24h": 2,
                     "uid_url": "https://example.invalid/uid/1",
                 },
@@ -136,4 +147,6 @@ def test_explain_theorem_and_render_sortable_table() -> None:
     )
     assert "Problem Rubric" in html
     assert 'data-sort="number"' in html
+    assert "Passed Previous Round" in html
+    assert "Prove that True." in html
     assert 'href="https://example.invalid/uid/1"' in html
