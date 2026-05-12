@@ -660,12 +660,14 @@ def _theorem_card(obj: Any, label: str) -> str:
     if not isinstance(obj, dict):
         return f'<article class="panel"><p class="label">{_esc(label)}</p><h3>Unknown</h3></article>'
     current_cls = " current" if label == "current" else ""
+    statement = str(obj.get("plain_english") or obj.get("explanation") or "Generated Lean theorem.")
     return f"""<article class="panel{current_cls}">
         <p class="label">{_esc(label)}</p>
-        <h3>{_esc(str(obj.get("theorem_id") or ""))}</h3>
+        <h3>{_esc(statement)}</h3>
         <p>{_esc(str(obj.get("name") or ""))} - {_esc(str(obj.get("split") or ""))}</p>
+        <p class="label">Formal theorem to prove</p>
         <div class="goal">{_esc(str(obj.get("type_expr") or ""))}</div>
-        <p class="explain">{_esc(str(obj.get("plain_english") or obj.get("explanation") or ""))}</p>
+        <p class="explain">{_esc(str(obj.get("theorem_id") or ""))}</p>
       </article>"""
 
 

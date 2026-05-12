@@ -203,6 +203,9 @@ def test_explain_theorem_and_render_sortable_table() -> None:
     assert 'data-sort="number"' in html
     assert "Passed Previous Round" in html
     assert "Prove that True." in html
+    assert "<h3>Prove that True.</h3>" in html
+    assert html.index("<h3>Prove that True.</h3>") < html.index("Formal theorem to prove")
+    assert html.index("Formal theorem to prove") < html.index('<div class="goal">True</div>')
     assert 'href="https://example.invalid/uid/1"' in html
 
 

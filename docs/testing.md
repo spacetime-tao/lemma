@@ -33,7 +33,7 @@ Production should use a subnet-published immutable tag or digest, not the mutabl
 
 ## Generated template gate (CI `docker-lean-sandbox` job)
 
-[`scripts/ci_verify_generated_templates.py`](../scripts/ci_verify_generated_templates.py) always runs the cheap metadata/witness gate: every generated builder must be reachable, have coherent registry metadata, bridge the expected theorem name, and carry a complete public witness proof. With `RUN_DOCKER_LEAN_TEMPLATES=1`, it runs `lake build` on every generated template shape twice: once with `sorry` stubs and once with witness proofs plus axiom checks. By default it merges all theorems into **one** Lake workspace (single Mathlib build). Set `CI_TEMPLATE_MULTIPLEX=0` to fall back to per-template workspaces (slow; mainly for debugging).
+[`scripts/ci_verify_generated_templates.py`](../scripts/ci_verify_generated_templates.py) always runs the cheap metadata/witness gate: every generated builder must be reachable, have coherent registry metadata, bridge the expected theorem name, and carry a complete public witness proof. With `RUN_DOCKER_LEAN_TEMPLATES=1`, it runs `lake build` on every generated template shape twice: once with `sorry` stubs and once with witness proofs plus axiom checks. By default it merges all theorems into **one** Lake workspace (single Mathlib build). Set `CI_TEMPLATE_BISECT_ON_FAIL=1` only when debugging a failing multiplex locally or on a large runner; the bisection path runs repeated Lake builds and is intentionally off by default in CI. Set `CI_TEMPLATE_MULTIPLEX=0` to fall back to per-template workspaces (slow; mainly for debugging).
 
 ## LLM keys
 

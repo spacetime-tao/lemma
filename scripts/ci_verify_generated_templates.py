@@ -315,19 +315,23 @@ def _lake_build_only(work: Path, image: str, *, witness: bool) -> tuple[int, str
     except Exception as e:  # noqa: BLE001
         return 1, str(e)
 
+    container = None
     try:
-        out = client.containers.run(
+        container = client.containers.create(
             image,
             command=["bash", "-lc", inner],
             volumes={str(work.resolve()): {"bind": "/work", "mode": "rw"}},
             working_dir="/work",
             network_mode="bridge",
-            remove=True,
-            stdout=True,
-            stderr=True,
             user="0:0",
         )
-        text = out.decode("utf-8", errors="replace") if isinstance(out, bytes) else str(out)
+        container.start()
+        result = container.wait()
+        raw_logs = container.logs(stdout=True, stderr=True)
+        text = raw_logs.decode("utf-8", errors="replace") if isinstance(raw_logs, bytes) else str(raw_logs)
+        status_code = int(result.get("StatusCode", 1))
+        if status_code != 0:
+            return status_code, text
         if witness:
             axiom_errors = _axiom_errors(text)
             if axiom_errors:
@@ -348,6 +352,16 @@ def _lake_build_only(work: Path, image: str, *, witness: bool) -> tuple[int, str
         return int(getattr(e, "exit_status", 1)), text
     except Exception as e:
         return 1, str(e)
+    finally:
+        if container is not None:
+            try:
+                container.remove(force=True)
+            except Exception:
+                pass
+
+
+def _env_truthy(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _run_docker_multiplex(problems: list[Problem], image: str, *, witness: bool) -> int:
@@ -364,6 +378,12 @@ def _run_docker_multiplex(problems: list[Problem], image: str, *, witness: bool)
             )
             if _docker_unavailable(out):
                 print("Docker is unavailable; skipping template bisection.", file=sys.stderr)
+                return 1
+            if not _env_truthy("CI_TEMPLATE_BISECT_ON_FAIL"):
+                print(
+                    "SKIP: set CI_TEMPLATE_BISECT_ON_FAIL=1 to run disk-heavy template bisection.",
+                    file=sys.stderr,
+                )
                 return 1
             print(
                 "Bisecting multiplex subsets (disk-friendly) to isolate failing builder(s)... "

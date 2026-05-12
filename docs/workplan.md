@@ -33,20 +33,23 @@ not let parallel checklists drift.
 - Normal operator workflows are consolidated under `lemma`: setup, doctor,
   status, problem views, preview, miner, and validator entrypoints.
 - Local baseline checks after generated supply hardening:
-  - `.venv/bin/ruff check lemma tests tools`;
+  - `.venv/bin/ruff check .`;
   - `.venv/bin/mypy lemma`
     (`Success: no issues found in 69 source files`);
-  - `.venv/bin/pytest tests -q`
-    (`273 passed, 2 skipped, 12 warnings`);
-  - generated-template metadata/witness gate for 72 builders;
+  - `.venv/bin/pytest -q`
+    (`280 passed, 2 skipped, 12 warnings`);
+  - `.venv/bin/python scripts/ci_verify_generated_templates.py`
+    (`OK: generated template metadata/witness gate covered 72 builders`);
 - Prior security hygiene checks from the remote worker safe-default pass:
   - `.venv/bin/bandit -q -r lemma -ll`;
   - `.venv/bin/pip-audit --ignore-vuln PYSEC-2025-49 --ignore-vuln PYSEC-2022-42969`
     (`No known vulnerabilities found, 3 ignored`).
-- GitHub Actions CI run
-  [`25691630114`](https://github.com/spacetime-tao/lemma/actions/runs/25691630114)
-  passed on `00e1805`, including the `test` job and `docker-lean-sandbox`
-  job with Docker golden Lean verify and generated-template lake build.
+- Latest checked GitHub Actions CI run for `main` before this patch,
+  [`25732798918`](https://github.com/spacetime-tao/lemma/actions/runs/25732798918),
+  passed the `test` job on `5a9761d`; `docker-lean-sandbox` failed after the
+  generated-template witness multiplex, then the old automatic bisection
+  exhausted runner disk. The next CI run should preserve the real Lean output
+  because generated-template bisection is now opt-in.
 - Docker image publish passed on code commit `551b217`. The final `00e1805`
   commit was docs-only, so no image-publish run was needed for it.
 
