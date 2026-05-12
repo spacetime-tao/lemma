@@ -2,13 +2,17 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
+from lemma.problems.generated import _problem_for_builder_index, generated_registry_canonical_dict
 from tools.public_dashboard import (
+    PUBLIC_DASHBOARD_SCHEMA_VERSION,
     build_theorem_triplet,
     correct_theorem_counts,
     explain_theorem,
     latest_round_proof_count,
     latest_round_proofs,
+    lookback_min_block,
     public_miner_rows,
+    public_statement_for_problem,
     render_public_html,
 )
 
@@ -36,6 +40,38 @@ def test_build_theorem_triplet_uses_quantize_step() -> None:
     assert [r.theorem_id for r in rows] == ["gen/100", "gen/200", "gen/300"]
     assert rows[1].plain_english == "Prove that 200 equals 200."
     assert rows[1].explanation == rows[1].plain_english
+
+
+def test_generated_public_statement_uses_template_family_text() -> None:
+    problem = _problem_for_builder_index(7105000, 29)
+    statement = public_statement_for_problem(problem)
+
+    assert statement == "Prove that filtering a finite range cannot increase its cardinality."
+    assert "∀" not in statement
+    assert "DecidablePred" not in statement
+    assert "medium" not in statement.lower()
+    assert "statement:" not in statement.lower()
+
+
+def test_generated_public_statement_covers_rich_binder_shape() -> None:
+    problem = _problem_for_builder_index(123, 71)
+    statement = public_statement_for_problem(problem)
+
+    assert statement == "Prove the inverse-of-product identity in any group."
+    assert "∀" not in statement
+    assert "[Group" not in statement
+
+
+def test_every_generated_builder_has_non_raw_public_statement() -> None:
+    builder_count = int(generated_registry_canonical_dict()["builder_count"])
+
+    for builder_index in range(builder_count):
+        statement = public_statement_for_problem(_problem_for_builder_index(123, builder_index))
+        assert statement
+        assert statement != "Prove the displayed generated Lean theorem."
+        assert "∀" not in statement
+        assert "DecidablePred" not in statement
+        assert "statement:" not in statement.lower()
 
 
 def test_correct_theorem_counts_deduplicates_within_window(tmp_path: Path) -> None:
@@ -73,6 +109,24 @@ def test_latest_round_proof_count_uses_latest_round_not_24h_total(tmp_path: Path
     assert sum(counts.values()) == 37
     assert latest_round_proof_count(path) == 6
     assert latest_round_proofs(path).passed_uids == frozenset({2, 3, 4, 5, 6, 7})
+
+
+def test_latest_round_proofs_can_ignore_stale_summary_rows(tmp_path: Path) -> None:
+    path = tmp_path / "summary.jsonl"
+    path.write_text(
+        "\n".join(
+            json.dumps(row)
+            for row in [
+                {"block": 1000, "theorem_id": "old", "uid": 2},
+                {"block": 1000, "theorem_id": "old", "uid": 3},
+            ]
+        ),
+        encoding="utf-8",
+    )
+    min_block = lookback_min_block(current_block=2000, seconds_per_block=12.0, hours=1.0)
+
+    assert latest_round_proofs(path, min_block=min_block).count is None
+    assert latest_round_proofs(path, min_block=min_block).passed_uids is None
 
 
 def test_public_miner_rows_are_sorted_by_score() -> None:
@@ -150,3 +204,7 @@ def test_explain_theorem_and_render_sortable_table() -> None:
     assert "Passed Previous Round" in html
     assert "Prove that True." in html
     assert 'href="https://example.invalid/uid/1"' in html
+
+
+def test_public_dashboard_schema_version_tracks_current_contract() -> None:
+    assert PUBLIC_DASHBOARD_SCHEMA_VERSION == 2

@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 SECONDS_PER_HOUR = 3600.0
+PUBLIC_DASHBOARD_SCHEMA_VERSION = 2
 FORALL_RE = re.compile(r"^(?:forall|∀)\s+(.+?)\s+:\s+(.+?),\s+(.+)$")
 TOPIC_LABELS = {
     "nat": "natural-number arithmetic",
@@ -113,13 +114,18 @@ def main() -> None:
         problem_source=get_problem_source(settings),
     )
     export_path = Path(args.summary_jsonl) if args.summary_jsonl else settings.training_export_jsonl
+    min_summary_block = lookback_min_block(
+        current_block=chain_head,
+        seconds_per_block=float(settings.block_time_sec_estimate),
+        hours=float(args.lookback_hours),
+    )
     correct_counts = correct_theorem_counts(
         export_path,
         current_block=chain_head,
         seconds_per_block=float(settings.block_time_sec_estimate),
         hours=float(args.lookback_hours),
     )
-    latest_round = latest_round_proofs(export_path)
+    latest_round = latest_round_proofs(export_path, min_block=min_summary_block)
     miners = public_miner_rows(
         subtensor.metagraph(settings.netuid),
         correct_counts,
@@ -131,7 +137,7 @@ def main() -> None:
     )
     generated_at = dt.datetime.now(dt.UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
     payload = {
-        "schema_version": 1,
+        "schema_version": PUBLIC_DASHBOARD_SCHEMA_VERSION,
         "generated_at": generated_at,
         "network": settings.subtensor_network,
         "netuid": settings.netuid,
@@ -197,7 +203,7 @@ def _public_theorem(label: str, seed: int, problem: Any) -> PublicTheorem:
     split = str(getattr(problem, "split", ""))
     topic = str(extra.get("topic") or "")
     type_expr = str(getattr(problem, "type_expr", ""))
-    plain_english = explain_theorem(type_expr=type_expr)
+    plain_english = public_statement_for_problem(problem)
     return PublicTheorem(
         label=label,
         seed=int(seed),
@@ -209,6 +215,86 @@ def _public_theorem(label: str, seed: int, problem: Any) -> PublicTheorem:
         plain_english=plain_english,
         explanation=plain_english,
     )
+
+
+def public_statement_for_problem(problem: Any) -> str:
+    extra = getattr(problem, "extra", {}) if isinstance(getattr(problem, "extra", {}), dict) else {}
+    family = str(extra.get("family") or "")
+    if family:
+        return _GENERATED_FAMILY_STATEMENTS.get(family, "Prove the displayed generated Lean theorem.")
+    return explain_theorem(type_expr=str(getattr(problem, "type_expr", "")))
+
+
+_GENERATED_FAMILY_STATEMENTS = {
+    "truth": "Prove that True holds.",
+    "nat_arithmetic": "Prove that the displayed natural-number addition equals its computed value.",
+    "nat_order": "Prove that the displayed natural-number inequality holds.",
+    "booleans": "Prove the displayed Boolean identity.",
+    "list_length": "Prove the displayed list has the stated length.",
+    "list_reverse_length": "Prove that reversing the displayed list preserves its length.",
+    "real_arithmetic": "Prove that the displayed real-number addition equals its computed value.",
+    "finset_range_card": "Prove that the displayed finite range has the stated cardinality.",
+    "reflexive_order": "Prove that every natural number is at most itself.",
+    "nat_commutativity": "Prove that addition of natural numbers commutes.",
+    "nat_associativity": "Prove the displayed associativity identity for natural-number multiplication.",
+    "real_polynomial_identity": "Prove the displayed polynomial identity over the real numbers.",
+    "implication": "Prove the displayed elementary implication about propositions.",
+    "odd_numbers": "Prove that every number of the form two times n plus one is odd.",
+    "divisibility_trans": "Prove that divisibility is transitive for natural numbers.",
+    "set_subset": "Prove the displayed subset fact for sets of natural numbers.",
+    "finset_sum_range": "Prove the displayed identity for sums over finite ranges.",
+    "matrix_det_identity": "Prove that the displayed identity matrix has determinant one.",
+    "real_abs_triangle": "Prove the displayed triangle inequality for absolute value.",
+    "continuous_identity": "Prove that the identity function on real numbers is continuous.",
+    "prime_witness": "Prove that there is a prime number dividing two.",
+    "infinite_primes": "Prove that for every bound there is a prime number at least that large.",
+    "sqrt_two_irrational": "Prove that the square root of two is irrational.",
+    "finset_union_card": "Prove the displayed cardinality bound for a union of finite sets.",
+    "set_distributivity": "Prove the displayed distributive law for set intersection and union.",
+    "nat_distributivity_instance": "Prove the displayed concrete distributive identity for natural numbers.",
+    "real_square_nonneg": "Prove that the square of any real number is nonnegative.",
+    "integer_abs_triangle": "Prove the displayed triangle inequality for integer absolute value.",
+    "finset_filter_card": "Prove that filtering a finite range cannot increase its cardinality.",
+    "nat_power_identity": "Prove the displayed power identity for natural numbers.",
+    "finset_insert": "Prove that inserting one natural number into the empty finite set gives cardinality one.",
+    "logic_commutativity": "Prove that conjunction of propositions is commutative.",
+    "nat_min_order": "Prove that the minimum of two natural numbers is at most the first number.",
+    "finset_subset_card": "Prove that a finite subset has cardinality at most the larger finite set.",
+    "list_append_length": "Prove that appending two lists adds their lengths.",
+    "set_union_subset": "Prove that a set is contained in its union with another set.",
+    "set_antisymmetry": "Prove set equality from mutual subset containment.",
+    "real_affine_identity": "Prove the displayed affine identity over the real numbers.",
+    "integer_monotonicity": "Prove that adding the same integer to both sides preserves order.",
+    "nat_distributivity": "Prove distributivity of multiplication over addition for natural numbers.",
+    "set_subset_trans": "Prove that subset containment is transitive.",
+    "function_composition": "Prove associativity of function composition on natural numbers.",
+    "finset_range_membership": "Prove that a natural number belongs to the finite range ending at its successor.",
+    "demorgan": "Prove the displayed De Morgan law for propositions.",
+    "absolute_value": "Prove that the absolute value of a real number is nonnegative.",
+    "real_cubic_identity": "Prove the displayed cubic expansion over the real numbers.",
+    "integer_square_identity": "Prove the displayed difference-of-squares identity over the integers.",
+    "nat_square_identity": "Prove the displayed square expansion for natural numbers.",
+    "quadratic_inequality": "Prove the displayed quadratic inequality over the real numbers.",
+    "sum_squares_nonneg": "Prove that the displayed sum of real squares is nonnegative.",
+    "square_difference_nonneg": "Prove that the square of a real-number difference is nonnegative.",
+    "set_union_inter_distrib": "Prove the displayed distributive law for set union and intersection.",
+    "set_difference": "Prove the displayed identity for set difference over a union.",
+    "image_preimage": "Prove that a set is contained in the preimage of its image under a function.",
+    "logic_curry": "Prove the displayed currying equivalence for propositions.",
+    "contrapositive": "Prove the displayed contrapositive implication.",
+    "divisibility_sum_squares": "Prove that divisibility is preserved by the displayed sum of squares.",
+    "divisibility_linear_combo": "Prove that divisibility is preserved by the displayed symmetric linear combination.",
+    "prime_beyond_shift": "Prove that beyond every shifted bound there is a prime number.",
+    "list_reverse_append": "Prove that reversing an appended list reverses the parts in opposite order.",
+    "list_map_reverse": "Prove that mapping over a list commutes with reversing it.",
+    "list_replicate_append": "Prove the displayed length identity for appended replicated lists.",
+    "finset_range_subset": "Prove that a smaller finite range is contained in a larger finite range.",
+    "finset_card_range": "Prove the displayed cardinality identity for a finite range.",
+    "matrix_transpose": "Prove that transposing a matrix twice gives the original matrix.",
+    "matrix_add_zero": "Prove that adding zero to the displayed matrix gives the same matrix.",
+    "continuous_polynomial": "Prove that the displayed polynomial function over real numbers is continuous.",
+    "group_inverse": "Prove the inverse-of-product identity in any group.",
+}
 
 
 def explain_theorem(*, type_expr: str, split: str = "", topic: str = "") -> str:
@@ -288,8 +374,11 @@ def correct_theorem_counts(
 ) -> dict[int, int]:
     if path is None or not path.exists():
         return {}
-    lookback_blocks = int(max(1.0, hours * SECONDS_PER_HOUR / max(1.0, seconds_per_block)))
-    min_block = int(current_block) - lookback_blocks
+    min_block = lookback_min_block(
+        current_block=current_block,
+        seconds_per_block=seconds_per_block,
+        hours=hours,
+    )
     seen: dict[int, set[str]] = defaultdict(set)
     for line in path.read_text(encoding="utf-8").splitlines():
         try:
@@ -305,7 +394,12 @@ def correct_theorem_counts(
     return {uid: len(theorem_ids) for uid, theorem_ids in seen.items()}
 
 
-def latest_round_proofs(path: Path | None) -> LatestRoundProofs:
+def lookback_min_block(*, current_block: int, seconds_per_block: float, hours: float) -> int:
+    lookback_blocks = int(max(1.0, hours * SECONDS_PER_HOUR / max(1.0, seconds_per_block)))
+    return int(current_block) - lookback_blocks
+
+
+def latest_round_proofs(path: Path | None, *, min_block: int | None = None) -> LatestRoundProofs:
     if path is None or not path.exists():
         return LatestRoundProofs(None, None)
     latest_key: tuple[int, str] | None = None
@@ -319,6 +413,8 @@ def latest_round_proofs(path: Path | None) -> LatestRoundProofs:
         block = _as_int(obj.get("block"))
         theorem_id = str(obj.get("theorem_id") or "")
         if uid is None or block is None or not theorem_id:
+            continue
+        if min_block is not None and block < min_block:
             continue
         key = (block, theorem_id)
         by_round[key].add(uid)
