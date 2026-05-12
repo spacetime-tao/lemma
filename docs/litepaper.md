@@ -32,27 +32,30 @@ The examples below are simplified for readability. Live challenges follow the sa
 
 **What the subnet publishes.** A formal Lean statement, together with the pinned toolchain and Mathlib revision. Everyone works against the same target: the exact theorem statement and module layout published for that round.
 
-**What the miner returns.** A `proof_script`: Lean source code, usually in a challenge-specified file such as `Submission.lean`.
+**What the miner returns.** A `proof_script`: Lean source code, usually in a
+challenge-specified file such as `Submission.lean`.
 
-**A real proof (illustrative).** The snippet below is valid Lean 4
-(prelude-style). A **lemma** states the general fact; a **theorem** reuses that
-lemma for a specific number. On the network, names, namespaces, and imports
-come from the live challenge, not from this copy-paste.
+**A real `Submission.lean` proof (illustrative).** The snippet below is a small
+complete file. On the network, theorem names, namespaces, imports, and allowed
+tactics come from the live challenge, not from this copy-paste.
 
 ```lean
-/-- Adding zero on the right does not change a natural (helper lemma). -/
-lemma add_right_zero (n : Nat) : n + 0 = n :=
-  Nat.add_zero n
+import Mathlib
 
-/-- Therefore 7 + 0 = 7, by the same fact. -/
+namespace Submission
+
 theorem seven_add_zero : 7 + 0 = 7 :=
-  add_right_zero 7
+  by
+    norm_num
+
+end Submission
 ```
 
-**How to read it.** `Nat.add_zero` is Lean’s standard lemma that \(n + 0 = n\).
-The helper packages it under `add_right_zero`. The theorem applies the helper
-with `n := 7`. Lean checks each step; if anything failed—wrong statement,
-missing piece, or `sorry`—the file would not build.
+**How to read it.** The file imports Mathlib, uses the `Submission` namespace
+expected by Lemma's checker, states the target theorem, and uses `norm_num` to
+prove the arithmetic equality. Lean checks the file; if the statement is wrong,
+the proof is incomplete, or the file uses a banned shortcut such as `sorry`, the
+submission does not pass.
 
 ### Example B: when no proof score is earned
 
