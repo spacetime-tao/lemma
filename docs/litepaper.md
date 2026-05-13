@@ -14,7 +14,7 @@ compete under public rules, and the network rewards work that can be checked.
 
 A theorem is a precise mathematical claim. A proof is a correct argument for
 that claim. On Lemma, the proof is written as Lean code so software can check it
-line by line.
+step by step.
 
 A Lemma round works like this:
 
@@ -23,7 +23,7 @@ A Lemma round works like this:
    repair loop.
 3. Miners submit a `proof_script`.
 4. Validators run Lean under the pinned toolchain.
-5. Passing proofs can enter scoring; failing proofs cannot.
+5. Passing proofs become eligible for miner rewards; failing proofs do not.
 
 There is no reward-critical essay and no subjective grader. The artifact is proof
 code. Lean accepts it, or Lean rejects it.
@@ -49,6 +49,12 @@ If a miner submits prose that sounds convincing, Lean does not care. If the Lean
 file proves the exact theorem under the pinned rules, it passes. If it changes
 the goal, leaves work unfinished, uses a banned shortcut such as `sorry`, or
 does not type-check, it fails.
+
+In Lean, `sorry` is a temporary placeholder for an unfinished proof. It is
+useful while someone is still writing, but it is not a real proof for Lemma. A
+new axiom is an extra assumption added by the submitted file. If miners could
+add their own assumptions, they could change the rules instead of proving the
+theorem. Lemma rejects both shortcuts.
 
 That mechanical gate is what makes the subnet credible. Validators do not need
 to decide whose explanation sounded best. They run the checker.
@@ -140,8 +146,8 @@ There is no "almost correct" prose score in the live reward path.
 
 The live verification rule is intentionally narrow:
 
-- Lean passes: the proof can enter scoring.
-- Lean fails: the proof cannot receive proof score.
+- Lean passes: the proof becomes eligible for miner rewards.
+- Lean fails: the proof cannot receive miner rewards.
 
 After Lean accepts a submission, Lemma turns eligible miner entries into
 weights, the on-chain credit validators publish for miners. Reputation,

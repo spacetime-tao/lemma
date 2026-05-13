@@ -47,7 +47,7 @@ that check honest and reproducible:
 
 - the theorem statement is fixed for the challenge;
 - the proof script is the editable artifact;
-- validators reject shortcuts such as `sorry` and unapproved `axiom`s;
+- validators reject unfinished proofs and attempts to add new assumptions;
 - the Lean toolchain, Mathlib revision, and validator profile are pinned;
 - dashboard exports publish safe summary data, not raw proof scripts.
 

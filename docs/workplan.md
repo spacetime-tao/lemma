@@ -18,8 +18,8 @@ not let parallel checklists drift.
 - Current testnet Droplet head: `0ff1068` on both known hosts. The validator,
   Lean worker, dashboard timer, and six miner services are active after the
   deploy.
-- Live reward direction: proof passes Lean and can enter scoring, or proof
-  fails Lean and does not enter scoring.
+- Live reward direction: proof passes Lean and becomes reward-eligible, or
+  proof fails Lean and cannot receive miner rewards.
 - Operator UX belongs in the core `lemma` command; consensus policy stays in
   protocol, problem selection, Lean verification, validator scoring, and tests.
 - Current audit docs:

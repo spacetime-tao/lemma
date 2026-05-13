@@ -9,7 +9,7 @@
 Current live path:
 
 1. Lean must typecheck (kernel gate).
-2. A passing proof enters scoring; a failing proof does not.
+2. A passing proof becomes reward-eligible; a failing proof does not.
 3. Validators turn eligible proofs into weights using the published scoring rules.
 4. Same-coldkey hotkeys share that coldkey's allocation instead of multiplying it.
 
@@ -186,8 +186,8 @@ Roughly: (challenges answered) × ($/challenge). Measure from logs.
 | `VerifyResult.reason` | Meaning |
 | --------------------- | ------- |
 | `compile_error` | `lake build` did not succeed or Lean could not run axiom check — **often** Mathlib fetch/build or sandbox limits, not a bad tactic |
-| `axiom_violation` | Disallowed axioms |
-| `cheat_token` | Banned constructs |
+| `axiom_violation` | The proof relied on an unapproved extra assumption instead of proving the theorem under the published rules |
+| `cheat_token` | Banned shortcuts, such as unfinished-proof placeholders |
 | `timeout` / `oom` | Resource limits |
 | `docker_error` | Sandbox error |
 | `remote_error` | Remote Lean worker transport or response error |
@@ -222,8 +222,8 @@ Order matters:
 
 1. **Lean sandbox** — Validators run **`lake build`** on your **`proof_script`** (as `Submission.lean`) together with the challenge, then axiom checks.
 
-2. **Proof scoring** — Only responses that pass Lean enter scoring. A proof
-   that fails verification cannot receive a reward score.
+2. **Reward eligibility** — Only responses that pass Lean can receive miner
+   rewards. A proof that fails verification cannot receive a reward score.
 
 So repeated “failures” while you believe the proof is right are usually **environment** (Mathlib fetch, Docker network, cold cache, timeout) or **layout/policy**. The proof has to pass Lean before any reward score exists.
 

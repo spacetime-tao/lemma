@@ -18,7 +18,7 @@ Validator→miner transport uses Bittensor Dendrite/Axon and synapse body-hash i
 | Only print validator-related env | `uv run lemma validator config` (not a scoring run) |
 
 Submitted proofs must pass Lean verification for the published theorem before
-they can enter scoring.
+they can receive miner rewards.
 
 ## System requirements (Docker)
 

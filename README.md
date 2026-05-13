@@ -14,7 +14,7 @@ A Lemma round is simple:
 1. The subnet publishes a theorem statement.
 2. Miners submit candidate Lean proof scripts.
 3. Validators verify those scripts with the published toolchain.
-4. Passing proofs become eligible for downstream scoring and allocation under Lemma's subnet rules; failing proofs do not.
+4. Passing proofs become eligible for miner rewards under Lemma's subnet rules; failing proofs do not.
 
 Anything that can be formalized as a Lean statement can become work for Lemma:
 algebra, number theory, logic, combinatorics, geometry, computer science,

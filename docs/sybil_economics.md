@@ -10,7 +10,7 @@ Canonical machine-readable notes: [`knowledge/sybil.realities.yaml`](../knowledg
 
 | Mechanism | Env | Purpose |
 | --- | --- | --- |
-| **Lean verification gate** | None | A miner entry can enter scoring only when its submitted proof verifies against the published theorem. |
+| **Lean verification gate** | None | A miner entry is reward-eligible only when its submitted proof verifies against the published theorem. |
 | **Identical-payload verify reuse** | None | Validators may reuse one Lean verification result for identical payloads inside an epoch. This saves verifier work; it does not drop a miner reward entry. |
 | **Same-coldkey partition** | `LEMMA_SCORING_COLDKEY_PARTITION=1` (default on) | After weights are computed, hotkeys sharing one coldkey are capped to one coldkey allocation and that allocation is split among those successful hotkeys. |
 
@@ -42,8 +42,8 @@ sybil deterrent    ≈ cost_of_N_slots > reward_from_running_N_parallel_miners
 ## Decision gate before Sybil or reward scoring changes
 
 Do not add another sybil or reward scoring layer without replay evidence. The
-default code should stay simple: verified proofs enter scoring, and same-coldkey
-hotkeys share one coldkey allocation.
+default code should stay simple: verified proofs become reward-eligible, and
+same-coldkey hotkeys share one coldkey allocation.
 
 Minimum evidence:
 

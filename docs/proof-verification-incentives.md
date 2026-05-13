@@ -67,4 +67,4 @@ verification can still consume most of a 5-minute window.
 
 | Date | Decision |
 | --- | --- |
-| 2026-05 | Live rewards should be proof-only: Lean-valid proofs can enter scoring; invalid proofs cannot. |
+| 2026-05 | Live rewards should be proof-only: Lean-valid proofs become reward-eligible; invalid proofs cannot receive miner rewards. |

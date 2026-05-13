@@ -73,7 +73,7 @@ later.
 
 Formal mathematics is mathematics written in a fully specified logical language.
 The definitions, axioms, and allowed inference steps are fixed in advance.
-Because the rules are explicit, software can check a proof line by line.
+Because the rules are explicit, software can check a proof step by step.
 
 ### What is a theorem?
 
@@ -98,6 +98,15 @@ A proof assistant checks whether a proof script follows the rules of the formal
 system. Lemma uses Lean. If every step is valid, Lean accepts the proof. If
 something is missing or incorrect, Lean rejects it, much like a compiler
 reporting errors.
+
+### What do `sorry` and new axioms mean?
+
+In Lean, `sorry` is a temporary placeholder for an unfinished proof. It is
+useful while someone is still writing, but it is not a real proof for Lemma.
+
+A new axiom is an extra assumption added by the submitted file. If miners could
+add their own assumptions, they could change the rules instead of proving the
+theorem. Lemma rejects both shortcuts.
 
 ### Is this "Bitcoin for math"?
 
@@ -138,8 +147,9 @@ as `lemma miner ...` and `lemma validator ...`.
 ### Do miners earn alpha?
 
 Yes. Alpha is the subnet reward token. Miners can earn alpha when their
-submissions receive score under Lemma's rules. The first gate is Lean
-verification: if a proof does not pass Lean, it is not eligible for proof score.
+submissions pass Lean and receive weight under Lemma's rules. The first gate is
+Lean verification: if a proof does not pass Lean, it is not eligible for miner
+rewards.
 See [Rewards and Weights](litepaper.md#rewards-and-weights).
 
 ### What is the difference between testnet and mainnet?
@@ -183,9 +193,9 @@ before this Lean verification gate.
 
 ### What happens after Lean accepts?
 
-A passing proof enters Lemma's scoring rules. Those rules can evolve through
-governance, but they sit after the Lean verification gate; they do not replace
-it.
+A passing proof becomes eligible for Lemma's reward rules. Those rules can
+evolve through governance, but they sit after the Lean verification gate; they
+do not replace it.
 
 ### Can validators cheat by changing the theorem?
 
