@@ -132,11 +132,13 @@ def _install_epoch_fakes(
 def test_set_weights_outcome_handles_bittensor_shapes() -> None:
     assert epoch._set_weights_outcome((False, "rate limited")) == (False, "rate limited")
     assert epoch._set_weights_outcome((True, "ok")) == (True, "ok")
+    assert epoch._set_weights_outcome((False, None)) == (False, "success=False without message")
+    assert epoch._set_weights_outcome({"success": False}) == (False, "success=False without message")
     assert epoch._set_weights_outcome(False) == (False, "False")
 
     ok, message = epoch._set_weights_outcome(SimpleNamespace(success=False, message=None))
     assert not ok
-    assert "success=False" in message
+    assert message == "success=False without message"
 
 
 async def test_training_export_oserror_does_not_block_set_weights(monkeypatch, tmp_path) -> None:

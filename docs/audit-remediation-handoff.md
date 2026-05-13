@@ -7,8 +7,9 @@ state quickly. Start here, then read [`local handoff note`](../local handoff not
 ## Current state
 
 - Working tree: `LOCAL_WORKSPACE/lemma` on `main`, tracking `origin/main`.
-- Current local patch is the uncommitted extreme-split problem-supply update on
-  top of `3fabf9c` (`Record droplet deploy evidence`).
+- Current local patch is the 2026-05-13 lemmasub.net dashboard plus read-only
+  droplet audit follow-up on top of `416c81e` (`Add extreme problem supply
+  split`).
 - Base commit before the earlier audit-remediation patch: `9546095`
   (`Track live ops hardening backlog`).
 - Current audit target: strict local subnet-quality pass for binary Lean proof
@@ -26,7 +27,8 @@ state quickly. Start here, then read [`local handoff note`](../local handoff not
 - The curated catalog includes positive-weight `extreme` rows, and hybrid
   sampling picks the split before the generated/catalog lane.
 - Validator timeout policy includes `LEMMA_TIMEOUT_SPLIT_EXTREME_MULT`; the
-  validator profile schema is bumped to `lemma_validator_profile_v7`.
+  validator profile schema is bumped to `lemma_validator_profile_v7`, and
+  `.env.example` lists the extreme multiplier alongside the other split knobs.
 
 ## Implemented in the earlier audit-remediation patch
 
@@ -51,6 +53,9 @@ state quickly. Start here, then read [`local handoff note`](../local handoff not
 - Follow-up after live read-only sampling: `set_weights` result handling now
   treats tuple-style false returns and raised RPC exceptions as failures, retries
   them, and logs a concrete final message.
+- Follow-up after the lemmasub.net/droplet audit: false/no-message set-weights
+  returns now normalize to `success=False without message` instead of tuple noise
+  such as `(False, None)`.
 
 ## Current focused verification
 
@@ -116,3 +121,23 @@ deploy; miners and Lean worker were restarted; validator was started last.
   `theorem_id=curated/foundations/list_append_nil_induction`, `verified=3`,
   `scored=3`, `verify_infra_errors=0`, no reject counters, `seconds=369.99`,
   and `set_weights success=True`.
+
+## Live read-only droplet audit follow-up
+
+Sampling on 2026-05-13 at about 10:18 UTC was read-only; no services were
+restarted or changed.
+
+- Validator / Lean worker `<validator-ssh-host>`: deployed `8067b70`,
+  `lemma-validator` and `lemma-lean-worker-http` active, root/cache filesystem
+  `28%` used, Lean worker health on `127.0.0.1:8787` returned
+  `{"status":"ok"}`.
+- Public dashboard publisher on the validator host: timer enabled/running, path
+  inactive, service completed successfully and pushed refresh commits through
+  `9c31c1e` during the audit window.
+- Miner host `<miner-ssh-host>`: deployed `8067b70`, six miner services
+  active, root filesystem `23%` used.
+- Latest sampled validator round at `2026-05-13 10:04 UTC` verified/scored `4`
+  proofs with `verify_infra_errors=0` and `set_weights success=True`. Earlier
+  rounds still logged intermittent `set_weights success=False message=(False,
+  None)` when Bittensor returned false without a message; the local follow-up
+  patch fixes that operator-facing message and is not deployed yet.

@@ -143,22 +143,17 @@ def _response_status_summary(responses: list[Any]) -> str:
     return "; ".join(f"{n}x {key}" for key, n in sorted(counts.items()))
 
 
-def _short_repr(value: object, *, limit: int = 300) -> str:
-    text = " ".join(repr(value).split())
-    return text if len(text) <= limit else text[: limit - 1] + "…"
-
-
 def _set_weights_outcome(result: object) -> tuple[bool, str]:
     if isinstance(result, (tuple, list)) and result:
         ok = bool(result[0])
         message = "" if len(result) < 2 or result[1] is None else str(result[1])
-        return ok, message or ("" if ok else _short_repr(result))
+        return ok, message or ("" if ok else "success=False without message")
     if isinstance(result, dict):
         raw_ok = result.get("success", result.get("ok"))
         ok = bool(result) if raw_ok is None else bool(raw_ok)
         raw_message = result.get("message", result.get("msg", result.get("error")))
         message = "" if raw_message is None else str(raw_message)
-        return ok, message or ("" if ok else _short_repr(result))
+        return ok, message or ("" if ok else "success=False without message")
     if isinstance(result, bool):
         return result, "" if result else "False"
 
@@ -166,7 +161,7 @@ def _set_weights_outcome(result: object) -> tuple[bool, str]:
     ok = bool(result) if raw_ok is None else bool(raw_ok)
     raw_message = getattr(result, "message", getattr(result, "msg", getattr(result, "error", None)))
     message = "" if raw_message is None else str(raw_message)
-    return ok, message or ("" if ok else _short_repr(result))
+    return ok, message or ("" if ok else "success=False without message")
 
 
 def _merge_multi_round_entries(uid_groups: dict[int, list[ScoredEntry]]) -> list[ScoredEntry]:
