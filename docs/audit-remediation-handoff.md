@@ -7,18 +7,20 @@ state quickly. Start here, then read [`local handoff note`](../local handoff not
 ## Current state
 
 - Working tree: `LOCAL_WORKSPACE/lemma` on `main`, tracking `origin/main`.
-- Current local patch is the 2026-05-13 lemmasub.net dashboard plus read-only
-  droplet audit follow-up on top of `416c81e` (`Add extreme problem supply
-  split`).
+- Latest pushed working batch is `d95411b` (`Normalize set_weights
+  false-return logs`) after the 2026-05-13 lemmasub.net dashboard plus
+  read-only droplet audit follow-up.
 - Base commit before the earlier audit-remediation patch: `9546095`
   (`Track live ops hardening backlog`).
 - Current audit target: strict local subnet-quality pass for binary Lean proof
   grading. Live VPS/testnet mutation was out of scope.
 - Refreshed audit doc: [`docs/codex-audit.md`](codex-audit.md), rating
   `8.4 / 10`.
-- Current deployed/GitHub-confirmed audit head:
-  `8067b70` (`Harden set_weights result handling`), with `CI` and
-  `Build and Push Docker Image` passing.
+- Current GitHub-confirmed head: `d95411b` (`Normalize set_weights
+  false-return logs`), with `CI` and `Build and Push Docker Image` passing on
+  GitHub Actions runs `25793209291` and `25793209296`.
+- Current testnet Droplet head: `8067b70` (`Harden set_weights result
+  handling`). The no-message set-weights logging cleanup is not deployed yet.
 
 ## Implemented in the current local patch
 
