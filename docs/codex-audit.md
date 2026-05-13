@@ -28,9 +28,10 @@ coverage remain outside what this repository can prove by itself.
 | Line liability / simplicity | 8.0 | Runtime `assert`s and silent cleanup exceptions were removed where they obscured behavior. Remaining Bandit lows are intentional subprocess/RNG surfaces rather than broad hidden exception paths. |
 
 This should be read as progress toward 10, not arrival at 10. A true 10 would
-need GitHub Actions evidence for the saved head, live testnet evidence,
+need GitHub Actions evidence for each saved head, live testnet evidence,
 external infra review, and continued deletion/isolation of research-only
-surfaces.
+surfaces. The broader audit head `2b0c076` passed GitHub Actions; the
+set_weights follow-up still needs its own push and CI confirmation.
 
 ---
 
@@ -81,19 +82,24 @@ surfaces.
    Chain/RPC errors around cadence calculation no longer fall out of the
    service loop. HTTP 429/rate-limit style errors use a longer backoff.
 
-9. **Dashboard refresh is serialized.**
+9. **Set-weights failures are less ambiguous.**
+
+   Tuple-style false returns and raised RPC exceptions from `set_weights` are
+   treated as failures, retried, and logged with a concrete final message.
+
+10. **Dashboard refresh is serialized.**
 
    `deploy/scripts/lemma-refresh-public-dashboard` now uses `flock`, cleans its
    temp file on exit, and remains isolated from validator scoring.
 
-10. **Legacy live-adjacent aliases were retired.**
+11. **Legacy live-adjacent aliases were retired.**
 
    `reasoning_only`, `LEMMA_JUDGE_PROFILE_ATTEST_*`,
    `JUDGE_PROFILE_SHA256_EXPECTED`, `/lemma/judge_profile_sha256`, and JSON
    `judge_profile_sha256` peer attest compatibility are no longer accepted live
    surfaces. The supported public naming is validator-profile oriented.
 
-11. **Low-severity Bandit noise was reduced where it clarified code.**
+12. **Low-severity Bandit noise was reduced where it clarified code.**
 
     Runtime `assert` statements and silent broad cleanup exceptions were removed.
     Full Bandit lows dropped from 27 to 20.
@@ -102,11 +108,11 @@ surfaces.
 
 ## Remaining gaps
 
-1. **GitHub Actions evidence for the saved head is still needed.**
+1. **GitHub Actions evidence for the set_weights follow-up is still needed.**
 
-   Local Docker golden, generated-template Docker builds, and the runtime Docker
-   image build now pass. The exact pushed head still needs GitHub Actions
-   confirmation, especially `docker-lean-sandbox`.
+   Local gates pass, and the broader audit head `2b0c076` passed GitHub
+   Actions. The small set_weights result-handling follow-up still needs push and
+   CI confirmation.
 
 2. **Full Bandit still reports 20 low-severity findings.**
 
@@ -137,7 +143,7 @@ Verified against the local working tree based on `9546095`:
 | --- | --- |
 | `.venv/bin/ruff check lemma tests tools` | Passed. |
 | `.venv/bin/mypy lemma` | Passed: `Success: no issues found in 70 source files`. |
-| `.venv/bin/pytest tests -q` | Passed: `307 passed, 2 skipped, 12 warnings`. |
+| `.venv/bin/pytest tests -q` | Passed: `310 passed, 2 skipped, 12 warnings`. |
 | `.venv/bin/python scripts/ci_verify_generated_templates.py` | Passed metadata/witness gate: `OK: generated template metadata/witness gate covered 80 builders`. |
 | `RUN_DOCKER_LEAN=1 LEAN_SANDBOX_IMAGE=lemma/lean-sandbox:latest .venv/bin/pytest tests/test_docker_golden.py -v --tb=short` | Passed: `1 passed in 208.57s`. |
 | `RUN_DOCKER_LEAN_TEMPLATES=1 LEAN_SANDBOX_IMAGE=lemma/lean-sandbox:latest .venv/bin/python scripts/ci_verify_generated_templates.py` | Passed: all 80 generated template stubs and witnesses built in one Docker workspace. |

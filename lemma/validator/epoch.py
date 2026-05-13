@@ -143,6 +143,32 @@ def _response_status_summary(responses: list[Any]) -> str:
     return "; ".join(f"{n}x {key}" for key, n in sorted(counts.items()))
 
 
+def _short_repr(value: object, *, limit: int = 300) -> str:
+    text = " ".join(repr(value).split())
+    return text if len(text) <= limit else text[: limit - 1] + "…"
+
+
+def _set_weights_outcome(result: object) -> tuple[bool, str]:
+    if isinstance(result, (tuple, list)) and result:
+        ok = bool(result[0])
+        message = "" if len(result) < 2 or result[1] is None else str(result[1])
+        return ok, message or ("" if ok else _short_repr(result))
+    if isinstance(result, dict):
+        raw_ok = result.get("success", result.get("ok"))
+        ok = bool(result) if raw_ok is None else bool(raw_ok)
+        raw_message = result.get("message", result.get("msg", result.get("error")))
+        message = "" if raw_message is None else str(raw_message)
+        return ok, message or ("" if ok else _short_repr(result))
+    if isinstance(result, bool):
+        return result, "" if result else "False"
+
+    raw_ok = getattr(result, "success", getattr(result, "ok", None))
+    ok = bool(result) if raw_ok is None else bool(raw_ok)
+    raw_message = getattr(result, "message", getattr(result, "msg", getattr(result, "error", None)))
+    message = "" if raw_message is None else str(raw_message)
+    return ok, message or ("" if ok else _short_repr(result))
+
+
 def _merge_multi_round_entries(uid_groups: dict[int, list[ScoredEntry]]) -> list[ScoredEntry]:
     merged: list[ScoredEntry] = []
     for uid, es in uid_groups.items():
@@ -778,25 +804,45 @@ async def run_epoch(
         return weights_by_uid
 
     delay = settings.set_weights_retry_delay_s
-    last_out = None
-    for attempt in range(settings.set_weights_max_retries):
-        last_out = subtensor.set_weights(
-            wallet=wallet,
-            netuid=netuid,
-            uids=list(range(n)),
-            weights=full_weights,
-            wait_for_inclusion=False,
-            wait_for_finalization=False,
-        )
-        ok = getattr(last_out, "success", True)
-        if ok:
+    last_success = False
+    last_message = ""
+    max_retries = settings.set_weights_max_retries
+    for attempt in range(max_retries):
+        attempt_no = attempt + 1
+        try:
+            out = subtensor.set_weights(
+                wallet=wallet,
+                netuid=netuid,
+                uids=list(range(n)),
+                weights=full_weights,
+                wait_for_inclusion=False,
+                wait_for_finalization=False,
+            )
+            last_success, last_message = _set_weights_outcome(out)
+        except Exception as e:
+            last_success = False
+            last_message = f"{type(e).__name__}: {e}"
+        if last_success:
             break
-        logger.warning("set_weights attempt {} failed; retrying", attempt + 1)
-        await asyncio.sleep(delay * (2**attempt))
+        if attempt_no < max_retries:
+            logger.warning(
+                "set_weights attempt {}/{} failed; retrying message={}",
+                attempt_no,
+                max_retries,
+                last_message,
+            )
+            await asyncio.sleep(delay * (2**attempt))
+        else:
+            logger.error(
+                "set_weights attempt {}/{} failed; no retries left message={}",
+                attempt_no,
+                max_retries,
+                last_message,
+            )
 
     logger.info(
         "set_weights success={} message={}",
-        getattr(last_out, "success", last_out),
-        getattr(last_out, "message", ""),
+        last_success,
+        last_message,
     )
     return weights_by_uid

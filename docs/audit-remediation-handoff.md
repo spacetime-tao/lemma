@@ -12,6 +12,9 @@ state quickly. Start here, then read [`local handoff note`](../local handoff not
   grading. Live VPS/testnet mutation was out of scope.
 - Refreshed audit doc: [`docs/codex-audit.md`](codex-audit.md), rating
   `8.4 / 10`.
+- Last GitHub-confirmed audit head before the set_weights follow-up:
+  `2b0c076` (`Harden validator audit boundaries`), with `CI` and
+  `Build and Push Docker Image` passing.
 
 ## Implemented in this local patch
 
@@ -33,12 +36,15 @@ state quickly. Start here, then read [`local handoff note`](../local handoff not
   `JUDGE_PROFILE_SHA256_EXPECTED`, `/lemma/judge_profile_sha256`.
 - Runtime asserts and silent broad cleanup exceptions were removed where they
   obscured behavior.
+- Follow-up after live read-only sampling: `set_weights` result handling now
+  treats tuple-style false returns and raised RPC exceptions as failures, retries
+  them, and logs a concrete final message.
 
 ## Verification already run
 
 - `.venv/bin/ruff check lemma tests tools`: passed.
 - `.venv/bin/mypy lemma`: passed.
-- `.venv/bin/pytest tests -q`: passed, `307 passed, 2 skipped, 12 warnings`.
+- `.venv/bin/pytest tests -q`: passed, `310 passed, 2 skipped, 12 warnings`.
 - `.venv/bin/python scripts/ci_verify_generated_templates.py`: passed,
   `OK: generated template metadata/witness gate covered 80 builders`.
 - `.venv/bin/bandit -q -r lemma -ll`: passed.
@@ -69,8 +75,24 @@ Total Memory: 7.75GiB
 
 ## Next decisions
 
-- Commit this patch locally.
-- Push and check GitHub Actions, especially `docker-lean-sandbox`.
-- Then run a live testnet evidence slice: miner latency, prover latency,
-  validator Lean verify time, scored miner count, skip reasons, `set_weights`,
-  and emission movement.
+- Commit and push the set_weights follow-up.
+- Check GitHub Actions for the follow-up head.
+- With an explicit live-ops go-ahead, deploy the green head to the Droplets and
+  rerun a live evidence slice: miner latency, prover latency, validator Lean
+  verify time, scored miner count, skip reasons, `set_weights`, and emission
+  movement.
+
+## Live read-only evidence
+
+Sampling on 2026-05-13 used `tools.ops_dashboard` plus direct SSH reads only; no
+services were restarted or changed.
+
+- Validator / Lean worker `<validator-ssh-host>`: deployed `d42addb`,
+  `lemma-validator` and `lemma-lean-worker-http` active, root/cache filesystem
+  `33%` used, Lean worker health `{"status": "ok"}`.
+- Miner host `<miner-ssh-host>`: deployed `d42addb`, six miner services
+  active, six axon ports open, root filesystem `23%` used.
+- Fresh sampled validator round at `2026-05-13 06:44 UTC`:
+  `theorem_id=gen/7110900`, `verified=5`, `scored=5`, no reject counters,
+  `seconds=554.74`; old deployed code then logged `set_weights success=False
+  message=None` after retries.

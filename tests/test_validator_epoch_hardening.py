@@ -52,6 +52,19 @@ class _Subtensor:
         return SimpleNamespace(success=True, message="ok")
 
 
+class _SequencedSubtensor(_Subtensor):
+    def __init__(self, results: list[object]) -> None:
+        super().__init__()
+        self.results = results
+
+    def set_weights(self, **kwargs: Any) -> object:
+        self.set_weights_calls.append(kwargs)
+        result = self.results.pop(0)
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+
 class _Wallet:
     def __init__(self, *args: object, **kwargs: object) -> None:
         self.hotkey = SimpleNamespace(ss58_address="validator-hotkey")
@@ -116,6 +129,16 @@ def _install_epoch_fakes(
     monkeypatch.setattr(epoch, "run_lean_verify", run_lean_verify)
 
 
+def test_set_weights_outcome_handles_bittensor_shapes() -> None:
+    assert epoch._set_weights_outcome((False, "rate limited")) == (False, "rate limited")
+    assert epoch._set_weights_outcome((True, "ok")) == (True, "ok")
+    assert epoch._set_weights_outcome(False) == (False, "False")
+
+    ok, message = epoch._set_weights_outcome(SimpleNamespace(success=False, message=None))
+    assert not ok
+    assert "success=False" in message
+
+
 async def test_training_export_oserror_does_not_block_set_weights(monkeypatch, tmp_path) -> None:
     subtensor = _Subtensor()
     _install_epoch_fakes(
@@ -137,6 +160,52 @@ async def test_training_export_oserror_does_not_block_set_weights(monkeypatch, t
 
     assert weights == {0: 1.0}
     assert len(subtensor.set_weights_calls) == 1
+
+
+async def test_set_weights_tuple_failure_retries_until_success(monkeypatch, tmp_path) -> None:
+    subtensor = _SequencedSubtensor([(False, "rate limited"), (True, "ok")])
+    _install_epoch_fakes(
+        monkeypatch,
+        subtensor=subtensor,
+        verify_result=VerifyResult(passed=True, reason="ok"),
+    )
+
+    async def no_sleep(delay: float) -> None:
+        return None
+
+    monkeypatch.setattr(epoch.asyncio, "sleep", no_sleep)
+
+    weights = await epoch.run_epoch(
+        _settings(tmp_path, set_weights_max_retries=2),
+        _OneProblemSource(),
+        dry_run=False,
+    )
+
+    assert weights == {0: 1.0}
+    assert len(subtensor.set_weights_calls) == 2
+
+
+async def test_set_weights_exception_retries_until_success(monkeypatch, tmp_path) -> None:
+    subtensor = _SequencedSubtensor([RuntimeError("rpc down"), SimpleNamespace(success=True, message="ok")])
+    _install_epoch_fakes(
+        monkeypatch,
+        subtensor=subtensor,
+        verify_result=VerifyResult(passed=True, reason="ok"),
+    )
+
+    async def no_sleep(delay: float) -> None:
+        return None
+
+    monkeypatch.setattr(epoch.asyncio, "sleep", no_sleep)
+
+    weights = await epoch.run_epoch(
+        _settings(tmp_path, set_weights_max_retries=2),
+        _OneProblemSource(),
+        dry_run=False,
+    )
+
+    assert weights == {0: 1.0}
+    assert len(subtensor.set_weights_calls) == 2
 
 
 async def test_disk_preflight_skips_before_dendrite_or_subtensor(monkeypatch, tmp_path) -> None:
