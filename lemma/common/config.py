@@ -480,7 +480,17 @@ class LemmaSettings(BaseSettings):
         description=(
             "Optional directory on fast local disk to reuse a warm `.lake` per theorem template. "
             "After the first passing verify for a template, later verifies only rebuild ``Submission`` "
-            "(same subnet epoch = same template for all miners). Creates subdirs; prune manually if huge."
+            "(same subnet epoch = same template for all miners). Creates bounded warm-slot subdirs."
+        ),
+    )
+    lemma_lean_workspace_cache_max_dirs: int = Field(
+        default=8,
+        ge=0,
+        le=10_000,
+        validation_alias="LEMMA_LEAN_WORKSPACE_CACHE_MAX_DIRS",
+        description=(
+            "Maximum warm workspace cache directories to keep under LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR. "
+            "Default 8; set 0 to disable automatic pruning."
         ),
     )
     lemma_lean_workspace_cache_include_submission_hash: bool = Field(

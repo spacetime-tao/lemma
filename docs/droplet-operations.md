@@ -213,6 +213,7 @@ BT_VALIDATOR_WALLET_COLD=<wallet-name>
 BT_VALIDATOR_WALLET_HOT=<validator-hotkey-name>
 LEAN_SANDBOX_IMAGE=lemma/lean-sandbox:latest
 LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR=/var/lib/lemma-lean-cache
+LEMMA_LEAN_WORKSPACE_CACHE_MAX_DIRS=8
 LEMMA_LEAN_DOCKER_WORKER=lemma-lean-worker
 LEMMA_LEAN_VERIFY_TIMING=1
 ```
@@ -276,6 +277,7 @@ Worker `.env`:
 ```bash
 LEAN_SANDBOX_IMAGE=<same-image-ref-as-validator>
 LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR=/var/lib/lemma-lean-cache
+LEMMA_LEAN_WORKSPACE_CACHE_MAX_DIRS=8
 LEMMA_LEAN_DOCKER_WORKER=lemma-lean-worker
 LEMMA_LEAN_VERIFY_REMOTE_BEARER=<long-random-token>
 ```

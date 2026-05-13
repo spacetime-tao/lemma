@@ -1,5 +1,6 @@
 """Workspace cache publishes and reuses in-place slots."""
 
+import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -170,3 +171,64 @@ end Submission
     sb = LeanSandbox(use_docker=False, timeout_s=30, workspace_cache_dir=cache, proof_metrics_enabled=True)
     vr = sb.verify(p, sub)
     assert vr.passed
+
+
+def test_workspace_cache_prunes_old_warm_slots(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    p = _minimal_problem()
+    sub = """import Mathlib
+namespace Submission
+theorem t_test : True := by trivial
+end Submission
+"""
+    cache = tmp_path / "ws_cache"
+    key = workspace_verify_cache_key(p, sub, include_submission_fingerprint=False)
+    current = cache / key
+    newest = cache / "newest"
+    old_a = cache / "old_a"
+    old_b = cache / "old_b"
+    for i, path in enumerate([old_a, old_b, newest, current], start=1):
+        (path / ".lake").mkdir(parents=True)
+        os.utime(path, (float(i), float(i)))
+
+    def fake_host(self: LeanSandbox, work: Path) -> VerifyResult:  # noqa: ARG001
+        return VerifyResult(passed=True, reason="ok")
+
+    monkeypatch.setattr(LeanSandbox, "_verify_host", fake_host)
+    sb = LeanSandbox(use_docker=False, timeout_s=30, workspace_cache_dir=cache, workspace_cache_max_dirs=2)
+    vr = sb.verify(p, sub)
+
+    assert vr.passed
+    assert current.is_dir()
+    assert newest.is_dir()
+    assert not old_a.exists()
+    assert not old_b.exists()
+
+
+def test_workspace_cache_prunes_stale_temp_dirs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    p = _minimal_problem()
+    sub = """import Mathlib
+namespace Submission
+theorem t_test : True := by trivial
+end Submission
+"""
+    cache = tmp_path / "ws_cache"
+    key = workspace_verify_cache_key(p, sub, include_submission_fingerprint=False)
+    current = cache / key
+    fresh_temp = cache / "lemma-lean-fresh"
+    stale_temp = cache / "lemma-lean-stale"
+    for path in [current, fresh_temp, stale_temp]:
+        (path / ".lake").mkdir(parents=True)
+    now = time.time()
+    os.utime(stale_temp, (now - 90_000, now - 90_000))
+
+    def fake_host(self: LeanSandbox, work: Path) -> VerifyResult:  # noqa: ARG001
+        return VerifyResult(passed=True, reason="ok")
+
+    monkeypatch.setattr(LeanSandbox, "_verify_host", fake_host)
+    sb = LeanSandbox(use_docker=False, timeout_s=30, workspace_cache_dir=cache, workspace_cache_max_dirs=8)
+    vr = sb.verify(p, sub)
+
+    assert vr.passed
+    assert current.is_dir()
+    assert fresh_temp.is_dir()
+    assert not stale_temp.exists()

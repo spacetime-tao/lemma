@@ -51,6 +51,21 @@ def test_documented_public_ip_discovery_env_enables_lookup(monkeypatch: pytest.M
     assert s.axon_discover_external_ip is True
 
 
+def test_lean_workspace_cache_has_bounded_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("LEMMA_LEAN_WORKSPACE_CACHE_MAX_DIRS", raising=False)
+    s = LemmaSettings(_env_file=None)
+    assert s.lemma_lean_workspace_cache_max_dirs == 8
+
+
+def test_lean_workspace_cache_bound_can_be_disabled(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    monkeypatch.delenv("LEMMA_PREFER_PROCESS_ENV", raising=False)
+    env_file = tmp_path / ".env"
+    env_file.write_text("LEMMA_LEAN_WORKSPACE_CACHE_MAX_DIRS=0\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    s = LemmaSettings(_env_file=str(env_file))
+    assert s.lemma_lean_workspace_cache_max_dirs == 0
+
+
 def test_explicit_init_kwarg_beats_all(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     monkeypatch.delenv("LEMMA_PREFER_PROCESS_ENV", raising=False)
     env_file = tmp_path / ".env"

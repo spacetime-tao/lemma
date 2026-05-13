@@ -141,6 +141,7 @@ class LeanSandbox:
         workspace_cache_dir: Path | None = None,
         docker_worker: str | None = None,
         workspace_cache_include_submission_hash: bool = False,
+        workspace_cache_max_dirs: int = 8,
         proof_metrics_enabled: bool = False,
     ) -> None:
         self.image = image
@@ -152,6 +153,7 @@ class LeanSandbox:
         self.use_docker = bool(use_docker)
         self.workspace_cache_dir = workspace_cache_dir
         self.workspace_cache_include_submission_hash = bool(workspace_cache_include_submission_hash)
+        self.workspace_cache_max_dirs = max(0, int(workspace_cache_max_dirs))
         self.proof_metrics_enabled = bool(proof_metrics_enabled)
         # Prefer explicit constructor / LemmaSettings (`.env`); ``os.environ`` alone is not populated from
         # pydantic's dotenv load unless the process exported the variable.
@@ -191,6 +193,7 @@ class LeanSandbox:
         )
         slot = self.workspace_cache_dir / cache_key
         with _template_slot_lock(cache_key):
+            self._prune_workspace_cache(protect_name=cache_key)
             if slot.is_dir() and (slot / ".lake").is_dir():
                 logger.debug("lean workspace cache hit template={} mode=in_place", cache_key)
                 materialize_workspace(
@@ -214,6 +217,7 @@ class LeanSandbox:
                 vr = self._verify_docker(work) if self.use_docker else self._verify_host(work)
                 if self._workspace_cache_publishable(work, vr):
                     self._publish_workspace_cache(slot, work, cache_key)
+                    self._prune_workspace_cache(protect_name=cache_key)
                 return vr
             finally:
                 shutil.rmtree(work, ignore_errors=True)
@@ -240,6 +244,40 @@ class LeanSandbox:
                 logger.debug("lean workspace cache primed template={}", key)
             except OSError as e:
                 logger.warning("lean workspace cache publish (rename) failed: {}", e)
+
+    def _prune_workspace_cache(self, *, protect_name: str) -> None:
+        """Keep warm workspace slots bounded; stale temp dirs are safe to drop after a day."""
+        if self.workspace_cache_dir is None or self.workspace_cache_max_dirs <= 0:
+            return
+        root = self.workspace_cache_dir
+        now = time.time()
+        warm_slots: list[tuple[float, str, Path]] = []
+        stale_temps: list[Path] = []
+        try:
+            entries = [p for p in root.iterdir() if p.is_dir()]
+        except OSError as e:
+            logger.debug("lean workspace cache prune skipped: {}", e)
+            return
+
+        for p in entries:
+            try:
+                st = p.stat()
+            except OSError:
+                continue
+            if p.name.startswith("lemma-lean-"):
+                if now - st.st_mtime > 86_400:
+                    stale_temps.append(p)
+                continue
+            warm_slots.append((st.st_mtime, p.name, p))
+
+        delete_count = max(0, len(warm_slots) - self.workspace_cache_max_dirs)
+        to_delete = [p for _, name, p in sorted(warm_slots) if name != protect_name][:delete_count]
+        for p in [*to_delete, *stale_temps]:
+            try:
+                shutil.rmtree(p)
+                logger.info("lean workspace cache pruned {}", p)
+            except OSError as e:
+                logger.warning("lean workspace cache prune failed for {}: {}", p, e)
 
     def _maybe_lake_cache_get(self, work: Path, env: dict[str, str]) -> None:
         """Warm mathlib cache when possible (matches Docker stub workflow); ignore failures."""
