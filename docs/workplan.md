@@ -7,14 +7,17 @@ not let parallel checklists drift.
 ## Current Baseline
 
 - Repository: `spacetime-tao/lemma`, local checkout `LOCAL_WORKSPACE/lemma`.
-- Latest pushed working batch: `d95411b` (`Normalize set_weights false-return
-  logs`) after the 2026-05-13 lemmasub.net dashboard plus read-only droplet
-  audit follow-up.
-- Current GitHub-confirmed head: `d95411b` (`Normalize set_weights
-  false-return logs`), with `CI` and `Build and Push Docker Image` passing on
-  GitHub Actions runs `25793209291` and `25793209296`.
-- Current testnet Droplet head: `8067b70` (`Harden set_weights result
-  handling`). The no-message set-weights logging cleanup is not deployed yet.
+- Latest runtime batch covered by this tracker: `0ff1068` (`Record CI evidence
+  for set_weights cleanup`) after the 2026-05-13 lemmasub.net dashboard plus
+  droplet audit follow-up.
+- Latest GitHub-confirmed runtime head: `0ff1068` (`Record CI evidence for
+  set_weights cleanup`), with `CI` passing on GitHub Actions run
+  `25793725075`. The preceding code commit `d95411b` also had `CI` and
+  `Build and Push Docker Image` passing on runs `25793209291` and
+  `25793209296`.
+- Current testnet Droplet head: `0ff1068` on both known hosts. The validator,
+  Lean worker, dashboard timer, and six miner services are active after the
+  deploy.
 - Live reward direction: proof passes Lean and can enter scoring, or proof
   fails Lean and does not enter scoring.
 - Operator UX belongs in the core `lemma` command; consensus policy stays in
@@ -45,9 +48,10 @@ not let parallel checklists drift.
 - Lean workspace cache is bounded by both slot count and total bytes.
 - Public dashboard refreshes are serialized with `flock` and remain outside the
   validator scoring path.
-- Testnet Droplets are currently deployed at `8067b70`. First post-deploy round
-  observed `verified=3`, `scored=3`, `verify_infra_errors=0`, no reject
-  counters, and `set_weights success=True`.
+- Testnet Droplets are currently deployed at `0ff1068`. The earlier `8067b70`
+  deploy observed `verified=3`, `scored=3`, `verify_infra_errors=0`, no reject
+  counters, and `set_weights success=True`; the first full `0ff1068` round
+  still needs to be observed.
 - Read-only droplet sampling later on 2026-05-13 found continued verified/scored
   rounds, active dashboard publishing, and intermittent false/no-message
   `set_weights` results from the deployed code. The latest sampled round at
@@ -97,9 +101,16 @@ not let parallel checklists drift.
 - Set-weights result handling: tuple-style false returns and raised RPC
   exceptions are failures, are retried, and produce a concrete final log message
   instead of `message=None`.
-- No-message set-weights false returns: the local follow-up normalizes tuple,
+- No-message set-weights false returns: the deployed follow-up normalizes tuple,
   dict, and object false/no-message returns to `success=False without message`
   instead of logging `(False, None)`.
+- Current-head droplet deploy: validator/miner hosts were fast-forwarded from
+  `8067b70` to `0ff1068`; old subnet pins failed closed; pins were refreshed to
+  profile
+  `85155229a2c1a0dd9537434d89a7c924368f888e4602b6d909757b09285b0a9c` and
+  problem-supply
+  `f4ae425ad437c97b00d47b7ba97f97e1ff4cec8d5d66290c8b2364d91f822311`; services
+  are active.
 - Testnet deploy/evidence slice: validator/miner hosts were fast-forwarded from
   `d42addb` to `8067b70`; services restarted; first post-deploy round set
   weights successfully.
@@ -116,10 +127,10 @@ not let parallel checklists drift.
    hosts should still mount `LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR` on its own
    volume or partition.
 
-2. **Deploy the set-weights no-message logging cleanup after CI.**
-   The 2026-05-13 read-only sample saw live `set_weights success=False
-   message=(False, None)` on deployed `8067b70`. The local follow-up fixes the
-   operator-facing message, but live hosts have not been changed.
+2. **Watch the first full `0ff1068` validator rounds.**
+   The cleanup is deployed and services are active, but the next complete rounds
+   need recorded evidence for `set_weights`, reveal/emission movement, and any
+   RPC retry behavior under the current head.
 
 3. **Live alerting.**
    Add operator alerts for root/cache disk >80%, failed Lemma systemd units,
@@ -144,12 +155,12 @@ not let parallel checklists drift.
 
 ## Next Work Order
 
-1. Watch several more deployed rounds and record set-weights/emission movement,
-   especially across any RPC retry event.
-2. Deploy the no-message set-weights logging cleanup after local and CI checks.
-3. Add production alerts and a compact live health command/report covering
-   commit, services, disk, cache slots, dashboard timer, latest epoch summary,
-   and latest `set_weights`.
+1. Watch the first full `0ff1068` deployed rounds and record
+   set-weights/emission movement, especially across any RPC retry event.
+2. Add a compact live health command/report covering commit, services, disk,
+   cache slots, dashboard timer, latest epoch summary, and latest
+   `set_weights`.
+3. Add production alerts using the same live health signals.
 4. Plan a separate Lean cache volume or partition for validator/worker hosts.
 5. Continue deleting or isolating optional research surfaces only when they
    touch live defaults or public operator UX.
@@ -179,19 +190,19 @@ the exact head are checked directly.
 
 ## VPS Status
 
-Read-only VPS sampling on 2026-05-13 at about 10:18 UTC:
+VPS sampling and the follow-up deploy on 2026-05-13:
 
 | Host | IP | Deployed commit | Running Lemma services |
 | --- | --- | --- | --- |
-| `lemma-lean-worker-1` | `<validator-host>` | `8067b70` | `lemma-lean-worker-http.service`, `lemma-validator.service`, `lemma-public-dashboard.timer` |
-| `lemma-miner-1` | `<miner-host>` | `8067b70` | `lemma-miner.service`, `lemma-miner3.service`, `lemma-miner4.service`, `lemma-miner5.service`, `lemma-miner6.service`, `lemma-miner7.service` |
+| `lemma-lean-worker-1` | `<validator-host>` | `0ff1068` | `lemma-lean-worker-http.service`, `lemma-validator.service`, `lemma-public-dashboard.timer` |
+| `lemma-miner-1` | `<miner-host>` | `0ff1068` | `lemma-miner.service`, `lemma-miner3.service`, `lemma-miner4.service`, `lemma-miner5.service`, `lemma-miner6.service`, `lemma-miner7.service` |
 
-Additional read-only evidence: validator root/cache filesystem `28%` used,
-miner root filesystem `23%` used, Lean worker health on `127.0.0.1:8787`
-returned `{"status":"ok"}`, and `lemma-public-dashboard.service` completed
-successful refresh pushes through `9c31c1e`. Recent rounds had
-`verify_infra_errors=0`; Bittensor sometimes returned false/no-message
-set-weights results.
+Additional evidence: Lean worker health on `127.0.0.1:8787` returned
+`{"status": "ok"}`, and `lemma-public-dashboard.service` kept pushing schema 3
+refresh commits after the site code deploy. The validator initially failed
+closed on stale pins; running the subnet-pins command refreshed the profile and
+problem-supply pins, after which startup logged the expected registry hash and
+`problem_source=hybrid`.
 
 Next VPS testing should measure behavior, not add mechanism code:
 

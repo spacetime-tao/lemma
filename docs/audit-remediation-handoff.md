@@ -7,20 +7,21 @@ state quickly. Start here, then read [`local handoff note`](../local handoff not
 ## Current state
 
 - Working tree: `LOCAL_WORKSPACE/lemma` on `main`, tracking `origin/main`.
-- Latest pushed working batch is `d95411b` (`Normalize set_weights
-  false-return logs`) after the 2026-05-13 lemmasub.net dashboard plus
-  read-only droplet audit follow-up.
+- Latest runtime batch covered by this handoff is `0ff1068` (`Record CI
+  evidence for set_weights cleanup`) after the 2026-05-13 lemmasub.net
+  dashboard plus droplet audit follow-up.
 - Base commit before the earlier audit-remediation patch: `9546095`
   (`Track live ops hardening backlog`).
 - Current audit target: strict local subnet-quality pass for binary Lean proof
   grading. Live VPS/testnet mutation was out of scope.
 - Refreshed audit doc: [`docs/codex-audit.md`](codex-audit.md), rating
   `8.4 / 10`.
-- Current GitHub-confirmed head: `d95411b` (`Normalize set_weights
-  false-return logs`), with `CI` and `Build and Push Docker Image` passing on
-  GitHub Actions runs `25793209291` and `25793209296`.
-- Current testnet Droplet head: `8067b70` (`Harden set_weights result
-  handling`). The no-message set-weights logging cleanup is not deployed yet.
+- Latest GitHub-confirmed runtime head: `0ff1068` (`Record CI evidence for
+  set_weights cleanup`), with `CI` passing on GitHub Actions run
+  `25793725075`. The preceding code commit `d95411b` also had `CI` and
+  `Build and Push Docker Image` passing on runs `25793209291` and
+  `25793209296`.
+- Current testnet Droplet head: `0ff1068` on both known hosts.
 
 ## Implemented in the current local patch
 
@@ -88,7 +89,8 @@ Total Memory: 7.75GiB
 
 ## Next decisions
 
-- Watch several more deployed rounds and record set-weights/emission movement.
+- Watch the first full `0ff1068` post-deploy rounds and record
+  set-weights/emission movement.
 - Add production alerts for failed services, high disk, missing epoch summaries,
   repeated skipped weights, and repeated set_weights failures.
 - Plan a separate Lean cache volume or partition for validator/worker hosts.
@@ -141,5 +143,29 @@ restarted or changed.
 - Latest sampled validator round at `2026-05-13 10:04 UTC` verified/scored `4`
   proofs with `verify_infra_errors=0` and `set_weights success=True`. Earlier
   rounds still logged intermittent `set_weights success=False message=(False,
-  None)` when Bittensor returned false without a message; the local follow-up
-  patch fixes that operator-facing message and is not deployed yet.
+  None)` when Bittensor returned false without a message; the follow-up patch
+  below is now deployed at `0ff1068`.
+
+## Live deploy to current head
+
+On 2026-05-13, both known Droplets were fast-forwarded from `8067b70` to
+`0ff1068`. The validator was stopped first; the miner host, Lean worker, miner
+services, and validator were then restarted in order.
+
+- Validator / Lean worker `<validator-ssh-host>`: deployed `0ff1068`;
+  `lemma-validator`, `lemma-lean-worker-http`, and
+  `lemma-public-dashboard.timer` active; Lean worker health on
+  `127.0.0.1:8787` returned `{"status": "ok"}`.
+- Miner host `<miner-ssh-host>`: deployed `0ff1068`; six miner services
+  active.
+- The first validator restart failed closed because the old
+  `LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED` pin did not match the profile after
+  the extreme-split supply change. Running
+  `lemma configure subnet-pins --env-file /opt/lemma/.env --yes` wrote profile
+  pin `85155229a2c1a0dd9537434d89a7c924368f888e4602b6d909757b09285b0a9c` and
+  problem-supply pin
+  `f4ae425ad437c97b00d47b7ba97f97e1ff4cec8d5d66290c8b2364d91f822311`.
+- After the pin update, validator startup logged the expected registry hash,
+  `problem_source=hybrid`, and `validator cadence follows problem seed windows`.
+- No full post-`0ff1068` validator round had completed at the last check; watch
+  the next rounds before claiming live set-weights behavior for this head.
