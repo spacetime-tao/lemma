@@ -1,13 +1,24 @@
 # Lemma
 
-**Lemma** is a [Bittensor](https://docs.learnbittensor.org/) subnet where miners write Lean proofs for theorem statements published by the subnet. Validators run each submitted `proof_script` through the same pinned Lean verifier. If Lean accepts the proof, it can enter scoring; if Lean rejects it, it cannot.
+**Lemma is a [Bittensor](https://docs.learnbittensor.org/) subnet that rewards correct mathematical proofs.**
+
+Every round, Lemma posts a theorem written in Lean. Miners run automated proving
+systems. Validators run Lean. The proof passes or it fails.
+
+Bitcoin rewards miners for securing the network. Bittensor rewards miners for
+producing useful intelligence. Lemma rewards miners for producing correct
+proofs.
 
 A Lemma round is simple:
 
 1. The subnet publishes a theorem statement.
 2. Miners submit candidate Lean proof scripts.
 3. Validators verify those scripts with the published toolchain.
-4. Passing proofs become eligible for downstream scoring and allocation under Lemma’s subnet rules; failing proofs do not.
+4. Passing proofs become eligible for downstream scoring and allocation under Lemma's subnet rules; failing proofs do not.
+
+Anything that can be formalized as a Lean statement can become work for Lemma:
+algebra, number theory, logic, combinatorics, geometry, computer science,
+cryptography, and more.
 
 Lemma is still proof-of-concept software. It currently runs on Bittensor testnet as **subnet 467** (`--network test`; run `uv run lemma configure chain` to set `NETUID=467`). Mainnet, also known as Finney, is separate. Only treat mainnet rewards or tokens as relevant when the deployment you are following is registered, active, and matched to the correct **network** and **netuid**.
 
