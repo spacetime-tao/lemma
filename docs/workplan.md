@@ -53,7 +53,9 @@ not let parallel checklists drift.
   counters, and `set_weights success=True`. The first observed `0ff1068` round
   at `2026-05-13 10:59 UTC` verified/scored 5 proofs with
   `verify_infra_errors=0`; `set_weights` returned false, and the deployed
-  cleanup logged `success=False without message`.
+  cleanup logged `success=False without message`. A follow-up `0ff1068`
+  extreme-split round at `2026-05-13 11:10 UTC` verified/scored 2 proofs with
+  `verify_infra_errors=0` and `set_weights success=True`.
 - Read-only droplet sampling later on 2026-05-13 found continued verified/scored
   rounds, active dashboard publishing, and intermittent false/no-message
   `set_weights` results from the deployed code. The latest sampled round at
@@ -130,10 +132,10 @@ not let parallel checklists drift.
    hosts should still mount `LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR` on its own
    volume or partition.
 
-2. **Watch follow-up `0ff1068` validator rounds.**
-   The first complete current-head round verified/scored normally and confirmed
-   the no-message logging cleanup. Follow-up rounds need recorded evidence for
-   successful `set_weights`, reveal/emission movement, and repeated RPC false
+2. **Watch continued `0ff1068` validator rounds.**
+   Current-head rounds have now shown both cleaned false/no-message
+   `set_weights` logging and a later successful `set_weights` call. Continued
+   monitoring should record reveal/emission movement and any repeated RPC false
    returns.
 
 3. **Live alerting.**
@@ -159,8 +161,8 @@ not let parallel checklists drift.
 
 ## Next Work Order
 
-1. Watch follow-up `0ff1068` deployed rounds and record successful
-   set-weights/emission movement, especially across any RPC retry event.
+1. Watch continued `0ff1068` deployed rounds and record reveal/emission
+   movement, especially across any RPC retry event.
 2. Add a compact live health command/report covering commit, services, disk,
    cache slots, dashboard timer, latest epoch summary, and latest
    `set_weights`.
@@ -208,7 +210,9 @@ closed on stale pins; running the subnet-pins command refreshed the profile and
 problem-supply pins, after which startup logged the expected registry hash and
 `problem_source=hybrid`. The first observed `0ff1068` round verified/scored 5
 proofs with `verify_infra_errors=0`; `set_weights` returned false with the
-cleaned message `success=False without message`.
+cleaned message `success=False without message`. The next observed round was an
+extreme-split generated theorem that verified/scored 2 proofs and set weights
+successfully.
 
 Next VPS testing should measure behavior, not add mechanism code:
 

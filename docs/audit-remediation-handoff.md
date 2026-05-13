@@ -172,5 +172,9 @@ services, and validator were then restarted in order.
   `verified=5`, `scored=5`, `verify_infra_errors=0`, no reject counters.
   `set_weights` returned false after three attempts, but the deployed cleanup
   logged `success=False without message` instead of `(False, None)`.
-- Next live task: watch follow-up rounds for successful `set_weights`,
-  reveal/emission movement, and any repeated false/no-message RPC pattern.
+- Follow-up post-`0ff1068` round completed at `2026-05-13 11:10 UTC`:
+  `theorem_id=gen/7112200`, split `extreme`, `verified=2`, `scored=2`,
+  `verify_infra_errors=0`, no reject counters, and
+  `set_weights success=True`.
+- Next live task: keep watching continued rounds for reveal/emission movement
+  and any repeated false/no-message RPC pattern.
