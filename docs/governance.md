@@ -10,7 +10,7 @@ Validators map block seed → theorem via [`hybrid.py`](../lemma/problems/hybrid
 uv run lemma meta
 ```
 
-Publish `problem_supply_registry_sha256`; validators set `LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED`. The current hybrid source defaults to 60% generated templates and 40% curated catalog rows. The generated registry has 80 builders with explicit 10% / 35% / 55% easy / medium / hard split weights. Difficulty mix: [generated-problems.md](generated-problems.md). Builder/catalog promotion checklist: [problem-supply-policy.md](problem-supply-policy.md).
+Publish `problem_supply_registry_sha256`; validators set `LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED`. The current hybrid source defaults to 60% generated templates and 40% curated catalog rows. The generated registry has 85 builders with explicit 10% / 35% / 50% / 5% easy / medium / hard / extreme split weights. Difficulty mix: [generated-problems.md](generated-problems.md). Builder/catalog promotion checklist: [problem-supply-policy.md](problem-supply-policy.md).
 Use the release and rotation checklist in [problem-supply-policy.md](problem-supply-policy.md#release-and-rotation-checklist) before changing the live supply, generated registry, catalog, weights, or cadence.
 
 ## Generated templates only (`LEMMA_PROBLEM_SOURCE=generated`)

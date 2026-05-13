@@ -51,11 +51,19 @@ def test_different_seeds_usually_differ() -> None:
     assert p1.id != p2.id
 
 
-def test_split_filters_only_easy_or_medium_or_hard() -> None:
+def test_split_filters_only_known_splits() -> None:
     src = GeneratedProblemSource()
-    for spl in ("easy", "medium", "hard"):
+    for spl in ("easy", "medium", "hard", "extreme"):
         p = src.sample(99991, split=spl)
         assert p.split == spl
+
+
+def test_extreme_split_is_deterministic() -> None:
+    src = GeneratedProblemSource()
+    a = src.sample(42, split="extreme")
+    b = src.sample(42, split="extreme")
+    assert a.split == b.split == "extreme"
+    assert a.challenge_source() == b.challenge_source()
 
 
 def test_invalid_split_rejected() -> None:
@@ -64,11 +72,11 @@ def test_invalid_split_rejected() -> None:
 
 
 def test_default_split_weights_are_explicit() -> None:
-    assert DEFAULT_SPLIT_WEIGHTS == {"easy": 10, "medium": 35, "hard": 55}
+    assert DEFAULT_SPLIT_WEIGHTS == {"easy": 10, "medium": 35, "hard": 50, "extreme": 5}
     src = GeneratedProblemSource()
-    picks = [src.sample(seed).split for seed in range(100)]
-    assert picks == [src.sample(seed).split for seed in range(100)]
-    assert {"easy", "medium", "hard"}.issubset(set(picks))
+    picks = [src.sample(seed).split for seed in range(500)]
+    assert picks == [src.sample(seed).split for seed in range(500)]
+    assert {"easy", "medium", "hard", "extreme"}.issubset(set(picks))
 
 
 def test_template_topics_are_not_random_labels() -> None:

@@ -206,5 +206,44 @@
     "family": "nat_rec_counter",
     "informal_statement": "Prove that a recursive counter starting at zero returns the input natural number.",
     "witness_proof": "by\n  intro n\n  induction n with\n  | zero => rfl\n  | succ n ih => simp [ih]"
+  },
+  {
+    "id": "curated/metric/four_point_abs_triangle",
+    "theorem_name": "curated_four_point_abs_triangle",
+    "type_expr": "∀ w x y z : ℝ, |w - z| ≤ |w - x| + |x - y| + |y - z|",
+    "split": "extreme",
+    "lean_toolchain": "leanprover/lean4:v4.30.0-rc2",
+    "mathlib_rev": "5450b53e5ddc",
+    "imports": ["Mathlib"],
+    "topic": "geometry.metric",
+    "family": "four_point_abs_triangle",
+    "informal_statement": "Prove the displayed multi-step triangle inequality for real absolute value.",
+    "witness_proof": "by\n  intro w x y z\n  have hyz : w - z = (w - y) + (y - z) := by\n    ring\n  have hxy : w - y = (w - x) + (x - y) := by\n    ring\n  calc\n    |w - z| = |(w - y) + (y - z)| := by rw [hyz]\n    _ ≤ |w - y| + |y - z| := abs_add_le (w - y) (y - z)\n    _ = |(w - x) + (x - y)| + |y - z| := by rw [hxy]\n    _ ≤ (|w - x| + |x - y|) + |y - z| := by\n      nlinarith [abs_add_le (w - x) (x - y)]\n    _ = |w - x| + |x - y| + |y - z| := by ring"
+  },
+  {
+    "id": "curated/divisibility/three_square_sum",
+    "theorem_name": "curated_dvd_three_square_sum",
+    "type_expr": "∀ a b c d : Nat, a ∣ b → a ∣ c → a ∣ d → a ∣ b * b + c * c + d * d",
+    "split": "extreme",
+    "lean_toolchain": "leanprover/lean4:v4.30.0-rc2",
+    "mathlib_rev": "5450b53e5ddc",
+    "imports": ["Mathlib"],
+    "topic": "number_theory.divisibility",
+    "family": "divisibility_three_squares",
+    "informal_statement": "Prove that divisibility is preserved by the displayed three-square sum.",
+    "witness_proof": "by\n  intro a b c d hb hc hd\n  have hbb : a ∣ b * b := dvd_mul_of_dvd_left hb b\n  have hcc : a ∣ c * c := dvd_mul_of_dvd_left hc c\n  have hdd : a ∣ d * d := dvd_mul_of_dvd_left hd d\n  exact dvd_add (dvd_add hbb hcc) hdd"
+  },
+  {
+    "id": "curated/set/image_subset_chain",
+    "theorem_name": "curated_set_image_subset_chain",
+    "type_expr": "∀ (f : Nat → Nat) (A B C : Set Nat), A ⊆ B → B ⊆ C → f '' A ⊆ f '' C",
+    "split": "extreme",
+    "lean_toolchain": "leanprover/lean4:v4.30.0-rc2",
+    "mathlib_rev": "5450b53e5ddc",
+    "imports": ["Mathlib"],
+    "topic": "set_theory.finite_sets",
+    "family": "set_image_subset_chain",
+    "informal_statement": "Prove that image preserves a two-step subset chain under a function.",
+    "witness_proof": "by\n  intro f A B C hAB hBC y hy\n  rcases hy with ⟨x, hxA, rfl⟩\n  exact ⟨x, hBC (hAB hxA), rfl⟩"
   }
 ]

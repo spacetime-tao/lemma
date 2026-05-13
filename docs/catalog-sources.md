@@ -2,7 +2,7 @@
 
 ## Hybrid supply (default)
 
-**`LEMMA_PROBLEM_SOURCE=hybrid`** is the default live supply. It deterministically mixes seed-generated templates with a bundled curated catalog using published weights: **60 generated / 40 catalog**.
+**`LEMMA_PROBLEM_SOURCE=hybrid`** is the default live supply. It deterministically picks the published split first (**10 easy / 35 medium / 50 hard / 5 extreme**), then mixes seed-generated templates with a bundled curated catalog using published source weights: **60 generated / 40 catalog**.
 
 Validators agree because they share head + seed mode + hybrid weights + registry pins. `uv run lemma meta --raw` prints `problem_supply_registry_sha256`, which covers the generated registry hash, curated catalog hash, and hybrid weights. Validators set `LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED` from that value.
 

@@ -289,7 +289,7 @@ def _run_preview_session(
             click.echo("")
     click.echo(
         stylize(
-            "Calling your prover LLM (no axon / no other miners). Long runs are normal on medium/hard; "
+            "Calling your prover LLM (no axon / no other miners). Long runs are normal on medium/hard/extreme; "
             "transient HTTP errors are retried a few times automatically.",
             dim=True,
         ),

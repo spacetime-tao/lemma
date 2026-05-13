@@ -16,7 +16,7 @@ from lemma.common.config import LemmaSettings
 def judge_profile_dict(settings: LemmaSettings) -> dict[str, object]:
     """Stable dict for hashing proof-only validator policy (no API keys)."""
     out: dict[str, object] = {
-        "profile_schema": "lemma_validator_profile_v6",
+        "profile_schema": "lemma_validator_profile_v7",
         "problem_policy": {
             "problem_source": (settings.problem_source or "").strip().lower(),
             "problem_seed_mode": settings.problem_seed_mode,
@@ -36,6 +36,7 @@ def judge_profile_dict(settings: LemmaSettings) -> dict[str, object]:
             "timeout_split_easy_mult": float(settings.timeout_split_easy_mult),
             "timeout_split_medium_mult": float(settings.timeout_split_medium_mult),
             "timeout_split_hard_mult": float(settings.timeout_split_hard_mult),
+            "timeout_split_extreme_mult": float(settings.timeout_split_extreme_mult),
         },
         "scoring_policy": {
             "lemma_scoring_coldkey_partition": bool(settings.lemma_scoring_coldkey_partition),

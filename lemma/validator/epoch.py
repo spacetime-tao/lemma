@@ -399,6 +399,7 @@ async def run_epoch(
                         "easy": settings.timeout_split_easy_mult,
                         "medium": settings.timeout_split_medium_mult,
                         "hard": settings.timeout_split_hard_mult,
+                        "extreme": settings.timeout_split_extreme_mult,
                     }.get((problem.split or "").strip().lower(), 1.0)
                 )
                 verify_timeout_s = max(1, int(round(float(settings.lean_verify_timeout_s) * wait_scale)))

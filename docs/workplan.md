@@ -7,8 +7,9 @@ not let parallel checklists drift.
 ## Current Baseline
 
 - Repository: `spacetime-tao/lemma`, local checkout `LOCAL_WORKSPACE/lemma`.
-- Current local hardening batch: 2026-05-13 audit remediation, starting from
-  `9546095` (`Track live ops hardening backlog`).
+- Current local working batch: 2026-05-13 audit remediation plus the
+  uncommitted extreme-split problem-supply update on top of `3fabf9c`
+  (`Record droplet deploy evidence`).
 - Current deployed/GitHub-confirmed audit head:
   `8067b70` (`Harden set_weights result handling`), with `CI` and
   `Build and Push Docker Image` passing on GitHub Actions.
@@ -30,10 +31,10 @@ not let parallel checklists drift.
   partitioning limits one-coldkey multi-hotkey multiplication after weights are
   computed.
 - Default problem supply is hybrid: generated templates plus a curated catalog
-  lane with authored dashboard statements. The generated registry has 80
-  builders with explicit 10% / 35% / 55% easy / medium / hard split weights,
-  template-owned topics, and a metadata/witness gate covering registry
-  reachability/coherence.
+  lane with authored dashboard statements. The local working registry has 85
+  builders with explicit 10% / 35% / 50% / 5% easy / medium / hard / extreme
+  split weights, template-owned topics, and a metadata/witness gate covering
+  registry reachability/coherence.
 - Normal operator workflows are consolidated under `lemma`: setup, doctor,
   status, problem views, preview, miner, and validator entrypoints.
 - Validator hot-path side effects are bounded: export writes are non-fatal after
@@ -45,24 +46,18 @@ not let parallel checklists drift.
 - Testnet Droplets are currently deployed at `8067b70`. First post-deploy round
   observed `verified=3`, `scored=3`, `verify_infra_errors=0`, no reject
   counters, and `set_weights success=True`.
-- Local baseline checks after the 2026-05-13 hardening pass:
+- Local baseline checks after the 2026-05-13 extreme-split problem-supply update:
   - `.venv/bin/ruff check lemma tests tools`: passed;
   - `.venv/bin/mypy lemma`: passed
     (`Success: no issues found in 70 source files`);
   - `.venv/bin/pytest tests -q`: passed
-    (`310 passed, 2 skipped, 12 warnings`);
+    (`314 passed, 2 skipped, 12 warnings`);
   - `.venv/bin/python scripts/ci_verify_generated_templates.py`: passed
-    (`OK: generated template metadata/witness gate covered 80 builders`);
-  - `RUN_DOCKER_LEAN=1 LEAN_SANDBOX_IMAGE=lemma/lean-sandbox:latest .venv/bin/pytest tests/test_docker_golden.py -v --tb=short`:
-    passed (`1 passed in 208.57s`);
+    (`OK: generated template metadata/witness gate covered 85 builders`);
   - `RUN_DOCKER_LEAN_TEMPLATES=1 LEAN_SANDBOX_IMAGE=lemma/lean-sandbox:latest .venv/bin/python scripts/ci_verify_generated_templates.py`:
-    passed; all 80 generated template stubs and witnesses built in one Docker
+    passed; all 85 generated template stubs and witnesses built in one Docker
     workspace;
-  - `docker build -f Dockerfile -t lemma-runtime:ci-smoke .`: passed;
-  - `.venv/bin/bandit -q -r lemma -ll`: passed with no medium/high findings;
-  - `.venv/bin/bandit -q -r lemma`: 20 low-severity findings only;
-  - `.venv/bin/pip-audit --ignore-vuln PYSEC-2025-49 --ignore-vuln PYSEC-2022-42969`:
-    passed (`No known vulnerabilities found, 3 ignored`).
+  - `git diff --check`: passed.
 
 ## Recently Closed
 
@@ -73,8 +68,9 @@ not let parallel checklists drift.
   `lemma lean-worker` binds fail unless the explicit dev-only override is set.
 - Binary proof eligibility docs: high-traffic docs separate the binary Lean
   eligibility gate from downstream allocation policy.
-- Generated problem supply hardening: registry now has 80 builders and the
-  local metadata/witness gate covers all of them.
+- Generated problem supply hardening: local working registry now has 85 builders
+  across easy / medium / hard / extreme splits, and the local metadata/witness
+  gate covers all of them.
 - Hybrid supply design: default source is generated + curated catalog with
   deterministic 60 / 40 lane weights, authored `informal_statement` metadata,
   and `problem_supply_registry_sha256` for validator pinning.

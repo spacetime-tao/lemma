@@ -3,8 +3,8 @@
 This is a long-term direction for Lemma, not a v0 launch requirement.
 
 The v0 lane stays simple: public generated theorem statements, easy / medium /
-hard splits, fixed cadence, Lean verification, and evidence-driven reward
-changes. Open-problem campaigns are a later lane for slower, higher-stakes work:
+hard / extreme splits, fixed cadence, Lean verification, and evidence-driven
+reward changes. Open-problem campaigns are a later lane for slower, higher-stakes work:
 formalizing major mathematical targets, building their dependency graphs, and
 rewarding verified progress toward them.
 
@@ -68,7 +68,7 @@ Campaigns should be separate from the generated cadence lane.
 
 | Lane | Role |
 | --- | --- |
-| `generated` | v0 traffic: easy / medium / hard recurring theorems, high throughput, predictable verify costs. |
+| `generated` | v0 traffic: easy / medium / hard / extreme recurring theorems, high throughput, predictable verify costs. |
 | `curated` | benchmark or mathlib-adjacent theorem sets with explicit release governance. |
 | `campaign` | long-horizon open-problem infrastructure and prerequisite lemmas. |
 | `bounty` | submit-when-ready targets with explicit deadlines, rollover, and payout rules. |

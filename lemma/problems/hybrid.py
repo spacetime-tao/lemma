@@ -5,12 +5,15 @@ from __future__ import annotations
 import hashlib
 import json
 import random
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
 from lemma.catalog.constants import DEFAULT_LEAN_TOOLCHAIN, DEFAULT_MATHLIB_REV
 from lemma.problems.base import Problem, ProblemSource
 from lemma.problems.generated import (
+    DEFAULT_SPLIT_WEIGHTS,
+    VALID_SPLITS,
     GeneratedProblemSource,
     generated_registry_canonical_dict,
     generated_registry_sha256,
@@ -51,6 +54,7 @@ def validate_curated_catalog_rows(rows: list[dict[str, Any]]) -> None:
     """Cheap live-supply gate for dashboard metadata and deterministic catalog rows."""
     errors: list[str] = []
     seen: set[str] = set()
+    splits_seen: set[str] = set()
     for i, row in enumerate(rows):
         if not isinstance(row, dict):
             errors.append(f"row {i}: expected object")
@@ -64,12 +68,20 @@ def validate_curated_catalog_rows(rows: list[dict[str, Any]]) -> None:
         missing = sorted(k for k in _REQUIRED_CURATED_KEYS if not str(row.get(k) or "").strip())
         if missing:
             errors.append(f"row {i} id={rid!r}: missing {', '.join(missing)}")
+        split = str(row.get("split") or "").strip().lower()
+        if split not in VALID_SPLITS:
+            errors.append(f"row {i} id={rid!r}: invalid split {split!r}")
+        else:
+            splits_seen.add(split)
         if row.get("lean_toolchain") != DEFAULT_LEAN_TOOLCHAIN:
             errors.append(f"row {i} id={rid!r}: lean_toolchain must match {DEFAULT_LEAN_TOOLCHAIN}")
         if row.get("mathlib_rev") != DEFAULT_MATHLIB_REV:
             errors.append(f"row {i} id={rid!r}: mathlib_rev must match {DEFAULT_MATHLIB_REV}")
         if row.get("informal_statement") == "Prove the displayed generated Lean theorem.":
             errors.append(f"row {i} id={rid!r}: informal_statement is fallback text")
+    missing_splits = [split for split in VALID_SPLITS if DEFAULT_SPLIT_WEIGHTS[split] > 0 and split not in splits_seen]
+    if missing_splits:
+        errors.append(f"curated catalog missing positive-weight splits: {', '.join(missing_splits)}")
     if errors:
         raise ValueError("curated catalog metadata gate failed:\n- " + "\n- ".join(errors))
 
@@ -96,6 +108,7 @@ def problem_supply_registry_canonical_dict(
         "kind": "lemma_problem_supply_registry_v1",
         "rng_mix_tag": HYBRID_RNG_MIX_TAG,
         "weights": {"generated": int(generated_weight), "catalog": int(catalog_weight)},
+        "split_weights": dict(DEFAULT_SPLIT_WEIGHTS),
         "generated_registry_sha256": generated_registry_sha256(),
         "generated_registry": generated_registry_canonical_dict(),
         "curated_catalog_sha256": curated_catalog_sha256(curated_catalog_path),
@@ -134,11 +147,13 @@ class CuratedCatalogSource(ProblemSource):
         return list(self._problems)
 
     def sample(self, seed: int, split: str | None = None) -> Problem:
-        rng = random.Random(_mixed_seed("catalog", seed))
         split_key = (split or "").strip().lower()
+        if split_key and split_key not in VALID_SPLITS:
+            raise ValueError(f"unknown curated problem split {split!r}")
+        rng = random.Random(_mixed_seed("catalog", seed))
         pool = [p for p in self._problems if not split_key or p.split.lower() == split_key]
         if not pool:
-            pool = self._problems
+            raise ValueError(f"curated catalog has no problems for split {split_key!r}")
         return rng.choice(pool)
 
     def get(self, problem_id: str) -> Problem:
@@ -170,10 +185,11 @@ class HybridProblemSource(ProblemSource):
 
     def sample(self, seed: int, split: str | None = None) -> Problem:
         rng = random.Random(_mixed_seed("hybrid", seed))
+        split_key = _pick_split(rng, DEFAULT_SPLIT_WEIGHTS) if split is None else _normalize_split(split)
         lane = _pick_lane(rng, self._weights)
         if lane == "generated":
-            return _require_public_statement(self._generated.sample(seed, split=split))
-        return _require_public_statement(self._catalog.sample(seed, split=split))
+            return _require_public_statement(self._generated.sample(seed, split=split_key))
+        return _require_public_statement(self._catalog.sample(seed, split=split_key))
 
     def get(self, problem_id: str) -> Problem:
         if problem_id.startswith("gen/"):
@@ -184,6 +200,23 @@ class HybridProblemSource(ProblemSource):
 def _pick_lane(rng: random.Random, weights: dict[str, int]) -> str:
     pick = rng.randrange(sum(weights.values()))
     return "generated" if pick < weights["generated"] else "catalog"
+
+
+def _pick_split(rng: random.Random, weights: Mapping[Any, int]) -> str:
+    pick = rng.randrange(sum(weights.values()))
+    offset = 0
+    for split in VALID_SPLITS:
+        offset += weights[split]
+        if pick < offset:
+            return split
+    raise AssertionError("unreachable split selection")
+
+
+def _normalize_split(split: str) -> str:
+    split_key = split.strip().lower()
+    if split_key not in VALID_SPLITS:
+        raise ValueError(f"unknown hybrid problem split {split!r}")
+    return split_key
 
 
 def _row_to_problem(row: dict[str, Any]) -> Problem:

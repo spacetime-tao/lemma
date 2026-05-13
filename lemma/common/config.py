@@ -443,7 +443,7 @@ class LemmaSettings(BaseSettings):
         default=False,
         validation_alias="LEMMA_TIMEOUT_SCALE_BY_SPLIT",
         description=(
-            "If true, multiply forward HTTP wait and LEAN_VERIFY_TIMEOUT_S by easy/medium/hard multipliers."
+            "If true, multiply forward HTTP wait and LEAN_VERIFY_TIMEOUT_S by split-specific multipliers."
         ),
     )
     timeout_split_easy_mult: float = Field(
@@ -463,6 +463,12 @@ class LemmaSettings(BaseSettings):
         ge=0.1,
         le=50.0,
         validation_alias="LEMMA_TIMEOUT_SPLIT_HARD_MULT",
+    )
+    timeout_split_extreme_mult: float = Field(
+        default=3.0,
+        ge=0.1,
+        le=50.0,
+        validation_alias="LEMMA_TIMEOUT_SPLIT_EXTREME_MULT",
     )
     lemma_lean_verify_max_concurrent: int = Field(
         default=4,

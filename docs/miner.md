@@ -52,7 +52,7 @@ For frozen catalog problems, `LEMMA_MINER_LOCAL_VERIFY` needs the same `LEMMA_MI
 
 ## Generated mode
 
-Templates span easy/medium/hard; how long validators wait on the wire follows **block height** (blocks to the next seed edge × `LEMMA_BLOCK_TIME_SEC_ESTIMATE`, clamped) — see [generated-problems.md](generated-problems.md).
+Templates span easy/medium/hard/extreme; how long validators wait on the wire follows **block height** (blocks to the next seed edge × `LEMMA_BLOCK_TIME_SEC_ESTIMATE`, clamped) — see [generated-problems.md](generated-problems.md).
 
 ## Compose
 

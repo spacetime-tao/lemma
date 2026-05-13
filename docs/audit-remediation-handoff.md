@@ -7,7 +7,10 @@ state quickly. Start here, then read [`local handoff note`](../local handoff not
 ## Current state
 
 - Working tree: `LOCAL_WORKSPACE/lemma` on `main`, tracking `origin/main`.
-- Base commit before this local patch: `9546095` (`Track live ops hardening backlog`).
+- Current local patch is the uncommitted extreme-split problem-supply update on
+  top of `3fabf9c` (`Record droplet deploy evidence`).
+- Base commit before the earlier audit-remediation patch: `9546095`
+  (`Track live ops hardening backlog`).
 - Current audit target: strict local subnet-quality pass for binary Lean proof
   grading. Live VPS/testnet mutation was out of scope.
 - Refreshed audit doc: [`docs/codex-audit.md`](codex-audit.md), rating
@@ -16,7 +19,16 @@ state quickly. Start here, then read [`local handoff note`](../local handoff not
   `8067b70` (`Harden set_weights result handling`), with `CI` and
   `Build and Push Docker Image` passing.
 
-## Implemented in this local patch
+## Implemented in the current local patch
+
+- Generated supply adds a rare `extreme` split: 85 builders total with
+  10 / 35 / 50 / 5 easy / medium / hard / extreme weights.
+- The curated catalog includes positive-weight `extreme` rows, and hybrid
+  sampling picks the split before the generated/catalog lane.
+- Validator timeout policy includes `LEMMA_TIMEOUT_SPLIT_EXTREME_MULT`; the
+  validator profile schema is bumped to `lemma_validator_profile_v7`.
+
+## Implemented in the earlier audit-remediation patch
 
 - Training export `OSError` is non-fatal after scoring; `set_weights` can still
   run with known scores.
@@ -40,17 +52,14 @@ state quickly. Start here, then read [`local handoff note`](../local handoff not
   treats tuple-style false returns and raised RPC exceptions as failures, retries
   them, and logs a concrete final message.
 
-## Verification already run
+## Current focused verification
 
 - `.venv/bin/ruff check lemma tests tools`: passed.
 - `.venv/bin/mypy lemma`: passed.
-- `.venv/bin/pytest tests -q`: passed, `310 passed, 2 skipped, 12 warnings`.
+- `.venv/bin/pytest tests -q`: passed, `314 passed, 2 skipped, 12 warnings`.
 - `.venv/bin/python scripts/ci_verify_generated_templates.py`: passed,
-  `OK: generated template metadata/witness gate covered 80 builders`.
-- `.venv/bin/bandit -q -r lemma -ll`: passed.
-- `.venv/bin/bandit -q -r lemma`: 20 low findings only.
-- `.venv/bin/pip-audit --ignore-vuln PYSEC-2025-49 --ignore-vuln PYSEC-2022-42969`:
-  passed with `No known vulnerabilities found, 3 ignored`.
+  `OK: generated template metadata/witness gate covered 85 builders`.
+- `git diff --check`: passed.
 
 ## Docker evidence
 
@@ -66,12 +75,9 @@ Total Memory: 7.75GiB
 
 - `docker image inspect lemma/lean-sandbox:latest`: image present
   (`lemma/lean-sandbox:latest`, `lemma/lean-sandbox:mathlib-5450b53e`).
-- `RUN_DOCKER_LEAN=1 LEAN_SANDBOX_IMAGE=lemma/lean-sandbox:latest .venv/bin/pytest tests/test_docker_golden.py -v --tb=short`:
-  passed, `1 passed in 208.57s`.
 - `RUN_DOCKER_LEAN_TEMPLATES=1 LEAN_SANDBOX_IMAGE=lemma/lean-sandbox:latest .venv/bin/python scripts/ci_verify_generated_templates.py`:
-  passed; all 80 generated template stubs and witnesses built in one Docker
+  passed; all 85 generated template stubs and witnesses built in one Docker
   workspace.
-- `docker build -f Dockerfile -t lemma-runtime:ci-smoke .`: passed.
 
 ## Next decisions
 

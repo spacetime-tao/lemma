@@ -38,6 +38,7 @@ def test_judge_profile_includes_validator_scoring_policy() -> None:
         timeout_split_easy_mult=1.1,
         timeout_split_medium_mult=1.2,
         timeout_split_hard_mult=1.3,
+        timeout_split_extreme_mult=1.4,
         lemma_reputation_credibility_exponent=2.0,
         lemma_epoch_problem_count=3,
         lemma_commit_reveal_enabled=True,
@@ -47,13 +48,14 @@ def test_judge_profile_includes_validator_scoring_policy() -> None:
     )
     d = judge_profile_dict(s)
 
-    assert d["profile_schema"] == "lemma_validator_profile_v6"
+    assert d["profile_schema"] == "lemma_validator_profile_v7"
     assert d["problem_policy"]["problem_seed_quantize_blocks"] == 55
     assert d["problem_policy"]["hybrid_generated_weight"] == 60
     assert d["problem_policy"]["hybrid_catalog_weight"] == 40
     assert d["verification_policy"]["lean_sandbox_image"] == "lemma/lean-sandbox:latest"
     assert d["verification_policy"]["lean_verify_timeout_s"] == 123
     assert d["verification_policy"]["timeout_split_hard_mult"] == 1.3
+    assert d["verification_policy"]["timeout_split_extreme_mult"] == 1.4
     assert d["scoring_policy"]["lemma_reputation_credibility_exponent"] == 2.0
     assert d["scoring_policy"]["lemma_epoch_problem_count"] == 3
     assert d["scoring_policy"]["lemma_scoring_coldkey_partition"] is True

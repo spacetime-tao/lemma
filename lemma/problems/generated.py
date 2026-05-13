@@ -18,10 +18,10 @@ from typing import Any, Literal
 from lemma.catalog.constants import DEFAULT_LEAN_TOOLCHAIN, DEFAULT_MATHLIB_REV
 from lemma.problems.base import SOLUTION_BRIDGE_THEOREM, Problem, ProblemSource
 
-Split = Literal["easy", "medium", "hard"]
+Split = Literal["easy", "medium", "hard", "extreme"]
 
-VALID_SPLITS: tuple[Split, ...] = ("easy", "medium", "hard")
-DEFAULT_SPLIT_WEIGHTS: dict[Split, int] = {"easy": 10, "medium": 35, "hard": 55}
+VALID_SPLITS: tuple[Split, ...] = ("easy", "medium", "hard", "extreme")
+DEFAULT_SPLIT_WEIGHTS: dict[Split, int] = {"easy": 10, "medium": 35, "hard": 50, "extreme": 5}
 RNG_MIX_TAG = "lemma_generated_rng_v1"
 
 # Taxonomy for logging / exports. Templates carry their own topic; topics are no
@@ -128,21 +128,26 @@ GENERATED_FAMILY_STATEMENTS: dict[str, str] = {
     "integer_square_identity": "Prove the displayed difference-of-squares identity over the integers.",
     "nat_square_identity": "Prove the displayed square expansion for natural numbers.",
     "quadratic_inequality": "Prove the displayed quadratic inequality over the real numbers.",
+    "four_point_abs_triangle": "Prove the displayed multi-step triangle inequality for real absolute value.",
     "sum_squares_nonneg": "Prove that the displayed sum of real squares is nonnegative.",
     "square_difference_nonneg": "Prove that the square of a real-number difference is nonnegative.",
     "set_union_inter_distrib": "Prove the displayed distributive law for set union and intersection.",
     "set_difference": "Prove the displayed identity for set difference over a union.",
     "image_preimage": "Prove that a set is contained in the preimage of its image under a function.",
+    "set_image_subset_chain": "Prove that image preserves a two-step subset chain under a function.",
     "logic_curry": "Prove the displayed currying equivalence for propositions.",
     "contrapositive": "Prove the displayed contrapositive implication.",
     "divisibility_sum_squares": "Prove that divisibility is preserved by the displayed sum of squares.",
+    "divisibility_three_squares": "Prove that divisibility is preserved by the displayed three-square sum.",
     "divisibility_linear_combo": "Prove that divisibility is preserved by the displayed symmetric linear combination.",
     "prime_beyond_shift": "Prove that beyond every shifted bound there is a prime number.",
     "list_reverse_append": "Prove that reversing an appended list reverses the parts in opposite order.",
+    "list_map_reverse_append": "Prove the displayed identity combining list append, map, and reverse.",
     "list_map_reverse": "Prove that mapping over a list commutes with reversing it.",
     "list_replicate_append": "Prove the displayed length identity for appended replicated lists.",
     "finset_range_subset": "Prove that a smaller finite range is contained in a larger finite range.",
     "finset_card_range": "Prove the displayed cardinality identity for a finite range.",
+    "finset_sum_range_two_steps": "Prove the displayed finite-sum identity by adding two successive range endpoints.",
     "matrix_transpose": "Prove that transposing a matrix twice gives the original matrix.",
     "matrix_add_zero": "Prove that adding zero to the displayed matrix gives the same matrix.",
     "continuous_polynomial": "Prove that the displayed polynomial function over real numbers is continuous.",
@@ -781,6 +786,79 @@ def _b_real_quadratic_param_hard(rng: random.Random) -> TemplateInstance:
     )
 
 
+# --- Extreme builders 80..84.
+
+
+def _b_real_four_point_abs_triangle_extreme(rng: random.Random) -> TemplateInstance:
+    return _inst(
+        "∀ w x y z : ℝ, |w - z| ≤ |w - x| + |x - y| + |y - z|",
+        "by\n  intro w x y z\n"
+        "  have hyz : w - z = (w - y) + (y - z) := by\n"
+        "    ring\n"
+        "  have hxy : w - y = (w - x) + (x - y) := by\n"
+        "    ring\n"
+        "  calc\n"
+        "    |w - z| = |(w - y) + (y - z)| := by rw [hyz]\n"
+        "    _ ≤ |w - y| + |y - z| := abs_add_le (w - y) (y - z)\n"
+        "    _ = |(w - x) + (x - y)| + |y - z| := by rw [hxy]\n"
+        "    _ ≤ (|w - x| + |x - y|) + |y - z| := by\n"
+        "      nlinarith [abs_add_le (w - x) (x - y)]\n"
+        "    _ = |w - x| + |x - y| + |y - z| := by ring",
+    )
+
+
+def _b_dvd_three_square_sum_extreme(rng: random.Random) -> TemplateInstance:
+    return _inst(
+        "∀ a b c d : Nat, a ∣ b → a ∣ c → a ∣ d → a ∣ b * b + c * c + d * d",
+        "by\n  intro a b c d hb hc hd\n"
+        "  have hbb : a ∣ b * b := dvd_mul_of_dvd_left hb b\n"
+        "  have hcc : a ∣ c * c := dvd_mul_of_dvd_left hc c\n"
+        "  have hdd : a ∣ d * d := dvd_mul_of_dvd_left hd d\n"
+        "  exact dvd_add (dvd_add hbb hcc) hdd",
+    )
+
+
+def _b_set_image_subset_chain_extreme(rng: random.Random) -> TemplateInstance:
+    return _inst(
+        "∀ (f : Nat → Nat) (A B C : Set Nat), A ⊆ B → B ⊆ C → f '' A ⊆ f '' C",
+        "by\n  intro f A B C hAB hBC y hy\n"
+        "  rcases hy with ⟨x, hxA, rfl⟩\n"
+        "  exact ⟨x, hBC (hAB hxA), rfl⟩",
+    )
+
+
+def _b_list_map_reverse_append_extreme(rng: random.Random) -> TemplateInstance:
+    k = rng.randint(1, 20)
+    return _inst(
+        f"∀ xs ys : List Nat, ((xs ++ ys).map (fun n => n + {k})).reverse = "
+        f"(ys.map (fun n => n + {k})).reverse ++ (xs.map (fun n => n + {k})).reverse",
+        f"by\n  intro xs ys\n"
+        f"  calc\n"
+        f"    ((xs ++ ys).map (fun n => n + {k})).reverse = "
+        f"((xs.map (fun n => n + {k})) ++ (ys.map (fun n => n + {k}))).reverse := by\n"
+        f"      simp\n"
+        f"    _ = (ys.map (fun n => n + {k})).reverse ++ "
+        f"(xs.map (fun n => n + {k})).reverse := by\n"
+        f"      simp",
+    )
+
+
+def _b_finset_sum_range_two_steps_extreme(rng: random.Random) -> TemplateInstance:
+    n = rng.randint(3, 12)
+    return _inst(
+        f"(∑ i ∈ Finset.range ({n} + 2), (i : Nat)) = "
+        f"(∑ i ∈ Finset.range {n}, (i : Nat)) + ({n} : Nat) + ({n} + 1 : Nat)",
+        f"by\n  calc\n"
+        f"    (∑ i ∈ Finset.range ({n} + 2), (i : Nat)) = "
+        f"(∑ i ∈ Finset.range ({n} + 1), (i : Nat)) + ({n} + 1 : Nat) := by\n"
+        f"      exact Finset.sum_range_succ (fun i : Nat => (i : Nat)) ({n} + 1)\n"
+        f"    _ = ((∑ i ∈ Finset.range {n}, (i : Nat)) + ({n} : Nat)) + ({n} + 1 : Nat) := by\n"
+        f"      rw [Finset.sum_range_succ (fun i : Nat => (i : Nat)) {n}]\n"
+        f"    _ = (∑ i ∈ Finset.range {n}, (i : Nat)) + ({n} : Nat) + ({n} + 1 : Nat) := by\n"
+        f"      ring",
+    )
+
+
 _RAW_BUILDERS: tuple[GeneratedTemplate, ...] = (
     GeneratedTemplate("easy", "logic.propositional", "truth", _b_true_easy),
     GeneratedTemplate("easy", "algebra.basic", "nat_arithmetic", _b_nat_add_norm_easy),
@@ -877,6 +955,36 @@ _RAW_BUILDERS: tuple[GeneratedTemplate, ...] = (
     GeneratedTemplate("hard", "foundations.recursion", "nat_rec_counter", _b_nat_rec_counter_hard),
     GeneratedTemplate("hard", "set_theory.finite_sets", "set_image_mono", _b_set_image_mono_hard),
     GeneratedTemplate("hard", "algebra.polynomial_light", "real_quadratic_param", _b_real_quadratic_param_hard),
+    GeneratedTemplate(
+        "extreme",
+        "geometry.metric",
+        "four_point_abs_triangle",
+        _b_real_four_point_abs_triangle_extreme,
+    ),
+    GeneratedTemplate(
+        "extreme",
+        "number_theory.divisibility",
+        "divisibility_three_squares",
+        _b_dvd_three_square_sum_extreme,
+    ),
+    GeneratedTemplate(
+        "extreme",
+        "set_theory.finite_sets",
+        "set_image_subset_chain",
+        _b_set_image_subset_chain_extreme,
+    ),
+    GeneratedTemplate(
+        "extreme",
+        "combinatorics.counting",
+        "list_map_reverse_append",
+        _b_list_map_reverse_append_extreme,
+    ),
+    GeneratedTemplate(
+        "extreme",
+        "combinatorics.finite_sets",
+        "finset_sum_range_two_steps",
+        _b_finset_sum_range_two_steps_extreme,
+    ),
 )
 
 

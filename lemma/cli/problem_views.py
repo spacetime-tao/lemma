@@ -37,7 +37,7 @@ def echo_problem_card(
     click.echo(
         stylize("  difficulty   ", dim=True)
         + stylize(p.split, fg="yellow", bold=True)
-        + stylize("  (easy / medium / hard)", dim=True),
+        + stylize("  (easy / medium / hard / extreme)", dim=True),
     )
     if isinstance(ex, dict) and ex.get("template_fn"):
         click.echo(stylize("  builder      ", dim=True) + stylize(str(ex["template_fn"]), fg="green"))

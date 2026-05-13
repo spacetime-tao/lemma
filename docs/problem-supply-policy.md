@@ -13,7 +13,7 @@ That means:
 - Do not treat SHA256 mixing as anti-precompute security.
 - Do use `problem_supply_registry_sha256` to keep validators on the same public hybrid supply.
 
-The current hybrid lane is steady traffic: deterministic, Lean-checkable challenges with known generated families and a reviewed curated catalog. The generated registry has 80 builders and explicit 10% / 35% / 55% easy / medium / hard split weights; hybrid source weights default to 60% generated and 40% catalog. It is not a complete difficulty market for all of mathematics.
+The current hybrid lane is steady traffic: deterministic, Lean-checkable challenges with known generated families and a reviewed curated catalog. The generated registry has 85 builders and explicit 10% / 35% / 50% / 5% easy / medium / hard / extreme split weights; hybrid source weights default to 60% generated and 40% catalog. Extreme is a rare stretch tier inside steady cadence, not the off-cadence bounty/campaign lane.
 
 ## Accepted risk
 
@@ -33,7 +33,7 @@ New generated builders should enter the live registry only after they pass the s
 
 1. The statement is Lean-valid after replacing the miner proof with `sorry`.
 2. At least one public witness proof passes the sandbox on the pinned Lean/Mathlib image and axiom check.
-3. The expected split is honest (`easy`, `medium`, `hard`) and not based only on proof text length.
+3. The expected split is honest (`easy`, `medium`, `hard`, `extreme`) and not based only on proof text length.
 4. Cold-cache and warm-cache verification costs fit the published timeout policy.
 5. The builder has a stable source hash in `generated_registry_sha256`.
 6. `docs/generated-problems.md` and operator release notes describe the changed mix.
@@ -86,6 +86,7 @@ Builder mix:
 - easy:
 - medium:
 - hard:
+- extreme:
 - split weights:
 
 Evidence:

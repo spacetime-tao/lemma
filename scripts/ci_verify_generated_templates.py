@@ -38,7 +38,7 @@ from lemma.lean.cheats import ALLOWED_AXIOMS
 from lemma.problems.base import Problem
 from lemma.problems.generated import generated_witness_submission_source
 
-_VALID_SPLITS = {"easy", "medium", "hard"}
+_VALID_SPLITS = {"easy", "medium", "hard", "extreme"}
 
 
 def _find_seed_per_builder() -> dict[int, int]:
