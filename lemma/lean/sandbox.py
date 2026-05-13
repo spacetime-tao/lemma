@@ -212,11 +212,17 @@ class LeanSandbox:
                     include_proof_metrics_probe=self.proof_metrics_enabled,
                 )
                 vr = self._verify_docker(work) if self.use_docker else self._verify_host(work)
-                if vr.passed and (work / ".lake").is_dir():
+                if self._workspace_cache_publishable(work, vr):
                     self._publish_workspace_cache(slot, work, cache_key)
                 return vr
             finally:
                 shutil.rmtree(work, ignore_errors=True)
+
+    def _workspace_cache_publishable(self, work: Path, result: VerifyResult) -> bool:
+        """Keep dependency warmup even when the miner proof itself failed."""
+        if self.workspace_cache_dir is None or not (work / ".lake" / "packages" / "mathlib").is_dir():
+            return False
+        return result.reason not in {"timeout", "oom", "docker_error", "remote_error"}
 
     def _publish_workspace_cache(self, slot: Path, work: Path, key: str) -> None:
         """First passing verify for this template — keep the verified workspace as the warm slot."""
