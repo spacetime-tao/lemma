@@ -9,8 +9,8 @@ not let parallel checklists drift.
 - Repository: `spacetime-tao/lemma`, local checkout `LOCAL_WORKSPACE/lemma`.
 - Current local hardening batch: 2026-05-13 audit remediation, starting from
   `9546095` (`Track live ops hardening backlog`).
-- Last GitHub-confirmed audit head before the set_weights follow-up:
-  `2b0c076` (`Harden validator audit boundaries`), with `CI` and
+- Current deployed/GitHub-confirmed audit head:
+  `8067b70` (`Harden set_weights result handling`), with `CI` and
   `Build and Push Docker Image` passing on GitHub Actions.
 - Live reward direction: proof passes Lean and can enter scoring, or proof
   fails Lean and does not enter scoring.
@@ -42,6 +42,9 @@ not let parallel checklists drift.
 - Lean workspace cache is bounded by both slot count and total bytes.
 - Public dashboard refreshes are serialized with `flock` and remain outside the
   validator scoring path.
+- Testnet Droplets are currently deployed at `8067b70`. First post-deploy round
+  observed `verified=3`, `scored=3`, `verify_infra_errors=0`, no reject
+  counters, and `set_weights success=True`.
 - Local baseline checks after the 2026-05-13 hardening pass:
   - `.venv/bin/ruff check lemma tests tools`: passed;
   - `.venv/bin/mypy lemma`: passed
@@ -91,6 +94,9 @@ not let parallel checklists drift.
 - Set-weights result handling: tuple-style false returns and raised RPC
   exceptions are failures, are retried, and produce a concrete final log message
   instead of `message=None`.
+- Testnet deploy/evidence slice: validator/miner hosts were fast-forwarded from
+  `d42addb` to `8067b70`; services restarted; first post-deploy round set
+  weights successfully.
 - Dashboard refresh isolation: the deploy script uses `flock`, cleans temp files,
   and keeps site git failures separate from validator scoring.
 - Legacy live-adjacent aliases: `reasoning_only`,
@@ -99,60 +105,41 @@ not let parallel checklists drift.
 
 ## Current Blockers And Gaps
 
-1. **GitHub Actions evidence for the set_weights follow-up.**
-   The broader audit head `2b0c076` is green on GitHub Actions. The small
-   set_weights result-handling follow-up still needs to be saved, pushed, and
-   checked.
-
-2. **Deployed Droplets are behind the reviewed head.**
-   Read-only sampling on 2026-05-13 found validator/miner hosts still on
-   `d42addb`. Deploy only after the follow-up head is green, then rerun the live
-   evidence slice.
-
-3. **Set-weights reliability needs live confirmation.**
-   A fresh old-code round at `2026-05-13 06:44 UTC` had `verified=5`,
-   `scored=5`, and no reject counters, but `set_weights success=False
-   message=None` after retries. The code now logs that boundary better; the next
-   live pass should confirm whether the chain write itself is healthy.
-
-4. **Separate Lean cache from the root filesystem in production.**
+1. **Separate Lean cache from the root filesystem in production.**
    The code now has preflight and byte pruning, but production validator/worker
    hosts should still mount `LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR` on its own
    volume or partition.
 
-5. **Live alerting.**
+2. **Live alerting.**
    Add operator alerts for root/cache disk >80%, failed Lemma systemd units,
    repeated `epoch failed`, missing `lemma_epoch_summary` for N minutes, and
    repeated empty-score / skipped-weight epochs.
 
-6. **Full Bandit low-severity cleanup.**
+3. **Full Bandit low-severity cleanup.**
    CI's medium/high Bandit gate passes. Full Bandit still reports 20 low
    findings: intentional Lean/Docker subprocess calls and deterministic
    non-crypto RNG/jitter. Fix only when the change removes ambiguity or code.
 
-7. **Live subnet/VPS evidence still matters.**
+4. **Live subnet/VPS evidence still matters.**
    Local and GitHub CI proof PASS are necessary but not enough. The subnet still
    needs measured miner response time, prover latency, validator Lean
-   verification time, scored miner count, timeout/fail reasons, set-weights
-   behavior, and emission changes from live runs.
+   verification time over repeated rounds, timeout/fail reasons, set-weights
+   behavior across RPC failures, and emission changes after reveal.
 
-8. **External audit.**
+5. **External audit.**
    Before high-value mainnet operation, get independent review of validator
    infrastructure, Docker/remote worker exposure, Bittensor operations, and key
    custody.
 
 ## Next Work Order
 
-1. Save and push the set_weights follow-up, then confirm GitHub Actions.
-2. Deploy the green head to the testnet Droplets only with an explicit live-ops
-   go-ahead, then rerun one full live evidence round.
-3. Run a live testnet evidence slice: miner response timing, prover latency,
-   validator verify timing, scored miner count, skip reasons, `set_weights`, and
-   emission movement.
-4. Add production alerts and a compact live health command/report covering
+1. Watch several more deployed rounds and record set-weights/emission movement,
+   especially across any RPC retry event.
+2. Add production alerts and a compact live health command/report covering
    commit, services, disk, cache slots, dashboard timer, latest epoch summary,
    and latest `set_weights`.
-5. Continue deleting or isolating optional research surfaces only when they
+3. Plan a separate Lean cache volume or partition for validator/worker hosts.
+4. Continue deleting or isolating optional research surfaces only when they
    touch live defaults or public operator UX.
 
 ## Testing Matrix

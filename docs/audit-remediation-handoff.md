@@ -12,8 +12,8 @@ state quickly. Start here, then read [`local handoff note`](../local handoff not
   grading. Live VPS/testnet mutation was out of scope.
 - Refreshed audit doc: [`docs/codex-audit.md`](codex-audit.md), rating
   `8.4 / 10`.
-- Last GitHub-confirmed audit head before the set_weights follow-up:
-  `2b0c076` (`Harden validator audit boundaries`), with `CI` and
+- Current deployed/GitHub-confirmed audit head:
+  `8067b70` (`Harden set_weights result handling`), with `CI` and
   `Build and Push Docker Image` passing.
 
 ## Implemented in this local patch
@@ -75,12 +75,10 @@ Total Memory: 7.75GiB
 
 ## Next decisions
 
-- Commit and push the set_weights follow-up.
-- Check GitHub Actions for the follow-up head.
-- With an explicit live-ops go-ahead, deploy the green head to the Droplets and
-  rerun a live evidence slice: miner latency, prover latency, validator Lean
-  verify time, scored miner count, skip reasons, `set_weights`, and emission
-  movement.
+- Watch several more deployed rounds and record set-weights/emission movement.
+- Add production alerts for failed services, high disk, missing epoch summaries,
+  repeated skipped weights, and repeated set_weights failures.
+- Plan a separate Lean cache volume or partition for validator/worker hosts.
 
 ## Live read-only evidence
 
@@ -96,3 +94,19 @@ services were restarted or changed.
   `theorem_id=gen/7110900`, `verified=5`, `scored=5`, no reject counters,
   `seconds=554.74`; old deployed code then logged `set_weights success=False
   message=None` after retries.
+
+## Live deploy evidence
+
+On 2026-05-13, after explicit live-ops go-ahead, both known Droplets were
+fast-forwarded from `d42addb` to `8067b70`. The validator was paused during the
+deploy; miners and Lean worker were restarted; validator was started last.
+
+- Validator / Lean worker `<validator-ssh-host>`: deployed `8067b70`,
+  `lemma-validator` and `lemma-lean-worker-http` active, root/cache filesystem
+  `38%` used, Lean worker health `{"status": "ok"}`.
+- Miner host `<miner-ssh-host>`: deployed `8067b70`, six miner services
+  active, six axon ports open, root filesystem `23%` used.
+- First post-deploy validator round at `2026-05-13 07:30 UTC`:
+  `theorem_id=curated/foundations/list_append_nil_induction`, `verified=3`,
+  `scored=3`, `verify_infra_errors=0`, no reject counters, `seconds=369.99`,
+  and `set_weights success=True`.
