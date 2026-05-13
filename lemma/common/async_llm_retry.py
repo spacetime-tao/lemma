@@ -83,5 +83,6 @@ async def async_llm_retry(
                 e,
             )
             await asyncio.sleep(wait_total)
-    assert last is not None
+    if last is None:
+        raise RuntimeError("async_llm_retry exhausted without capturing an exception")
     raise last

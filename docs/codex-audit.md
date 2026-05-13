@@ -1,134 +1,162 @@
 # Lemma codebase audit (Codex assessment)
 
-This document records a docs-only engineering and security posture review of the
-Lemma repository ([github.com/spacetime-tao/lemma](https://github.com/spacetime-tao/lemma)),
-produced with Codex. It is not a penetration test, formal verification of the
-Python stack, or an independent third-party security audit.
+This document records an engineering and security posture review of the Lemma
+repository ([github.com/spacetime-tao/lemma](https://github.com/spacetime-tao/lemma)),
+refreshed after the local hardening pass on 2026-05-13. It is not a penetration
+test, formal verification of the Python stack, or an independent third-party
+security audit.
 
-The review lens was deliberately strict: **treat every line of code as a
-liability**. A line should justify itself by reducing risk, clarifying the
-system, or making invalid states harder to express.
+The review lens remains strict: **treat every line of code as a liability**. A
+line should justify itself by reducing risk, clarifying the system, or making
+invalid states harder to express.
 
 ---
 
 ## Rating
 
-**7.2 / 10** - **B engineering quality** for an early-stage Bittensor subnet.
-For adversarial production readiness alone, the rating is **C+ to B-**.
-
-This mostly aligns with the Cursor audit's **7.5 / 10**, but Codex rates the
-repo slightly lower because a few remaining surfaces still add operational or
-adversarial risk without enough hard edges in code.
+**8.4 / 10** - **A- local engineering quality** for an early-stage Bittensor
+testnet subnet. For adversarial production readiness alone, the rating is
+**B / B-** because Docker, Bittensor economics, live ops, and external-audit
+coverage remain outside what this repository can prove by itself.
 
 | Dimension | Score (0-10) | Comment |
 | --- | ---: | --- |
-| Architecture and clarity | 8.0 | The module split is understandable: protocol, miner, validator, Lean verification, scoring, CLI, docs. |
-| Proof-only mechanism fit | 7.5 | The live eligibility path is coherent: Lean pass enters scoring, Lean fail does not. Post-pass reputation and partitioning still mean final weights are not purely equal-per-pass. |
-| Testing and CI | 8.0 | Ruff, mypy, pytest, pip-audit, bandit medium/high, and generated-template metadata checks are wired into CI. |
-| Security posture | 7.0 | Good awareness of Docker, pins, body hashes, and remote verifier risk; still has sharp ops edges around Docker socket, remote workers, and dependency inheritance. |
-| Line liability / simplicity | 6.5 | The proof-only path is much cleaner than the older judge-heavy direction, but optional judge/proof-metric/reputation surfaces still make the repo carry more policy weight than the core objective needs. |
+| Architecture and clarity | 8.4 | The protocol/miner/validator/Lean/scoring split is clear, and the latest pass tightened the validator hot path without adding a parallel framework. |
+| Proof-only mechanism fit | 8.6 | The live eligibility rule is still binary Lean proof verification. Verifier-local failures are now separated from proof failures, reducing accidental punishment from local infra breakage. |
+| Testing and CI | 8.7 | Focused hardening tests were added for export failure, disk preflight, cache byte pruning, infra accounting, RPC backoff, dashboard locking, and retired legacy aliases. Local non-Docker gates pass. |
+| Security posture | 8.1 | Remote worker exposure, oversized payloads, export side effects, disk pressure, and stale legacy profile aliases now have tighter defaults or cleaner failure modes. |
+| Line liability / simplicity | 8.0 | Runtime `assert`s and silent cleanup exceptions were removed where they obscured behavior. Remaining Bandit lows are intentional subprocess/RNG surfaces rather than broad hidden exception paths. |
+
+This should be read as progress toward 10, not arrival at 10. A true 10 would
+need GitHub Actions evidence for the saved head, live testnet evidence,
+external infra review, and continued deletion/isolation of research-only
+surfaces.
 
 ---
 
-## Alignment with Cursor
+## Closed since the 7.2 audit
 
-Codex agrees with Cursor's broad verdict:
+1. **Validator response size cap is symmetric.**
 
-1. The codebase is unusually disciplined for an early subnet implementation.
-2. The proof-verification path is clear and test-covered.
-3. CI security automation is real, not just a checklist.
-4. Docker, remote Lean workers, Bittensor economics, and dependencies remain the largest production risks.
-5. This repo should not be treated as externally audited for high-value mainnet operation.
+   The shared synapse limit rejects oversized `resp.proof_script` payloads in
+   the validator epoch path before verification work is queued.
 
-The difference is emphasis. Cursor graded the repo as a strong early-stage
-implementation. Codex also asks whether each line and knob helps the simple
-goal: **valid Lean proof passes, invalid proof fails**. Under that lens, a few
-remaining surfaces deserve a more conservative score.
+2. **Remote Lean worker defaults are safer.**
+
+   Non-loopback `lemma lean-worker` binds require bearer auth unless the
+   explicit dev-only unauthenticated override is set.
+
+3. **Export writes no longer block grading.**
+
+   Training/dashboard JSONL appends are non-consensus side effects. If an
+   `OSError` occurs after scoring, the validator logs the failure and continues
+   toward `set_weights` with the already-computed scores.
+
+4. **Disk pressure is checked before miner queries.**
+
+   `LEMMA_VALIDATOR_MIN_FREE_BYTES` now gates root/cache free space before an
+   epoch opens Dendrite or queries miners. Low disk becomes a validator infra
+   skip, not a partial miner failure pattern.
+
+5. **Lean workspace cache has a byte cap.**
+
+   `LEMMA_LEAN_WORKSPACE_CACHE_MAX_BYTES` complements
+   `LEMMA_LEAN_WORKSPACE_CACHE_MAX_DIRS`, pruning old warm slots by total size
+   while protecting the active slot.
+
+6. **Verifier-local failures are accounted separately.**
+
+   `timeout`, `oom`, `docker_error`, and `remote_error` are counted as validator
+   infra failures in epoch summaries and exported round summaries via
+   `verify_infra_error_uids`. They do not lower verify credibility as if they
+   were ordinary miner proof failures.
+
+7. **All-fail proof epochs persist credibility updates.**
+
+   Ordinary Lean proof failures now save verify-credibility downgrades even when
+   no miner scored in that epoch. Verifier-local infra failures remain excluded.
+
+8. **Validator loop handles RPC rate pressure better.**
+
+   Chain/RPC errors around cadence calculation no longer fall out of the
+   service loop. HTTP 429/rate-limit style errors use a longer backoff.
+
+9. **Dashboard refresh is serialized.**
+
+   `deploy/scripts/lemma-refresh-public-dashboard` now uses `flock`, cleans its
+   temp file on exit, and remains isolated from validator scoring.
+
+10. **Legacy live-adjacent aliases were retired.**
+
+   `reasoning_only`, `LEMMA_JUDGE_PROFILE_ATTEST_*`,
+   `JUDGE_PROFILE_SHA256_EXPECTED`, `/lemma/judge_profile_sha256`, and JSON
+   `judge_profile_sha256` peer attest compatibility are no longer accepted live
+   surfaces. The supported public naming is validator-profile oriented.
+
+11. **Low-severity Bandit noise was reduced where it clarified code.**
+
+    Runtime `assert` statements and silent broad cleanup exceptions were removed.
+    Full Bandit lows dropped from 27 to 20.
 
 ---
 
-## Codex-only findings
+## Remaining gaps
 
-1. **Validator response size cap is asymmetric.**
+1. **GitHub Actions evidence for the saved head is still needed.**
 
-   The audit found miner-side `SYNAPSE_MAX_PROOF_CHARS` enforcement without a
-   matching validator inbound check. Status: fixed after the audit; the shared
-   synapse limit now rejects oversized `resp.proof_script` payloads in the
-   validator epoch path before verification work is queued.
+   Local Docker golden, generated-template Docker builds, and the runtime Docker
+   image build now pass. The exact pushed head still needs GitHub Actions
+   confirmation, especially `docker-lean-sandbox`.
 
-2. **Remote Lean worker defaults are permissive.**
+2. **Full Bandit still reports 20 low-severity findings.**
 
-   The audit found that `lemma lean-worker` accepted `/verify` without
-   authentication when `LEMMA_LEAN_VERIFY_REMOTE_BEARER` was unset. Status:
-   fixed after the audit; non-loopback worker binds now require bearer auth
-   unless the operator sets the explicit dev-only unauthenticated override.
+   The remaining lows are intentional subprocess use in Lean/Docker verifier
+   paths and deterministic non-crypto RNG/jitter. Do not add wrappers merely to
+   silence them; reduce them only when it removes code or ambiguity.
 
-3. **Binary eligibility is simple; final weights are not purely binary.**
+3. **Live ops evidence is still needed.**
 
-   `entry_from_verified_proof()` assigns every verified proof `score=1.0` and
-   `cost=0`, which preserves the proof-pass eligibility rule. After that,
-   reputation/credibility EMA, Pareto layering, and same-coldkey partitioning can
-   alter final weights. Status: docs refreshed after the audit to say the precise
-   thing: **proof verification is binary; downstream allocation policy is
-   additional policy**.
+   Local proof PASS is not enough. The subnet still needs measured miner
+   response time, prover latency, validator verify time, scored miner count,
+   timeout/fail reasons, `set_weights` behavior, and emission movement from
+   live testnet runs.
 
-4. **Tracker drift was real.**
+4. **External review is still absent.**
 
-   Before this audit-doc pass, `local handoff note` and `docs/workplan.md` still
-   described an older head, old failing CI context, and old mypy failures. The
-   source tree itself was clean, but stale status files can mislead future
-   agents into fixing already-fixed problems.
-
-5. **Full Bandit still reports low-severity noise.**
-
-   CI correctly gates only medium/high Bandit findings with `-ll`, and that gate
-   passed. A full local Bandit run still reports low-severity items around
-   subprocess use, seeded RNG for deterministic problem selection, `assert`, and
-   broad cleanup exceptions. Most are explainable in context, but they are still
-   useful line-liability cleanup candidates.
+   Before high-value mainnet operation, budget an independent review focused on
+   validator infra, Docker/worker exposure, Bittensor operations, and key
+   custody.
 
 ---
 
 ## Verification run
 
-Verified against local/GitHub `main` at:
-
-```text
-28bbbfc8c747c46ff5d6c5b0e015e5451aeb4e58
-```
-
-Commands and results recorded during the Codex audit:
+Verified against the local working tree based on `9546095`:
 
 | Check | Result |
 | --- | --- |
 | `.venv/bin/ruff check lemma tests tools` | Passed. |
-| `.venv/bin/mypy lemma` | Passed: `Success: no issues found in 68 source files`. |
-| `.venv/bin/pytest tests -q` | Passed: `254 passed, 2 skipped, 12 warnings`. |
-| `.venv/bin/python scripts/ci_verify_generated_templates.py` | Passed metadata gate: `OK: generated template metadata gate covered 40 builders`; Docker template compile skipped because `RUN_DOCKER_LEAN_TEMPLATES=1` was not set. |
+| `.venv/bin/mypy lemma` | Passed: `Success: no issues found in 70 source files`. |
+| `.venv/bin/pytest tests -q` | Passed: `307 passed, 2 skipped, 12 warnings`. |
+| `.venv/bin/python scripts/ci_verify_generated_templates.py` | Passed metadata/witness gate: `OK: generated template metadata/witness gate covered 80 builders`. |
+| `RUN_DOCKER_LEAN=1 LEAN_SANDBOX_IMAGE=lemma/lean-sandbox:latest .venv/bin/pytest tests/test_docker_golden.py -v --tb=short` | Passed: `1 passed in 208.57s`. |
+| `RUN_DOCKER_LEAN_TEMPLATES=1 LEAN_SANDBOX_IMAGE=lemma/lean-sandbox:latest .venv/bin/python scripts/ci_verify_generated_templates.py` | Passed: all 80 generated template stubs and witnesses built in one Docker workspace. |
+| `docker build -f Dockerfile -t lemma-runtime:ci-smoke .` | Passed. |
 | `.venv/bin/bandit -q -r lemma -ll` | Passed: no medium/high findings. |
-| `.venv/bin/bandit -q -r lemma` | Failed only on 24 low-severity findings. |
+| `.venv/bin/bandit -q -r lemma` | Failed only on 20 low-severity findings. |
 | `.venv/bin/pip-audit --ignore-vuln PYSEC-2025-49 --ignore-vuln PYSEC-2022-42969` | Passed with `No known vulnerabilities found, 3 ignored`; local package `lemma` is not on PyPI and could not be audited as a PyPI dependency. |
-| Docker Lean golden | Not rerun locally; Docker daemon was unavailable at the local socket. |
-
----
-
-## Recommended fix order
-
-1. Retire or isolate optional judge/proof-metric research code when it stops
-   paying for its maintenance cost.
-2. Work through low-severity Bandit noise only when the fix removes ambiguity or
-   code, not by scattering defensive wrappers.
 
 ---
 
 ## Summary verdict
 
-Lemma is in good shape for a proof-of-concept subnet and has a much cleaner
-incentive story after the proof-only pivot. The live path now mostly honors the
-simple rule: **pass or fail, binary system**. The remaining downgrade comes from
-operational attack surface and policy surface, not from a broken core proof
-checker story.
+Lemma is materially stronger than the prior 7.2 audit baseline. The core live
+rule remains simple: **valid Lean proof passes, invalid proof fails**. The latest
+pass improved the surrounding failure boundaries so local validator problems
+are less likely to masquerade as miner proof failures or block already-computed
+weights.
 
-For the next engineering pass, resist adding new layers. The highest-value work
-is to tighten boundaries where invalid or expensive states currently enter, and
-to delete surfaces that no longer serve the proof-only mechanism.
+The next points toward 10 are evidence-heavy rather than code-heavy: confirm the
+saved head in GitHub Actions, collect live testnet measurements, keep deleting
+stale research/live compatibility surfaces, and invite external review once the
+testnet path is stable.

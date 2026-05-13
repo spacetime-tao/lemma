@@ -190,6 +190,13 @@ Roughly: (challenges answered) × ($/challenge). Measure from logs.
 | `cheat_token` | Banned constructs |
 | `timeout` / `oom` | Resource limits |
 | `docker_error` | Sandbox error |
+| `remote_error` | Remote Lean worker transport or response error |
+
+Validator epoch summaries and exported round summaries count `timeout`, `oom`,
+`docker_error`, and `remote_error` as verifier infrastructure failures. They do
+not score the miner, but they are kept separate from actual Lean
+compile/axiom/cheat proof failures for operator diagnosis and credibility
+accounting.
 
 **`lemma preview` says FAIL but the proof is just `rfl` on arithmetic literals:** The LLM answer may still be **mathematically fine**. Logs like `no previous manifest`, `creating one from scratch`, `mathlib: running post-update hooks`, then `error: build failed` usually mean **Lake is building Mathlib** (slow), **post-update hooks** failed, **network blocked** (Docker `network_mode=none`), or **timeout** — not that `rfl` is wrong. Fix the **environment** (prebuilt `LEAN_SANDBOX_IMAGE`, `LEAN_SANDBOX_NETWORK=bridge`, higher `LEAN_VERIFY_TIMEOUT_S`) and retry.
 

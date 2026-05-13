@@ -7,10 +7,27 @@ Clone repo and `uv sync --extra dev` ([getting-started.md](getting-started.md)).
 ```bash
 uv sync --extra dev
 uv run pytest tests/ -q
-uv run ruff check lemma tests
+uv run ruff check lemma tests tools
+uv run mypy lemma
+uv run python scripts/ci_verify_generated_templates.py
+uv run bandit -q -r lemma -ll
 ```
 
 No API keys are needed for proof-only verification tests; Docker Lean tests are skipped unless enabled.
+
+For audit or release hardening passes, also run full Bandit and pip-audit:
+
+```bash
+uv run bandit -q -r lemma
+uv run pip-audit \
+  --ignore-vuln PYSEC-2025-49 \
+  --ignore-vuln PYSEC-2022-42969
+```
+
+Full Bandit may report low-severity findings for intentional subprocess calls
+inside the Lean/Docker verifier or deterministic non-crypto RNG in problem
+sampling. Fix those only when the change removes code or ambiguity; CI gates
+medium/high findings with `-ll`.
 
 ## Opt-in Lean tests
 

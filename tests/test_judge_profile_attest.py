@@ -24,7 +24,7 @@ def test_parse_peer_judge_hash_plain_and_json() -> None:
     assert parse_peer_judge_hash(h + "\n") == h
     assert parse_peer_judge_hash(f'0x{h}\n') == h
     assert parse_peer_judge_hash(f'{{"validator_profile_sha256":"{h}"}}') == h
-    assert parse_peer_judge_hash(f'{{"judge_profile_sha256":"{h}"}}') == h
+    assert parse_peer_judge_hash(f'{{"judge_profile_sha256":"{h}"}}') is None
 
 
 def test_attest_off_returns_empty() -> None:

@@ -219,7 +219,12 @@ def make_forward(
         solve_s = 0.0
         proof = ""
         if phase == "reveal":
-            assert cr_key is not None
+            if cr_key is None:
+                return reject_synopsis(
+                    synapse,
+                    400,
+                    "commit-reveal requires validator dendrite hotkey",
+                )
             cached = cr_cache.pop(cr_key)
             if cached is None:
                 return reject_synopsis(
@@ -260,8 +265,8 @@ def make_forward(
             ex = prob_meta.extra or {}
             if isinstance(ex, dict) and ex.get("template_fn"):
                 template_fn = str(ex.get("template_fn"))
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as e:  # noqa: BLE001
+            logger.debug("miner forward could not resolve problem metadata for {}: {}", synapse.theorem_id, e)
 
         if settings.miner_log_forwards:
             logger.info(
@@ -356,7 +361,12 @@ def make_forward(
             )
 
         if phase == "commit":
-            assert cr_key is not None
+            if cr_key is None:
+                return reject_synopsis(
+                    synapse,
+                    400,
+                    "commit-reveal requires validator dendrite hotkey",
+                )
             if settings.miner_local_verify and local_lean_status != "PASS":
                 return reject_synopsis(
                     synapse,

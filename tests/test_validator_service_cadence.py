@@ -1,5 +1,5 @@
 from lemma.common.config import LemmaSettings
-from lemma.validator.service import epoch_sleep_seconds, validator_problem_window
+from lemma.validator.service import epoch_sleep_seconds, validator_problem_window, validator_retry_sleep_seconds
 
 
 def test_epoch_sleep_does_not_oversleep_near_boundary() -> None:
@@ -9,6 +9,14 @@ def test_epoch_sleep_does_not_oversleep_near_boundary() -> None:
 def test_epoch_sleep_polls_tightly_at_boundary() -> None:
     assert epoch_sleep_seconds(3, 12.0) == 1.0
     assert epoch_sleep_seconds(1, 12.0) == 0.0
+
+
+def test_validator_retry_sleep_backs_off_rpc_429() -> None:
+    assert validator_retry_sleep_seconds(RuntimeError("HTTP 429 too many requests"), 12.0) == 60.0
+
+
+def test_validator_retry_sleep_keeps_generic_errors_short() -> None:
+    assert validator_retry_sleep_seconds(RuntimeError("temporary failure"), 12.0) == 2.0
 
 
 def test_validator_quantize_cadence_uses_problem_seed_window() -> None:

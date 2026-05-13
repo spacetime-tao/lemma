@@ -105,6 +105,17 @@ def _docker_container_logs_text(container: Any) -> str:
     return str(raw.decode("utf-8", errors="replace"))
 
 
+def _dir_size_bytes(root: Path) -> int:
+    total = 0
+    for p in root.rglob("*"):
+        try:
+            if p.is_file():
+                total += p.stat().st_size
+        except OSError:
+            continue
+    return total
+
+
 VerifyReason = Literal[
     "ok",
     "compile_error",
@@ -142,6 +153,7 @@ class LeanSandbox:
         docker_worker: str | None = None,
         workspace_cache_include_submission_hash: bool = False,
         workspace_cache_max_dirs: int = 8,
+        workspace_cache_max_bytes: int = 16 * 1024 * 1024 * 1024,
         proof_metrics_enabled: bool = False,
     ) -> None:
         self.image = image
@@ -154,6 +166,7 @@ class LeanSandbox:
         self.workspace_cache_dir = workspace_cache_dir
         self.workspace_cache_include_submission_hash = bool(workspace_cache_include_submission_hash)
         self.workspace_cache_max_dirs = max(0, int(workspace_cache_max_dirs))
+        self.workspace_cache_max_bytes = max(0, int(workspace_cache_max_bytes))
         self.proof_metrics_enabled = bool(proof_metrics_enabled)
         # Prefer explicit constructor / LemmaSettings (`.env`); ``os.environ`` alone is not populated from
         # pydantic's dotenv load unless the process exported the variable.
@@ -247,11 +260,14 @@ class LeanSandbox:
 
     def _prune_workspace_cache(self, *, protect_name: str) -> None:
         """Keep warm workspace slots bounded; stale temp dirs are safe to drop after a day."""
-        if self.workspace_cache_dir is None or self.workspace_cache_max_dirs <= 0:
+        if (
+            self.workspace_cache_dir is None
+            or (self.workspace_cache_max_dirs <= 0 and self.workspace_cache_max_bytes <= 0)
+        ):
             return
         root = self.workspace_cache_dir
         now = time.time()
-        warm_slots: list[tuple[float, str, Path]] = []
+        warm_slots: list[tuple[float, str, Path, int]] = []
         stale_temps: list[Path] = []
         try:
             entries = [p for p in root.iterdir() if p.is_dir()]
@@ -268,10 +284,32 @@ class LeanSandbox:
                 if now - st.st_mtime > 86_400:
                     stale_temps.append(p)
                 continue
-            warm_slots.append((st.st_mtime, p.name, p))
+            warm_slots.append((st.st_mtime, p.name, p, _dir_size_bytes(p)))
 
-        delete_count = max(0, len(warm_slots) - self.workspace_cache_max_dirs)
-        to_delete = [p for _, name, p in sorted(warm_slots) if name != protect_name][:delete_count]
+        to_delete: list[Path] = []
+        warm_sorted = sorted(warm_slots)
+        if self.workspace_cache_max_dirs > 0:
+            delete_count = max(0, len(warm_slots) - self.workspace_cache_max_dirs)
+            to_delete.extend([p for _, name, p, _size in warm_sorted if name != protect_name][:delete_count])
+
+        if self.workspace_cache_max_bytes > 0:
+            delete_names = {p.name for p in to_delete}
+            total = sum(size for _mtime, _name, _path, size in warm_slots)
+            for _mtime, name, p, size in warm_sorted:
+                if total <= self.workspace_cache_max_bytes:
+                    break
+                if name == protect_name or name in delete_names:
+                    continue
+                to_delete.append(p)
+                delete_names.add(name)
+                total -= size
+            if total > self.workspace_cache_max_bytes:
+                logger.warning(
+                    "lean workspace cache still above byte cap after pruning; protected slot={} total_bytes={} cap={}",
+                    protect_name,
+                    total,
+                    self.workspace_cache_max_bytes,
+                )
         for p in [*to_delete, *stale_temps]:
             try:
                 shutil.rmtree(p)
@@ -596,8 +634,8 @@ class LeanSandbox:
                 elapsed = time.monotonic() - t0
                 try:
                     container.kill()
-                except Exception:
-                    pass
+                except Exception as e:  # noqa: BLE001
+                    logger.debug("docker container kill after timeout failed: {}", e)
                 text = _docker_container_logs_text(container)
                 return VerifyResult(
                     passed=False,
@@ -637,5 +675,5 @@ class LeanSandbox:
             if container is not None:
                 try:
                     container.remove(force=True)
-                except Exception:
-                    pass
+                except Exception as e:  # noqa: BLE001
+                    logger.debug("docker container cleanup failed: {}", e)

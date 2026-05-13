@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import AliasChoices, Field
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic_settings.sources import PydanticBaseSettingsSource
 
@@ -334,7 +334,7 @@ class LemmaSettings(BaseSettings):
     )
     judge_profile_expected_sha256: str | None = Field(
         default=None,
-        validation_alias=AliasChoices("LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED", "JUDGE_PROFILE_SHA256_EXPECTED"),
+        validation_alias="LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED",
         description=(
             "Expected validator profile hash. Validators must set this; startup fails unless it matches live "
             "`lemma meta`."
@@ -493,6 +493,15 @@ class LemmaSettings(BaseSettings):
             "Default 8; set 0 to disable automatic pruning."
         ),
     )
+    lemma_lean_workspace_cache_max_bytes: int = Field(
+        default=16 * 1024 * 1024 * 1024,
+        ge=0,
+        validation_alias="LEMMA_LEAN_WORKSPACE_CACHE_MAX_BYTES",
+        description=(
+            "Maximum total bytes for warm workspace cache directories under "
+            "LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR. Default 16 GiB; set 0 to disable byte pruning."
+        ),
+    )
     lemma_lean_workspace_cache_include_submission_hash: bool = Field(
         default=False,
         validation_alias="LEMMA_LEAN_WORKSPACE_CACHE_INCLUDE_SUBMISSION_HASH",
@@ -573,18 +582,26 @@ class LemmaSettings(BaseSettings):
         validation_alias="VALIDATOR_ABORT_IF_NOT_REGISTERED",
         description="If true, skip epochs when this wallet has no UID on the subnet.",
     )
+    validator_min_free_bytes: int = Field(
+        default=1024 * 1024 * 1024,
+        ge=0,
+        validation_alias="LEMMA_VALIDATOR_MIN_FREE_BYTES",
+        description=(
+            "Minimum free bytes required on `/` and the Lean workspace cache filesystem before an epoch queries "
+            "miners. Default 1 GiB; set 0 to disable disk preflight."
+        ),
+    )
     training_export_jsonl: Path | None = Field(
         default=None,
         validation_alias="LEMMA_TRAINING_EXPORT_JSONL",
         description="Append one JSON object per scored miner per epoch.",
     )
-    lemma_training_export_profile: Literal["full", "summary", "reasoning_only"] = Field(
+    lemma_training_export_profile: Literal["full", "summary"] = Field(
         default="full",
         validation_alias="LEMMA_TRAINING_EXPORT_PROFILE",
         description=(
             "`full`: schema v1 includes proof_script, optional labels, pareto_weight. "
-            "`summary`: schema v2 omits proof, labels, metrics, and weights. "
-            "`reasoning_only` is accepted as a legacy alias for `summary`."
+            "`summary`: schema v2 omits proof, labels, metrics, and weights."
         ),
     )
 
@@ -669,7 +686,7 @@ class LemmaSettings(BaseSettings):
     )
     lemma_judge_profile_attest_enabled: bool = Field(
         default=False,
-        validation_alias=AliasChoices("LEMMA_VALIDATOR_PROFILE_ATTEST_ENABLED", "LEMMA_JUDGE_PROFILE_ATTEST_ENABLED"),
+        validation_alias="LEMMA_VALIDATOR_PROFILE_ATTEST_ENABLED",
         description=(
             "Optional validator-profile peer check. See LEMMA_VALIDATOR_PROFILE_ATTEST_PEER_URLS, "
             "LEMMA_VALIDATOR_PROFILE_ATTEST_SKIP, `lemma validator profile-attest-serve`, "
@@ -678,10 +695,7 @@ class LemmaSettings(BaseSettings):
     )
     lemma_judge_profile_attest_peer_urls: str = Field(
         default="",
-        validation_alias=AliasChoices(
-            "LEMMA_VALIDATOR_PROFILE_ATTEST_PEER_URLS",
-            "LEMMA_JUDGE_PROFILE_ATTEST_PEER_URLS",
-        ),
+        validation_alias="LEMMA_VALIDATOR_PROFILE_ATTEST_PEER_URLS",
         description=(
             "Comma-separated GET URLs probed when LEMMA_VALIDATOR_PROFILE_ATTEST_ENABLED=1 "
             "(plaintext hex or JSON with validator_profile_sha256)."
@@ -689,7 +703,7 @@ class LemmaSettings(BaseSettings):
     )
     lemma_judge_profile_attest_allow_skip: bool = Field(
         default=False,
-        validation_alias=AliasChoices("LEMMA_VALIDATOR_PROFILE_ATTEST_SKIP", "LEMMA_JUDGE_PROFILE_ATTEST_SKIP"),
+        validation_alias="LEMMA_VALIDATOR_PROFILE_ATTEST_SKIP",
         description=(
             "When attest is enabled, skip peer HTTP (solo / dev only). Logs as WARN at validator startup — "
             "not for production multi-validator alignment."
@@ -699,10 +713,7 @@ class LemmaSettings(BaseSettings):
         default=15.0,
         ge=1.0,
         le=300.0,
-        validation_alias=AliasChoices(
-            "LEMMA_VALIDATOR_PROFILE_ATTEST_HTTP_TIMEOUT_S",
-            "LEMMA_JUDGE_PROFILE_ATTEST_HTTP_TIMEOUT_S",
-        ),
+        validation_alias="LEMMA_VALIDATOR_PROFILE_ATTEST_HTTP_TIMEOUT_S",
         description="Per-URL HTTP timeout when LEMMA_VALIDATOR_PROFILE_ATTEST_ENABLED=1.",
     )
 

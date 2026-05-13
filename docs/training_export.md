@@ -6,6 +6,10 @@ Lemma **does not upload** files; operators rotate or ship logs themselves
 ([`scripts/training_export_upload_example.sh`](../scripts/training_export_upload_example.sh),
 [production.md](production.md)).
 
+Export writes are not consensus-critical. If the local JSONL append fails after
+scoring, the validator logs the error and continues to the weight-write path
+with the scores it already computed.
+
 ## Profiles (`LEMMA_TRAINING_EXPORT_PROFILE`)
 
 | Profile | Schema | Contents | Use when |
@@ -159,8 +163,9 @@ Exports are **not** a neutral “public good.” Depending on fields, they can t
 values. It
 does not remove all structure: `theorem_id`, `uid`, and `block` still support
 stratification or deanonymization risks if combined with other data. For maximum
-privacy, post-process or aggregate before publication. The old
-`reasoning_only` value is accepted as a legacy alias for `summary`.
+privacy, post-process or aggregate before publication. The only accepted
+profiles are `full` and `summary`; stale `reasoning_only` configuration now
+fails instead of silently selecting a legacy mode.
 
 ## Schema reference
 
@@ -189,6 +194,9 @@ privacy, post-process or aggregate before publication. The old
 - Written once per exported epoch in every profile, including rounds where no UID
   passed.
 - Includes **`block`**, **`theorem_id`**, and **`passed_uids`**.
+- Includes **`verify_infra_error_uids`** when validator-local verification
+  infrastructure failed for candidate responses; these are separated from Lean
+  proof failures.
 - Contains no proof text or private validator data.
 
 ## References

@@ -11,7 +11,7 @@ from lemma.judge.base import RubricScore
 from lemma.lean.proof_metrics import LeanProofMetrics
 from lemma.protocol import LemmaChallenge
 
-TrainingExportProfile = Literal["full", "summary", "reasoning_only"]
+TrainingExportProfile = Literal["full", "summary"]
 
 
 def round_summary_record(
@@ -19,6 +19,7 @@ def round_summary_record(
     block: int,
     theorem_id: str,
     passed_uids: list[int] | set[int] | frozenset[int],
+    verify_infra_error_uids: list[int] | set[int] | frozenset[int] | None = None,
     export_context: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """One round marker, including zero-pass rounds."""
@@ -29,6 +30,8 @@ def round_summary_record(
         "theorem_id": theorem_id,
         "passed_uids": sorted(int(uid) for uid in passed_uids),
     }
+    if verify_infra_error_uids:
+        row["verify_infra_error_uids"] = sorted(int(uid) for uid in verify_infra_error_uids)
     if export_context:
         row["export_context"] = dict(export_context)
     return row
@@ -54,16 +57,18 @@ def training_record(
     ``summary`` (schema_version 2): identifiers and provenance only — omits proof text,
     labels, proof metrics, and incentive weights when appended (see ``append_epoch_jsonl``).
     """
+    if profile not in ("full", "summary"):
+        raise ValueError(f"unsupported training export profile: {profile}")
     common = {
         "block": block,
         "theorem_id": theorem_id,
         "uid": uid,
-        "export_profile": "summary" if profile == "reasoning_only" else profile,
+        "export_profile": profile,
         "model_card": resp.model_card,
     }
     if export_context:
         common["export_context"] = dict(export_context)
-    if profile in ("summary", "reasoning_only"):
+    if profile == "summary":
         return {
             "schema_version": 2,
             **common,

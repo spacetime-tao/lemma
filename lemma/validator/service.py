@@ -40,6 +40,14 @@ def epoch_sleep_seconds(blocks_until_epoch: int, block_time_sec_estimate: float)
     return min(12.0, max(1.0, float(bu) * float(block_time_sec_estimate) * 0.25))
 
 
+def validator_retry_sleep_seconds(exc: BaseException, block_time_sec_estimate: float) -> float:
+    """Back off longer for RPC rate limits, briefly for ordinary epoch errors."""
+    msg = str(exc).lower()
+    if "429" in msg or "rate limit" in msg or "too many requests" in msg:
+        return min(300.0, max(30.0, float(block_time_sec_estimate) * 5.0))
+    return 2.0
+
+
 def validator_problem_window(
     settings: LemmaSettings,
     subtensor: object,
@@ -183,19 +191,21 @@ class ValidatorService:
         logger.info("validator cadence follows problem seed windows")
         last_problem_seed: int | None = None
         while True:
-            chain_head = int(subtensor.get_current_block())
-            problem_seed, blocks_until_change, edge = validator_problem_window(s, subtensor, chain_head)
-            if last_problem_seed != problem_seed:
-                try:
+            try:
+                chain_head = int(subtensor.get_current_block())
+                problem_seed, blocks_until_change, edge = validator_problem_window(s, subtensor, chain_head)
+                if last_problem_seed != problem_seed:
                     await ep.run_epoch(s, source, dry_run=self.dry_run)
                     last_problem_seed = problem_seed
-                except Exception as e:  # noqa: BLE001
-                    logger.exception("epoch failed: {}", e)
-                await asyncio.sleep(2)
-                continue
-            wait_s = epoch_sleep_seconds(blocks_until_change, s.block_time_sec_estimate)
-            logger.debug("Waiting {:.0f}s (~{} blocks to {})", wait_s, blocks_until_change, edge)
-            await asyncio.sleep(wait_s)
+                    await asyncio.sleep(2)
+                    continue
+                wait_s = epoch_sleep_seconds(blocks_until_change, s.block_time_sec_estimate)
+                logger.debug("Waiting {:.0f}s (~{} blocks to {})", wait_s, blocks_until_change, edge)
+                await asyncio.sleep(wait_s)
+            except Exception as e:  # noqa: BLE001
+                wait_s = validator_retry_sleep_seconds(e, s.block_time_sec_estimate)
+                logger.exception("validator loop skipped epoch/window after error; retry in {:.0f}s: {}", wait_s, e)
+                await asyncio.sleep(wait_s)
 
     def run_blocking(self) -> None:
         import click

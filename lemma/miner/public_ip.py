@@ -9,6 +9,7 @@ import ipaddress
 from typing import Final
 
 import httpx
+from loguru import logger
 
 _IP_SOURCES: Final[tuple[tuple[str, dict[str, str] | None], ...]] = (
     ("https://api.ipify.org", {"format": "text"}),
@@ -25,6 +26,7 @@ def discover_public_ipv4(timeout_s: float = 5.0) -> str | None:
             text = r.text.strip().split()[0] if r.text.strip() else ""
             ipaddress.IPv4Address(text)
             return text
-        except Exception:
+        except Exception as e:  # noqa: BLE001
+            logger.debug("public IPv4 discovery failed via {}: {}", url, e)
             continue
     return None

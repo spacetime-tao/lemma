@@ -43,7 +43,7 @@ def parse_peer_judge_hash(body: str) -> str | None:
         except (json.JSONDecodeError, TypeError):
             return None
         if isinstance(data, dict):
-            v = data.get("validator_profile_sha256") or data.get("judge_profile_sha256")
+            v = data.get("validator_profile_sha256")
             if v is not None:
                 return _normalize_hash(str(v))
         return None
@@ -127,7 +127,7 @@ def serve_judge_profile_attest_forever(host: str, port: int, settings: LemmaSett
                 self.send_header("Content-Type", "text/plain; charset=utf-8")
                 self.end_headers()
                 self.wfile.write(b"ok\n")
-            elif path in ("/lemma/validator_profile_sha256", "/lemma/judge_profile_sha256"):
+            elif path == "/lemma/validator_profile_sha256":
                 self.send_response(200)
                 self.send_header("Content-Type", "text/plain; charset=utf-8")
                 self.end_headers()

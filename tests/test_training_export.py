@@ -127,7 +127,7 @@ def test_round_summary_record_exports_zero_pass_round(tmp_path: Path) -> None:
     assert "pareto_weight" not in line
 
 
-def test_training_record_legacy_reasoning_only_alias_is_summary() -> None:
+def test_training_record_rejects_legacy_reasoning_only_alias() -> None:
     resp = LemmaChallenge(
         theorem_id="x",
         theorem_statement="theorem p : True := by sorry",
@@ -139,7 +139,9 @@ def test_training_record_legacy_reasoning_only_alias_is_summary() -> None:
         proof_script="namespace Submission\n",
     )
 
-    row = training_record(block=1, theorem_id="tid", uid=3, resp=resp, profile="reasoning_only")
-
-    assert row["schema_version"] == 2
-    assert row["export_profile"] == "summary"
+    try:
+        training_record(block=1, theorem_id="tid", uid=3, resp=resp, profile="reasoning_only")  # type: ignore[arg-type]
+    except ValueError as e:
+        assert "unsupported training export profile" in str(e)
+    else:
+        raise AssertionError("legacy reasoning_only profile should fail")

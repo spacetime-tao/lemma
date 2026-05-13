@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import shutil
 import time
 from collections import defaultdict
 from collections.abc import Awaitable, Callable
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import bittensor as bt
@@ -181,6 +183,45 @@ def _update_verify_credibility(
 
 VerifyItem = tuple[int, LemmaChallenge, VerifyResult]
 
+_VERIFY_INFRA_REASONS = frozenset({"timeout", "oom", "docker_error", "remote_error"})
+
+
+def _verify_result_is_infra_failure(vr: VerifyResult) -> bool:
+    return not vr.passed and vr.reason in _VERIFY_INFRA_REASONS
+
+
+def _existing_disk_path(path: Path) -> Path:
+    p = path.expanduser()
+    if p.exists():
+        return p
+    for parent in p.parents:
+        if parent.exists():
+            return parent
+    return Path("/")
+
+
+def _disk_preflight_issue(settings: LemmaSettings) -> str | None:
+    min_free = int(settings.validator_min_free_bytes or 0)
+    if min_free <= 0:
+        return None
+    paths = [Path("/")]
+    if settings.lean_verify_workspace_cache_dir is not None:
+        paths.append(Path(settings.lean_verify_workspace_cache_dir))
+    checked: set[str] = set()
+    for raw_path in paths:
+        path = _existing_disk_path(raw_path)
+        key = str(path.resolve())
+        if key in checked:
+            continue
+        checked.add(key)
+        try:
+            free = int(shutil.disk_usage(path).free)
+        except OSError as e:
+            return f"disk preflight could not inspect {path}: {e}"
+        if free < min_free:
+            return f"disk preflight free_bytes={free} below_min={min_free} path={path}"
+    return None
+
 
 def _lean_verify_equivalence_key(resp: LemmaChallenge) -> str:
     """Hash fields that determine Lean verification for one already-bound challenge response."""
@@ -248,6 +289,11 @@ async def run_epoch(
     dry_run: bool = False,
 ) -> dict[int, float]:
     t_epoch = time.perf_counter()
+    disk_issue = _disk_preflight_issue(settings)
+    if disk_issue:
+        logger.error("validator infra skip before miner query: {}", disk_issue)
+        return {}
+
     vc, vh = settings.validator_wallet_names()
     wallet = bt.Wallet(name=vc, hotkey=vh)
     subtensor = get_subtensor(settings)
@@ -278,6 +324,7 @@ async def run_epoch(
     )
 
     rep_store = load_reputation(settings.lemma_reputation_state_path)
+    rep_dirty = False
 
     k_problems = max(1, int(settings.lemma_epoch_problem_count))
     aggregate: dict[int, list[ScoredEntry]] = defaultdict(list)
@@ -306,6 +353,8 @@ async def run_epoch(
     payload_rejects = 0
     attest_rejects = 0
     commit_reveal_rejects = 0
+    verify_infra_errors = 0
+    verify_infra_error_uids: set[int] = set()
     last_problem: Problem | None = None
 
     export_lock = asyncio.Lock()
@@ -540,13 +589,21 @@ async def run_epoch(
                 if proof_src is None:
                     return None
                 async with _sem:
-                    vr = await asyncio.to_thread(
-                        run_lean_verify,
-                        settings,
-                        verify_timeout_s=_vto,
-                        problem=_prob,
-                        proof_script=proof_src,
-                    )
+                    try:
+                        vr = await asyncio.to_thread(
+                            run_lean_verify,
+                            settings,
+                            verify_timeout_s=_vto,
+                            problem=_prob,
+                            proof_script=proof_src,
+                        )
+                    except Exception as exc:  # noqa: BLE001
+                        err = str(exc)
+                        logger.warning("uid={} verify task raised before VerifyResult: {}", uid, err)
+                        vr = VerifyResult(passed=False, reason="docker_error", stderr_tail=err[:8000])
+                if _verify_result_is_infra_failure(vr):
+                    logger.warning("uid={} verify infra failure: {}", uid, vr.reason)
+                    return (uid, resp, vr)
                 if not vr.passed:
                     logger.debug("uid={} verify failed: {}", uid, vr.reason)
                     return None
@@ -558,17 +615,28 @@ async def run_epoch(
                 def verify_key_fn(_uid: int, resp: LemmaChallenge) -> str:
                     return _lean_verify_equivalence_key(resp)
 
-            verified = await _run_verify_batch(candidates, _verify_one, key_fn=verify_key_fn)
+            verify_results = await _run_verify_batch(candidates, _verify_one, key_fn=verify_key_fn)
+            verified = [(uid, resp, vr) for uid, resp, vr in verify_results if vr.passed]
+            infra_failures = [
+                (uid, resp, vr)
+                for uid, resp, vr in verify_results
+                if _verify_result_is_infra_failure(vr)
+            ]
+            verify_infra_errors += len(infra_failures)
+            verify_infra_error_uids.update(uid for uid, _resp, _vr in infra_failures)
             total_verified += len(verified)
 
             vca = float(settings.lemma_reputation_verify_credibility_alpha)
             if not dry_run and vca > 0.0 and candidates:
+                infra_uids = {uid for uid, _resp, _vr in infra_failures}
+                credibility_candidates = [(uid, resp) for uid, resp in candidates if uid not in infra_uids]
                 _update_verify_credibility(
                     rep_store.credibility_by_uid,
-                    candidates,
+                    credibility_candidates,
                     verified,
                     alpha=vca,
                 )
+                rep_dirty = rep_dirty or bool(credibility_candidates)
 
             scored_sub: list[ScoredEntry] = []
             for uid_i, resp_i, vr_i in verified:
@@ -610,6 +678,9 @@ async def run_epoch(
             prev_ema=rep_store.ema_by_uid,
             credibility_by_uid=dict(rep_store.credibility_by_uid),
         )
+        rep_dirty = True
+
+    if rep_dirty and not dry_run:
         try:
             save_reputation(settings.lemma_reputation_state_path, rep_store)
         except OSError as e:
@@ -635,20 +706,24 @@ async def run_epoch(
                 block=cur_block,
                 theorem_id=last_problem.id,
                 passed_uids={e.uid for e in scored},
+                verify_infra_error_uids=verify_infra_error_uids,
                 export_context=export_context,
             ),
         ]
-        append_epoch_jsonl(
-            export_path,
-            export_rows,
-            weights_by_uid,
-            include_pareto_weights=(export_profile == "full"),
-        )
-        logger.debug(
-            "training_export appended {} proof rows and 1 round summary to {}",
-            len(training_rows),
-            export_path,
-        )
+        try:
+            append_epoch_jsonl(
+                export_path,
+                export_rows,
+                weights_by_uid,
+                include_pareto_weights=(export_profile == "full"),
+            )
+            logger.debug(
+                "training_export appended {} proof rows and 1 round summary to {}",
+                len(training_rows),
+                export_path,
+            )
+        except OSError as e:
+            logger.error("training_export append failed after scoring; continuing to set_weights: {}", e)
 
     full_weights, skip_chain_write = build_full_weights(
         n,
@@ -666,7 +741,7 @@ async def run_epoch(
         "theorem_id={} k_problems={} verified={} scored={} pareto_entries={} "
         "coldkey_partitioned={} deadline_rejects={} "
         "challenge_rejects={} payload_rejects={} "
-        "attest_rejects={} commit_reveal_rejects={} "
+        "attest_rejects={} commit_reveal_rejects={} verify_infra_errors={} "
         "skip_set_weights={} seconds={:.2f}  "
         "[verified=Lean proof OK; scored=verified proof rows; pareto_entries=weight rows]",
         cur_block,
@@ -686,6 +761,7 @@ async def run_epoch(
         payload_rejects,
         attest_rejects,
         commit_reveal_rejects,
+        verify_infra_errors,
         skip_chain_write,
         elapsed,
     )
