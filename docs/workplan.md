@@ -50,8 +50,10 @@ not let parallel checklists drift.
   validator scoring path.
 - Testnet Droplets are currently deployed at `0ff1068`. The earlier `8067b70`
   deploy observed `verified=3`, `scored=3`, `verify_infra_errors=0`, no reject
-  counters, and `set_weights success=True`; the first full `0ff1068` round
-  still needs to be observed.
+  counters, and `set_weights success=True`. The first observed `0ff1068` round
+  at `2026-05-13 10:59 UTC` verified/scored 5 proofs with
+  `verify_infra_errors=0`; `set_weights` returned false, and the deployed
+  cleanup logged `success=False without message`.
 - Read-only droplet sampling later on 2026-05-13 found continued verified/scored
   rounds, active dashboard publishing, and intermittent false/no-message
   `set_weights` results from the deployed code. The latest sampled round at
@@ -103,7 +105,8 @@ not let parallel checklists drift.
   instead of `message=None`.
 - No-message set-weights false returns: the deployed follow-up normalizes tuple,
   dict, and object false/no-message returns to `success=False without message`
-  instead of logging `(False, None)`.
+  instead of logging `(False, None)`. Live logs on `0ff1068` confirmed this at
+  `2026-05-13 10:59 UTC`.
 - Current-head droplet deploy: validator/miner hosts were fast-forwarded from
   `8067b70` to `0ff1068`; old subnet pins failed closed; pins were refreshed to
   profile
@@ -127,10 +130,11 @@ not let parallel checklists drift.
    hosts should still mount `LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR` on its own
    volume or partition.
 
-2. **Watch the first full `0ff1068` validator rounds.**
-   The cleanup is deployed and services are active, but the next complete rounds
-   need recorded evidence for `set_weights`, reveal/emission movement, and any
-   RPC retry behavior under the current head.
+2. **Watch follow-up `0ff1068` validator rounds.**
+   The first complete current-head round verified/scored normally and confirmed
+   the no-message logging cleanup. Follow-up rounds need recorded evidence for
+   successful `set_weights`, reveal/emission movement, and repeated RPC false
+   returns.
 
 3. **Live alerting.**
    Add operator alerts for root/cache disk >80%, failed Lemma systemd units,
@@ -155,7 +159,7 @@ not let parallel checklists drift.
 
 ## Next Work Order
 
-1. Watch the first full `0ff1068` deployed rounds and record
+1. Watch follow-up `0ff1068` deployed rounds and record successful
    set-weights/emission movement, especially across any RPC retry event.
 2. Add a compact live health command/report covering commit, services, disk,
    cache slots, dashboard timer, latest epoch summary, and latest
@@ -202,7 +206,9 @@ Additional evidence: Lean worker health on `127.0.0.1:8787` returned
 refresh commits after the site code deploy. The validator initially failed
 closed on stale pins; running the subnet-pins command refreshed the profile and
 problem-supply pins, after which startup logged the expected registry hash and
-`problem_source=hybrid`.
+`problem_source=hybrid`. The first observed `0ff1068` round verified/scored 5
+proofs with `verify_infra_errors=0`; `set_weights` returned false with the
+cleaned message `success=False without message`.
 
 Next VPS testing should measure behavior, not add mechanism code:
 

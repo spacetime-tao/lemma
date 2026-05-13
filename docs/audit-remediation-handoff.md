@@ -167,5 +167,10 @@ services, and validator were then restarted in order.
   `f4ae425ad437c97b00d47b7ba97f97e1ff4cec8d5d66290c8b2364d91f822311`.
 - After the pin update, validator startup logged the expected registry hash,
   `problem_source=hybrid`, and `validator cadence follows problem seed windows`.
-- No full post-`0ff1068` validator round had completed at the last check; watch
-  the next rounds before claiming live set-weights behavior for this head.
+- First observed post-`0ff1068` validator round completed at
+  `2026-05-13 10:59 UTC`: `theorem_id=gen/7112100`, split `medium`,
+  `verified=5`, `scored=5`, `verify_infra_errors=0`, no reject counters.
+  `set_weights` returned false after three attempts, but the deployed cleanup
+  logged `success=False without message` instead of `(False, None)`.
+- Next live task: watch follow-up rounds for successful `set_weights`,
+  reveal/emission movement, and any repeated false/no-message RPC pattern.
