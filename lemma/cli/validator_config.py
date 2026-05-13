@@ -82,7 +82,7 @@ def print_validator_config() -> None:
     )
     click.echo(
         stylize(
-            "  Validator cadence: subnet epoch boundaries only (no env toggle - mandatory for all operators).",
+            "  Validator cadence: published problem-seed windows.",
             dim=True,
         ),
     )

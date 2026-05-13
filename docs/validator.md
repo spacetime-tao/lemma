@@ -4,7 +4,7 @@ Walkthrough: [getting-started.md](getting-started.md) — `uv run lemma setup` (
 
 **Short checklist:** `bash scripts/prebuild_lean_image.sh` → **`uv run lemma preview`** (prover + Lean preview) → `uv run lemma validator check` until READY → `uv run lemma validator start`. Same keys/chain setup as a miner if you run both roles.
 
-Validators **always** wait for subnet epoch boundaries before each round — no timer-only mode; every operator shares the same on-chain cadence.
+Validator rounds follow the published problem-seed windows. The default `quantize` mode rotates every `LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS` blocks; `subnet_epoch` mode uses subnet epoch boundaries.
 
 Validator→miner transport uses Bittensor Dendrite/Axon and synapse body-hash integrity — [transport.md](transport.md).
 

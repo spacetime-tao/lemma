@@ -24,7 +24,7 @@ instead of multiplying it.
 
 - Require `proof_script`; informal reasoning belongs outside the live protocol.
 - Align `LEMMA_BLOCK_TIME_SEC_ESTIMATE`, forward-wait clamps, `LEMMA_LLM_HTTP_TIMEOUT_S`, and `LEAN_VERIFY_TIMEOUT_S` across validators (see `.env.example`).
-- Validator cadence is subnet epoch boundaries only (mandatory).
+- Validator cadence follows the published problem-seed mode: quantized theorem windows by default, or subnet epoch boundaries when `LEMMA_PROBLEM_SEED_MODE=subnet_epoch`.
 
 ## Catalogs
 

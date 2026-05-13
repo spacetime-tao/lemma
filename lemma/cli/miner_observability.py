@@ -94,8 +94,8 @@ def print_miner_observability() -> None:
     click.echo(stylize("Subnet round timing\n", fg="cyan", bold=True), nl=False)
     click.echo(
         stylize(
-            "Validators always wait for subnet epoch boundaries before each scoring round; there is no "
-            "timer-only mode in Lemma.\n",
+            "Validators follow the published problem-seed windows: quantized theorem windows by default, "
+            "or subnet epoch boundaries when that mode is configured.\n",
             dim=True,
         ),
     )

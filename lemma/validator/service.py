@@ -12,6 +12,11 @@ from loguru import logger
 import lemma.validator.epoch as ep
 from lemma.common.config import LemmaSettings
 from lemma.common.logging import setup_logging
+from lemma.common.problem_seed import (
+    blocks_until_challenge_may_change,
+    effective_chain_head_for_problem_seed,
+    resolve_problem_seed,
+)
 from lemma.common.subtensor import get_subtensor
 from lemma.judge.profile import judge_profile_sha256
 from lemma.problems.factory import get_problem_source
@@ -33,6 +38,34 @@ def epoch_sleep_seconds(blocks_until_epoch: int, block_time_sec_estimate: float)
     if bu <= 3:
         return 1.0
     return min(12.0, max(1.0, float(bu) * float(block_time_sec_estimate) * 0.25))
+
+
+def validator_problem_window(
+    settings: LemmaSettings,
+    subtensor: object,
+    chain_head_block: int,
+) -> tuple[int, int, str]:
+    """Return the active problem seed and blocks until it can change."""
+    seed_head = effective_chain_head_for_problem_seed(
+        int(chain_head_block),
+        int(settings.lemma_problem_seed_chain_head_slack_blocks or 0),
+    )
+    problem_seed, seed_tag = resolve_problem_seed(
+        chain_head_block=seed_head,
+        netuid=settings.netuid,
+        mode=settings.problem_seed_mode,
+        quantize_blocks=settings.problem_seed_quantize_blocks,
+        subtensor=subtensor,
+    )
+    blocks_until_change, edge = blocks_until_challenge_may_change(
+        chain_head_block=seed_head,
+        netuid=settings.netuid,
+        mode=settings.problem_seed_mode,
+        quantize_blocks=settings.problem_seed_quantize_blocks,
+        seed_tag=seed_tag,
+        subtensor=subtensor,
+    )
+    return int(problem_seed), int(blocks_until_change), edge
 
 
 def _require_docker_for_validator(settings: LemmaSettings) -> None:
@@ -147,23 +180,21 @@ class ValidatorService:
         subtensor = get_subtensor(s)
         source = get_problem_source(s)
         logger.info("problem_source={}", s.problem_source)
-        logger.info(
-            "validator cadence: subnet epoch boundaries only (each run_epoch waits for the next epoch)",
-        )
+        logger.info("validator cadence follows problem seed windows")
+        last_problem_seed: int | None = None
         while True:
-            bu = subtensor.blocks_until_next_epoch(s.netuid)
-            if bu is None:
-                await asyncio.sleep(12)
-                continue
-            if bu <= 1:
+            chain_head = int(subtensor.get_current_block())
+            problem_seed, blocks_until_change, edge = validator_problem_window(s, subtensor, chain_head)
+            if last_problem_seed != problem_seed:
                 try:
                     await ep.run_epoch(s, source, dry_run=self.dry_run)
+                    last_problem_seed = problem_seed
                 except Exception as e:  # noqa: BLE001
                     logger.exception("epoch failed: {}", e)
                 await asyncio.sleep(2)
                 continue
-            wait_s = epoch_sleep_seconds(bu, s.block_time_sec_estimate)
-            logger.debug("Waiting {:.0f}s (~{} blocks to epoch)", wait_s, bu)
+            wait_s = epoch_sleep_seconds(blocks_until_change, s.block_time_sec_estimate)
+            logger.debug("Waiting {:.0f}s (~{} blocks to {})", wait_s, blocks_until_change, edge)
             await asyncio.sleep(wait_s)
 
     def run_blocking(self) -> None:

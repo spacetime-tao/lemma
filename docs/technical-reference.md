@@ -101,7 +101,7 @@ Template or catalog changes need coordinated upgrades ([governance.md](governanc
 | `LEMMA_LLM_HTTP_TIMEOUT_S` | HTTP read timeout for one prover completion — must fit within a round’s forward wait at typical chain heads. |
 | `LEAN_VERIFY_TIMEOUT_S` | Sandbox `lake build` budget **per miner proof** (default 300 s). |
 
-Validator **round cadence** is not configurable in Lemma: each validator waits for **subnet epoch boundaries** before running `run_epoch` — no wall-clock interval mode.
+Validator **round cadence** follows the published problem-seed mode. The default `quantize` mode runs once per `LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS` block window; `subnet_epoch` mode runs on subnet epoch boundaries.
 
 Timeout values are subnet policy: the operator publishes a single canonical `.env` (or equivalent) and every validator is expected to run that same configuration. Individual validators do not choose different budgets; drift breaks fairness and comparability ([governance.md](governance.md)). Forward HTTP wait follows **block height** (same edge as the next seed rotation), not a single operator-chosen wall-clock cap. If the operator’s published policy includes per-split multipliers (`LEMMA_TIMEOUT_SCALE_BY_SPLIT`, `LEMMA_TIMEOUT_SPLIT_*_MULT`), that is still one policy for the whole subnet, not a per-node setting.
 
