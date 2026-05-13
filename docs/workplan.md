@@ -81,16 +81,89 @@ not let parallel checklists drift.
 
 ## Current Blockers And Gaps
 
-1. **Full Bandit low-severity cleanup.**
+1. **Exporter failure must not block validator grading.**
+   Training/dashboard export writes currently sit on the hot epoch path. A
+   local `OSError` such as disk-full should log loudly and preserve proof
+   grading / `set_weights` whenever the verified score set is already known.
+
+2. **Disk preflight before miner queries.**
+   Validators should check root/cache free space before each epoch and skip
+   cleanly if the host is below a safe threshold. Do not query miners and then
+   turn verifier infrastructure failure into partial miner failures.
+
+3. **Lean cache needs a byte cap, not only a directory cap.**
+   `LEMMA_LEAN_WORKSPACE_CACHE_MAX_DIRS` bounds slot count. Add a total-size
+   guard such as `LEMMA_LEAN_WORKSPACE_CACHE_MAX_BYTES` so a small number of
+   unusually large `.lake` workspaces cannot fill the disk.
+
+4. **Separate Lean cache from the root filesystem.**
+   Production validator/worker hosts should mount
+   `LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR` on its own volume or partition. A
+   cache blow-up should not take out git, logs, dashboard refresh, or validator
+   state writes.
+
+5. **RPC 429 resilience.**
+   Live logs showed repeated WebSocket `HTTP 429` errors. Add endpoint
+   fallback/backoff guidance and tests around the validator loop so rate-limit
+   pressure becomes a clear skipped epoch, not a noisy retry storm.
+
+6. **Dashboard refresh isolation.**
+   The public dashboard refresh should use a lock (`flock` or equivalent), keep
+   git index failures out of validator scoring, and surface failed refreshes as
+   ops alerts. Dashboard freshness is useful, but not consensus-critical.
+
+7. **Infra-error accounting.**
+   Verifier-local failures (`No space left on device`, Docker unavailable,
+   remote worker unavailable, RPC unavailable) should be classified as validator
+   infrastructure failures. They should not silently look like miner proof
+   failures.
+
+8. **Live alerting.**
+   Add operator alerts for root/cache disk >80%, failed Lemma systemd units,
+   repeated `epoch failed`, missing `lemma_epoch_summary` for N minutes, and
+   repeated empty-score / skipped-weight epochs.
+
+9. **Full Bandit low-severity cleanup.**
    CI's medium/high Bandit gate passes. A full Bandit run still reports
    low-severity subprocess, seeded RNG, `assert`, and cleanup-exception items.
    Only fix these when the change removes ambiguity or code.
 
-2. **Live subnet/VPS evidence still matters.**
+10. **Live subnet/VPS evidence still matters.**
    Local and GitHub CI proof PASS are necessary but not enough. The subnet still
    needs measured miner response time, prover latency, validator Lean
    verification time, scored miner count, timeout/fail reasons, set-weights
    behavior, and emission changes from live runs.
+
+## Lemma / Lemma Repo Fix List
+
+### Lemma live ops
+
+1. Make export/dashboard write failures non-fatal to grading and chain weight
+   writes.
+2. Add disk-space preflight before every validator epoch.
+3. Keep Lean cache on a separate disk/partition from `/`.
+4. Add disk, failed-unit, epoch-failure, and missing-summary alerts.
+5. Add RPC fallback/backoff for rate-limited endpoints.
+6. Keep dashboard refreshes serialized and isolated from validator scoring.
+7. Label verifier-local failures as validator infra failures in logs/exports.
+8. Add a compact live health command/report covering commit, services, disk,
+   cache slots, dashboard timer, latest epoch summary, and latest set_weights.
+
+### lemma repo/code
+
+1. Move training/dashboard export append behind a non-fatal boundary in
+   `lemma/validator/epoch.py`.
+2. Add `LEMMA_LEAN_WORKSPACE_CACHE_MAX_BYTES` and prune by total cache size.
+3. Add tests proving disk/export `OSError` cannot abort `set_weights` after
+   scoring is complete.
+4. Add tests proving verifier infra errors are not counted as miner proof
+   failures.
+5. Add a systemd/dashboard refresh lock in deploy scripts.
+6. Add docs for the production cache-volume layout and alert thresholds.
+7. Keep `docs/workplan.md`, `local handoff note`, and deployment runbooks current
+   after every live infra change.
+8. Keep CI Docker/Lean gates honest about disk pressure: show the real Lean
+   failure first, and keep expensive bisection opt-in.
 
 ## Testing Matrix
 
