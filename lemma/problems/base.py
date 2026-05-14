@@ -31,7 +31,7 @@ class Problem:
         if isinstance(cf, str) and cf.strip():
             imps = "\n".join(f"import {m}" for m in self.imports)
             body = cf.strip()
-            if self.imports:
+            if self.imports and not body.lstrip().startswith("import "):
                 return f"{imps}\n\n{body}\n"
             return body + "\n"
 
@@ -84,3 +84,7 @@ class ProblemSource(ABC):
     @abstractmethod
     def sample(self, seed: int, split: str | None = None) -> Problem:
         """Deterministic pick for metronome rounds."""
+
+    @abstractmethod
+    def get(self, problem_id: str) -> Problem:
+        """Return one problem by stable id."""

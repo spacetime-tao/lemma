@@ -6,7 +6,7 @@ from lemma.protocol import LemmaChallenge
 
 
 def reject_synopsis(synapse: LemmaChallenge, status: int, message: str) -> LemmaChallenge:
-    """Mark synapse as failed without running the prover."""
+    """Mark synapse as failed without serving a proof."""
     if synapse.axon is not None:
         synapse.axon.status_code = status
         synapse.axon.status_message = message

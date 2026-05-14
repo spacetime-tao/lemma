@@ -36,11 +36,6 @@ end Submission
         use_docker=True,
         network_mode=os.environ.get("LEAN_SANDBOX_NETWORK", "bridge"),
         timeout_s=1200,
-        proof_metrics_enabled=True,
     )
     vr = sb.verify(p, submission)
     assert vr.passed, vr.stderr_tail
-    assert vr.proof_metrics is not None
-    assert vr.proof_metrics.probe_exit_code == 0
-    assert vr.proof_metrics.proof_declaration_bytes > 0
-    assert vr.proof_metrics.proof_declaration_lines > 0

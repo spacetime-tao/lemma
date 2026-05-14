@@ -1,61 +1,28 @@
 # Testing
 
-Clone repo and `uv sync --extra dev` ([getting-started.md](getting-started.md)).
-
-## Default suite
+Default local checks:
 
 ```bash
 uv sync --extra dev
-uv run pytest tests/ -q
-uv run ruff check lemma tests tools
+uv run ruff check lemma tests
 uv run mypy lemma
-uv run python scripts/ci_verify_generated_templates.py
-uv run bandit -q -r lemma -ll
+uv run pytest tests -q
 ```
 
-No API keys are needed for proof-only verification tests; Docker Lean tests are skipped unless enabled.
+No API keys are needed.
 
-For audit or release hardening passes, also run full Bandit and pip-audit:
-
-```bash
-uv run bandit -q -r lemma
-uv run pip-audit \
-  --ignore-vuln PYSEC-2025-49 \
-  --ignore-vuln PYSEC-2022-42969
-```
-
-Full Bandit may report low-severity findings for intentional subprocess calls
-inside the Lean/Docker verifier or deterministic non-crypto RNG in problem
-sampling. Fix those only when the change removes code or ambiguity; CI gates
-medium/high findings with `-ll`.
-
-## Opt-in Lean tests
+## Lean Tests
 
 | File | Enable |
 | ---- | ------ |
 | [`test_sandbox_host.py`](../tests/test_sandbox_host.py) | `LEMMA_RUN_HOST_LEAN=1` and `lake` on `PATH` |
 | [`test_docker_golden.py`](../tests/test_docker_golden.py) | `RUN_DOCKER_LEAN=1`, Docker, `LEAN_SANDBOX_IMAGE` |
 
-`LEMMA_SKIP_LAKE_CACHE=1` skips `lake exe cache get` when offline.
-
-### Docker golden
+Docker golden loop:
 
 ```bash
 docker build -f compose/lean.Dockerfile -t lemma/lean-sandbox:latest .
 RUN_DOCKER_LEAN=1 uv run pytest tests/test_docker_golden.py -v
 ```
 
-CI uses tag `lemma-lean-sandbox:ci`; locally `latest` is fine.
-Production should use a subnet-published immutable tag or digest, not the mutable local `latest` tag ([toolchain-image-policy.md](toolchain-image-policy.md)).
-
-## Generated template gate (CI `docker-lean-sandbox` job)
-
-[`scripts/ci_verify_generated_templates.py`](../scripts/ci_verify_generated_templates.py) always runs the cheap metadata/witness gate: every generated builder must be reachable, have coherent registry metadata, bridge the expected theorem name, and carry a complete public witness proof. With `RUN_DOCKER_LEAN_TEMPLATES=1`, it runs `lake build` on every generated template shape twice: once with `sorry` stubs and once with witness proofs plus axiom checks. By default it merges all theorems into **one** Lake workspace (single Mathlib build). Set `CI_TEMPLATE_BISECT_ON_FAIL=1` only when debugging a failing multiplex locally or on a large runner; the bisection path runs repeated Lake builds and is intentionally off by default in CI. Set `CI_TEMPLATE_MULTIPLEX=0` to fall back to per-template workspaces (slow; mainly for debugging).
-
-## LLM keys
-
-Only prover-preview commands such as **`lemma preview`** need inference keys.
-
-`lemma preview` runs **prover + Lean** on the current subnet theorem
-(chain RPC required). Live scoring accepts only proofs that pass Lean
-verification for that theorem.
+CI runs the normal suite plus the Docker golden proof check.

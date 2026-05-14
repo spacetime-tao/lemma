@@ -5,13 +5,11 @@ from lemma.protocol import LemmaChallenge
 
 def _challenge(**kwargs) -> LemmaChallenge:
     data = {
-        "theorem_id": "gen/1",
+        "theorem_id": "known/test/one",
         "theorem_statement": "theorem t : True := by sorry",
         "lean_toolchain": "lt",
         "mathlib_rev": "mr",
-        "deadline_unix": 1,
-        "deadline_block": 10,
-        "metronome_id": "m1",
+        "poll_id": "poll-1",
     }
     data.update(kwargs)
     return LemmaChallenge(**data)
@@ -25,16 +23,9 @@ def test_challenge_payload_check_keeps_statement_cap() -> None:
     assert err == "theorem_statement too large"
 
 
-def test_challenge_payload_check_skips_response_only_commit_fields() -> None:
-    settings = LemmaSettings()
-    synapse = _challenge(
-        commit_reveal_phase="commit",
-        proof_commitment_hex="not hex",
-        proof_script="response field",
-    )
+def test_challenge_payload_check_skips_response_proof_cap_on_request() -> None:
+    settings = LemmaSettings(synapse_max_proof_chars=4)
+    synapse = _challenge(proof_script="response field")
 
     assert synapse_payload_error(synapse, settings, response=False) is None
-    assert (
-        synapse_payload_error(synapse, settings)
-        == "proof_commitment_hex must be 64 hex chars, with optional 0x prefix"
-    )
+    assert synapse_payload_error(synapse, settings) == "proof_script too large"

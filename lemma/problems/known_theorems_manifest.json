@@ -1,0 +1,174 @@
+{
+  "schema_version": 1,
+  "source": {
+    "name": "Lemma Mathlib-only smoke queue",
+    "repo": "curated-local",
+    "commit": "a95bff4a5ae4356e0ac60d76d22e96233dfc2e10",
+    "lean_toolchain": "leanprover/lean4:v4.27.0",
+    "mathlib_rev": "a3a10db0e9d66acbebf76c5e6a135066525ac900",
+    "license_note": "Curated theorem statements and metadata are Apache-2.0. Human proof references are citations only.",
+    "snapshot_note": "Smoke queue for local protocol testing. Replace with launch-quality reviewed targets before live use."
+  },
+  "targets": [
+    {
+      "id": "known/smoke/nat_two_plus_two_eq_four",
+      "order": 1,
+      "title": "Two plus two is four",
+      "difficulty": "smoke",
+      "imports": [
+        "Mathlib"
+      ],
+      "theorem_name": "nat_two_plus_two_eq_four",
+      "type_expr": "(2 : Nat) + 2 = 4",
+      "challenge_full": "import Mathlib\n\nnamespace Submission\n\n/-- Smoke target: two plus two is four. -/\ntheorem nat_two_plus_two_eq_four : (2 : Nat) + 2 = 4 := by\n  sorry\n\nend Submission\n",
+      "submission_stub": "import Mathlib\n\nnamespace Submission\n\ntheorem nat_two_plus_two_eq_four : (2 : Nat) + 2 = 4 := by\n  sorry\n\nend Submission\n",
+      "human_proof_reference": {
+        "citation": "Elementary arithmetic: normalizing natural-number numerals gives 4.",
+        "url": "",
+        "proof_status": "known"
+      },
+      "attribution": {
+        "source": "Classical elementary arithmetic",
+        "license_note": "Public-domain mathematical fact; statement curated for Lemma smoke testing."
+      },
+      "review": {
+        "known_math": true,
+        "already_formalized_in_lean": false,
+        "accepted_lean_proof_known": false,
+        "reviewer": "Lemma smoke review",
+        "reviewed_at": "2026-05-14",
+        "duplicate_check": "Smoke target intentionally overlaps elementary Mathlib capability; not launch-quality theorem supply.",
+        "statement_faithfulness": "Direct formal statement of the elementary arithmetic fact.",
+        "notes": "Use to test local LLM proof generation and submit/verify UX."
+      }
+    },
+    {
+      "id": "known/smoke/prop_and_comm",
+      "order": 2,
+      "title": "Conjunction is commutative",
+      "difficulty": "smoke",
+      "imports": [
+        "Mathlib"
+      ],
+      "theorem_name": "prop_and_comm",
+      "type_expr": "∀ p q : Prop, p ∧ q → q ∧ p",
+      "challenge_full": "import Mathlib\n\nnamespace Submission\n\n/-- Smoke target: conjunction can be flipped. -/\ntheorem prop_and_comm (p q : Prop) : p ∧ q → q ∧ p := by\n  sorry\n\nend Submission\n",
+      "submission_stub": "import Mathlib\n\nnamespace Submission\n\ntheorem prop_and_comm (p q : Prop) : p ∧ q → q ∧ p := by\n  sorry\n\nend Submission\n",
+      "human_proof_reference": {
+        "citation": "Elementary propositional logic: from p and q, construct q and p.",
+        "url": "",
+        "proof_status": "known"
+      },
+      "attribution": {
+        "source": "Classical propositional logic",
+        "license_note": "Public-domain mathematical fact; statement curated for Lemma smoke testing."
+      },
+      "review": {
+        "known_math": true,
+        "already_formalized_in_lean": false,
+        "accepted_lean_proof_known": false,
+        "reviewer": "Lemma smoke review",
+        "reviewed_at": "2026-05-14",
+        "duplicate_check": "Smoke target intentionally overlaps elementary Mathlib capability; not launch-quality theorem supply.",
+        "statement_faithfulness": "Direct formal statement of conjunction commutativity.",
+        "notes": "Use to test local LLM proof generation and submit/verify UX."
+      }
+    },
+    {
+      "id": "known/smoke/nat_add_zero_right",
+      "order": 3,
+      "title": "Adding zero on the right",
+      "difficulty": "smoke",
+      "imports": [
+        "Mathlib"
+      ],
+      "theorem_name": "nat_add_zero_right",
+      "type_expr": "∀ n : Nat, n + 0 = n",
+      "challenge_full": "import Mathlib\n\nnamespace Submission\n\n/-- Smoke target: adding zero on the right leaves a natural number unchanged. -/\ntheorem nat_add_zero_right (n : Nat) : n + 0 = n := by\n  sorry\n\nend Submission\n",
+      "submission_stub": "import Mathlib\n\nnamespace Submission\n\ntheorem nat_add_zero_right (n : Nat) : n + 0 = n := by\n  sorry\n\nend Submission\n",
+      "human_proof_reference": {
+        "citation": "Standard Peano arithmetic identity: n + 0 = n.",
+        "url": "",
+        "proof_status": "known"
+      },
+      "attribution": {
+        "source": "Classical elementary arithmetic",
+        "license_note": "Public-domain mathematical fact; statement curated for Lemma smoke testing."
+      },
+      "review": {
+        "known_math": true,
+        "already_formalized_in_lean": false,
+        "accepted_lean_proof_known": false,
+        "reviewer": "Lemma smoke review",
+        "reviewed_at": "2026-05-14",
+        "duplicate_check": "Smoke target intentionally overlaps elementary Mathlib capability; not launch-quality theorem supply.",
+        "statement_faithfulness": "Direct formal statement of the right-add-zero identity.",
+        "notes": "Use to test local LLM proof generation and submit/verify UX."
+      }
+    },
+    {
+      "id": "known/smoke/nat_add_commute",
+      "order": 4,
+      "title": "Addition of natural numbers is commutative",
+      "difficulty": "smoke",
+      "imports": [
+        "Mathlib"
+      ],
+      "theorem_name": "nat_add_commute",
+      "type_expr": "∀ a b : Nat, a + b = b + a",
+      "challenge_full": "import Mathlib\n\nnamespace Submission\n\n/-- Smoke target: natural-number addition is commutative. -/\ntheorem nat_add_commute (a b : Nat) : a + b = b + a := by\n  sorry\n\nend Submission\n",
+      "submission_stub": "import Mathlib\n\nnamespace Submission\n\ntheorem nat_add_commute (a b : Nat) : a + b = b + a := by\n  sorry\n\nend Submission\n",
+      "human_proof_reference": {
+        "citation": "Standard Peano arithmetic theorem: addition of natural numbers is commutative.",
+        "url": "",
+        "proof_status": "known"
+      },
+      "attribution": {
+        "source": "Classical elementary arithmetic",
+        "license_note": "Public-domain mathematical fact; statement curated for Lemma smoke testing."
+      },
+      "review": {
+        "known_math": true,
+        "already_formalized_in_lean": false,
+        "accepted_lean_proof_known": false,
+        "reviewer": "Lemma smoke review",
+        "reviewed_at": "2026-05-14",
+        "duplicate_check": "Smoke target intentionally overlaps elementary Mathlib capability; not launch-quality theorem supply.",
+        "statement_faithfulness": "Direct formal statement of commutativity of natural-number addition.",
+        "notes": "Use to test local LLM proof generation and submit/verify UX."
+      }
+    },
+    {
+      "id": "known/smoke/nat_mul_one_right",
+      "order": 5,
+      "title": "Multiplying by one on the right",
+      "difficulty": "smoke",
+      "imports": [
+        "Mathlib"
+      ],
+      "theorem_name": "nat_mul_one_right",
+      "type_expr": "∀ n : Nat, n * 1 = n",
+      "challenge_full": "import Mathlib\n\nnamespace Submission\n\n/-- Smoke target: multiplying by one on the right leaves a natural number unchanged. -/\ntheorem nat_mul_one_right (n : Nat) : n * 1 = n := by\n  sorry\n\nend Submission\n",
+      "submission_stub": "import Mathlib\n\nnamespace Submission\n\ntheorem nat_mul_one_right (n : Nat) : n * 1 = n := by\n  sorry\n\nend Submission\n",
+      "human_proof_reference": {
+        "citation": "Standard Peano arithmetic identity: n * 1 = n.",
+        "url": "",
+        "proof_status": "known"
+      },
+      "attribution": {
+        "source": "Classical elementary arithmetic",
+        "license_note": "Public-domain mathematical fact; statement curated for Lemma smoke testing."
+      },
+      "review": {
+        "known_math": true,
+        "already_formalized_in_lean": false,
+        "accepted_lean_proof_known": false,
+        "reviewer": "Lemma smoke review",
+        "reviewed_at": "2026-05-14",
+        "duplicate_check": "Smoke target intentionally overlaps elementary Mathlib capability; not launch-quality theorem supply.",
+        "statement_faithfulness": "Direct formal statement of the right-mul-one identity.",
+        "notes": "Use to test local LLM proof generation and submit/verify UX."
+      }
+    }
+  ]
+}

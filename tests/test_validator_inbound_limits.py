@@ -12,10 +12,10 @@ from lemma.validator import epoch
 class _OneProblemSource(ProblemSource):
     def __init__(self) -> None:
         self.problem = Problem(
-            id="gen/1",
+            id="known/test/one",
             theorem_name="t",
             type_expr="True",
-            split="easy",
+            split="wta",
             lean_toolchain="lt",
             mathlib_rev="mr",
             imports=("Mathlib",),
@@ -25,6 +25,11 @@ class _OneProblemSource(ProblemSource):
         return [self.problem]
 
     def sample(self, seed: int, split: str | None = None) -> Problem:
+        return self.problem
+
+    def get(self, problem_id: str) -> Problem:
+        if problem_id != self.problem.id:
+            raise KeyError(problem_id)
         return self.problem
 
 
@@ -63,9 +68,7 @@ class _Dendrite:
             imports=list(synapse.imports or []),
             lean_toolchain=synapse.lean_toolchain,
             mathlib_rev=synapse.mathlib_rev,
-            deadline_unix=synapse.deadline_unix,
-            deadline_block=synapse.deadline_block,
-            metronome_id=synapse.metronome_id,
+            poll_id=synapse.poll_id,
             proof_script="x" * 1025,
         )
         resp.dendrite.status_code = 200
@@ -93,7 +96,9 @@ async def test_validator_rejects_oversized_proof_before_lean(monkeypatch, tmp_pa
     settings = LemmaSettings(
         _env_file=None,
         synapse_max_proof_chars=1024,
-        lemma_reputation_state_path=tmp_path / "reputation.json",
+        wta_ledger_path=tmp_path / "wta-ledger.jsonl",
+        validator_abort_if_not_registered=False,
+        validator_min_free_bytes=0,
     )
 
     weights = await epoch.run_epoch(settings, _OneProblemSource(), dry_run=True)
