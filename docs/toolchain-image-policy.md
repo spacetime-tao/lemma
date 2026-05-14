@@ -30,6 +30,22 @@ LEAN_SANDBOX_IMAGE=registry.example/lemma/lean-sandbox@sha256:<digest>
 
 An immutable version tag is acceptable only when the operator controls the registry policy and will not retag it.
 
+For high-value operation, publish the resolved digest even if operators use a
+human-readable tag in `.env`. A tag is an operator convenience; the digest is
+the stronger evidence that everyone can compare.
+
+## Release evidence
+
+Each release should record:
+
+- Git commit and release tag used to build the image;
+- full image ref and resolved digest;
+- Lean toolchain and Mathlib revision;
+- `validator_profile_sha256`, which includes `LEAN_SANDBOX_IMAGE`;
+- Docker golden test result;
+- generated-template Docker stub/witness gate result when generated supply
+  changes.
+
 ## Updating pins
 
 When Lean or Mathlib changes, update the constants, template, Dockerfile assumptions, generated/frozen catalog metadata, and operator image ref together. Then rebuild the sandbox image, rerun the golden test, publish the new immutable image ref, and announce the cutover block or release tag.

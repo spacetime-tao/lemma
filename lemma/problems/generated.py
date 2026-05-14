@@ -169,6 +169,13 @@ GENERATED_FAMILY_STATEMENTS: dict[str, str] = {
     "set_union_comm": "Prove that union of sets is commutative.",
     "real_shifted_square_lower_bound": "Prove the displayed lower bound from nonnegativity of a square.",
     "set_image_union": "Prove that image distributes over union.",
+    "midpoint_identity": "Prove the displayed midpoint identity over the real numbers.",
+    "finite_average_identity": "Prove the displayed finite-average identity over the real numbers.",
+    "difference_quotient": "Prove the displayed difference-quotient identity over the real numbers.",
+    "finite_constant_series": "Prove the displayed finite constant-sum identity.",
+    "simple_graph_symmetry": "Prove the displayed symmetry fact for adjacency in a simple graph.",
+    "linear_diophantine_witness": "Prove that the displayed integer linear equation has a witness.",
+    "amgm_square_inequality": "Prove the displayed square-based inequality over the real numbers.",
 }
 
 
@@ -1777,6 +1784,120 @@ def _b_set_image_union_hard(rng: random.Random) -> TemplateInstance:
     )
 
 
+# --- New appended families 93..99. Keep previous indices stable.
+
+
+def _b_real_midpoint_identity_medium(rng: random.Random) -> TemplateInstance:
+    k = rng.randint(1, 12)
+    if rng.choice((False, True)):
+        return _inst(
+            f"∀ x y : ℝ, ((x + y) / 2 - x) + ({k} : ℝ) = (y - x) / 2 + ({k} : ℝ)",
+            "by\n  intro x y\n  ring",
+            informal_statement=f"Prove the midpoint displacement identity after adding {k} to both sides.",
+        )
+    return _inst(
+        f"∀ x y : ℝ, ((x + y) / 2 - y) + ({k} : ℝ) = (x - y) / 2 + ({k} : ℝ)",
+        "by\n  intro x y\n  ring",
+        informal_statement=f"Prove the reversed midpoint displacement identity after adding {k} to both sides.",
+    )
+
+
+def _b_real_finite_average_medium(rng: random.Random) -> TemplateInstance:
+    k = rng.randint(1, 12)
+    if rng.choice((False, True)):
+        return _inst(
+            f"∀ x y : ℝ, ((x + y) / 2) * 2 + ({k} : ℝ) = x + y + ({k} : ℝ)",
+            "by\n  intro x y\n  ring",
+            informal_statement=f"Prove that doubling a two-term average recovers the total, shifted by {k}.",
+        )
+    return _inst(
+        f"∀ x y z : ℝ, ((x + y + z) / 3) * 3 + ({k} : ℝ) = x + y + z + ({k} : ℝ)",
+        "by\n  intro x y z\n  ring",
+        informal_statement=f"Prove that tripling a three-term average recovers the total, shifted by {k}.",
+    )
+
+
+def _b_real_difference_quotient_hard(rng: random.Random) -> TemplateInstance:
+    k = rng.randint(1, 12)
+    if rng.choice((False, True)):
+        return _inst(
+            "∀ x h : ℝ, h ≠ 0 → ((x + h) ^ 2 - x ^ 2) / h = 2 * x + h",
+            "by\n  intro x h hh\n  field_simp [hh]\n  ring",
+            informal_statement="Prove the square-function difference quotient at a nonzero step.",
+        )
+    return _inst(
+        f"∀ x h : ℝ, h ≠ 0 → (((x + h + {k}) - (x + {k})) / h) = 1",
+        "by\n  intro x h hh\n  field_simp [hh]\n  ring",
+        informal_statement=f"Prove the affine difference quotient with intercept {k}.",
+    )
+
+
+def _b_finset_constant_one_sum_medium(rng: random.Random) -> TemplateInstance:
+    k = rng.randint(1, 12)
+    if rng.choice((False, True)):
+        return _inst(
+            "∀ n : Nat, (∑ _i ∈ Finset.range n, (1 : Nat)) = n",
+            "by\n  intro n\n  simp",
+            informal_statement="Prove that summing ones over a finite range returns the range length.",
+        )
+    return _inst(
+        f"∀ n : Nat, (∑ _i ∈ Finset.range (n + {k}), (1 : Nat)) = n + {k}",
+        "by\n  intro n\n  simp",
+        informal_statement=f"Prove that summing ones over a finite range shifted by {k} returns its length.",
+    )
+
+
+def _b_simple_graph_adjacency_symmetry_hard(rng: random.Random) -> TemplateInstance:
+    n = rng.randint(3, 9)
+    if rng.choice((False, True)):
+        return _inst(
+            f"∀ (G : SimpleGraph (Fin {n})) {{u v : Fin {n}}}, G.Adj u v → G.Adj v u",
+            "by\n  intro G u v h\n  exact G.symm h",
+            informal_statement=f"Prove that adjacency in a simple graph on Fin {n} is symmetric.",
+        )
+    return _inst(
+        f"∀ (G : SimpleGraph (Fin {n})) {{u v w : Fin {n}}}, "
+        "G.Adj u v → G.Adj v w → G.Adj v u ∧ G.Adj w v",
+        "by\n  intro G u v w huv hvw\n  exact ⟨G.symm huv, G.symm hvw⟩",
+        informal_statement=f"Prove two reversed adjacency facts in a simple graph on Fin {n}.",
+    )
+
+
+def _b_linear_diophantine_witness_hard(rng: random.Random) -> TemplateInstance:
+    a = rng.randint(2, 9)
+    b = rng.randint(2, 9)
+    x = rng.randint(3, 12)
+    y = rng.randint(1, 8)
+    if rng.choice((False, True)):
+        rhs = a * x + b * y
+        return _inst(
+            f"∃ x y : ℤ, ({a} : ℤ) * x + ({b} : ℤ) * y = ({rhs} : ℤ)",
+            f"by\n  refine ⟨{x}, {y}, ?_⟩\n  norm_num",
+            informal_statement=f"Prove that the integer equation {a}x + {b}y = {rhs} has a witness.",
+        )
+    rhs = a * (x + y) - b * y
+    return _inst(
+        f"∃ x y : ℤ, ({a} : ℤ) * x - ({b} : ℤ) * y = ({rhs} : ℤ)",
+        f"by\n  refine ⟨{x + y}, {y}, ?_⟩\n  norm_num",
+        informal_statement=f"Prove that the integer equation {a}x - {b}y = {rhs} has a witness.",
+    )
+
+
+def _b_real_amgm_square_inequality_hard(rng: random.Random) -> TemplateInstance:
+    k = rng.randint(1, 12)
+    if rng.choice((False, True)):
+        return _inst(
+            f"∀ x y : ℝ, 2 * x * y + ({k} : ℝ) ≤ x ^ 2 + y ^ 2 + ({k} : ℝ)",
+            "by\n  intro x y\n  nlinarith [sq_nonneg (x - y)]",
+            informal_statement=f"Prove a shifted two-term square inequality with offset {k}.",
+        )
+    return _inst(
+        f"∀ x y : ℝ, 4 * x * y + ({k} : ℝ) ≤ (x + y) ^ 2 + ({k} : ℝ)",
+        "by\n  intro x y\n  nlinarith [sq_nonneg (x - y)]",
+        informal_statement=f"Prove a shifted square inequality for the sum x plus y with offset {k}.",
+    )
+
+
 _RAW_BUILDERS: tuple[GeneratedTemplate, ...] = (
     GeneratedTemplate("easy", "algebra.basic", "nat_mul_one", _b_nat_mul_one_easy),
     GeneratedTemplate("easy", "algebra.basic", "nat_arithmetic", _b_nat_add_norm_easy),
@@ -1921,6 +2042,38 @@ _RAW_BUILDERS: tuple[GeneratedTemplate, ...] = (
         _b_real_shifted_square_lower_bound_hard,
     ),
     GeneratedTemplate("hard", "set_theory.finite_sets", "set_image_union", _b_set_image_union_hard),
+    GeneratedTemplate("medium", "geometry.algebraic_light", "midpoint_identity", _b_real_midpoint_identity_medium),
+    GeneratedTemplate(
+        "medium",
+        "probability.expectation_light",
+        "finite_average_identity",
+        _b_real_finite_average_medium,
+    ),
+    GeneratedTemplate("hard", "calculus.limits_light", "difference_quotient", _b_real_difference_quotient_hard),
+    GeneratedTemplate(
+        "medium",
+        "analysis.series_light",
+        "finite_constant_series",
+        _b_finset_constant_one_sum_medium,
+    ),
+    GeneratedTemplate(
+        "hard",
+        "graph_theory.discrete",
+        "simple_graph_symmetry",
+        _b_simple_graph_adjacency_symmetry_hard,
+    ),
+    GeneratedTemplate(
+        "hard",
+        "number_theory.mod_arith",
+        "linear_diophantine_witness",
+        _b_linear_diophantine_witness_hard,
+    ),
+    GeneratedTemplate(
+        "hard",
+        "optimization.inequalities",
+        "amgm_square_inequality",
+        _b_real_amgm_square_inequality_hard,
+    ),
 )
 
 

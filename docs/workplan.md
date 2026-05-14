@@ -36,7 +36,7 @@ not let parallel checklists drift.
   partitioning limits one-coldkey multi-hotkey multiplication after weights are
   computed.
 - Default problem supply is hybrid: generated templates plus a curated catalog
-  lane with authored dashboard statements. The local working registry has 85
+  lane with authored dashboard statements. The local working registry has 100
   builders with explicit 10% / 35% / 50% / 5% easy / medium / hard / extreme
   split weights, template-owned topics, and a metadata/witness gate covering
   registry reachability/coherence.
@@ -61,16 +61,20 @@ not let parallel checklists drift.
   `set_weights` results from the deployed code. The latest sampled round at
   `2026-05-13 10:04 UTC` had `verified=4`, `scored=4`,
   `verify_infra_errors=0`, and `set_weights success=True`.
-- Local baseline checks after the 2026-05-13 extreme-split problem-supply update:
+- Local baseline checks after the generated-builder expansion:
   - `.venv/bin/ruff check lemma tests tools`: passed;
   - `.venv/bin/mypy lemma`: passed
     (`Success: no issues found in 70 source files`);
   - `.venv/bin/pytest tests -q`: passed
-    (`314 passed, 2 skipped, 12 warnings`);
+    (`315 passed, 2 skipped, 12 warnings`);
   - `.venv/bin/python scripts/ci_verify_generated_templates.py`: passed
-    (`OK: generated template metadata/witness gate covered 93 builders`);
+    (`OK: generated template metadata/witness gate covered 100 builders`);
+  - local generated registry hash:
+    `b926194367c2b0ef25dd5da4179256e7b70185cf3eb0543cbc603a73a45efff3`;
+  - local hybrid problem-supply hash:
+    `8b7dccd4fc2a1cf68ad1e1e0ee35ea8680bdc05b24abdb7819ec1dbaee0c1556`;
   - `RUN_DOCKER_LEAN_TEMPLATES=1 LEAN_SANDBOX_IMAGE=lemma/lean-sandbox:latest .venv/bin/python scripts/ci_verify_generated_templates.py`:
-    passed; all 93 generated template stubs and witnesses built in one Docker
+    passed; all 100 generated template stubs and witnesses built in one Docker
     workspace;
   - `git diff --check`: passed.
 
@@ -83,9 +87,11 @@ not let parallel checklists drift.
   `lemma lean-worker` binds fail unless the explicit dev-only override is set.
 - Binary proof eligibility docs: high-traffic docs separate the binary Lean
   eligibility gate from downstream allocation policy.
-- Generated problem supply hardening: local working registry now has 93 builders
-  across easy / medium / hard / extreme splits, and the local metadata/witness
-  gate covers all of them.
+- Generated problem supply expansion: local working registry now has 100
+  builders across easy / medium / hard / extreme splits, including first-batch
+  templates for midpoint geometry, finite averages, difference quotients,
+  finite constant sums, graph adjacency, Diophantine witnesses, and stronger
+  inequalities.
 - Hybrid supply design: default source is generated + curated catalog with
   deterministic 60 / 40 lane weights, authored `informal_statement` metadata,
   and `problem_supply_registry_sha256` for validator pinning.
@@ -148,13 +154,49 @@ not let parallel checklists drift.
    findings: intentional Lean/Docker subprocess calls and deterministic
    non-crypto RNG/jitter. Fix only when the change removes ambiguity or code.
 
-5. **Live subnet/VPS evidence still matters.**
+5. **Problem supply expansion roadmap.**
+   Open-problem campaign design now lives in
+   [`open-problem-campaigns.md`](open-problem-campaigns.md). Normal cadence
+   expansion should start with generated builders for missing topics, then
+   promote reviewed solved contest rows, and only later add campaign/bounty
+   protocol support for locked open-problem targets.
+
+6. **Source/license hygiene.**
+   The live generated and curated problem supply is repo-authored and
+   witness-backed. Before any external miniF2F, Compfiles, PutnamBench,
+   FormalMATH, mathlib, or Formal Conjectures material enters live `hybrid` or
+   a campaign registry, record source, revision, license, attribution, split
+   role, and witness-proof status. Also add a tracked top-level Apache-2.0
+   `LICENSE` file, since the repo currently declares Apache-2.0 in `README.md`
+   and `pyproject.toml`.
+
+7. **Live subnet/VPS evidence still matters.**
    Local and GitHub CI proof PASS are necessary but not enough. The subnet still
    needs measured miner response time, prover latency, validator Lean
    verification time over repeated rounds, timeout/fail reasons, set-weights
    behavior across RPC failures, and emission changes after reveal.
 
-6. **External audit.**
+8. **Trust-minimized release evidence.**
+   The live path should be described as trust-minimized, not absolutely
+   trustless. Next release work should publish Git tag/commit, immutable sandbox
+   image ref or digest, Lean toolchain, Mathlib revision,
+   `validator_profile_sha256`, `problem_supply_registry_sha256`,
+   `generated_registry_sha256`, Docker witness-gate evidence, cutover window,
+   and rollback pins.
+
+9. **Public verification logs.**
+   Design the smallest public evidence format that lets a third party rerun a
+   round: theorem id, theorem statement, proof or proof digest,
+   registry/profile hashes, sandbox image ref, verification result, and relevant
+   timing/failure reason. Do not add protocol machinery until the format is
+   clear.
+
+10. **Open-problem faithfulness review.**
+    Formal Conjectures-style work remains a candidate-source lane until the
+    reviewed statement, source citation, reviewer sign-off, statement hash, and
+    caveats are recorded in the campaign registry.
+
+11. **External audit.**
    Before high-value mainnet operation, get independent review of validator
    infrastructure, Docker/remote worker exposure, Bittensor operations, and key
    custody.
@@ -167,8 +209,18 @@ not let parallel checklists drift.
    cache slots, dashboard timer, latest epoch summary, and latest
    `set_weights`.
 3. Add production alerts using the same live health signals.
-4. Plan a separate Lean cache volume or partition for validator/worker hosts.
-5. Continue deleting or isolating optional research surfaces only when they
+4. Add release-evidence output or docs that bundle commit, image digest,
+   validator profile hash, problem-supply hash, generated-registry hash, and
+   cutover/rollback pins.
+5. Plan public verification logs for rerunning completed rounds.
+6. Plan a separate Lean cache volume or partition for validator/worker hosts.
+7. Add the next generated-builder expansion batch for remaining missing topics
+   named in [`problem-supply-policy.md`](problem-supply-policy.md).
+8. Promote solved contest-style curated rows only after source/license review
+   and witness-proof verification.
+9. Keep campaign/bounty protocol machinery out of the live path until a locked
+   open-problem target requires it.
+10. Continue deleting or isolating optional research surfaces only when they
    touch live defaults or public operator UX.
 
 ## Testing Matrix

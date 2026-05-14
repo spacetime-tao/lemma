@@ -10,8 +10,13 @@ Validators map block seed → theorem via [`hybrid.py`](../lemma/problems/hybrid
 uv run lemma meta
 ```
 
-Publish `problem_supply_registry_sha256`; validators set `LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED`. The current hybrid source defaults to 60% generated templates and 40% curated catalog rows. The generated registry has 93 builders with explicit 10% / 35% / 50% / 5% easy / medium / hard / extreme split weights. Difficulty mix: [generated-problems.md](generated-problems.md). Builder/catalog promotion checklist: [problem-supply-policy.md](problem-supply-policy.md).
+Publish `problem_supply_registry_sha256`; validators set `LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED`. The current hybrid source defaults to 60% generated templates and 40% curated catalog rows. The generated registry has 100 builders with explicit 10% / 35% / 50% / 5% easy / medium / hard / extreme split weights. Difficulty mix: [generated-problems.md](generated-problems.md). Builder/catalog promotion checklist: [problem-supply-policy.md](problem-supply-policy.md).
 Use the release and rotation checklist in [problem-supply-policy.md](problem-supply-policy.md#release-and-rotation-checklist) before changing the live supply, generated registry, catalog, weights, or cadence.
+
+Registry hashes are coordination fingerprints. They prove validators are aligned
+to the same release surface; they do not prove the problem supply is high
+quality, licensed correctly, or mathematically faithful. Quality still comes
+from review, witness proofs, Docker Lean gates, and release discipline.
 
 ## Generated templates only (`LEMMA_PROBLEM_SOURCE=generated`)
 
@@ -71,6 +76,35 @@ code does not enforce equality — parity relies on the published policy
 4. Announce upgrades with changelog and cutover.
 
 Hashes reduce drift; they do not prove honest validators. Epoch tempo comes from Bittensor; forward HTTP wait per query is derived from block height and shared clamps — not a per-node dial.
+
+## Trust-minimized release evidence
+
+Every live rollout should publish enough evidence for another operator to
+reproduce the verifier and compare config:
+
+- Git commit and release tag;
+- sandbox image immutable ref, preferably a digest;
+- Lean toolchain and Mathlib revision;
+- `validator_profile_sha256`;
+- `problem_supply_registry_sha256`;
+- `generated_registry_sha256`;
+- generated-builder split counts and hybrid lane weights;
+- generated-template metadata gate result;
+- Docker Lean stub and witness gate result;
+- cutover block/window and rollback release.
+
+Future public-verification logs should make individual rounds rerunnable by
+recording theorem id, theorem statement, submitted proof or proof digest,
+registry/profile hashes, verifier image ref, and verification result. Avoid
+adding protocol machinery until the minimal public evidence format is clear.
+
+## Config drift detection
+
+Operators can already compare `lemma meta --raw` output against published pins.
+The next trust-minimization step is to make drift easier to spot: a compact
+health/report command should print the deployed commit, sandbox image ref,
+profile hash, problem-supply hash, generated-registry hash, current problem
+source, latest epoch summary, and set-weights status.
 
 ## Miner axon policy
 

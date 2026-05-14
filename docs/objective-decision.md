@@ -22,8 +22,8 @@ See [proof-verification-incentives.md](proof-verification-incentives.md) for the
 
 ## Why This Matters
 
-Lean verification is objective and reproducible. The live scoring path keeps the
-v0 game simple: publish work, verify work mechanically, pay for valid work.
+Lean verification is objective and reproducible. The live scoring path stays
+simple: publish work, verify work mechanically, pay for valid work.
 
 ## Boundary Check
 

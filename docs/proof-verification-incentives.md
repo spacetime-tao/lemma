@@ -53,7 +53,7 @@ verification remains the hard budget. Shorter windows should be adopted only
 after warm-cache verification, remote worker throughput, and miner response time
 fit the target cadence.
 
-For the current generated v0 lane, 25 blocks is a reasonable target only if the
+For the current generated lane, 25 blocks is a reasonable target only if the
 operator can keep verifier caches warm and bound miner response time. Cold-cache
 verification can still consume most of a 5-minute window.
 

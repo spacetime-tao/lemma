@@ -25,7 +25,7 @@ state quickly. Start here, then read [`local handoff note`](../local handoff not
 
 ## Implemented in the current local patch
 
-- Generated supply has 93 builders total and adds a rare `extreme` split with
+- Generated supply has 100 builders total and includes a rare `extreme` split with
   10 / 35 / 50 / 5 easy / medium / hard / extreme sampling weights.
 - The curated catalog includes positive-weight `extreme` rows, and hybrid
   sampling picks the split before the generated/catalog lane.
@@ -64,27 +64,19 @@ state quickly. Start here, then read [`local handoff note`](../local handoff not
 
 - `.venv/bin/ruff check lemma tests tools`: passed.
 - `.venv/bin/mypy lemma`: passed.
-- `.venv/bin/pytest tests -q`: passed, `314 passed, 2 skipped, 12 warnings`.
+- `.venv/bin/pytest tests -q`: passed, `315 passed, 2 skipped, 12 warnings`.
 - `.venv/bin/python scripts/ci_verify_generated_templates.py`: passed,
-  `OK: generated template metadata/witness gate covered 93 builders`.
+  `OK: generated template metadata/witness gate covered 100 builders`.
+- Local generated registry hash:
+  `b926194367c2b0ef25dd5da4179256e7b70185cf3eb0543cbc603a73a45efff3`.
+- Local hybrid problem-supply hash:
+  `8b7dccd4fc2a1cf68ad1e1e0ee35ea8680bdc05b24abdb7819ec1dbaee0c1556`.
 - `git diff --check`: passed.
 
 ## Docker evidence
 
-Docker Desktop is now reachable from an escalated shell:
-
-```text
-Server Version: 29.4.2
-Operating System: Docker Desktop
-Architecture: aarch64
-CPUs: 10
-Total Memory: 7.75GiB
-```
-
-- `docker image inspect lemma/lean-sandbox:latest`: image present
-  (`lemma/lean-sandbox:latest`, `lemma/lean-sandbox:mathlib-5450b53e`).
 - `RUN_DOCKER_LEAN_TEMPLATES=1 LEAN_SANDBOX_IMAGE=lemma/lean-sandbox:latest .venv/bin/python scripts/ci_verify_generated_templates.py`:
-  passed; all 93 generated template stubs and witnesses built in one Docker
+  passed; all 100 generated template stubs and witnesses built in one Docker
   workspace.
 
 ## Next decisions
