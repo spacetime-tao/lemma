@@ -7,17 +7,19 @@ not let parallel checklists drift.
 ## Current Baseline
 
 - Repository: `spacetime-tao/lemma`, local checkout `LOCAL_WORKSPACE/lemma`.
-- Latest runtime batch covered by this tracker: `0ff1068` (`Record CI evidence
-  for set_weights cleanup`) after the 2026-05-13 lemmasub.net dashboard plus
-  droplet audit follow-up.
+- Latest pushed batch covered by this tracker: `28fb364` (`Expand generated
+  supply and trust docs`) after the 2026-05-14 generated-builder expansion and
+  validator-only deploy.
 - Latest GitHub-confirmed runtime head: `0ff1068` (`Record CI evidence for
   set_weights cleanup`), with `CI` passing on GitHub Actions run
   `25793725075`. The preceding code commit `d95411b` also had `CI` and
   `Build and Push Docker Image` passing on runs `25793209291` and
-  `25793209296`.
-- Current testnet Droplet head: `0ff1068` on both known hosts. The validator,
-  Lean worker, dashboard timer, and six miner services are active after the
-  deploy.
+  `25793209296`. The newer `28fb364` head has local tests and Docker Lean
+  template verification recorded below, but this tracker did not re-check
+  GitHub Actions.
+- Current testnet Droplet head: validator / Lean worker host checkout is
+  `28fb364`; the validator service was restarted. The miner host remains
+  `0ff1068`.
 - Live reward direction: proof passes Lean and becomes reward-eligible, or
   proof fails Lean and cannot receive miner rewards.
 - Operator UX belongs in the core `lemma` command; consensus policy stays in
@@ -48,13 +50,19 @@ not let parallel checklists drift.
 - Lean workspace cache is bounded by both slot count and total bytes.
 - Public dashboard refreshes are serialized with `flock` and remain outside the
   validator scoring path.
-- Testnet Droplets are currently deployed at `0ff1068`. The earlier `8067b70`
+- Testnet Droplets reached `0ff1068` on 2026-05-13. The earlier `8067b70`
   deploy observed `verified=3`, `scored=3`, `verify_infra_errors=0`, no reject
   counters, and `set_weights success=True`. The first observed `0ff1068` round
   at `2026-05-13 10:59 UTC` verified/scored 5 proofs with
   `verify_infra_errors=0`; `set_weights` returned false, and the deployed
   cleanup logged `success=False without message`. A follow-up `0ff1068`
   extreme-split round at `2026-05-13 11:10 UTC` verified/scored 2 proofs with
+  `verify_infra_errors=0` and `set_weights success=True`. The 2026-05-14
+  generated-supply rollout moved the validator / Lean worker host checkout to
+  `28fb364`, refreshed pins, restarted `lemma-validator`, and logged
+  `problem_supply_registry_sha256=8b7dccd4fc2a1cf68ad1e1e0ee35ea8680bdc05b24abdb7819ec1dbaee0c1556`
+  with `problem_source=hybrid`. The first observed post-`28fb364` round at
+  `2026-05-14 05:46 UTC` verified/scored 3 proofs with
   `verify_infra_errors=0` and `set_weights success=True`.
 - Read-only droplet sampling later on 2026-05-13 found continued verified/scored
   rounds, active dashboard publishing, and intermittent false/no-message
@@ -122,6 +130,14 @@ not let parallel checklists drift.
   problem-supply
   `f4ae425ad437c97b00d47b7ba97f97e1ff4cec8d5d66290c8b2364d91f822311`; services
   are active.
+- Generated-supply validator deploy: validator / Lean worker host checkout was
+  fast-forwarded to `28fb364`; `lemma-validator` was restarted with profile pin
+  `85155229a2c1a0dd9537434d89a7c924368f888e4602b6d909757b09285b0a9c` and
+  problem-supply pin
+  `8b7dccd4fc2a1cf68ad1e1e0ee35ea8680bdc05b24abdb7819ec1dbaee0c1556`.
+  An initial pin refresh from the wrong working directory failed closed on
+  startup; rerunning from `/opt/lemma` corrected the pins and the service came
+  up active.
 - Testnet deploy/evidence slice: validator/miner hosts were fast-forwarded from
   `d42addb` to `8067b70`; services restarted; first post-deploy round set
   weights successfully.
@@ -138,11 +154,10 @@ not let parallel checklists drift.
    hosts should still mount `LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR` on its own
    volume or partition.
 
-2. **Watch continued `0ff1068` validator rounds.**
-   Current-head rounds have now shown both cleaned false/no-message
-   `set_weights` logging and a later successful `set_weights` call. Continued
-   monitoring should record reveal/emission movement and any repeated RPC false
-   returns.
+2. **Watch continued `28fb364` validator rounds.**
+   The first observed `28fb364` round verified/scored 3 proofs and set weights
+   successfully. Continued monitoring should record reveal/emission movement
+   and any repeated RPC false returns.
 
 3. **Live alerting.**
    Add operator alerts for root/cache disk >80%, failed Lemma systemd units,
@@ -203,7 +218,7 @@ not let parallel checklists drift.
 
 ## Next Work Order
 
-1. Watch continued `0ff1068` deployed rounds and record reveal/emission
+1. Watch continued `28fb364` validator rounds and record reveal/emission
    movement, especially across any RPC retry event.
 2. Add a compact live health command/report covering commit, services, disk,
    cache slots, dashboard timer, latest epoch summary, and latest
@@ -248,11 +263,13 @@ the exact head are checked directly.
 
 ## VPS Status
 
-VPS sampling and the follow-up deploy on 2026-05-13:
+VPS sampling and the follow-up deploy on 2026-05-13 moved both known hosts to
+`0ff1068`. The 2026-05-14 generated-supply rollout updated the validator host
+checkout and validator service only.
 
 | Host | IP | Deployed commit | Running Lemma services |
 | --- | --- | --- | --- |
-| `lemma-lean-worker-1` | `<validator-host>` | `0ff1068` | `lemma-lean-worker-http.service`, `lemma-validator.service`, `lemma-public-dashboard.timer` |
+| `lemma-lean-worker-1` | `<validator-host>` | `28fb364` checkout; validator restarted | `lemma-lean-worker-http.service`, `lemma-validator.service`, `lemma-public-dashboard.timer` |
 | `lemma-miner-1` | `<miner-host>` | `0ff1068` | `lemma-miner.service`, `lemma-miner3.service`, `lemma-miner4.service`, `lemma-miner5.service`, `lemma-miner6.service`, `lemma-miner7.service` |
 
 Additional evidence: Lean worker health on `127.0.0.1:8787` returned
@@ -265,6 +282,18 @@ proofs with `verify_infra_errors=0`; `set_weights` returned false with the
 cleaned message `success=False without message`. The next observed round was an
 extreme-split generated theorem that verified/scored 2 proofs and set weights
 successfully.
+
+Additional 2026-05-14 validator evidence: the host checkout is `28fb364`;
+`.env` pins are profile
+`85155229a2c1a0dd9537434d89a7c924368f888e4602b6d909757b09285b0a9c` and
+problem-supply
+`8b7dccd4fc2a1cf68ad1e1e0ee35ea8680bdc05b24abdb7819ec1dbaee0c1556`;
+`lemma-validator.service` is active/running with `NRestarts=0`. A first restart
+failed closed after a subnet-pins command was run from the wrong working
+directory; rerunning from `/opt/lemma` corrected the pin and startup logged
+`problem_source=hybrid`. The first observed post-`28fb364` round used
+`theorem_id=gen/7117800`, verified/scored 3 proofs with
+`verify_infra_errors=0`, and set weights successfully.
 
 Next VPS testing should measure behavior, not add mechanism code:
 
