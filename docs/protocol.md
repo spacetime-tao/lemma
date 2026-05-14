@@ -1,6 +1,6 @@
 # Lemma Proof Protocol
 
-Lemma is a Lean proof-verification protocol on Bittensor Testnet Subnet 467.
+Lemma is a Lean proof-verification protocol on a Bittensor subnet.
 
 The protocol is intentionally small: validators publish one formal theorem
 target, miners return Lean proof files, and validators run Lean. The reward

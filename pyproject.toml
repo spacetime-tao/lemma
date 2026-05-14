@@ -1,7 +1,7 @@
 [project]
 name = "lemma"
 version = "0.1.0"
-description = "Lemma: Bittensor Testnet Subnet 467 for Lean theorem proving"
+description = "Lemma: Bittensor subnet for Lean theorem proving"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }

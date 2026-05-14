@@ -1,6 +1,6 @@
 # Lemma
 
-**Lemma is Bittensor Testnet Subnet 467 for turning formal mathematics targets
+**Lemma is a Bittensor subnet for turning formal mathematics targets
 into machine-checked Lean proofs.**
 
 The live reward path is deliberately narrow:
