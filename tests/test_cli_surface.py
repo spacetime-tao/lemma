@@ -16,7 +16,7 @@ def test_public_script_is_lemma_only() -> None:
     assert scripts == {"lemma": "lemma.cli.main:main"}
 
 
-def test_home_screen_lists_wta_commands() -> None:
+def test_home_screen_lists_proof_commands() -> None:
     result = CliRunner().invoke(main)
 
     assert result.exit_code == 0
@@ -143,7 +143,7 @@ def test_miner_help_lists_manual_subcommands() -> None:
     assert "observability" not in result.output
 
 
-def test_validator_help_lists_wta_subcommands() -> None:
+def test_validator_help_lists_proof_subcommands() -> None:
     result = CliRunner().invoke(main, ["validator", "--help"])
 
     assert result.exit_code == 0
@@ -154,7 +154,7 @@ def test_validator_help_lists_wta_subcommands() -> None:
 
 
 def test_target_command_shows_active_known_theorem(monkeypatch, tmp_path: Path) -> None:
-    monkeypatch.setenv("LEMMA_LEDGER_PATH", str(tmp_path / "wta-ledger.jsonl"))
+    monkeypatch.setenv("LEMMA_LEDGER_PATH", str(tmp_path / "solved-ledger.jsonl"))
 
     result = CliRunner().invoke(main, ["target", "show"])
 
@@ -165,7 +165,7 @@ def test_target_command_shows_active_known_theorem(monkeypatch, tmp_path: Path) 
 
 
 def test_target_ledger_empty(monkeypatch, tmp_path: Path) -> None:
-    monkeypatch.setenv("LEMMA_LEDGER_PATH", str(tmp_path / "wta-ledger.jsonl"))
+    monkeypatch.setenv("LEMMA_LEDGER_PATH", str(tmp_path / "solved-ledger.jsonl"))
 
     result = CliRunner().invoke(main, ["target", "ledger"])
 

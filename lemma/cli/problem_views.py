@@ -12,7 +12,7 @@ def echo_problem_card(
     heading: str = "This theorem",
     show_lean_goal: bool = True,
 ) -> None:
-    """Human-oriented summary for the locked WTA target."""
+    """Human-oriented summary for the locked theorem target."""
     import click
 
     click.echo(stylize(heading, fg="cyan", bold=True))

@@ -7,8 +7,8 @@ import json
 from pathlib import Path
 from typing import Any, cast
 
+from lemma.ledger import solved_target_ids
 from lemma.problems.base import Problem, ProblemSource
-from lemma.wta import solved_target_ids
 
 KNOWN_THEOREMS_MANIFEST_PATH = Path(__file__).resolve().parent / "known_theorems_manifest.json"
 _REQUIRED_TARGET_KEYS = frozenset(
@@ -116,7 +116,7 @@ def known_theorems_manifest_sha256(path: Path | None = None) -> str:
 
 
 class KnownTheoremsSource(ProblemSource):
-    """Ordered WTA source: first unsolved known-theorem target is active."""
+    """Ordered source: first unsolved known-theorem target is active."""
 
     def __init__(self, manifest_path: Path | None = None, ledger_path: Path | None = None) -> None:
         self._manifest_path = _manifest_path(manifest_path)
@@ -162,7 +162,7 @@ def _row_to_problem(row: dict[str, Any], *, source: dict[str, Any]) -> Problem:
         id=str(row["id"]),
         theorem_name=str(row["theorem_name"]),
         type_expr=str(row["type_expr"]),
-        split="wta",
+        split="known_theorems",
         lean_toolchain=str(source["lean_toolchain"]),
         mathlib_rev=str(source["mathlib_rev"]),
         imports=imports,

@@ -1,4 +1,4 @@
-"""Validator polling service for manual-proof WTA."""
+"""Validator polling service for manual proofs."""
 
 from __future__ import annotations
 

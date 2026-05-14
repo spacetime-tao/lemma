@@ -1,6 +1,6 @@
 # Miner
 
-The v1 miner is a tiny proof-serving Axon daemon.
+The miner is a tiny proof-serving Axon daemon.
 
 It does not run an LLM, retry a prover, score prose, or optimize proof
 efficiency. Miners can use any external workflow they want, then submit the

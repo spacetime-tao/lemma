@@ -1,4 +1,4 @@
-"""Bittensor synapse for manual-proof WTA polling."""
+"""Bittensor synapse for proof polling."""
 
 from __future__ import annotations
 

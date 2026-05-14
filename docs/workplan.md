@@ -10,9 +10,9 @@ help, and tests.
 - Active supply: [`known_theorems_manifest.json`](../lemma/problems/known_theorems_manifest.json).
 - Reward-critical miner artifact: `proof_script` only.
 - Ledger: operator-published JSONL solved-target ledger.
-- Reward rule: no winner means no miner weights; after a solve, the current
-  winner set receives 100% miner weight until the next target is solved. Same-
-  batch winners split that weight equally.
+- Reward rule: no verified solver means no miner weights; after a solve, the
+  current solver set receives miner weight until the next target is solved.
+  Same-batch solvers split that weight equally.
 
 ## Implemented In This Fork
 
@@ -20,8 +20,8 @@ help, and tests.
 - Mathlib-only smoke target queue for local protocol testing.
 - Known-theorem manifest loader, validation, manifest hash, and deterministic
   target order.
-- WTA ledger helpers and winner weighting with equal same-batch tie splits.
-- Validator WTA mode for `known_theorems`.
+- Solved-ledger helpers and solver weighting with equal same-batch tie splits.
+- Validator proof mode for `known_theorems`.
 - Manual miner submission storage and proof-serving Axon flow.
 - `lemma submit` verifies by default and prints validity/serving confirmation.
 - CLI:
@@ -36,8 +36,8 @@ help, and tests.
   - `lemma meta`.
 - Startup/profile/subnet-pin checks for `known_theorems_manifest_sha256`.
 - Legacy LLM prover, judge, scoring, generated/hybrid/frozen source, Formal
-  Conjectures runtime, commit reveal, miner attest, dashboard, training-export,
-  miner-gating, public-IP discovery, and knowledge-base paths removed from trunk.
+  Conjectures runtime, commit reveal, miner attest, training-export, miner-gating,
+  public-IP discovery, and knowledge-base paths removed from trunk.
 
 ## Next Work
 

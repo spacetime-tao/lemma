@@ -1,18 +1,18 @@
 # Lemma
 
-**Lemma is a winner-take-all Bittensor subnet for turning known human
-mathematics into machine-checked Lean proofs.**
+**Lemma is Bittensor Testnet Subnet 467 for turning formal mathematics targets
+into machine-checked Lean proofs.**
 
 The live reward path is deliberately narrow:
 
 1. Validators publish one ordered known-theorem target at a time from a pinned manifest.
 2. Miners submit one reward-critical artifact: `proof_script`.
 3. Validators verify the submitted Lean file against the locked target.
-4. The first passing solver is written to the solved-target ledger.
-5. The current champion receives 100% miner weight until the next target is solved.
+4. Passing solvers are written to the solved-target ledger.
+5. The current verified solver set receives miner weight until the next target is solved.
 
 No prose score, proof-efficiency score, difficulty multiplier, subjective judge,
-or commit-reveal ceremony is part of the v1 reward path.
+or commit-reveal ceremony is part of the reward path.
 
 ## Current Scope
 
@@ -68,21 +68,21 @@ manifest hash before live use:
 uv run lemma meta --raw
 ```
 
-## WTA Design Notes
+## Protocol Notes
 
-- The operator-published ledger is the v1 source of truth for solved targets.
+- The operator-published ledger is the source of truth for solved targets.
 - Validators choose the active target as `manifest - solved_ledger`.
 - Targets with known accepted Lean proofs are not launch-eligible.
 - Each target row carries a human proof reference, imports, attribution, and
   reviewer duplicate/faithfulness notes.
 - Difficulty labels are operator planning metadata, not reward weights.
 - If multiple miners verify in the same batch, those UIDs split the reward equally.
-- If no target has been solved yet, validators do not write miner champion weights.
-- Duplicate proofs for already-solved targets do not change the champion.
+- If no target has been solved yet, validators do not write miner weights.
+- Duplicate proofs for already-solved targets do not change the active solver set.
 - Launch on a fresh or intentionally reset subnet state so old Lemma weights do
-  not carry into the WTA mechanism.
+  not carry into the proof protocol.
 
-See [`docs/wta.md`](docs/wta.md) for the compact mechanism reference.
+See [`docs/protocol.md`](docs/protocol.md) for the compact mechanism reference.
 
 ## License
 

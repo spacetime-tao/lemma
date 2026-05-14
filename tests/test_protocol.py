@@ -1,4 +1,4 @@
-"""Manual WTA synapse serialization."""
+"""Manual proof synapse serialization."""
 
 from lemma.protocol import LemmaChallenge, synapse_miner_response_integrity_ok
 

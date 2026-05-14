@@ -1,4 +1,4 @@
-"""Local pending proof store for manual WTA miners."""
+"""Local pending proof store for manual proof miners."""
 
 from __future__ import annotations
 

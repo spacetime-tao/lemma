@@ -16,7 +16,7 @@ PROBLEM = Problem(
     id="known/test/one",
     theorem_name="target_one",
     type_expr="True",
-    split="wta",
+    split="known_theorems",
     lean_toolchain="lt",
     mathlib_rev="mr",
     imports=("Mathlib",),
@@ -77,7 +77,7 @@ class _Wallet:
 def _settings(tmp_path: Path, **updates: object) -> LemmaSettings:
     base = {
         "_env_file": None,
-        "wta_ledger_path": tmp_path / "wta-ledger.jsonl",
+        "solved_ledger_path": tmp_path / "solved-ledger.jsonl",
         "validator_min_free_bytes": 0,
         "validator_abort_if_not_registered": False,
     }
@@ -141,14 +141,14 @@ def _install_epoch_fakes(
     monkeypatch.setattr(epoch, "run_lean_verify", run_lean_verify)
 
 
-def _ledger_row(target_id: str, winner_uid: int) -> str:
+def _ledger_row(target_id: str, solver_uid: int) -> str:
     return (
         json.dumps(
             {
                 "target_id": target_id,
-                "winner_uid": winner_uid,
-                "winner_hotkey": f"miner-hotkey-{winner_uid}",
-                "winner_coldkey": f"miner-coldkey-{winner_uid}",
+                "winner_uid": solver_uid,
+                "winner_hotkey": f"miner-hotkey-{solver_uid}",
+                "winner_coldkey": f"miner-coldkey-{solver_uid}",
                 "proof_sha256": "a" * 64,
                 "accepted_block": 1,
                 "accepted_unix": 2,
@@ -164,12 +164,12 @@ def _ledger_row(target_id: str, winner_uid: int) -> str:
     )
 
 
-def _tied_ledger_row(target_id: str, winner_uids: list[int]) -> str:
+def _tied_ledger_row(target_id: str, solver_uids: list[int]) -> str:
     return (
         json.dumps(
             {
                 "target_id": target_id,
-                "winners": [
+                "solvers": [
                     {
                         "uid": uid,
                         "hotkey": f"miner-hotkey-{uid}",
@@ -178,7 +178,7 @@ def _tied_ledger_row(target_id: str, winner_uids: list[int]) -> str:
                         "verify_reason": "ok",
                         "build_seconds": 0.0,
                     }
-                    for uid in winner_uids
+                    for uid in solver_uids
                 ],
                 "accepted_block": 1,
                 "accepted_unix": 2,
@@ -204,7 +204,7 @@ def test_set_weights_outcome_handles_bittensor_shapes() -> None:
     assert message == "success=False without message"
 
 
-async def test_wta_no_proof_and_no_champion_skips_weights(monkeypatch, tmp_path: Path) -> None:
+async def test_proof_no_proof_and_no_solver_set_skips_weights(monkeypatch, tmp_path: Path) -> None:
     subtensor = _Subtensor()
     _install_epoch_fakes(
         monkeypatch,
@@ -216,10 +216,10 @@ async def test_wta_no_proof_and_no_champion_skips_weights(monkeypatch, tmp_path:
 
     assert weights == {}
     assert subtensor.set_weights_calls == []
-    assert not (tmp_path / "wta-ledger.jsonl").exists()
+    assert not (tmp_path / "solved-ledger.jsonl").exists()
 
 
-async def test_wta_single_valid_solver_gets_full_weight(monkeypatch, tmp_path: Path) -> None:
+async def test_proof_single_valid_solver_gets_full_weight(monkeypatch, tmp_path: Path) -> None:
     subtensor = _Subtensor(n=2)
     _install_epoch_fakes(
         monkeypatch,
@@ -231,15 +231,15 @@ async def test_wta_single_valid_solver_gets_full_weight(monkeypatch, tmp_path: P
     )
 
     weights = await epoch.run_epoch(_settings(tmp_path), _OneProblemSource(), dry_run=False)
-    ledger = [json.loads(line) for line in (tmp_path / "wta-ledger.jsonl").read_text().splitlines()]
+    ledger = [json.loads(line) for line in (tmp_path / "solved-ledger.jsonl").read_text().splitlines()]
 
     assert weights == {0: 1.0}
     assert ledger[0]["target_id"] == PROBLEM.id
-    assert [winner["uid"] for winner in ledger[0]["winners"]] == [0]
+    assert [solver["uid"] for solver in ledger[0]["solvers"]] == [0]
     assert subtensor.set_weights_calls[0]["weights"] == [1.0, 0.0]
 
 
-async def test_wta_same_batch_valid_solvers_split_rewards(monkeypatch, tmp_path: Path) -> None:
+async def test_proof_same_batch_valid_solvers_split_rewards(monkeypatch, tmp_path: Path) -> None:
     subtensor = _Subtensor(n=2)
     _install_epoch_fakes(
         monkeypatch,
@@ -250,15 +250,15 @@ async def test_wta_same_batch_valid_solvers_split_rewards(monkeypatch, tmp_path:
     )
 
     weights = await epoch.run_epoch(_settings(tmp_path), _OneProblemSource(), dry_run=False)
-    ledger = [json.loads(line) for line in (tmp_path / "wta-ledger.jsonl").read_text().splitlines()]
+    ledger = [json.loads(line) for line in (tmp_path / "solved-ledger.jsonl").read_text().splitlines()]
 
     assert weights == {0: 0.5, 1: 0.5}
     assert ledger[0]["target_id"] == PROBLEM.id
-    assert [winner["uid"] for winner in ledger[0]["winners"]] == [0, 1]
+    assert [solver["uid"] for solver in ledger[0]["solvers"]] == [0, 1]
     assert subtensor.set_weights_calls[0]["weights"] == [0.5, 0.5]
 
 
-async def test_wta_invalid_lean_cannot_win(monkeypatch, tmp_path: Path) -> None:
+async def test_proof_invalid_lean_cannot_win(monkeypatch, tmp_path: Path) -> None:
     subtensor = _Subtensor()
     _install_epoch_fakes(
         monkeypatch,
@@ -271,10 +271,10 @@ async def test_wta_invalid_lean_cannot_win(monkeypatch, tmp_path: Path) -> None:
 
     assert weights == {}
     assert subtensor.set_weights_calls == []
-    assert not (tmp_path / "wta-ledger.jsonl").exists()
+    assert not (tmp_path / "solved-ledger.jsonl").exists()
 
 
-async def test_wta_mismatched_response_is_ignored_before_verify(monkeypatch, tmp_path: Path) -> None:
+async def test_proof_mismatched_response_is_ignored_before_verify(monkeypatch, tmp_path: Path) -> None:
     verify_calls: list[str] = []
     subtensor = _Subtensor()
     _install_epoch_fakes(
@@ -293,8 +293,8 @@ async def test_wta_mismatched_response_is_ignored_before_verify(monkeypatch, tmp
     assert subtensor.set_weights_calls == []
 
 
-async def test_wta_existing_champion_keeps_weights_while_next_target_unsolved(monkeypatch, tmp_path: Path) -> None:
-    ledger_path = tmp_path / "wta-ledger.jsonl"
+async def test_proof_existing_solver_set_keeps_weights_while_next_target_unsolved(monkeypatch, tmp_path: Path) -> None:
+    ledger_path = tmp_path / "solved-ledger.jsonl"
     ledger_path.write_text(_ledger_row("known/test/zero", 1), encoding="utf-8")
     subtensor = _Subtensor(n=2)
     _install_epoch_fakes(
@@ -309,8 +309,8 @@ async def test_wta_existing_champion_keeps_weights_while_next_target_unsolved(mo
     assert subtensor.set_weights_calls[0]["weights"] == [0.0, 1.0]
 
 
-async def test_wta_existing_tied_winners_keep_split_weights(monkeypatch, tmp_path: Path) -> None:
-    ledger_path = tmp_path / "wta-ledger.jsonl"
+async def test_proof_existing_tied_solvers_keep_split_weights(monkeypatch, tmp_path: Path) -> None:
+    ledger_path = tmp_path / "solved-ledger.jsonl"
     ledger_path.write_text(_tied_ledger_row("known/test/zero", [0, 1]), encoding="utf-8")
     subtensor = _Subtensor(n=2)
     _install_epoch_fakes(
@@ -325,8 +325,8 @@ async def test_wta_existing_tied_winners_keep_split_weights(monkeypatch, tmp_pat
     assert subtensor.set_weights_calls[0]["weights"] == [0.5, 0.5]
 
 
-async def test_wta_duplicate_target_does_not_change_champion(monkeypatch, tmp_path: Path) -> None:
-    ledger_path = tmp_path / "wta-ledger.jsonl"
+async def test_proof_duplicate_target_does_not_change_solver_set(monkeypatch, tmp_path: Path) -> None:
+    ledger_path = tmp_path / "solved-ledger.jsonl"
     original = _ledger_row(PROBLEM.id, 1)
     ledger_path.write_text(original, encoding="utf-8")
     subtensor = _Subtensor(n=2)
@@ -345,8 +345,8 @@ async def test_wta_duplicate_target_does_not_change_champion(monkeypatch, tmp_pa
     assert subtensor.set_weights_calls[0]["weights"] == [0.0, 1.0]
 
 
-async def test_wta_all_targets_solved_preserves_champion(monkeypatch, tmp_path: Path) -> None:
-    ledger_path = tmp_path / "wta-ledger.jsonl"
+async def test_proof_all_targets_solved_preserves_solver_set(monkeypatch, tmp_path: Path) -> None:
+    ledger_path = tmp_path / "solved-ledger.jsonl"
     ledger_path.write_text(_ledger_row(PROBLEM.id, 0), encoding="utf-8")
     subtensor = _Subtensor(n=2)
     monkeypatch.setattr(epoch, "get_subtensor", lambda settings: subtensor)

@@ -1,4 +1,4 @@
-"""Miner forward handler for manual WTA proofs."""
+"""Miner forward handler for manually stored proofs."""
 
 from __future__ import annotations
 

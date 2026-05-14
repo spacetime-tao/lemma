@@ -54,7 +54,7 @@ uv run lemma validator start
 ```
 
 The validator service should stay live for subnet operation: it polls miners,
-verifies proofs with Lean, appends the solved ledger, and sets winner weights.
+verifies proofs with Lean, appends the solved ledger, and sets miner weights.
 
-More detail: [wta.md](wta.md), [miner.md](miner.md), [validator.md](validator.md),
-and `.env.example`.
+More detail: [protocol.md](protocol.md), [miner.md](miner.md),
+[validator.md](validator.md), and `.env.example`.

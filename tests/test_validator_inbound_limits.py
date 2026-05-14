@@ -15,7 +15,7 @@ class _OneProblemSource(ProblemSource):
             id="known/test/one",
             theorem_name="t",
             type_expr="True",
-            split="wta",
+            split="known_theorems",
             lean_toolchain="lt",
             mathlib_rev="mr",
             imports=("Mathlib",),
@@ -96,7 +96,7 @@ async def test_validator_rejects_oversized_proof_before_lean(monkeypatch, tmp_pa
     settings = LemmaSettings(
         _env_file=None,
         synapse_max_proof_chars=1024,
-        wta_ledger_path=tmp_path / "wta-ledger.jsonl",
+        solved_ledger_path=tmp_path / "solved-ledger.jsonl",
         validator_abort_if_not_registered=False,
         validator_min_free_bytes=0,
     )

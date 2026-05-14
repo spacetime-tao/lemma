@@ -1,7 +1,7 @@
 # Validator
 
 Validators poll miners on a fixed interval, verify returned Lean proofs, append
-the valid solve set to the WTA ledger, and write winner weights.
+the valid solve set to the solved ledger, and write miner weights.
 
 ## Startup
 
@@ -27,7 +27,7 @@ chosen by block seed. It is always the first manifest target not already present
 in the solved ledger.
 
 If multiple proofs verify in one poll, those UIDs split the reward equally. If no
-proof verifies and there is no previous winner set, the validator skips
+proof verifies and there is no previous solver set, the validator skips
 `set_weights`.
 
 ## Lean Verify

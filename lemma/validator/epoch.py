@@ -1,4 +1,4 @@
-"""One WTA validator poll: query miners, verify proofs, update champion weights."""
+"""One validator poll: query miners, verify proofs, update miner weights."""
 
 from __future__ import annotations
 
@@ -18,9 +18,15 @@ from lemma.common.subtensor import get_subtensor
 from lemma.common.synapse_limits import synapse_payload_error
 from lemma.lean.sandbox import VerifyResult
 from lemma.lean.verify_runner import run_lean_verify
+from lemma.ledger import (
+    LedgerSolver,
+    SolvedLedgerEntry,
+    active_solver_weights,
+    append_solved_ledger_entry,
+    split_solver_weights,
+)
 from lemma.problems.base import Problem, ProblemSource
 from lemma.protocol import LemmaChallenge, synapse_miner_response_integrity_ok
-from lemma.wta import WtaLedgerEntry, WtaWinner, append_wta_ledger_entry, champion_weights, split_winner_weights
 
 
 def _validator_poll_challenge(problem: Problem, *, poll_id: str) -> LemmaChallenge:
@@ -167,8 +173,8 @@ async def run_epoch(
     try:
         problem = problem_source.sample(seed=0)
     except ValueError:
-        weights_by_uid = champion_weights(settings.wta_ledger_path, set(uids))
-        logger.info("all known-theorem targets solved; preserving champion weights={}", weights_by_uid)
+        weights_by_uid = active_solver_weights(settings.solved_ledger_path, set(uids))
+        logger.info("all known-theorem targets solved; preserving solver weights={}", weights_by_uid)
         return await _write_weights(settings, subtensor, wallet, netuid, n, weights_by_uid, dry_run=dry_run)
 
     poll_id = f"{problem.id}:{cur_block}:{int(time.time())}"
@@ -220,10 +226,10 @@ async def run_epoch(
 
     raw_verified = await asyncio.gather(*(verify_one(uid, resp) for uid, resp in candidates))
     verified = [item for item in raw_verified if item is not None]
-    dry_run_winner_weights: dict[int, float] = {}
+    dry_run_solver_weights: dict[int, float] = {}
     if verified:
-        winners = tuple(
-            WtaWinner(
+        solvers = tuple(
+            LedgerSolver(
                 uid=uid,
                 hotkey=_hotkey_ss58_for_uid(metagraph, uid),
                 coldkey=_coldkey_for_uid_or_none(metagraph, uid),
@@ -233,9 +239,9 @@ async def run_epoch(
             )
             for uid, resp, vr in sorted(verified, key=lambda item: item[0])
         )
-        entry = WtaLedgerEntry(
+        entry = SolvedLedgerEntry(
             target_id=problem.id,
-            winners=winners,
+            solvers=solvers,
             accepted_block=cur_block,
             accepted_unix=int(time.time()),
             validator_hotkey=wallet.hotkey.ss58_address,
@@ -243,22 +249,22 @@ async def run_epoch(
             theorem_statement_sha256=hashlib.sha256(problem.challenge_source().encode("utf-8")).hexdigest(),
         )
         if dry_run:
-            dry_run_winner_weights = split_winner_weights(entry.winner_uids, set(uids))
+            dry_run_solver_weights = split_solver_weights(entry.solver_uids, set(uids))
         else:
             try:
-                append_wta_ledger_entry(settings.wta_ledger_path, entry)
+                append_solved_ledger_entry(settings.solved_ledger_path, entry)
                 logger.info(
-                    "wta_target_solved target_id={} winner_uids={} proofs={}",
+                    "target_solved target_id={} solver_uids={} proofs={}",
                     entry.target_id,
-                    list(entry.winner_uids),
-                    [winner.proof_sha256 for winner in entry.winners],
+                    list(entry.solver_uids),
+                    [solver.proof_sha256 for solver in entry.solvers],
                 )
             except ValueError as exc:
-                logger.warning("WTA ledger append skipped: {}", exc)
+                logger.warning("solved ledger append skipped: {}", exc)
 
-    weights_by_uid = champion_weights(settings.wta_ledger_path, set(uids))
-    if dry_run and not weights_by_uid and dry_run_winner_weights:
-        weights_by_uid = dry_run_winner_weights
+    weights_by_uid = active_solver_weights(settings.solved_ledger_path, set(uids))
+    if dry_run and not weights_by_uid and dry_run_solver_weights:
+        weights_by_uid = dry_run_solver_weights
     logger.info(
         "lemma_poll_summary block={} target_id={} candidates={} verified={} weight_entries={} seconds={:.2f}",
         cur_block,

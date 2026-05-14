@@ -54,7 +54,7 @@ class LemmaSettings(BaseSettings):
         default=None,
         validation_alias="LEMMA_KNOWN_THEOREMS_MANIFEST_SHA256_EXPECTED",
     )
-    wta_ledger_path: Path | None = Field(default=None, validation_alias="LEMMA_LEDGER_PATH")
+    solved_ledger_path: Path | None = Field(default=None, validation_alias="LEMMA_LEDGER_PATH")
     miner_submissions_path: Path | None = Field(default=None, validation_alias="LEMMA_MINER_SUBMISSIONS_PATH")
 
     subtensor_network: str = Field(default="finney", validation_alias="SUBTENSOR_NETWORK")

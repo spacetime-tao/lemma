@@ -1,4 +1,4 @@
-"""Canonical WTA validator profile fingerprint."""
+"""Canonical validator profile fingerprint."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from typing import Any
 from lemma.common.config import LemmaSettings
 from lemma.problems.known_theorems import known_theorems_manifest_sha256
 
-PROFILE_SCHEMA = "lemma_manual_wta_profile_v2"
+PROFILE_SCHEMA = "lemma_manual_proof_profile_v2"
 
 
 def validator_profile_dict(settings: LemmaSettings) -> dict[str, Any]:
@@ -29,7 +29,7 @@ def validator_profile_dict(settings: LemmaSettings) -> dict[str, Any]:
             "lean_verify_timeout_s": int(settings.lean_verify_timeout_s),
             "lean_use_docker": bool(settings.lean_use_docker),
         },
-        "scoring_policy": {"reward_mode": "winner_take_all_batch_tie_split"},
+        "scoring_policy": {"reward_mode": "verified_proof_batch_tie_split"},
     }
 
 

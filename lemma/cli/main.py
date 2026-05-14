@@ -25,11 +25,11 @@ def _resolve_problem_or_click(settings: LemmaSettings, problem_id: str):
 @click.pass_context
 @click.version_option(version=__version__)
 def main(ctx: click.Context) -> None:
-    """Winner-take-all manual Lean proof formalization."""
+    """Manual Lean proof verification protocol."""
     if ctx.invoked_subcommand is not None:
         return
     click.echo(stylize("Lemma ", fg="cyan", bold=True) + stylize(__version__, dim=True))
-    click.echo("Manual proof submission. First valid Lean proof wins.\n")
+    click.echo("Manual proof submission. Lean decides whether a proof verifies.\n")
     click.echo(ctx.get_help(), color=colors_enabled())
 
 
@@ -45,8 +45,8 @@ def target_group(ctx: click.Context) -> None:
 @click.argument("target_id", required=False)
 def target_show_cmd(target_id: str | None) -> None:
     from lemma.cli.problem_views import echo_challenge_separator, echo_problem_card
+    from lemma.ledger import current_solver_set
     from lemma.problems.known_theorems import known_theorems_manifest_sha256
-    from lemma.wta import current_champion
 
     settings = LemmaSettings()
     src = get_problem_source(settings)
@@ -54,16 +54,16 @@ def target_show_cmd(target_id: str | None) -> None:
         problem = src.get(target_id.strip()) if target_id else src.sample(seed=0)
     except KeyError as exc:
         raise click.ClickException(f"unknown target id: {target_id}") from exc
-    champion = current_champion(settings.wta_ledger_path)
+    solver_set = current_solver_set(settings.solved_ledger_path)
     manifest_sha = known_theorems_manifest_sha256(settings.known_theorems_manifest_path)
     click.echo(stylize("Lemma target", fg="cyan", bold=True))
     click.echo(stylize(f"manifest_sha256={manifest_sha}", dim=True))
-    champion_text = (
-        "champion=<none yet>"
-        if champion is None
-        else f"champion_uids={','.join(str(uid) for uid in champion.winner_uids)} last_solved={champion.target_id}"
-    )
-    click.echo(stylize(champion_text, fg="yellow"))
+    if solver_set is None:
+        solver_text = "active_solver_uids=<none yet>"
+    else:
+        uids = ",".join(str(uid) for uid in solver_set.solver_uids)
+        solver_text = f"active_solver_uids={uids} last_solved={solver_set.target_id}"
+    click.echo(stylize(solver_text, fg="yellow"))
     click.echo("")
     echo_problem_card(problem, heading="Active theorem" if target_id is None else "Theorem")
     ref = problem.extra.get("human_proof_reference")
@@ -78,21 +78,21 @@ def target_show_cmd(target_id: str | None) -> None:
 
 @target_group.command("ledger")
 def target_ledger_cmd() -> None:
-    from lemma.wta import load_wta_ledger, resolved_wta_ledger_path
+    from lemma.ledger import load_solved_ledger, resolved_solved_ledger_path
 
     settings = LemmaSettings()
-    path = resolved_wta_ledger_path(settings.wta_ledger_path)
-    entries = load_wta_ledger(settings.wta_ledger_path)
+    path = resolved_solved_ledger_path(settings.solved_ledger_path)
+    entries = load_solved_ledger(settings.solved_ledger_path)
     click.echo(stylize("Lemma ledger", fg="cyan", bold=True))
     click.echo(stylize(str(path), dim=True))
     if not entries:
         click.echo("No solved targets yet.")
         return
     for entry in entries:
-        uids = ",".join(str(uid) for uid in entry.winner_uids)
-        proofs = ",".join(winner.proof_sha256[:16] for winner in entry.winners)
+        uids = ",".join(str(uid) for uid in entry.solver_uids)
+        proofs = ",".join(solver.proof_sha256[:16] for solver in entry.solvers)
         click.echo(
-            f"{entry.target_id}\twinner_uids={uids}\tproofs={proofs}\t"
+            f"{entry.target_id}\tsolver_uids={uids}\tproofs={proofs}\t"
             f"block={entry.accepted_block}",
         )
 
@@ -158,7 +158,7 @@ def miner_start_cmd() -> None:
     MinerService(settings).run()
 
 
-@main.group("validator", invoke_without_command=True, help="Poll miners, Lean verify, and set champion weights.")
+@main.group("validator", invoke_without_command=True, help="Poll miners, Lean verify, and set miner weights.")
 @click.pass_context
 def validator_group(ctx: click.Context) -> None:
     if ctx.invoked_subcommand is None:

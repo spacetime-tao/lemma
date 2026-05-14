@@ -1,4 +1,4 @@
-"""Problem source factory for WTA v1."""
+"""Problem source factory for known-theorem targets."""
 
 import pytest
 from lemma.common.config import LemmaSettings
@@ -26,6 +26,6 @@ def test_resolve_known_theorem_id() -> None:
     assert p.extra["source_lane"] == "known_theorems"
 
 
-def test_resolve_non_known_id_is_not_public_wta_surface() -> None:
+def test_resolve_non_known_id_is_not_public_proof_surface() -> None:
     with pytest.raises(KeyError):
         resolve_problem(LemmaSettings(_env_file=None), "gen/42")

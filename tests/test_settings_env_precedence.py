@@ -107,7 +107,7 @@ def test_documented_proof_env_names_work(monkeypatch: pytest.MonkeyPatch, tmp_pa
             [
                 "LEMMA_VALIDATOR_POLL_INTERVAL_S=123",
                 "LEMMA_VALIDATOR_POLL_TIMEOUT_S=7",
-                "LEMMA_LEDGER_PATH=/tmp/wta-ledger.jsonl",
+                "LEMMA_LEDGER_PATH=/tmp/solved-ledger.jsonl",
                 "LEMMA_MINER_SUBMISSIONS_PATH=/tmp/submissions.json",
                 "LEMMA_KNOWN_THEOREMS_MANIFEST_SHA256_EXPECTED=" + ("a" * 64),
                 "LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED=" + ("b" * 64),
@@ -117,20 +117,20 @@ def test_documented_proof_env_names_work(monkeypatch: pytest.MonkeyPatch, tmp_pa
 
     assert s.validator_poll_interval_s == 123
     assert s.validator_poll_timeout_s == 7
-    assert str(s.wta_ledger_path) == "/tmp/wta-ledger.jsonl"
+    assert str(s.solved_ledger_path) == "/tmp/solved-ledger.jsonl"
     assert str(s.miner_submissions_path) == "/tmp/submissions.json"
     assert s.known_theorems_manifest_expected_sha256 == "a" * 64
     assert s.validator_profile_expected_sha256 == "b" * 64
 
 
-def test_removed_wta_ledger_env_name_is_ignored(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_unknown_ledger_env_name_is_ignored(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     s = _settings_from_env(
         tmp_path,
         monkeypatch,
-        "LEMMA_WTA_LEDGER_PATH=/tmp/old-wta-ledger.jsonl\n",
+        "LEMMA_OLD_LEDGER_PATH=/tmp/old-solved-ledger.jsonl\n",
     )
 
-    assert s.wta_ledger_path is None
+    assert s.solved_ledger_path is None
 
 
 def test_removed_legacy_env_names_are_ignored(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
