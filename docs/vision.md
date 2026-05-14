@@ -1,14 +1,15 @@
 # Vision & roadmap
 
-**Lemma is a Bittensor subnet that rewards correct mathematical proofs.**
+**Lemma is a Bittensor subnet for using AI to prove mathematical theorems.**
 
-Every round, Lemma posts a theorem written in Lean. Miners run automated proving
-systems. Validators run Lean. The proof passes or it fails.
+Lemma posts theorem challenges. Miners use AI to write Lean proof files.
+Validators use Lean to check them. Valid proofs become eligible for miner
+rewards.
 
 Bitcoin rewards miners for securing the network. Bittensor rewards miners for
 producing useful intelligence. Lemma rewards miners for producing correct
 proofs. The value is solved mathematics, better reasoning systems, and a growing
-public record of machine-checkable proofs. The market decides how valuable that
+public record of computer-verified proofs. The market decides how valuable that
 is.
 
 **One-sentence objective:** Lemma rewards Lean-valid proofs for published theorem
@@ -31,8 +32,8 @@ Lemma produces **verified formal proofs**.
 
 The live product is a theorem/proof pair where the proof script is accepted by
 Lean for the published theorem statement. The subnet publishes formal theorem
-statements; miners run automated proving systems; validators mechanically verify
-the submissions; accepted proofs become the produced work.
+statements; miners use AI proving systems; validators mechanically verify the
+submissions; accepted proofs become the produced work.
 
 That keeps the base story simple: Bitcoin miners produce valid blocks under
 public rules. Lemma miners produce valid Lean proofs under a theorem rule.
@@ -81,24 +82,24 @@ Difficulty should increase concretely as the network scales:
 - more abstract algebraic structures;
 - larger finite set and combinatorics arguments;
 - harder real-number inequalities and continuity facts;
-- eventually, formalized statements connected to known unsolved problems.
+- eventually, formalized statements connected to known open problems.
 
 The point is not to hide the tasks. The point is to keep expanding public,
 deterministic, verifiable theorem work.
 
 ---
 
-## Harder and unsolved work
+## Harder and open work
 
 Lemma should not begin by asking miners to solve the hardest open problems in
 the world. A subnet needs a healthy proving loop first: miners need tasks they
 can solve, validators need predictable verification, and the network needs a
 record of valid work.
 
-Once that base loop is healthy, Lemma can aim at harder targets. For unsolved or
+Once that base loop is healthy, Lemma can aim at harder targets. For open or
 especially difficult formalized statements, the reward shape can be
-winner-take-all: the first miner to submit a Lean-valid proof for the published
-statement earns the reward.
+winner-take-all: the first miner to resolve the published target through a
+formally verified proof earns the reward.
 
 Some famous problems may require careful formalization before proof rewards are
 fair. A Lean statement can be valid while failing to capture the real informal
@@ -111,7 +112,7 @@ subnet points rewards at it.
 
 The near-term operator goal is plain:
 
-- a miner can run the automated prover path without bespoke support;
+- a miner can run the AI proof path without bespoke support;
 - a validator can publish theorem challenges, verify proof files, and set
   weights reliably;
 - problem supply changes are tied to published registry hashes;

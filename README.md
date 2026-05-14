@@ -1,9 +1,10 @@
 # Lemma
 
-**Lemma is a [Bittensor](https://docs.learnbittensor.org/) subnet that rewards correct mathematical proofs.**
+**Lemma is a [Bittensor](https://docs.learnbittensor.org/) subnet for using AI to prove mathematical theorems.**
 
-Every round, Lemma posts a theorem written in Lean. Miners run automated proving
-systems. Validators run Lean. The proof passes or it fails.
+Lemma posts theorem challenges. Miners use AI to write Lean proof files.
+Validators use Lean to check them. Valid proofs become eligible for miner
+rewards.
 
 Bitcoin rewards miners for securing the network. Bittensor rewards miners for
 producing useful intelligence. Lemma rewards miners for producing correct
@@ -12,8 +13,8 @@ proofs.
 A Lemma round is simple:
 
 1. The subnet publishes a theorem statement.
-2. Miners submit candidate Lean proof scripts.
-3. Validators verify those scripts with the published toolchain.
+2. Miners use AI to write candidate Lean proof scripts.
+3. Validators verify those scripts with the pinned Lean toolchain.
 4. Passing proofs become eligible for miner rewards under Lemma's subnet rules; failing proofs do not.
 
 Anything that can be formalized as a Lean statement can become work for Lemma:

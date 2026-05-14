@@ -8,10 +8,11 @@ To run the software, start with [getting-started.md](getting-started.md).
 
 ## What is Lemma?
 
-**Lemma is a Bittensor subnet that rewards correct mathematical proofs.**
+**Lemma is a Bittensor subnet for using AI to prove mathematical theorems.**
 
-Every round, Lemma posts a theorem written in Lean. Miners run automated proving
-systems. Validators run Lean. The proof passes or it fails.
+Lemma posts theorem challenges. Miners use AI to write Lean proof files.
+Validators use Lean to check them. Valid proofs become eligible for miner
+rewards.
 
 Bitcoin rewards miners for securing the network. Bittensor rewards miners for
 producing useful intelligence. Lemma rewards miners for producing correct
@@ -30,11 +31,11 @@ with Lean is objective and reproducible.
 
 ## Are miners manually watching for theorems?
 
-No. The current reference miner is automated software. It receives theorem
+No. The current reference miner runs automatically. It receives theorem
 challenges from validators, calls an AI proving model or proof-search loop, and
 returns a proof file when it finds one.
 
-Human-in-the-loop flows may make sense later for longer unsolved-problem work,
+Human-in-the-loop flows may make sense later for longer open-problem work,
 but the base round design is automated.
 
 ## Who needs this math to be solved?
@@ -53,7 +54,7 @@ result that helps prove another result.
 No. Lemma is not built around a revenue model.
 
 The value is solved mathematics, better reasoning systems, and a growing public
-record of machine-checkable proofs. How valuable that is should be decided by
+record of computer-verified proofs. How valuable that is should be decided by
 the market, similar to how markets decide the value of Bitcoin's security or
 Bittensor's intelligence.
 
@@ -64,8 +65,8 @@ the world.
 
 If every task is nearly impossible, miners cannot learn, earn, or improve. Lemma
 starts with a range of solvable theorem tasks so miners can build proof
-capacity. Harder curated problem sets and winner-take-all proof rewards can come
-later.
+capacity. Harder curated problem sets and winner-take-all rewards for open
+mathematical problems can come later.
 
 ## Foundations
 
@@ -126,9 +127,9 @@ statement and submitted proof file.
 
 ### What does a miner do?
 
-A miner runs automated prover software. Validators send it theorem challenges;
-the miner calls an AI proving model, a proof-search loop, or a repair loop, and
-returns a Lean `proof_script` when it finds one. More detail: [miner.md](miner.md).
+A miner uses AI to receive theorem challenges and try to prove them. When it
+finds a proof, it returns a Lean `proof_script` for validators to check. More
+detail: [miner.md](miner.md).
 
 ### What does a validator do?
 

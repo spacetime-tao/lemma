@@ -1,9 +1,10 @@
 # Lemma Litepaper
 
-**Lemma is a Bittensor subnet that rewards correct mathematical proofs.**
+**Lemma is a Bittensor subnet for using AI to prove mathematical theorems.**
 
-Every round, Lemma posts a theorem written in Lean. Miners run automated proving
-systems. Validators run Lean. The proof passes or it fails.
+Lemma posts theorem challenges. Miners use AI to write Lean proof files.
+Validators use Lean to check them. Valid proofs become eligible for miner
+rewards.
 
 Bitcoin rewards miners for securing the network. Bittensor rewards miners for
 producing useful intelligence. Lemma rewards miners for producing correct
@@ -19,8 +20,7 @@ step by step.
 A Lemma round works like this:
 
 1. The subnet publishes a theorem statement.
-2. Miners run an automated prover, usually an AI model plus a proof-search or
-   repair loop.
+2. Miners use AI, proof search, or repair loops to write proof files.
 3. Miners submit a `proof_script`.
 4. Validators run Lean under the pinned toolchain.
 5. Passing proofs become eligible for miner rewards; failing proofs do not.
@@ -33,7 +33,7 @@ code. Lean accepts it, or Lean rejects it.
 Mathematics is one of the foundations under science, cryptography, algorithms,
 software, physics, engineering, and AI reasoning. Better theorem proving can
 produce solved problems, stronger reasoning systems, new training data, and a
-public record of machine-checkable mathematical work.
+public record of computer-verified mathematical work.
 
 Lemma does not need a revenue story to matter. Its value is the work it
 coordinates: verified mathematical progress. How valuable that is should be
@@ -69,7 +69,7 @@ The pairing is simple:
 
 - Bittensor coordinates the network.
 - Lean checks the work.
-- Lemma points that market at theorem proving.
+- Lemma points that incentive structure at theorem proving.
 
 ## What Counts As Work?
 
@@ -89,13 +89,14 @@ Bitcoin did not begin with today's difficulty. Lemma should also begin with a
 base loop that lets miners build proof capacity, tooling, participation, and
 validator reliability.
 
-The long-term direction can still include difficult or unsolved mathematics. The
+The long-term direction can still include difficult or open mathematics. The
 path is a ladder:
 
 1. a reliable cadence of generated and curated theorem tasks;
 2. broader theorem supply across more mathematical fields;
 3. steadily harder formal statements as the network scales;
-4. winner-take-all proof rewards for unsolved or especially difficult targets.
+4. winner-take-all rewards for especially difficult targets and open
+   mathematical problems.
 
 ## Concrete Example
 
@@ -161,10 +162,10 @@ Lemma separates two questions:
 
 ## What Miners Do
 
-A miner runs automated prover software. When a theorem challenge arrives, the
-miner sends the Lean statement to an AI proving model, a proof-search loop, a
-repair loop, or some combination of those systems. If it finds a proof, it
-returns a Lean `proof_script` for validators to check.
+A miner uses AI to receive theorem challenges and try to prove them. It may send
+the Lean statement to a proving model, a proof-search loop, a repair loop, or
+some combination of those systems. If it finds a proof, it returns a Lean
+`proof_script` for validators to check.
 
 The reference miner uses a prover model through an OpenAI-compatible API, but
 operators may use any proving strategy. The reward-critical artifact is always
@@ -213,8 +214,8 @@ supply, not secrecy:
 - add reviewed curated catalog rows;
 - coordinate supply registry upgrades;
 - measure solve and verify time;
-- later add winner-take-all proof rewards for especially difficult or unsolved
-  targets.
+- later add winner-take-all rewards for especially difficult targets and open
+  mathematical problems.
 
 ## Transport and Operations
 
@@ -277,12 +278,12 @@ hand-holding.
 The first lane is steady generated and curated work with predictable
 verification cost.
 
-Later work can add broader theorem sets, Mathlib gaps, and winner-take-all proof
-rewards for difficult or unsolved targets. Those targets should still use public
-statements, pinned toolchains, clear reward rules, and reproducible
-verification.
+Later work can add broader theorem sets, Mathlib gaps, and winner-take-all
+rewards for difficult targets or open mathematical problems. Those targets
+should still use public statements, pinned toolchains, clear reward rules, and
+reproducible verification.
 
-Long term, Lemma should become a market for verified mathematical progress. The
+Long term, Lemma should become a source of verified mathematical progress. The
 first step is keeping the basic rule clear, reproducible, and hard to fake.
 
 ## Start Here
