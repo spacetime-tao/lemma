@@ -13,7 +13,7 @@ That means:
 - Do not treat SHA256 mixing as anti-precompute security.
 - Do use `problem_supply_registry_sha256` to keep validators on the same public hybrid supply.
 
-The current hybrid lane is steady traffic: deterministic, Lean-checkable challenges with known generated families and a reviewed curated catalog. The generated registry has 85 builders and explicit 10% / 35% / 50% / 5% easy / medium / hard / extreme split weights; hybrid source weights default to 60% generated and 40% catalog. Extreme is a rare stretch tier inside steady cadence, not the off-cadence bounty/campaign lane.
+The current hybrid lane is steady traffic: deterministic, Lean-checkable challenges with known generated families and a reviewed curated catalog. The generated registry has 93 builders and explicit 10% / 35% / 50% / 5% easy / medium / hard / extreme split weights; hybrid source weights default to 60% generated and 40% catalog. Extreme is a rare stretch tier inside steady cadence, not the off-cadence bounty/campaign lane.
 
 ## Accepted risk
 

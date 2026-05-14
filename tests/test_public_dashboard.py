@@ -42,12 +42,14 @@ def test_build_theorem_triplet_uses_quantize_step() -> None:
     assert rows[1].explanation == rows[1].plain_english
 
 
-def test_generated_public_statement_uses_template_family_text() -> None:
+def test_generated_public_statement_uses_instance_text() -> None:
     problem = _problem_for_builder_index(7105000, 29)
     statement = public_statement_for_problem(problem)
 
-    assert statement == "Prove that filtering a finite range cannot increase its cardinality."
     assert statement == problem.extra["informal_statement"]
+    assert "finite range below 12" in statement
+    assert "cannot increase" in statement
+    assert "12" in problem.type_expr
     assert "∀" not in statement
     assert "DecidablePred" not in statement
     assert "medium" not in statement.lower()
@@ -58,7 +60,8 @@ def test_generated_public_statement_covers_rich_binder_shape() -> None:
     problem = _problem_for_builder_index(123, 71)
     statement = public_statement_for_problem(problem)
 
-    assert statement == "Prove the inverse-of-product identity in any group."
+    assert statement == problem.extra["informal_statement"]
+    assert "elements in any group" in statement
     assert "∀" not in statement
     assert "[Group" not in statement
 

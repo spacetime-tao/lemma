@@ -68,9 +68,9 @@ not let parallel checklists drift.
   - `.venv/bin/pytest tests -q`: passed
     (`314 passed, 2 skipped, 12 warnings`);
   - `.venv/bin/python scripts/ci_verify_generated_templates.py`: passed
-    (`OK: generated template metadata/witness gate covered 85 builders`);
+    (`OK: generated template metadata/witness gate covered 93 builders`);
   - `RUN_DOCKER_LEAN_TEMPLATES=1 LEAN_SANDBOX_IMAGE=lemma/lean-sandbox:latest .venv/bin/python scripts/ci_verify_generated_templates.py`:
-    passed; all 85 generated template stubs and witnesses built in one Docker
+    passed; all 93 generated template stubs and witnesses built in one Docker
     workspace;
   - `git diff --check`: passed.
 
@@ -83,7 +83,7 @@ not let parallel checklists drift.
   `lemma lean-worker` binds fail unless the explicit dev-only override is set.
 - Binary proof eligibility docs: high-traffic docs separate the binary Lean
   eligibility gate from downstream allocation policy.
-- Generated problem supply hardening: local working registry now has 85 builders
+- Generated problem supply hardening: local working registry now has 93 builders
   across easy / medium / hard / extreme splits, and the local metadata/witness
   gate covers all of them.
 - Hybrid supply design: default source is generated + curated catalog with

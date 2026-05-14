@@ -3,7 +3,7 @@
 from lemma.problems.generated import RNG_MIX_TAG, generated_registry_canonical_dict, generated_registry_sha256
 
 _OLD_BUILDER_FNS = [
-    "_b_true_easy",
+    "_b_nat_mul_one_easy",
     "_b_nat_add_norm_easy",
     "_b_nat_le_norm_easy",
     "_b_bool_and_easy",
@@ -26,7 +26,7 @@ _OLD_BUILDER_FNS = [
     "_b_continuous_id_medium",
     "_b_exists_prime_dvd_hard",
     "_b_inf_many_primes_hard",
-    "_b_sqrt2_irrational_hard",
+    "_b_rational_square_not_two_hard",
     "_b_finset_union_card_hard",
     "_b_set_inter_union_distrib_hard",
     "_b_mul_add_distrib_nat_medium",
@@ -57,10 +57,10 @@ def test_generated_registry_fingerprint_covers_source_and_rng_tag() -> None:
     builders = registry["builders"]
 
     assert registry["rng_mix_tag"] == RNG_MIX_TAG
-    assert registry["builder_count"] == 85
-    assert registry["split_counts"] == {"easy": 10, "medium": 35, "hard": 35, "extreme": 5}
+    assert registry["builder_count"] == 93
+    assert registry["split_counts"] == {"easy": 12, "medium": 38, "hard": 38, "extreme": 5}
     assert registry["split_weights"] == {"easy": 10, "medium": 35, "hard": 50, "extreme": 5}
-    assert len(builders) == 85
+    assert len(builders) == 93
     assert all(len(builder["source_sha256"]) == 64 for builder in builders)
     assert all(builder["topic"] for builder in builders)
     assert all(builder["family"] for builder in builders)

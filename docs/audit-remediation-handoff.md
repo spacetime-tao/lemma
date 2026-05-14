@@ -25,8 +25,8 @@ state quickly. Start here, then read [`local handoff note`](../local handoff not
 
 ## Implemented in the current local patch
 
-- Generated supply adds a rare `extreme` split: 85 builders total with
-  10 / 35 / 50 / 5 easy / medium / hard / extreme weights.
+- Generated supply has 93 builders total and adds a rare `extreme` split with
+  10 / 35 / 50 / 5 easy / medium / hard / extreme sampling weights.
 - The curated catalog includes positive-weight `extreme` rows, and hybrid
   sampling picks the split before the generated/catalog lane.
 - Validator timeout policy includes `LEMMA_TIMEOUT_SPLIT_EXTREME_MULT`; the
@@ -66,7 +66,7 @@ state quickly. Start here, then read [`local handoff note`](../local handoff not
 - `.venv/bin/mypy lemma`: passed.
 - `.venv/bin/pytest tests -q`: passed, `314 passed, 2 skipped, 12 warnings`.
 - `.venv/bin/python scripts/ci_verify_generated_templates.py`: passed,
-  `OK: generated template metadata/witness gate covered 85 builders`.
+  `OK: generated template metadata/witness gate covered 93 builders`.
 - `git diff --check`: passed.
 
 ## Docker evidence
@@ -84,7 +84,7 @@ Total Memory: 7.75GiB
 - `docker image inspect lemma/lean-sandbox:latest`: image present
   (`lemma/lean-sandbox:latest`, `lemma/lean-sandbox:mathlib-5450b53e`).
 - `RUN_DOCKER_LEAN_TEMPLATES=1 LEAN_SANDBOX_IMAGE=lemma/lean-sandbox:latest .venv/bin/python scripts/ci_verify_generated_templates.py`:
-  passed; all 85 generated template stubs and witnesses built in one Docker
+  passed; all 93 generated template stubs and witnesses built in one Docker
   workspace.
 
 ## Next decisions

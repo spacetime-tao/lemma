@@ -1,12 +1,22 @@
 """Deterministic generated problem source."""
 
+import re
+
 import pytest
 from lemma.problems.generated import (
     DEFAULT_SPLIT_WEIGHTS,
     GeneratedProblemSource,
     _problem_for_builder_index,
     expand_seed_for_problem_rng,
+    generated_registry_canonical_dict,
 )
+
+_VARIATION_SEEDS = tuple(range(512)) + (7105300, 7107800, 7116500, 7116900)
+_RAW_PUBLIC_TOKENS = ("∀", "DecidablePred", "[Group", ":=", "Finset.", "Set.", "Nat.", "Matrix.det")
+
+
+def _normalized_shape(type_expr: str) -> str:
+    return re.sub(r"\b\d+\b", "#", type_expr)
 
 
 def test_expand_seed_deterministic() -> None:
@@ -84,6 +94,28 @@ def test_template_topics_are_not_random_labels() -> None:
     b = _problem_for_builder_index(456, 48)
     assert a.extra["topic"] == b.extra["topic"] == "algebra.ring"
     assert a.extra["family"] == b.extra["family"] == "real_cubic_identity"
+
+
+def test_generated_builders_vary_across_seeds_and_do_not_emit_bare_true() -> None:
+    builder_count = int(generated_registry_canonical_dict()["builder_count"])
+    for builder_index in range(builder_count):
+        type_exprs = set()
+        normalized_shapes = set()
+        informal_statements = set()
+        for seed in _VARIATION_SEEDS:
+            p = _problem_for_builder_index(seed, builder_index)
+            type_exprs.add(p.type_expr)
+            normalized_shapes.add(_normalized_shape(p.type_expr))
+            informal = p.extra.get("informal_statement")
+            assert isinstance(informal, str)
+            informal_statements.add(informal)
+            assert p.type_expr.strip() != "True"
+            assert informal
+            assert informal != "Prove the displayed generated Lean theorem."
+            assert not any(token in informal for token in _RAW_PUBLIC_TOKENS)
+        assert len(type_exprs) >= 2, builder_index
+        assert len(normalized_shapes) >= 2, builder_index
+        assert len(informal_statements) >= 2, builder_index
 
 
 def test_legacy_plain_rng_opt_in() -> None:

@@ -8,25 +8,41 @@ Each round maps `chain_head → problem_seed` via `LEMMA_PROBLEM_SEED_MODE`: def
 
 There is **no single fixed “number of theorems in the world”** here. What exists today is:
 
-- **85 template builders** (10 easy, 35 medium, 35 hard, 5 extreme) in `_RAW_BUILDERS`: each is a function that emits a `Problem` for a given RNG seeded from the block.
-- **One sampled challenge per `(seed, registry version)`**: `random.Random(seed)` first uses the published **10% / 35% / 50% / 5% easy / medium / hard / extreme** split weights, then picks within that split. Many builders inject **fresh random numerals** (e.g. concrete `Nat` sums), so **infinitely many distinct statements** can appear over time even though the *family* of shapes is finite.
+- **93 template builders** (12 easy, 38 medium, 38 hard, 5 extreme) in `_RAW_BUILDERS`: each is a function that emits a `Problem` for a given RNG seeded from the block.
+- **One sampled challenge per `(seed, registry version)`**: `random.Random(seed)` first uses the published **10% / 35% / 50% / 5% easy / medium / hard / extreme** split weights, then picks within that split. Every generated builder injects seed-chosen structure and has more than one normalized theorem shape, so **infinitely many distinct statements** can appear over time even though the *family* of shapes is finite.
 - **Template-owned topic labels** (`TOPICS`) for logging / exports—algebra, analysis, combinatorics, logic, etc.—not separate proof rules and not randomly assigned.
 
 So: **finite template repertoire, infinite instance stream** as the chain advances. The default hybrid source mixes this with a curated catalog lane; see [catalog-sources.md](catalog-sources.md).
 
 ### Plain English
 
-What **85 builders** means is **not** “there are only 85 problems total.” It means **85 recipes**. Each recipe says how to cook one *kind* of challenge—e.g. ask for a proof about natural-number arithmetic, induction, modular arithmetic, list structure, set algebra, finite sets, real inequalities, matrices, prime existence, continuity, group laws, or rare multi-step stretch problems. Every time the subnet advances and hands out a **new seed**, the code runs the RNG again: it may pick **another recipe**, or the **same recipe with new random constants**. So **one family** can produce **endlessly many slightly different statements**: same pattern, different numbers or details.
+What **93 builders** means is **not** “there are only 93 problems total.” It means **93 recipes**. Each recipe says how to cook one *kind* of challenge—e.g. ask for a proof about natural-number arithmetic, induction, modular arithmetic, list structure, set algebra, finite sets, real inequalities, matrices, prime existence, continuity, group laws, or rare multi-step stretch problems. Every time the subnet advances and hands out a **new seed**, the code runs the RNG again: it may pick **another recipe**, or the **same recipe with a different theorem shape, constants, finite domain, shift, or witness**.
 
 You should **not** picture a short list to memorize. You picture **many instances** flowing from **a cookbook** with explicit split weights. The **topic** labels (algebra, analysis, …) are mainly for logging—they are not separate rule sets in Lean.
 
-**Honest limit:** these are **variations inside fixed templates**, not “every possible theorem in mathematics.” Over time, miners may still recognize **which shapes repeat**—that is normal. **More diversity** comes from higher-quality builders, the curated catalog lane, and later campaign/bounty lanes. See [problem-supply-policy.md](problem-supply-policy.md) for the explicit predictability boundary.
+**Honest limit:** these are **variations inside fixed templates**, not “every possible theorem in mathematics.” Over time, miners may still recognize the builder families—that is normal. **More diversity** comes from higher-quality builders, the curated catalog lane, and later campaign/bounty lanes. See [problem-supply-policy.md](problem-supply-policy.md) for the explicit predictability boundary.
 
 **Future directions** (not all implemented): more builders or splits; imports from formalized contest corpora (e.g. miniF2F-style); harder multi-lemma templates; curated `sorry` bounties alongside generated traffic—governance decides what is live.
 
+## Adding new families
+
+Add new generated families only when they increase real theorem-shape diversity. Prefer a new algebraic, combinatorial, order, set, list, matrix, continuity, or number-theory pattern over another near-copy of an existing tactic exercise.
+
+Checklist for a new family:
+
+- append the builder to `_RAW_BUILDERS`; do not reorder existing builders;
+- make the theorem depend on the seed through meaningful constants, finite domains, shifts, witnesses, or small concrete structures;
+- keep at least two normalized theorem shapes across the generated-source variation seed set;
+- provide an instance-specific `informal_statement` that remains readable above the formal theorem;
+- include a complete public witness proof and keep the advertised split honest;
+- run the generated-template gate, including the Docker Lean build before release;
+- record the new generated and hybrid registry hashes in release notes.
+
+Do not add a builder whose only variation is a hidden dummy marker or whose public text would need to say “displayed generated theorem.” If a family cannot vary naturally, leave it out until there is a better formulation.
+
 ## Template mix
 
-- 85 builders: 10 easy, 35 medium, 35 hard, 5 extreme (`_RAW_BUILDERS`).
+- 93 builders: 12 easy, 38 medium, 38 hard, 5 extreme (`_RAW_BUILDERS`).
 - Explicit default split weights: 10% easy, 35% medium, 50% hard, 5% extreme.
 - `TOPICS`: template-owned labels for logging; shape comes from the template.
 
