@@ -61,7 +61,7 @@ def target_show_cmd(target_id: str | None) -> None:
     champion_text = (
         "champion=<none yet>"
         if champion is None
-        else f"champion_uid={champion.winner_uid} last_solved={champion.target_id}"
+        else f"champion_uids={','.join(str(uid) for uid in champion.winner_uids)} last_solved={champion.target_id}"
     )
     click.echo(stylize(champion_text, fg="yellow"))
     click.echo("")
@@ -89,8 +89,10 @@ def target_ledger_cmd() -> None:
         click.echo("No solved targets yet.")
         return
     for entry in entries:
+        uids = ",".join(str(uid) for uid in entry.winner_uids)
+        proofs = ",".join(winner.proof_sha256[:16] for winner in entry.winners)
         click.echo(
-            f"{entry.target_id}\twinner_uid={entry.winner_uid}\tproof={entry.proof_sha256[:16]}\t"
+            f"{entry.target_id}\twinner_uids={uids}\tproofs={proofs}\t"
             f"block={entry.accepted_block}",
         )
 

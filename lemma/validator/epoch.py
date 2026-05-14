@@ -20,7 +20,7 @@ from lemma.lean.sandbox import VerifyResult
 from lemma.lean.verify_runner import run_lean_verify
 from lemma.problems.base import Problem, ProblemSource
 from lemma.protocol import LemmaChallenge, synapse_miner_response_integrity_ok
-from lemma.wta import WtaLedgerEntry, append_wta_ledger_entry, champion_weights
+from lemma.wta import WtaLedgerEntry, WtaWinner, append_wta_ledger_entry, champion_weights, split_winner_weights
 
 
 def _validator_poll_challenge(problem: Problem, *, poll_id: str) -> LemmaChallenge:
@@ -220,41 +220,45 @@ async def run_epoch(
 
     raw_verified = await asyncio.gather(*(verify_one(uid, resp) for uid, resp in candidates))
     verified = [item for item in raw_verified if item is not None]
-    dry_run_winner_uid: int | None = None
+    dry_run_winner_weights: dict[int, float] = {}
     if verified:
-        winner_uid, winner_resp, winner_vr = sorted(verified, key=lambda item: item[0])[0]
-        proof = winner_resp.proof_script or ""
+        winners = tuple(
+            WtaWinner(
+                uid=uid,
+                hotkey=_hotkey_ss58_for_uid(metagraph, uid),
+                coldkey=_coldkey_for_uid_or_none(metagraph, uid),
+                proof_sha256=hashlib.sha256((resp.proof_script or "").encode("utf-8")).hexdigest(),
+                verify_reason=vr.reason,
+                build_seconds=float(vr.build_seconds),
+            )
+            for uid, resp, vr in sorted(verified, key=lambda item: item[0])
+        )
         entry = WtaLedgerEntry(
             target_id=problem.id,
-            winner_uid=winner_uid,
-            winner_hotkey=_hotkey_ss58_for_uid(metagraph, winner_uid),
-            winner_coldkey=_coldkey_for_uid_or_none(metagraph, winner_uid),
-            proof_sha256=hashlib.sha256(proof.encode("utf-8")).hexdigest(),
+            winners=winners,
             accepted_block=cur_block,
             accepted_unix=int(time.time()),
             validator_hotkey=wallet.hotkey.ss58_address,
             lemma_version=__version__,
-            verify_reason=winner_vr.reason,
-            build_seconds=float(winner_vr.build_seconds),
             theorem_statement_sha256=hashlib.sha256(problem.challenge_source().encode("utf-8")).hexdigest(),
         )
         if dry_run:
-            dry_run_winner_uid = winner_uid
+            dry_run_winner_weights = split_winner_weights(entry.winner_uids, set(uids))
         else:
             try:
                 append_wta_ledger_entry(settings.wta_ledger_path, entry)
                 logger.info(
-                    "wta_target_solved target_id={} winner_uid={} proof_sha256={}",
+                    "wta_target_solved target_id={} winner_uids={} proofs={}",
                     entry.target_id,
-                    winner_uid,
-                    entry.proof_sha256,
+                    list(entry.winner_uids),
+                    [winner.proof_sha256 for winner in entry.winners],
                 )
             except ValueError as exc:
                 logger.warning("WTA ledger append skipped: {}", exc)
 
     weights_by_uid = champion_weights(settings.wta_ledger_path, set(uids))
-    if dry_run and not weights_by_uid and dry_run_winner_uid in set(uids):
-        weights_by_uid = {int(dry_run_winner_uid): 1.0}
+    if dry_run and not weights_by_uid and dry_run_winner_weights:
+        weights_by_uid = dry_run_winner_weights
     logger.info(
         "lemma_poll_summary block={} target_id={} candidates={} verified={} weight_entries={} seconds={:.2f}",
         cur_block,

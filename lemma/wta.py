@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -17,36 +18,75 @@ def resolved_wta_ledger_path(path: Path | None) -> Path:
 
 
 @dataclass(frozen=True)
+class WtaWinner:
+    uid: int
+    hotkey: str | None
+    coldkey: str | None
+    proof_sha256: str
+    verify_reason: str
+    build_seconds: float
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> WtaWinner:
+        return cls(
+            uid=int(data["uid"]),
+            hotkey=_str_or_none(data.get("hotkey")),
+            coldkey=_str_or_none(data.get("coldkey")),
+            proof_sha256=str(data["proof_sha256"]),
+            verify_reason=str(data["verify_reason"]),
+            build_seconds=float(data["build_seconds"]),
+        )
+
+
+@dataclass(frozen=True)
 class WtaLedgerEntry:
     target_id: str
-    winner_uid: int
-    winner_hotkey: str | None
-    winner_coldkey: str | None
-    proof_sha256: str
+    winners: tuple[WtaWinner, ...]
     accepted_block: int
     accepted_unix: int
     validator_hotkey: str
     lemma_version: str
-    verify_reason: str
-    build_seconds: float
     theorem_statement_sha256: str
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> WtaLedgerEntry:
+        winners = data.get("winners")
+        if isinstance(winners, list) and winners:
+            parsed_winners = tuple(WtaWinner.from_dict(row) for row in winners if isinstance(row, dict))
+        else:
+            parsed_winners = (
+                WtaWinner(
+                    uid=int(data["winner_uid"]),
+                    hotkey=_str_or_none(data.get("winner_hotkey")),
+                    coldkey=_str_or_none(data.get("winner_coldkey")),
+                    proof_sha256=str(data["proof_sha256"]),
+                    verify_reason=str(data["verify_reason"]),
+                    build_seconds=float(data["build_seconds"]),
+                ),
+            )
+        if not parsed_winners:
+            raise ValueError("winners must be non-empty")
         return cls(
             target_id=str(data["target_id"]),
-            winner_uid=int(data["winner_uid"]),
-            winner_hotkey=_str_or_none(data.get("winner_hotkey")),
-            winner_coldkey=_str_or_none(data.get("winner_coldkey")),
-            proof_sha256=str(data["proof_sha256"]),
+            winners=parsed_winners,
             accepted_block=int(data["accepted_block"]),
             accepted_unix=int(data["accepted_unix"]),
             validator_hotkey=str(data["validator_hotkey"]),
             lemma_version=str(data["lemma_version"]),
-            verify_reason=str(data["verify_reason"]),
-            build_seconds=float(data["build_seconds"]),
             theorem_statement_sha256=str(data["theorem_statement_sha256"]),
         )
+
+    @property
+    def winner_uids(self) -> tuple[int, ...]:
+        return tuple(winner.uid for winner in self.winners)
+
+    @property
+    def winner_uid(self) -> int:
+        return self.winners[0].uid
+
+    @property
+    def proof_sha256(self) -> str:
+        return self.winners[0].proof_sha256
 
     def to_json_line(self) -> str:
         return json.dumps(asdict(self), sort_keys=True, separators=(",", ":")) + "\n"
@@ -95,8 +135,16 @@ def append_wta_ledger_entry(path: Path | None, entry: WtaLedgerEntry) -> None:
         f.write(entry.to_json_line())
 
 
+def split_winner_weights(winner_uids: Iterable[int], eligible_uids: set[int]) -> dict[int, float]:
+    eligible_winners = tuple(uid for uid in dict.fromkeys(winner_uids) if uid in eligible_uids)
+    if not eligible_winners:
+        return {}
+    share = 1.0 / len(eligible_winners)
+    return {uid: share for uid in eligible_winners}
+
+
 def champion_weights(path: Path | None, eligible_uids: set[int]) -> dict[int, float]:
     champion = current_champion(path)
-    if champion is None or champion.winner_uid not in eligible_uids:
+    if champion is None:
         return {}
-    return {champion.winner_uid: 1.0}
+    return split_winner_weights(champion.winner_uids, eligible_uids)

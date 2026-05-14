@@ -32,8 +32,8 @@ target. Everyone works down the same list.
 The ledger is JSONL. Each accepted row records:
 
 - target id;
-- winner UID, hotkey, and coldkey when known;
-- proof hash;
+- winner UIDs, hotkeys, and coldkeys when known;
+- proof hashes;
 - accepted block and Unix time;
 - validator hotkey;
 - Lemma version;
@@ -44,11 +44,11 @@ The operator-published ledger is the v1 source of truth for solved targets.
 
 ## Rewards
 
-Before the first solve, validators write no miner champion weights.
+Before the first solve, validators write no miner winner weights.
 
-After a solve, the current champion receives 100% miner weight until the next
-target is solved. If more than one miner verifies in the same validator batch,
-the lowest UID wins deterministically.
+After a solve, the current winner set receives 100% miner weight until the next
+target is solved. A single winner gets all of it. If more than one miner verifies
+in the same validator batch, those UIDs split the reward equally.
 
 Duplicate submissions for an already-solved target do not change rewards.
 

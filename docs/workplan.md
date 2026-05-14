@@ -1,7 +1,7 @@
 # Lemma Workplan
 
-This is the active tracker for `LOCAL_WORKSPACE/lemma-wta`. Keep it aligned with
-README, `local handoff note`, CLI help, and tests.
+This is the active tracker for the Lemma repo. Keep it aligned with README, CLI
+help, and tests.
 
 ## Current Baseline
 
@@ -10,9 +10,9 @@ README, `local handoff note`, CLI help, and tests.
 - Active supply: [`known_theorems_manifest.json`](../lemma/problems/known_theorems_manifest.json).
 - Reward-critical miner artifact: `proof_script` only.
 - Ledger: operator-published JSONL solved-target ledger.
-- Champion rule: no winner means no miner champion weights; after the first
-  solve, the current champion receives 100% miner weight until the next target
-  is solved.
+- Reward rule: no winner means no miner weights; after a solve, the current
+  winner set receives 100% miner weight until the next target is solved. Same-
+  batch winners split that weight equally.
 
 ## Implemented In This Fork
 
@@ -20,7 +20,7 @@ README, `local handoff note`, CLI help, and tests.
 - Mathlib-only smoke target queue for local protocol testing.
 - Known-theorem manifest loader, validation, manifest hash, and deterministic
   target order.
-- WTA ledger helpers and champion-only weighting.
+- WTA ledger helpers and winner weighting with equal same-batch tie splits.
 - Validator WTA mode for `known_theorems`.
 - Manual miner submission storage and proof-serving Axon flow.
 - `lemma submit` verifies by default and prints validity/serving confirmation.
@@ -59,8 +59,7 @@ README, `local handoff note`, CLI help, and tests.
 ## Verification Snapshot
 
 - `uv lock`: passed after rename.
-- `uv sync --extra dev --extra btcli`: passed and removed the stale local
-  `lemma-wta` console script from `.venv`.
+- `uv sync --extra dev --extra btcli`: passed.
 - `.venv/bin/ruff check lemma tests`: passed.
 - `.venv/bin/mypy lemma`: passed (`31 source files`).
 - `.venv/bin/pytest tests -q`: passed (`81 passed, 2 skipped`).

@@ -26,3 +26,4 @@ wallets/
 .vscode/
 *.swp
 *.swo
+AGENT_STATE.md

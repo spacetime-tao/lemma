@@ -76,7 +76,7 @@ uv run lemma meta --raw
 - Each target row carries a human proof reference, imports, attribution, and
   reviewer duplicate/faithfulness notes.
 - Difficulty labels are operator planning metadata, not reward weights.
-- If multiple miners verify in the same batch, the lowest UID wins deterministically.
+- If multiple miners verify in the same batch, those UIDs split the reward equally.
 - If no target has been solved yet, validators do not write miner champion weights.
 - Duplicate proofs for already-solved targets do not change the champion.
 - Launch on a fresh or intentionally reset subnet state so old Lemma weights do

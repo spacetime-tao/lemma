@@ -1,7 +1,7 @@
 # Validator
 
 Validators poll miners on a fixed interval, verify returned Lean proofs, append
-the first valid solve to the WTA ledger, and write champion-only weights.
+the valid solve set to the WTA ledger, and write winner weights.
 
 ## Startup
 
@@ -26,8 +26,8 @@ Copy the two expected hashes from `lemma meta --raw` into `.env`.
 chosen by block seed. It is always the first manifest target not already present
 in the solved ledger.
 
-If multiple proofs verify in one poll, the lowest UID wins deterministically. If
-no proof verifies and there is no previous champion, the validator skips
+If multiple proofs verify in one poll, those UIDs split the reward equally. If no
+proof verifies and there is no previous winner set, the validator skips
 `set_weights`.
 
 ## Lean Verify

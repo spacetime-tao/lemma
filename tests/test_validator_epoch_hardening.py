@@ -164,6 +164,34 @@ def _ledger_row(target_id: str, winner_uid: int) -> str:
     )
 
 
+def _tied_ledger_row(target_id: str, winner_uids: list[int]) -> str:
+    return (
+        json.dumps(
+            {
+                "target_id": target_id,
+                "winners": [
+                    {
+                        "uid": uid,
+                        "hotkey": f"miner-hotkey-{uid}",
+                        "coldkey": f"miner-coldkey-{uid}",
+                        "proof_sha256": str(uid) * 64,
+                        "verify_reason": "ok",
+                        "build_seconds": 0.0,
+                    }
+                    for uid in winner_uids
+                ],
+                "accepted_block": 1,
+                "accepted_unix": 2,
+                "validator_hotkey": "validator-hotkey",
+                "lemma_version": "0.1.0",
+                "theorem_statement_sha256": "b" * 64,
+            },
+            sort_keys=True,
+        )
+        + "\n"
+    )
+
+
 def test_set_weights_outcome_handles_bittensor_shapes() -> None:
     assert epoch._set_weights_outcome((False, "rate limited")) == (False, "rate limited")
     assert epoch._set_weights_outcome((True, "ok")) == (True, "ok")
@@ -191,7 +219,27 @@ async def test_wta_no_proof_and_no_champion_skips_weights(monkeypatch, tmp_path:
     assert not (tmp_path / "wta-ledger.jsonl").exists()
 
 
-async def test_wta_first_valid_solver_wins_and_appends_ledger(monkeypatch, tmp_path: Path) -> None:
+async def test_wta_single_valid_solver_gets_full_weight(monkeypatch, tmp_path: Path) -> None:
+    subtensor = _Subtensor(n=2)
+    _install_epoch_fakes(
+        monkeypatch,
+        subtensor=subtensor,
+        response_fn=lambda axons, synapse: [
+            _response(synapse, proof="namespace Submission\n-- uid 0\n"),
+            _response(synapse, proof=None),
+        ],
+    )
+
+    weights = await epoch.run_epoch(_settings(tmp_path), _OneProblemSource(), dry_run=False)
+    ledger = [json.loads(line) for line in (tmp_path / "wta-ledger.jsonl").read_text().splitlines()]
+
+    assert weights == {0: 1.0}
+    assert ledger[0]["target_id"] == PROBLEM.id
+    assert [winner["uid"] for winner in ledger[0]["winners"]] == [0]
+    assert subtensor.set_weights_calls[0]["weights"] == [1.0, 0.0]
+
+
+async def test_wta_same_batch_valid_solvers_split_rewards(monkeypatch, tmp_path: Path) -> None:
     subtensor = _Subtensor(n=2)
     _install_epoch_fakes(
         monkeypatch,
@@ -204,10 +252,10 @@ async def test_wta_first_valid_solver_wins_and_appends_ledger(monkeypatch, tmp_p
     weights = await epoch.run_epoch(_settings(tmp_path), _OneProblemSource(), dry_run=False)
     ledger = [json.loads(line) for line in (tmp_path / "wta-ledger.jsonl").read_text().splitlines()]
 
-    assert weights == {0: 1.0}
+    assert weights == {0: 0.5, 1: 0.5}
     assert ledger[0]["target_id"] == PROBLEM.id
-    assert ledger[0]["winner_uid"] == 0
-    assert subtensor.set_weights_calls[0]["weights"] == [1.0, 0.0]
+    assert [winner["uid"] for winner in ledger[0]["winners"]] == [0, 1]
+    assert subtensor.set_weights_calls[0]["weights"] == [0.5, 0.5]
 
 
 async def test_wta_invalid_lean_cannot_win(monkeypatch, tmp_path: Path) -> None:
@@ -259,6 +307,22 @@ async def test_wta_existing_champion_keeps_weights_while_next_target_unsolved(mo
 
     assert weights == {1: 1.0}
     assert subtensor.set_weights_calls[0]["weights"] == [0.0, 1.0]
+
+
+async def test_wta_existing_tied_winners_keep_split_weights(monkeypatch, tmp_path: Path) -> None:
+    ledger_path = tmp_path / "wta-ledger.jsonl"
+    ledger_path.write_text(_tied_ledger_row("known/test/zero", [0, 1]), encoding="utf-8")
+    subtensor = _Subtensor(n=2)
+    _install_epoch_fakes(
+        monkeypatch,
+        subtensor=subtensor,
+        response_fn=lambda axons, synapse: [_response(synapse, proof=None) for _axon in axons],
+    )
+
+    weights = await epoch.run_epoch(_settings(tmp_path), _OneProblemSource(), dry_run=False)
+
+    assert weights == {0: 0.5, 1: 0.5}
+    assert subtensor.set_weights_calls[0]["weights"] == [0.5, 0.5]
 
 
 async def test_wta_duplicate_target_does_not_change_champion(monkeypatch, tmp_path: Path) -> None:
