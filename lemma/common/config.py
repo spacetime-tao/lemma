@@ -581,7 +581,10 @@ class LemmaSettings(BaseSettings):
     empty_epoch_weights_policy: Literal["skip", "uniform"] = Field(
         default="skip",
         validation_alias="EMPTY_EPOCH_WEIGHTS_POLICY",
-        description="If no miner passes verify: skip set_weights, or emit uniform weights across all UIDs.",
+        description=(
+            "Legacy empty-epoch policy. Difficulty-weighted rolling scoring skips set_weights when every "
+            "eligible UID has zero rolling score."
+        ),
     )
     validator_abort_if_not_registered: bool = Field(
         default=False,
@@ -606,7 +609,7 @@ class LemmaSettings(BaseSettings):
         default="full",
         validation_alias="LEMMA_TRAINING_EXPORT_PROFILE",
         description=(
-            "`full`: schema v1 includes proof_script, optional labels, pareto_weight. "
+            "`full`: schema v3 includes proof_script, optional labels, validator_weight. "
             "`summary`: schema v2 omits proof, labels, metrics, and weights."
         ),
     )
@@ -617,12 +620,48 @@ class LemmaSettings(BaseSettings):
         validation_alias="LEMMA_SCORING_COLDKEY_PARTITION",
         description="Cap same-coldkey hotkeys to one allocation and split it among those hotkeys.",
     )
+    lemma_scoring_rolling_alpha: float = Field(
+        default=0.08,
+        ge=0.0,
+        le=1.0,
+        validation_alias="LEMMA_SCORING_ROLLING_ALPHA",
+        description="EMA alpha for difficulty-weighted per-UID rolling proof scores.",
+    )
+    lemma_scoring_difficulty_easy: float = Field(
+        default=1.0,
+        ge=0.0,
+        validation_alias="LEMMA_SCORING_DIFFICULTY_EASY",
+        description="Rolling-score impact multiplier for easy problems.",
+    )
+    lemma_scoring_difficulty_medium: float = Field(
+        default=2.0,
+        ge=0.0,
+        validation_alias="LEMMA_SCORING_DIFFICULTY_MEDIUM",
+        description="Rolling-score impact multiplier for medium problems.",
+    )
+    lemma_scoring_difficulty_hard: float = Field(
+        default=4.0,
+        ge=0.0,
+        validation_alias="LEMMA_SCORING_DIFFICULTY_HARD",
+        description="Rolling-score impact multiplier for hard problems.",
+    )
+    lemma_scoring_difficulty_extreme: float = Field(
+        default=8.0,
+        ge=0.0,
+        validation_alias="LEMMA_SCORING_DIFFICULTY_EXTREME",
+        description="Rolling-score impact multiplier for extreme problems.",
+    )
+    lemma_uid_variant_problems: bool = Field(
+        default=False,
+        validation_alias="LEMMA_UID_VARIANT_PROBLEMS",
+        description="Give each queried UID a deterministic same-split theorem variant.",
+    )
     lemma_reputation_ema_alpha: float = Field(
         default=0.08,
         ge=0.0,
         le=1.0,
         validation_alias="LEMMA_REPUTATION_EMA_ALPHA",
-        description="EMA smoothing for per-UID scores before Pareto weights (0 disables smoothing).",
+        description="Legacy EMA smoothing setting kept for loading old reputation state.",
     )
     lemma_reputation_credibility_exponent: float = Field(
         default=1.0,
@@ -630,8 +669,7 @@ class LemmaSettings(BaseSettings):
         le=4.0,
         validation_alias="LEMMA_REPUTATION_CREDIBILITY_EXPONENT",
         description=(
-            "Multiply EMA-smoothed score by (verify credibility)**exponent. "
-            "Exponent 0 disables the multiplier (always 1). Default 1 applies a linear credibility curve."
+            "Legacy verify-credibility exponent kept for compatibility with old reputation state."
         ),
     )
     lemma_reputation_verify_credibility_alpha: float = Field(
@@ -647,7 +685,7 @@ class LemmaSettings(BaseSettings):
     lemma_reputation_state_path: Path | None = Field(
         default=None,
         validation_alias="LEMMA_REPUTATION_STATE_PATH",
-        description="JSON file for per-UID EMA persistence (default: ~/.lemma/validator_reputation.json).",
+        description="JSON file for per-UID rolling score state (default: ~/.lemma/validator_reputation.json).",
     )
     lemma_epoch_problem_count: int = Field(
         default=1,

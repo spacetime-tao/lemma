@@ -55,15 +55,15 @@ Validator→miner calls use Bittensor Dendrite/Axon today; synapse **`body_hash`
 ## Shared validator settings
 
 The **subnet operator** publishes one configuration for the subnet: timeouts,
-seeds, proof-verification scoring policy, partition/reputation policy, and sandbox image.
+seeds, proof-verification scoring policy, rolling-score/partition policy, and sandbox image.
 Validators are expected to deploy **that** template so scores stay comparable.
 Document and distribute: `LEMMA_BLOCK_TIME_SEC_ESTIMATE`,
 `LEMMA_FORWARD_WAIT_MIN_S`, `LEMMA_FORWARD_WAIT_MAX_S`,
 `LEAN_VERIFY_TIMEOUT_S`, `LEMMA_TIMEOUT_SCALE_BY_SPLIT` /
 `LEMMA_TIMEOUT_SPLIT_*_MULT` (only if the operator’s policy includes them),
 `LEMMA_PROBLEM_SEED_MODE`, `LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`,
-`EMPTY_EPOCH_WEIGHTS_POLICY`, `LEAN_SANDBOX_*`, and scoring/partition/reputation
-fields. The main scoring/cadence/verification fields are pinned by
+`LEAN_SANDBOX_*`, and scoring/partition fields. The main
+scoring/cadence/verification fields are pinned by
 `validator_profile_sha256`. Nothing here is “per-validator preference.” On-chain
 code does not enforce equality — parity relies on the published policy
 ([technical-reference.md](technical-reference.md)).

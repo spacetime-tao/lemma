@@ -17,24 +17,31 @@ accepts the proof or rejects it.
 
 1. **Eligibility:** the submitted proof must pass the pinned Lean toolchain,
    Mathlib revision, sandbox policy, theorem binding checks, and cheat scans.
-2. **Proof score:** each eligible miner entry receives the same proof score
-   before reputation and subnet weight policy are applied.
+2. **Proof event:** each eligible miner entry records a positive binary event.
+   Invalid, missing, late, or mismatched responses record a negative event when
+   the validator successfully queried that UID.
 3. **Verifier reuse:** validators may reuse a Lean result for identical proof
    payloads inside one epoch, but that does not remove a miner from rewards.
-4. **Weights:** eligible proof entries become miner weights.
-   Reputation/credibility can adjust an entry. When several hotkeys share one
-   coldkey, that coldkey's allocation is partitioned among those hotkeys instead
-   of multiplied.
+4. **Rolling weights:** per-UID rolling scores are updated by pass/fail events.
+   Harder splits move the rolling score more than easier splits. Positive
+   rolling scores become normalized miner weights; same-coldkey hotkeys share
+   one coldkey allocation instead of multiplying it.
 
 ## Current Live Rollout
 
 The live validator path is intentionally simple: a submitted proof either passes
 Lean verification for the published theorem and enters scoring, or it does not.
 
-That binary gate is separate from final allocation. A Lean-valid proof earns
-eligibility with the same base proof score; reputation, verify credibility,
-Pareto layering, and same-coldkey partitioning are downstream policy that can
-change weights after eligibility.
+That binary gate is separate from final allocation. A Lean-valid proof moves the
+miner score upward; an ordinary miss or Lean failure moves it downward. The move
+is difficulty-weighted and smoothed over time, so one miss should not erase a
+strong recent history. Verifier-local infrastructure failures are excluded from
+the score update for that UID.
+
+By default, all queried UIDs share one theorem. `LEMMA_UID_VARIANT_PROBLEMS=1`
+is an opt-in anti-Sybil mode where each queried UID receives a deterministic
+same-split variant. This does not prove human identity; it makes extra accounts
+require extra proof work.
 
 ## Out Of Scope For Rewards
 
@@ -68,3 +75,4 @@ verification can still consume most of a 5-minute window.
 | Date | Decision |
 | --- | --- |
 | 2026-05 | Live rewards should be proof-only: Lean-valid proofs become reward-eligible; invalid proofs cannot receive miner rewards. |
+| 2026-05 | Chain weights should use difficulty-weighted rolling proof scores, not only the latest passed set. |

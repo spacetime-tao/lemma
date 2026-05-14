@@ -20,6 +20,8 @@ def round_summary_record(
     theorem_id: str,
     passed_uids: list[int] | set[int] | frozenset[int],
     verify_infra_error_uids: list[int] | set[int] | frozenset[int] | None = None,
+    rolling_score_by_uid: Mapping[int, float] | None = None,
+    weight_by_uid: Mapping[int, float] | None = None,
     export_context: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """One round marker, including zero-pass rounds."""
@@ -32,9 +34,17 @@ def round_summary_record(
     }
     if verify_infra_error_uids:
         row["verify_infra_error_uids"] = sorted(int(uid) for uid in verify_infra_error_uids)
+    if rolling_score_by_uid:
+        row["rolling_score_by_uid"] = _float_map(rolling_score_by_uid)
+    if weight_by_uid:
+        row["weight_by_uid"] = _float_map(weight_by_uid)
     if export_context:
         row["export_context"] = dict(export_context)
     return row
+
+
+def _float_map(values: Mapping[int, float]) -> dict[str, float]:
+    return {str(int(k)): float(v) for k, v in sorted(values.items())}
 
 
 def training_record(
@@ -51,8 +61,8 @@ def training_record(
 ) -> dict[str, Any]:
     """One JSON-serializable row for dataset export.
 
-    ``full`` (schema_version 1): proof, optional labels, optional proof metrics, and later ``pareto_weight`` —
-    highest fidelity for offline analysis.
+    ``full`` (schema_version 3): proof, optional labels, optional proof metrics, and later
+    ``validator_weight`` — highest fidelity for offline analysis.
 
     ``summary`` (schema_version 2): identifiers and provenance only — omits proof text,
     labels, proof metrics, and incentive weights when appended (see ``append_epoch_jsonl``).
@@ -74,7 +84,7 @@ def training_record(
             **common,
         }
     row = {
-        "schema_version": 1,
+        "schema_version": 3,
         **common,
         "theorem_statement": resp.theorem_statement,
         "proof_script": resp.proof_script or "",
@@ -93,15 +103,15 @@ def append_epoch_jsonl(
     rows: list[dict[str, Any]],
     weights_by_uid: dict[int, float],
     *,
-    include_pareto_weights: bool = True,
+    include_weights: bool = True,
 ) -> None:
-    """Append one JSON object per line; optionally merge Pareto weights by uid (``full`` export only)."""
+    """Append one JSON object per line; optionally merge final validator weights by uid."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as f:
         for row in rows:
             out = dict(row)
             uid = out.get("uid")
-            if include_pareto_weights and uid is not None:
-                out["pareto_weight"] = float(weights_by_uid.get(int(uid), 0.0))
+            if include_weights and uid is not None:
+                out["validator_weight"] = float(weights_by_uid.get(int(uid), 0.0))
             f.write(json.dumps(out, ensure_ascii=False) + "\n")
         f.flush()

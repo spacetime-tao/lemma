@@ -7,6 +7,10 @@ not let parallel checklists drift.
 ## Current Baseline
 
 - Repository: `spacetime-tao/lemma`, local checkout `LOCAL_WORKSPACE/lemma`.
+- Current uncommitted working batch: difficulty-weighted rolling scoring plus
+  default-off UID-specific theorem variants. It has local ruff, mypy, full pytest,
+  and non-Docker generated-template verification; the Docker Lean template gate
+  could not complete locally because the Docker daemon was not running.
 - Latest runtime-impacting batch covered by this tracker: `28fb364` (`Expand
   generated supply and trust docs`) after the 2026-05-14 generated-builder
   expansion and validator-only deploy.
@@ -37,6 +41,11 @@ not let parallel checklists drift.
 - Identical verified proofs are no longer dropped from live rewards; same-coldkey
   partitioning limits one-coldkey multi-hotkey multiplication after weights are
   computed.
+- In the current uncommitted scoring batch, all queried UIDs receive
+  difficulty-weighted rolling pass/fail updates each round. Live weights are
+  normalized from positive `rolling_score_by_uid` values for eligible
+  non-validator UIDs; verifier-local infrastructure failures leave that UID's
+  rolling score unchanged.
 - Default problem supply is hybrid: generated templates plus a curated catalog
   lane with authored dashboard statements. The local working registry has 100
   builders with explicit 10% / 35% / 50% / 5% easy / medium / hard / extreme
@@ -88,6 +97,15 @@ not let parallel checklists drift.
 
 ## Recently Closed
 
+- Local rolling scoring and dashboard contract batch: added
+  `LEMMA_SCORING_ROLLING_ALPHA`, split difficulty weights, persisted
+  `rolling_score_by_uid`, summary/dashboard rolling-score fields, and a
+  `validator_weight` full-export field; removed live dependence on proof
+  length/Pareto cost for default chain weights.
+- Local UID-variant scaffold: added `LEMMA_UID_VARIANT_PROBLEMS=0` default-off
+  mode where queried UIDs receive deterministic same-split theorem variants
+  bound through theorem id, theorem statement, metronome id, and Lean
+  verification.
 - Validator inbound proof-size boundary: validator epochs reject oversized
   `resp.proof_script` payloads with `SYNAPSE_MAX_PROOF_CHARS` before scheduling
   Lean verification.

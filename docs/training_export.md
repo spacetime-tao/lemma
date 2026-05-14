@@ -14,8 +14,8 @@ with the scores it already computed.
 
 | Profile | Schema | Contents | Use when |
 | --- | --- | --- | --- |
-| **`full`** (default) | `schema_version` **1** | `theorem_statement`, `proof_script`, public `coldkey` when available from the metagraph, optional labels when enabled, optional `proof_metrics` when `LEMMA_LEAN_PROOF_METRICS=1`, non-secret `export_context` hashes, plus final **`pareto_weight`** after weights are computed | Internal research, calibration, full offline replay |
-| **`summary`** | `schema_version` **2** | Scored rows with `block`, `theorem_id`, `uid`, `model_card`, non-secret `export_context` hashes; **no** proof text, **no** labels, **no** `proof_metrics`, **no** `pareto_weight` | Lightweight operational provenance without solution leakage |
+| **`full`** (default) | `schema_version` **3** | `theorem_statement`, `proof_script`, public `coldkey` when available from the metagraph, optional labels when enabled, optional `proof_metrics` when `LEMMA_LEAN_PROOF_METRICS=1`, non-secret `export_context` hashes, plus final **`validator_weight`** after weights are computed | Internal research, calibration, full offline replay |
+| **`summary`** | `schema_version` **2** | Scored rows with `block`, `theorem_id`, `uid`, `model_card`, non-secret `export_context` hashes; **no** proof text, **no** labels, **no** `proof_metrics`, **no** `validator_weight` | Lightweight operational provenance without solution leakage |
 
 Set in `.env`:
 
@@ -28,7 +28,7 @@ LEMMA_TRAINING_EXPORT_PROFILE=summary
 
 Use this only for private validator research, not public dataset sharing. The
 `full` profile includes proof text, optional labels, optional proof metrics, and
-the final `pareto_weight` field.
+the final `validator_weight` field.
 
 On a validator run where you want proof-side calibration rows:
 
@@ -156,10 +156,10 @@ Exports are **not** a neutral “public good.” Depending on fields, they can t
 
 - **Optimize labels instead of proofs** — label fields can expose scalar targets.
 - **Copy proofs** — `proof_script` is a full solution for `theorem_id` at `block`.
-- **Optimize incentives** — `pareto_weight` ties rows to final subnet weights.
+- **Optimize incentives** — `validator_weight` ties rows to final subnet weights.
 - **Reverse-engineer proof-side probes** — `proof_metrics` can expose candidate scoring research signals.
 
-**`summary`** removes proof text, labels, proof metrics, and `pareto_weight`
+**`summary`** removes proof text, labels, proof metrics, and `validator_weight`
 values. It
 does not remove all structure: `theorem_id`, `uid`, and `block` still support
 stratification or deanonymization risks if combined with other data. For maximum
@@ -169,7 +169,7 @@ fails instead of silently selecting a legacy mode.
 
 ## Schema reference
 
-### `full` (`schema_version` 1)
+### `full` (`schema_version` 3)
 
 - **`export_profile`**: `"full"`.
 - **`export_context`**: non-secret provenance hashes for the validator run:
@@ -178,15 +178,15 @@ fails instead of silently selecting a legacy mode.
 - **`theorem_statement`**, **`proof_script`**, optional labels: see [`training_export.py`](../lemma/validator/training_export.py).
 - **`coldkey`**: public metagraph coldkey when available; omitted if unavailable.
 - **`proof_metrics`**: optional compare-only Lean probe output when `LEMMA_LEAN_PROOF_METRICS=1`.
-- After the epoch, **`pareto_weight`** is merged per UID. This is the exported
-  final weight from the current weight helper, not a proof-quality or
-  proof-efficiency score.
+- After the epoch, **`validator_weight`** is merged per UID. This is the final
+  normalized validator weight derived from rolling scores, not a proof-quality
+  or proof-efficiency score.
 
 ### `summary` (`schema_version` 2)
 
 - **`export_profile`**: `"summary"`.
 - **`export_context`**: same non-secret provenance hashes as `full`.
-- No **`proof_script`**, labels, **`proof_metrics`**, or **`pareto_weight`**.
+- No **`proof_script`**, labels, **`proof_metrics`**, or **`validator_weight`**.
 
 ### Round summary marker (`schema_version` 2)
 
@@ -197,6 +197,9 @@ fails instead of silently selecting a legacy mode.
 - Includes **`verify_infra_error_uids`** when validator-local verification
   infrastructure failed for candidate responses; these are separated from Lean
   proof failures.
+- Includes **`rolling_score_by_uid`** and **`weight_by_uid`** when those maps are
+  non-empty, so dashboards and replay tools can separate validator rolling score
+  from chain metagraph score.
 - Contains no proof text or private validator data.
 
 ## References

@@ -68,7 +68,9 @@ The first public version should show only:
 - miner UID;
 - public coldkey;
 - public hotkey;
-- miner score from the public metagraph incentive field;
+- validator rolling score used to build the latest weights;
+- chain score from the public metagraph incentive field, which can lag the
+  latest validator summary;
 - unique Lean-verified theorem count in the last 24 hours.
 - sortable miner columns.
 

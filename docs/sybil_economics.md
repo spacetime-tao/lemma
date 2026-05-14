@@ -11,8 +11,10 @@ Canonical machine-readable notes: [`knowledge/sybil.realities.yaml`](../knowledg
 | Mechanism | Env | Purpose |
 | --- | --- | --- |
 | **Lean verification gate** | None | A miner entry is reward-eligible only when its submitted proof verifies against the published theorem. |
+| **Difficulty-weighted rolling score** | `LEMMA_SCORING_ROLLING_ALPHA=0.08` | Pass/fail events update a per-UID rolling score; hard and extreme problems move the score more than easy problems. |
 | **Identical-payload verify reuse** | None | Validators may reuse one Lean verification result for identical payloads inside an epoch. This saves verifier work; it does not drop a miner reward entry. |
 | **Same-coldkey partition** | `LEMMA_SCORING_COLDKEY_PARTITION=1` (default on) | After weights are computed, hotkeys sharing one coldkey are capped to one coldkey allocation and that allocation is split among those successful hotkeys. |
+| **UID-specific variants** | `LEMMA_UID_VARIANT_PROBLEMS=0` by default | Optional mode where each queried UID receives a deterministic same-split theorem variant, making extra accounts require extra proof work. |
 
 Neither mechanism limits how many **distinct coldkeys** an attacker can register. Creating another coldkey is cheap relative to sybil resistance expectations.
 
@@ -20,6 +22,8 @@ Neither mechanism limits how many **distinct coldkeys** an attacker can register
 
 - **Verified identity** — coldkeys are not proof of personhood.
 - **Sybil-proof partitioning** — same-coldkey partitioning is bypassed by **more coldkeys**.
+- **Identity proof from UID variants** — variants raise the work cost of many
+  accounts, but they do not reveal common ownership.
 - **Stake-weighted miner sampling** in the scoring loop beyond what Bittensor’s metagraph already implies for weights — Lemma does not implement an extra “only query high-stake miners” policy by default.
 
 ## Where real economic pressure comes from (Bittensor)
@@ -38,6 +42,8 @@ sybil deterrent    ≈ cost_of_N_slots > reward_from_running_N_parallel_miners
 1. **Do not** treat same-coldkey partitioning as sybil defense; it only prevents one coldkey from multiplying rewards across many hotkeys.
 2. **Do** assume attackers can obtain **many coldkeys** if slots are cheap or rewards are high.
 3. **Prefer** tasks where the useful work is the proof that verifies, not another subjective ranking signal.
+4. **Use** UID-specific variants when copy-across-account pressure matters more
+   than shared-theorem comparability.
 
 ## Decision gate before Sybil or reward scoring changes
 

@@ -16,7 +16,7 @@ from lemma.common.config import LemmaSettings
 def judge_profile_dict(settings: LemmaSettings) -> dict[str, object]:
     """Stable dict for hashing proof-only validator policy (no API keys)."""
     out: dict[str, object] = {
-        "profile_schema": "lemma_validator_profile_v7",
+        "profile_schema": "lemma_validator_profile_v8",
         "problem_policy": {
             "problem_source": (settings.problem_source or "").strip().lower(),
             "problem_seed_mode": settings.problem_seed_mode,
@@ -40,11 +40,13 @@ def judge_profile_dict(settings: LemmaSettings) -> dict[str, object]:
         },
         "scoring_policy": {
             "lemma_scoring_coldkey_partition": bool(settings.lemma_scoring_coldkey_partition),
-            "lemma_reputation_ema_alpha": float(settings.lemma_reputation_ema_alpha),
-            "lemma_reputation_credibility_exponent": float(settings.lemma_reputation_credibility_exponent),
-            "lemma_reputation_verify_credibility_alpha": float(settings.lemma_reputation_verify_credibility_alpha),
+            "lemma_scoring_rolling_alpha": float(settings.lemma_scoring_rolling_alpha),
+            "lemma_scoring_difficulty_easy": float(settings.lemma_scoring_difficulty_easy),
+            "lemma_scoring_difficulty_medium": float(settings.lemma_scoring_difficulty_medium),
+            "lemma_scoring_difficulty_hard": float(settings.lemma_scoring_difficulty_hard),
+            "lemma_scoring_difficulty_extreme": float(settings.lemma_scoring_difficulty_extreme),
+            "lemma_uid_variant_problems": bool(settings.lemma_uid_variant_problems),
             "lemma_epoch_problem_count": int(settings.lemma_epoch_problem_count),
-            "empty_epoch_weights_policy": settings.empty_epoch_weights_policy,
         },
         "protocol_policy": {
             "lemma_commit_reveal_enabled": bool(settings.lemma_commit_reveal_enabled),

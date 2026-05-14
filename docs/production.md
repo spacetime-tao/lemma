@@ -35,7 +35,7 @@ instead of multiplying it.
 
 `LEMMA_TRAINING_EXPORT_JSONL` appends scored miner rows and one round summary
 marker per epoch. Optional **`LEMMA_TRAINING_EXPORT_PROFILE`** controls whether
-proof text, proof metrics, and the final `pareto_weight` field are included —
+proof text, proof metrics, and the final `validator_weight` field are included —
 see [training_export.md](training_export.md). For proof-metrics calibration, use
 `LEMMA_TRAINING_EXPORT_PROFILE=full` with `LEMMA_LEAN_PROOF_METRICS=1`, follow
 the [operator checklist](training_export.md#collect-proof-metrics-calibration-data),
@@ -68,7 +68,7 @@ validator rounds without putting Git publishing inside the scoring path.
 
 ## Ops
 
-Document `EMPTY_EPOCH_WEIGHTS_POLICY`, `SET_WEIGHTS_*`, block-derived forward wait / LLM timeouts, registration rules. Watch `lemma_epoch_summary` and scoring/verify errors.
+Document `SET_WEIGHTS_*`, block-derived forward wait / LLM timeouts, registration rules, rolling scoring settings, and UID-variant status. Watch `lemma_epoch_summary` and scoring/verify errors.
 
 ## Cloud / VPS hosts
 

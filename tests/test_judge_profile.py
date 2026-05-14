@@ -39,7 +39,9 @@ def test_judge_profile_includes_validator_scoring_policy() -> None:
         timeout_split_medium_mult=1.2,
         timeout_split_hard_mult=1.3,
         timeout_split_extreme_mult=1.4,
-        lemma_reputation_credibility_exponent=2.0,
+        lemma_scoring_rolling_alpha=0.2,
+        lemma_scoring_difficulty_hard=5.0,
+        lemma_uid_variant_problems=True,
         lemma_epoch_problem_count=3,
         lemma_commit_reveal_enabled=True,
         lemma_miner_verify_attest_enabled=True,
@@ -48,7 +50,7 @@ def test_judge_profile_includes_validator_scoring_policy() -> None:
     )
     d = judge_profile_dict(s)
 
-    assert d["profile_schema"] == "lemma_validator_profile_v7"
+    assert d["profile_schema"] == "lemma_validator_profile_v8"
     assert d["problem_policy"]["problem_seed_quantize_blocks"] == 55
     assert d["problem_policy"]["hybrid_generated_weight"] == 60
     assert d["problem_policy"]["hybrid_catalog_weight"] == 40
@@ -56,7 +58,9 @@ def test_judge_profile_includes_validator_scoring_policy() -> None:
     assert d["verification_policy"]["lean_verify_timeout_s"] == 123
     assert d["verification_policy"]["timeout_split_hard_mult"] == 1.3
     assert d["verification_policy"]["timeout_split_extreme_mult"] == 1.4
-    assert d["scoring_policy"]["lemma_reputation_credibility_exponent"] == 2.0
+    assert d["scoring_policy"]["lemma_scoring_rolling_alpha"] == 0.2
+    assert d["scoring_policy"]["lemma_scoring_difficulty_hard"] == 5.0
+    assert d["scoring_policy"]["lemma_uid_variant_problems"] is True
     assert d["scoring_policy"]["lemma_epoch_problem_count"] == 3
     assert d["scoring_policy"]["lemma_scoring_coldkey_partition"] is True
     assert d["protocol_policy"]["lemma_commit_reveal_enabled"] is True
@@ -67,16 +71,16 @@ def test_judge_profile_includes_validator_scoring_policy() -> None:
     assert "secret" not in salt_hash
 
 
-def test_default_reputation_credibility_exponent_is_linear_policy(monkeypatch) -> None:
-    monkeypatch.delenv("LEMMA_REPUTATION_CREDIBILITY_EXPONENT", raising=False)
+def test_default_rolling_alpha_is_live_policy(monkeypatch) -> None:
+    monkeypatch.delenv("LEMMA_SCORING_ROLLING_ALPHA", raising=False)
     s = LemmaSettings(_env_file=None)
-    assert s.lemma_reputation_credibility_exponent == 1.0
-    assert judge_profile_dict(s)["scoring_policy"]["lemma_reputation_credibility_exponent"] == 1.0
+    assert s.lemma_scoring_rolling_alpha == 0.08
+    assert judge_profile_dict(s)["scoring_policy"]["lemma_scoring_rolling_alpha"] == 0.08
 
 
-def test_judge_profile_hash_changes_when_reputation_policy_changes() -> None:
-    a = LemmaSettings(lemma_reputation_credibility_exponent=1.0)
-    b = LemmaSettings(lemma_reputation_credibility_exponent=2.0)
+def test_judge_profile_hash_changes_when_rolling_policy_changes() -> None:
+    a = LemmaSettings(lemma_scoring_rolling_alpha=0.08)
+    b = LemmaSettings(lemma_scoring_rolling_alpha=0.2)
     assert judge_profile_sha256(a) != judge_profile_sha256(b)
 
 

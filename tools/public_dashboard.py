@@ -16,7 +16,7 @@ from lemma.problems.generated import GENERATED_FAMILY_STATEMENTS
 
 SECONDS_PER_HOUR = 3600.0
 
-PUBLIC_DASHBOARD_SCHEMA_VERSION = 3
+PUBLIC_DASHBOARD_SCHEMA_VERSION = 4
 FORALL_RE = re.compile(r"^(?:forall|∀)\s+(.+?)\s+:\s+(.+?),\s+(.+)$")
 TOPIC_LABELS = {
     "nat": "natural-number arithmetic",
@@ -63,6 +63,7 @@ class PublicMiner:
     coldkey: str
     hotkey: str
     score: float | None
+    validator_rolling_score: float | None
     correct_theorems_24h: int
     passed_prior_round: bool | None = None
     uid_url: str = ""
@@ -75,6 +76,7 @@ class PublicMiner:
             "coldkey": self.coldkey,
             "hotkey": self.hotkey,
             "score": self.score,
+            "validator_rolling_score": self.validator_rolling_score,
             "correct_theorems_24h": self.correct_theorems_24h,
             "passed_prior_round": self.passed_prior_round,
             "uid_url": self.uid_url,
@@ -87,6 +89,7 @@ class PublicMiner:
 class LatestRoundProofs:
     count: int | None
     passed_uids: frozenset[int] | None
+    rolling_score_by_uid: dict[int, float] | None = None
 
 
 def main() -> None:
@@ -135,6 +138,7 @@ def main() -> None:
         subtensor.metagraph(settings.netuid),
         correct_counts,
         passed_prior_round_uids=latest_round.passed_uids,
+        rolling_score_by_uid=latest_round.rolling_score_by_uid,
         network=settings.subtensor_network,
         netuid=settings.netuid,
         uid_url_template=args.uid_url_template,
@@ -154,6 +158,7 @@ def main() -> None:
         "block_time_sec_estimate": float(settings.block_time_sec_estimate),
         "problem_seed_tag": seed_tag,
         "score_source": "metagraph_incentive",
+        "validator_score_source": "difficulty_weighted_rolling_validator_score",
         "correct_count_window_hours": float(args.lookback_hours),
         "proofs_passed_prior_round": latest_round.count,
         "theorems": {t.label: t.as_dict() for t in theorems},
@@ -342,6 +347,7 @@ def latest_round_proofs(path: Path | None, *, min_block: int | None = None) -> L
         return LatestRoundProofs(None, None)
     latest_key: tuple[int, str] | None = None
     by_round: dict[tuple[int, str], set[int]] = defaultdict(set)
+    rolling_by_round: dict[tuple[int, str], dict[int, float]] = {}
     for line in path.read_text(encoding="utf-8").splitlines():
         try:
             obj = json.loads(line)
@@ -360,6 +366,7 @@ def latest_round_proofs(path: Path | None, *, min_block: int | None = None) -> L
                 for uid in (_as_int(raw) for raw in obj.get("passed_uids", []))
                 if uid is not None
             )
+            rolling_by_round[key] = _uid_float_map(obj.get("rolling_score_by_uid"))
         else:
             uid = _as_int(obj.get("uid"))
             if uid is None:
@@ -370,7 +377,7 @@ def latest_round_proofs(path: Path | None, *, min_block: int | None = None) -> L
     if latest_key is None:
         return LatestRoundProofs(None, None)
     passed_uids = frozenset(by_round[latest_key])
-    return LatestRoundProofs(len(passed_uids), passed_uids)
+    return LatestRoundProofs(len(passed_uids), passed_uids, rolling_by_round.get(latest_key))
 
 
 def latest_round_proof_count(path: Path | None) -> int | None:
@@ -382,6 +389,7 @@ def public_miner_rows(
     correct_counts: dict[int, int],
     *,
     passed_prior_round_uids: frozenset[int] | set[int] | None = None,
+    rolling_score_by_uid: dict[int, float] | None = None,
     network: str = "",
     netuid: int = 0,
     uid_url_template: str = "",
@@ -390,6 +398,7 @@ def public_miner_rows(
     n = _as_int(getattr(metagraph, "n", 0)) or 0
     rows: list[PublicMiner] = []
     score_values = _first_attr(metagraph, ("I", "incentive", "incentives"))
+    rolling_scores = rolling_score_by_uid or {}
     for uid in range(n):
         coldkey = str(_sequence_value(getattr(metagraph, "coldkeys", ()), uid) or "")
         hotkey = str(_sequence_value(getattr(metagraph, "hotkeys", ()), uid) or "")
@@ -399,6 +408,7 @@ def public_miner_rows(
                 coldkey=coldkey,
                 hotkey=hotkey,
                 score=_as_float(_sequence_value(score_values, uid)),
+                validator_rolling_score=_as_float(rolling_scores.get(uid)),
                 correct_theorems_24h=correct_counts.get(uid, 0),
                 passed_prior_round=None if passed_prior_round_uids is None else uid in passed_prior_round_uids,
                 uid_url=_format_url(uid_url_template, uid=uid, netuid=netuid, network=network),
@@ -406,7 +416,7 @@ def public_miner_rows(
                 hotkey_url=_format_url(account_url_template, address=hotkey, netuid=netuid, network=network),
             ),
         )
-    return sorted(rows, key=lambda r: (-(r.score or 0.0), r.uid))
+    return sorted(rows, key=lambda r: (-(r.validator_rolling_score or 0.0), -(r.score or 0.0), r.uid))
 
 
 def render_public_html(payload: dict[str, Any]) -> str:
@@ -414,7 +424,8 @@ def render_public_html(payload: dict[str, Any]) -> str:
     miners = payload.get("miners") or []
     generated_at = _esc(str(payload.get("generated_at") or ""))
     score_source = _esc(str(payload.get("score_source") or ""))
-    rows = "\n".join(_miner_row(m) for m in miners) or '<tr><td colspan="6">No miners found.</td></tr>'
+    validator_score_source = _esc(str(payload.get("validator_score_source") or ""))
+    rows = "\n".join(_miner_row(m) for m in miners) or '<tr><td colspan="7">No miners found.</td></tr>'
     rubric = _rubric_html()
     return f"""<!doctype html>
 <html lang="en">
@@ -544,9 +555,10 @@ def render_public_html(payload: dict[str, Any]) -> str:
     <header>
       <div>
         <h1>Lemma Public Dashboard</h1>
-        <p>Public theorem schedule and miner scores.</p>
+        <p>Public theorem schedule, validator rolling scores, and chain incentives.</p>
       </div>
-      <p class="meta">Updated {generated_at}<br>Score source: {score_source}</p>
+      <p class="meta">Updated {generated_at}<br>Validator score: {validator_score_source}<br>
+      Chain score: {score_source}</p>
     </header>
 
     <section class="grid-3">
@@ -568,7 +580,8 @@ def render_public_html(payload: dict[str, Any]) -> str:
           <th><button type="button" data-sort="number">UID</button></th>
           <th><button type="button" data-sort="text">Coldkey</button></th>
           <th><button type="button" data-sort="text">Hotkey</button></th>
-          <th><button type="button" data-sort="number">Miner Score</button></th>
+          <th><button type="button" data-sort="number">Validator Rolling Score</button></th>
+          <th><button type="button" data-sort="number">Chain Score</button></th>
           <th><button type="button" data-sort="number">Passed Previous Round</button></th>
           <th><button type="button" data-sort="number">Correct Theorems 24h</button></th>
         </tr>
@@ -626,6 +639,9 @@ def _miner_row(obj: Any) -> str:
         return ""
     score = obj.get("score")
     score_text = "?" if score is None else f"{float(score):.6f}"
+    rolling = obj.get("validator_rolling_score")
+    rolling_text = "?" if rolling is None else f"{float(rolling):.6f}"
+    rolling_value = "" if rolling is None else str(float(rolling))
     uid = int(obj.get("uid") or 0)
     score_value = "" if score is None else str(float(score))
     correct = int(obj.get("correct_theorems_24h") or 0)
@@ -640,6 +656,7 @@ def _miner_row(obj: Any) -> str:
           <td data-value="{uid}">{_link_or_text(str(uid), str(obj.get("uid_url") or ""))}</td>
           <td class="addr" data-value="{_esc(coldkey)}">{coldkey_link}</td>
           <td class="addr" data-value="{_esc(hotkey)}">{hotkey_link}</td>
+          <td data-value="{_esc(rolling_value)}">{_esc(rolling_text)}</td>
           <td data-value="{_esc(score_value)}">{_esc(score_text)}</td>
           <td data-value="{_esc(passed_value)}">{passed_text}</td>
           <td data-value="{correct}">{correct}</td>
@@ -720,6 +737,18 @@ def _as_float(value: Any) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def _uid_float_map(value: Any) -> dict[int, float]:
+    if not isinstance(value, dict):
+        return {}
+    out: dict[int, float] = {}
+    for raw_uid, raw_score in value.items():
+        uid = _as_int(raw_uid)
+        score = _as_float(raw_score)
+        if uid is not None and score is not None:
+            out[uid] = score
+    return out
 
 
 def _esc(value: str) -> str:

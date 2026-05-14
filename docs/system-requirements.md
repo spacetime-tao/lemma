@@ -35,7 +35,7 @@ Linux hardware with persistent SSD cache before drawing conclusions about 5- or
 
 Validator rounds follow the published problem-seed windows. With the default 100-block quantized window, expect about 72 theorem windows per day.
 
-Each round samples one problem; miners answer within the subnet’s **forward HTTP wait** (blocks × block time, clamped — see [technical-reference.md](technical-reference.md)). `LEAN_VERIFY_TIMEOUT_S` defaults to 300 s for sandbox — raise if Mathlib builds legitimately exceed that. Governance may tune timeouts or `EMPTY_EPOCH_WEIGHTS_POLICY` (`.env.example`).
+Each round samples one problem; miners answer within the subnet’s **forward HTTP wait** (blocks × block time, clamped — see [technical-reference.md](technical-reference.md)). `LEAN_VERIFY_TIMEOUT_S` defaults to 300 s for sandbox — raise if Mathlib builds legitimately exceed that. Governance may tune timeouts and rolling scoring settings (`.env.example`).
 
 ## Related
 

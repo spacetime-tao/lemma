@@ -158,21 +158,42 @@ def test_public_miner_rows_are_sorted_by_score() -> None:
         metagraph,
         {1: 3},
         passed_prior_round_uids=frozenset({1}),
+        rolling_score_by_uid={0: 0.8, 1: 0.2},
         network="finney",
         netuid=1,
         uid_url_template="https://example.invalid/subnet/{netuid}/uid/{uid}",
         account_url_template="https://example.invalid/account/{address}",
     )
 
-    assert [r.uid for r in rows] == [1, 0]
-    assert rows[0].hotkey == "hot-1"
-    assert rows[0].coldkey == "cold-1"
-    assert rows[0].score == 0.9
-    assert rows[0].correct_theorems_24h == 3
-    assert rows[0].passed_prior_round is True
-    assert rows[1].passed_prior_round is False
-    assert rows[0].uid_url == "https://example.invalid/subnet/1/uid/1"
-    assert rows[0].hotkey_url == "https://example.invalid/account/hot-1"
+    assert [r.uid for r in rows] == [0, 1]
+    assert rows[0].validator_rolling_score == 0.8
+    assert rows[1].validator_rolling_score == 0.2
+    rows_by_uid = {r.uid: r for r in rows}
+    assert rows_by_uid[1].hotkey == "hot-1"
+    assert rows_by_uid[1].coldkey == "cold-1"
+    assert rows_by_uid[1].score == 0.9
+    assert rows_by_uid[1].correct_theorems_24h == 3
+    assert rows_by_uid[1].passed_prior_round is True
+    assert rows_by_uid[0].passed_prior_round is False
+    assert rows_by_uid[1].uid_url == "https://example.invalid/subnet/1/uid/1"
+    assert rows_by_uid[1].hotkey_url == "https://example.invalid/account/hot-1"
+
+
+def test_latest_round_proofs_reads_rolling_score_map(tmp_path: Path) -> None:
+    path = tmp_path / "summary.jsonl"
+    row = {
+        "block": 1000,
+        "theorem_id": "latest",
+        "record_type": "round_summary",
+        "passed_uids": [2],
+        "rolling_score_by_uid": {"2": 0.4, "3": 0.2},
+    }
+    path.write_text(json.dumps(row), encoding="utf-8")
+
+    latest = latest_round_proofs(path)
+
+    assert latest.passed_uids == frozenset({2})
+    assert latest.rolling_score_by_uid == {2: 0.4, 3: 0.2}
 
 
 def test_explain_theorem_and_render_sortable_table() -> None:
@@ -193,6 +214,7 @@ def test_explain_theorem_and_render_sortable_table() -> None:
             "problem_seed_quantize_blocks": 100,
             "block_time_sec_estimate": 12.0,
             "score_source": "metagraph_incentive",
+            "validator_score_source": "difficulty_weighted_rolling_validator_score",
             "theorems": {
                 "current": {
                     "theorem_id": "gen/1",
@@ -209,6 +231,7 @@ def test_explain_theorem_and_render_sortable_table() -> None:
                     "coldkey": "cold",
                     "hotkey": "hot",
                     "score": 0.5,
+                    "validator_rolling_score": 0.7,
                     "passed_prior_round": True,
                     "correct_theorems_24h": 2,
                     "uid_url": "https://example.invalid/uid/1",
@@ -218,6 +241,8 @@ def test_explain_theorem_and_render_sortable_table() -> None:
     )
     assert "Problem Rubric" in html
     assert 'data-sort="number"' in html
+    assert "Validator Rolling Score" in html
+    assert "Chain Score" in html
     assert "Passed Previous Round" in html
     assert "Prove that True." in html
     assert "<h3>Prove that True.</h3>" in html
@@ -227,4 +252,4 @@ def test_explain_theorem_and_render_sortable_table() -> None:
 
 
 def test_public_dashboard_schema_version_tracks_current_contract() -> None:
-    assert PUBLIC_DASHBOARD_SCHEMA_VERSION == 3
+    assert PUBLIC_DASHBOARD_SCHEMA_VERSION == 4

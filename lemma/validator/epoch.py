@@ -1,4 +1,4 @@
-"""One scoring round: broadcast, verify, score, Pareto, set_weights."""
+"""One scoring round: broadcast, verify, update rolling scores, set_weights."""
 
 from __future__ import annotations
 
@@ -40,9 +40,7 @@ from lemma.protocol_commit_reveal import (
     verify_reveal_against_commitment,
 )
 from lemma.scoring.dedup import partition_same_coldkey_weights
-from lemma.scoring.pareto import ScoredEntry, pareto_weights
-from lemma.scoring.reputation import apply_ema_to_entries, load_reputation, save_reputation
-from lemma.scoring.rewards import entry_from_verified_proof
+from lemma.scoring.reputation import apply_rolling_outcomes, load_reputation, rolling_weights, save_reputation
 from lemma.validator.training_export import append_epoch_jsonl, round_summary_record, training_record
 from lemma.validator.weights_policy import build_full_weights
 
@@ -53,7 +51,7 @@ if TYPE_CHECKING:
 def _validator_broadcast_challenge(
     problem: Problem,
     *,
-    seed_k: int,
+    metronome_id: str,
     deadline_block: int | None,
     forward_wait_s: float,
     commit_reveal_phase: str,
@@ -67,9 +65,29 @@ def _validator_broadcast_challenge(
         mathlib_rev=problem.mathlib_rev,
         deadline_unix=int(time.time()) + int(forward_wait_s),
         deadline_block=deadline_block,
-        metronome_id=str(seed_k),
+        metronome_id=metronome_id,
         timeout=float(forward_wait_s),
         commit_reveal_phase=commit_reveal_phase,
+    )
+
+
+def _uid_variant_seed(base_seed: int, uid: int) -> int:
+    h = hashlib.sha256(f"{int(base_seed)}:{int(uid)}".encode()).digest()
+    return int.from_bytes(h[:8], "big")
+
+
+def _uid_metronome_id(seed_k: int, uid: int, *, uid_variants: bool) -> str:
+    return f"{int(seed_k)}:{int(uid)}" if uid_variants else str(seed_k)
+
+
+def _difficulty_weight(settings: LemmaSettings, split: str) -> float:
+    return float(
+        {
+            "easy": settings.lemma_scoring_difficulty_easy,
+            "medium": settings.lemma_scoring_difficulty_medium,
+            "hard": settings.lemma_scoring_difficulty_hard,
+            "extreme": settings.lemma_scoring_difficulty_extreme,
+        }.get((split or "").strip().lower(), 1.0),
     )
 
 
@@ -162,25 +180,6 @@ def _set_weights_outcome(result: object) -> tuple[bool, str]:
     raw_message = getattr(result, "message", getattr(result, "msg", getattr(result, "error", None)))
     message = "" if raw_message is None else str(raw_message)
     return ok, message or ("" if ok else "success=False without message")
-
-
-def _merge_multi_round_entries(uid_groups: dict[int, list[ScoredEntry]]) -> list[ScoredEntry]:
-    merged: list[ScoredEntry] = []
-    for uid, es in uid_groups.items():
-        if len(es) == 1:
-            merged.append(es[0])
-            continue
-        rs = sum(e.score for e in es) / len(es)
-        ts = int(round(sum(e.cost for e in es) / len(es)))
-        merged.append(
-            ScoredEntry(
-                uid=uid,
-                score=rs,
-                cost=ts,
-                submission_fp="",
-            ),
-        )
-    return merged
 
 
 def _update_verify_credibility(
@@ -304,6 +303,58 @@ async def _run_verify_batch(
     return verified
 
 
+async def _broadcast_challenges(
+    dendrite: Any,
+    metagraph: Any,
+    uids: list[int],
+    problems_by_uid: dict[int, Problem],
+    metronome_by_uid: dict[int, str],
+    *,
+    deadline_block: int | None,
+    forward_wait_s: float,
+    commit_reveal_phase: str,
+    uid_variants: bool,
+) -> dict[int, object]:
+    if not uids:
+        return {}
+    if not uid_variants:
+        first_uid = uids[0]
+        synapse = _validator_broadcast_challenge(
+            problems_by_uid[first_uid],
+            metronome_id=metronome_by_uid[first_uid],
+            deadline_block=deadline_block,
+            forward_wait_s=forward_wait_s,
+            commit_reveal_phase=commit_reveal_phase,
+        )
+        responses = await dendrite(
+            [metagraph.axons[uid] for uid in uids],
+            synapse,
+            timeout=forward_wait_s,
+            run_async=True,
+        )
+        return dict(zip(uids, responses, strict=True))
+
+    async def query_one(uid: int) -> tuple[int, object]:
+        synapse = _validator_broadcast_challenge(
+            problems_by_uid[uid],
+            metronome_id=metronome_by_uid[uid],
+            deadline_block=deadline_block,
+            forward_wait_s=forward_wait_s,
+            commit_reveal_phase=commit_reveal_phase,
+        )
+        response = await dendrite(
+            [metagraph.axons[uid]],
+            synapse,
+            timeout=forward_wait_s,
+            run_async=True,
+        )
+        if isinstance(response, list) and len(response) == 1:
+            response = response[0]
+        return uid, response
+
+    return dict(await asyncio.gather(*(query_one(uid) for uid in uids)))
+
+
 async def run_epoch(
     settings: LemmaSettings,
     problem_source: ProblemSource,
@@ -348,7 +399,6 @@ async def run_epoch(
     rep_dirty = False
 
     k_problems = max(1, int(settings.lemma_epoch_problem_count))
-    aggregate: dict[int, list[ScoredEntry]] = defaultdict(list)
     training_rows: list[dict[str, Any]] = []
     export_path = settings.training_export_jsonl
     export_profile = settings.lemma_training_export_profile
@@ -376,6 +426,7 @@ async def run_epoch(
     commit_reveal_rejects = 0
     verify_infra_errors = 0
     verify_infra_error_uids: set[int] = set()
+    passed_uids_for_export: set[int] = set()
     last_problem: Problem | None = None
 
     export_lock = asyncio.Lock()
@@ -383,8 +434,23 @@ async def run_epoch(
     async with bt.Dendrite(wallet=wallet) as dendrite:
         for sub_k in range(k_problems):
             seed_k = problem_seed if k_problems == 1 else mix_sub_problem_seed(problem_seed, sub_k)
-            problem = problem_source.sample(seed=seed_k)
-            last_problem = problem
+            anchor_problem = problem_source.sample(seed=seed_k)
+            last_problem = anchor_problem
+            uid_variants = bool(settings.lemma_uid_variant_problems)
+            problems_by_uid = (
+                {
+                    uid: problem_source.sample(
+                        seed=_uid_variant_seed(seed_k, uid),
+                        split=anchor_problem.split,
+                    )
+                    for uid in uids
+                }
+                if uid_variants
+                else {uid: anchor_problem for uid in uids}
+            )
+            metronome_by_uid = {
+                uid: _uid_metronome_id(seed_k, uid, uid_variants=uid_variants) for uid in uids
+            }
 
             verify_timeout_s = settings.lean_verify_timeout_s
             wait_scale = 1.0
@@ -395,7 +461,7 @@ async def run_epoch(
                         "medium": settings.timeout_split_medium_mult,
                         "hard": settings.timeout_split_hard_mult,
                         "extreme": settings.timeout_split_extreme_mult,
-                    }.get((problem.split or "").strip().lower(), 1.0)
+                    }.get((anchor_problem.split or "").strip().lower(), 1.0)
                 )
                 verify_timeout_s = max(1, int(round(float(settings.lean_verify_timeout_s) * wait_scale)))
 
@@ -407,22 +473,20 @@ async def run_epoch(
                 wait_scale=wait_scale,
             )
 
-            axons = [metagraph.axons[uid] for uid in uids]
             commits_by_uid: dict[int, str] = {}
             if settings.lemma_commit_reveal_enabled:
-                syn_commit = _validator_broadcast_challenge(
-                    problem,
-                    seed_k=seed_k,
+                responses_commit_by_uid = await _broadcast_challenges(
+                    dendrite,
+                    metagraph,
+                    uids,
+                    problems_by_uid,
+                    metronome_by_uid,
                     deadline_block=deadline_block,
                     forward_wait_s=float(forward_wait_s),
                     commit_reveal_phase="commit",
+                    uid_variants=uid_variants,
                 )
-                responses_commit = await dendrite(
-                    axons,
-                    syn_commit,
-                    timeout=forward_wait_s,
-                    run_async=True,
-                )
+                responses_commit = [responses_commit_by_uid.get(uid) for uid in uids]
                 for uid_c, resp_c in zip(uids, responses_commit, strict=True):
                     if not isinstance(resp_c, LemmaChallenge) or not resp_c.is_success:
                         continue
@@ -430,23 +494,30 @@ async def run_epoch(
                     norm_commit = normalize_commitment_hex(hx)
                     if norm_commit is not None:
                         commits_by_uid[uid_c] = norm_commit
-                synapse = _validator_broadcast_challenge(
-                    problem,
-                    seed_k=seed_k,
+                responses_by_uid = await _broadcast_challenges(
+                    dendrite,
+                    metagraph,
+                    uids,
+                    problems_by_uid,
+                    metronome_by_uid,
                     deadline_block=deadline_block,
                     forward_wait_s=float(forward_wait_s),
                     commit_reveal_phase="reveal",
+                    uid_variants=uid_variants,
                 )
-                responses = await dendrite(axons, synapse, timeout=forward_wait_s, run_async=True)
             else:
-                synapse = _validator_broadcast_challenge(
-                    problem,
-                    seed_k=seed_k,
+                responses_by_uid = await _broadcast_challenges(
+                    dendrite,
+                    metagraph,
+                    uids,
+                    problems_by_uid,
+                    metronome_by_uid,
                     deadline_block=deadline_block,
                     forward_wait_s=float(forward_wait_s),
                     commit_reveal_phase="off",
+                    uid_variants=uid_variants,
                 )
-                responses = await dendrite(axons, synapse, timeout=forward_wait_s, run_async=True)
+            responses = [responses_by_uid.get(uid) for uid in uids]
             # Dendrite returns a batch, not a trusted per-response receipt block. Enforce the response deadline
             # conservatively at the block observed after the batch returns.
             batch_block_after_query = int(subtensor.get_current_block())
@@ -466,8 +537,8 @@ async def run_epoch(
                     continue
                 if not _response_matches_problem_challenge(
                     resp,
-                    problem,
-                    metronome_id=str(seed_k),
+                    problems_by_uid[uid],
+                    metronome_id=metronome_by_uid[uid],
                     deadline_block=deadline_block,
                 ):
                     logger.warning(
@@ -590,14 +661,15 @@ async def run_epoch(
                 *,
                 _sem: asyncio.Semaphore = verify_sem,
                 _vto: int = verify_timeout_s,
-                _prob: Problem = problem,
+                _problems_by_uid: dict[int, Problem] = problems_by_uid,
                 _spot_frac: float = spot_frac,
                 _spot_salt: str = spot_salt,
             ) -> tuple[int, LemmaChallenge, VerifyResult] | None:
+                prob = _problems_by_uid[uid]
                 if settings.lemma_miner_verify_attest_enabled:
                     if not attest_spot_should_full_verify(
                         uid=uid,
-                        theorem_id=_prob.id,
+                        theorem_id=prob.id,
                         metronome_id=str(resp.metronome_id or ""),
                         spot_verify_fraction=_spot_frac,
                         spot_verify_salt=_spot_salt,
@@ -616,7 +688,7 @@ async def run_epoch(
                             run_lean_verify,
                             settings,
                             verify_timeout_s=_vto,
-                            problem=_prob,
+                            problem=prob,
                             proof_script=proof_src,
                         )
                     except Exception as exc:  # noqa: BLE001
@@ -648,9 +720,20 @@ async def run_epoch(
             verify_infra_error_uids.update(uid for uid, _resp, _vr in infra_failures)
             total_verified += len(verified)
 
+            passed_uids = {uid for uid, _resp, _vr in verified}
+            infra_uids = {uid for uid, _resp, _vr in infra_failures}
+            rolling_outcomes = {uid: uid in passed_uids for uid in uids if uid not in infra_uids}
+            apply_rolling_outcomes(
+                rep_store.rolling_score_by_uid,
+                rolling_outcomes,
+                alpha=float(settings.lemma_scoring_rolling_alpha),
+                difficulty_weight=_difficulty_weight(settings, anchor_problem.split),
+            )
+            rep_dirty = rep_dirty or bool(rolling_outcomes)
+            passed_uids_for_export.update(passed_uids)
+
             vca = float(settings.lemma_reputation_verify_credibility_alpha)
-            if not dry_run and vca > 0.0 and candidates:
-                infra_uids = {uid for uid, _resp, _vr in infra_failures}
+            if vca > 0.0 and candidates:
                 credibility_candidates = [(uid, resp) for uid, resp in candidates if uid not in infra_uids]
                 _update_verify_credibility(
                     rep_store.credibility_by_uid,
@@ -660,14 +743,13 @@ async def run_epoch(
                 )
                 rep_dirty = rep_dirty or bool(credibility_candidates)
 
-            scored_sub: list[ScoredEntry] = []
             for uid_i, resp_i, vr_i in verified:
                 if export_path:
                     async with export_lock:
                         training_rows.append(
                             training_record(
                                 block=cur_block,
-                                theorem_id=problem.id,
+                                theorem_id=problems_by_uid[uid_i].id,
                                 uid=uid_i,
                                 resp=resp_i,
                                 profile=export_profile,
@@ -676,31 +758,7 @@ async def run_epoch(
                                 export_context=export_context,
                             ),
                         )
-                scored_sub.append(
-                    entry_from_verified_proof(
-                        uid_i,
-                        theorem_statement=resp_i.theorem_statement,
-                        proof_script=resp_i.proof_script or "",
-                    ),
-                )
-            total_scored += len(scored_sub)
-
-            for e in scored_sub:
-                aggregate[e.uid].append(e)
-
-    scored = _merge_multi_round_entries(aggregate)
-
-    alpha = float(settings.lemma_reputation_ema_alpha)
-    cred_exp = float(settings.lemma_reputation_credibility_exponent)
-    if scored and not dry_run and (alpha > 0.0 or cred_exp > 0.0):
-        scored, rep_store.ema_by_uid = apply_ema_to_entries(
-            scored,
-            alpha=alpha,
-            credibility_exponent=cred_exp,
-            prev_ema=rep_store.ema_by_uid,
-            credibility_by_uid=dict(rep_store.credibility_by_uid),
-        )
-        rep_dirty = True
+            total_scored += len(verified)
 
     if rep_dirty and not dry_run:
         try:
@@ -708,7 +766,8 @@ async def run_epoch(
         except OSError as e:
             logger.warning("could not save reputation state: {}", e)
 
-    weights_by_uid = pareto_weights(scored)
+    eligible_scores = {uid: rep_store.rolling_score_by_uid.get(uid, 0.0) for uid in uids}
+    weights_by_uid = rolling_weights(eligible_scores)
     if settings.lemma_scoring_coldkey_partition and weights_by_uid:
         weights_by_uid, coldkey_partitioned = partition_same_coldkey_weights(
             weights_by_uid,
@@ -727,8 +786,10 @@ async def run_epoch(
             round_summary_record(
                 block=cur_block,
                 theorem_id=last_problem.id,
-                passed_uids={e.uid for e in scored},
+                passed_uids=passed_uids_for_export,
                 verify_infra_error_uids=verify_infra_error_uids,
+                rolling_score_by_uid=rep_store.rolling_score_by_uid,
+                weight_by_uid=weights_by_uid,
                 export_context=export_context,
             ),
         ]
@@ -737,7 +798,7 @@ async def run_epoch(
                 export_path,
                 export_rows,
                 weights_by_uid,
-                include_pareto_weights=(export_profile == "full"),
+                include_weights=(export_profile == "full"),
             )
             logger.debug(
                 "training_export appended {} proof rows and 1 round summary to {}",
@@ -750,7 +811,7 @@ async def run_epoch(
     full_weights, skip_chain_write = build_full_weights(
         n,
         weights_by_uid,
-        empty_policy=settings.empty_epoch_weights_policy,
+        empty_policy="skip",
         exclude_uid=my_uid if isinstance(my_uid, int) else None,
     )
 
@@ -760,12 +821,12 @@ async def run_epoch(
     logger.info(
         "lemma_epoch_summary chain_head_block={} problem_seed_chain_head={} problem_seed_slack_blocks={} "
         "problem_seed={} problem_seed_tag={} split={} "
-        "theorem_id={} k_problems={} verified={} scored={} pareto_entries={} "
+        "theorem_id={} k_problems={} uid_variant_problems={} verified={} scored={} weight_entries={} "
         "coldkey_partitioned={} deadline_rejects={} "
         "challenge_rejects={} payload_rejects={} "
         "attest_rejects={} commit_reveal_rejects={} verify_infra_errors={} "
         "skip_set_weights={} seconds={:.2f}  "
-        "[verified=Lean proof OK; scored=verified proof rows; pareto_entries=weight rows]",
+        "[verified=Lean proof OK; scored=verified proof rows; weight_entries=rolling-score weight rows]",
         cur_block,
         seed_head,
         slack_b,
@@ -774,6 +835,7 @@ async def run_epoch(
         split,
         thm,
         k_problems,
+        bool(settings.lemma_uid_variant_problems),
         total_verified,
         total_scored,
         len(weights_by_uid),
@@ -794,8 +856,7 @@ async def run_epoch(
 
     if skip_chain_write:
         logger.warning(
-            "Skipping set_weights (empty scores policy={})",
-            settings.empty_epoch_weights_policy,
+            "Skipping set_weights (no positive rolling scores)",
         )
         return weights_by_uid
 

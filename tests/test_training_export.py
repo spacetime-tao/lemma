@@ -44,7 +44,7 @@ def test_training_record_roundtrip_fields(tmp_path: Path) -> None:
         coldkey="coldkey-public",
         export_context=export_context,
     )
-    assert row["schema_version"] == 1
+    assert row["schema_version"] == 3
     assert row["export_profile"] == "full"
     assert row["uid"] == 7
     assert row["coldkey"] == "coldkey-public"
@@ -62,7 +62,7 @@ def test_training_record_roundtrip_fields(tmp_path: Path) -> None:
     out = tmp_path / "train.jsonl"
     append_epoch_jsonl(out, [row], {7: 0.25})
     line = out.read_text(encoding="utf-8").strip()
-    assert '"pareto_weight": 0.25' in line
+    assert '"validator_weight": 0.25' in line
     assert '"proof_metrics":' in line
 
 
@@ -98,9 +98,9 @@ def test_training_record_summary_no_scores(tmp_path: Path) -> None:
     assert "coldkey" not in row
 
     out = tmp_path / "r.jsonl"
-    append_epoch_jsonl(out, [row], {3: 0.5}, include_pareto_weights=False)
+    append_epoch_jsonl(out, [row], {3: 0.5}, include_weights=False)
     line = out.read_text(encoding="utf-8").strip()
-    assert "pareto_weight" not in line
+    assert "validator_weight" not in line
     assert "proof_metrics" not in line
 
 
@@ -124,7 +124,20 @@ def test_round_summary_record_exports_zero_pass_round(tmp_path: Path) -> None:
     out = tmp_path / "summary.jsonl"
     append_epoch_jsonl(out, [row], {3: 0.5})
     line = out.read_text(encoding="utf-8").strip()
-    assert "pareto_weight" not in line
+    assert "validator_weight" not in line
+
+
+def test_round_summary_record_can_export_rolling_scores() -> None:
+    row = round_summary_record(
+        block=10,
+        theorem_id="gen/10",
+        passed_uids={2},
+        rolling_score_by_uid={2: 0.4, 3: 0.2},
+        weight_by_uid={2: 0.8, 3: 0.2},
+    )
+
+    assert row["rolling_score_by_uid"] == {"2": 0.4, "3": 0.2}
+    assert row["weight_by_uid"] == {"2": 0.8, "3": 0.2}
 
 
 def test_training_record_rejects_legacy_reasoning_only_alias() -> None:

@@ -76,9 +76,13 @@ def run_validator_check(settings: LemmaSettings) -> int:
     click.echo(
         stylize(
             "INFO scoring  proof_verification=1  "
-            f"LEMMA_REPUTATION_EMA_ALPHA={settings.lemma_reputation_ema_alpha}  "
-            f"LEMMA_REPUTATION_VERIFY_CREDIBILITY_ALPHA={settings.lemma_reputation_verify_credibility_alpha}  "
-            f"LEMMA_REPUTATION_CREDIBILITY_EXPONENT={settings.lemma_reputation_credibility_exponent}  "
+            f"LEMMA_SCORING_ROLLING_ALPHA={settings.lemma_scoring_rolling_alpha}  "
+            "LEMMA_SCORING_DIFFICULTY_WEIGHTS="
+            f"{settings.lemma_scoring_difficulty_easy}/"
+            f"{settings.lemma_scoring_difficulty_medium}/"
+            f"{settings.lemma_scoring_difficulty_hard}/"
+            f"{settings.lemma_scoring_difficulty_extreme}  "
+            f"LEMMA_UID_VARIANT_PROBLEMS={int(settings.lemma_uid_variant_problems)}  "
             f"LEMMA_EPOCH_PROBLEM_COUNT={settings.lemma_epoch_problem_count}  "
             f"LEMMA_MINER_VERIFY_ATTEST_ENABLED={int(settings.lemma_miner_verify_attest_enabled)}  "
             "LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION="

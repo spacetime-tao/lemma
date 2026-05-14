@@ -1,10 +1,9 @@
 # Credibility exponent decision
 
-## Current policy
+## Historical policy
 
-Lemma tracks a per-UID verify credibility EMA in the reputation state. Validator Lean
-verification moves that value toward `1.0` on pass and `0.0` on fail. The final
-reputation-adjusted score is:
+Lemma previously tracked a per-UID verify credibility EMA in the reputation
+state and used this final reputation-adjusted score:
 
 ```text
 ema_score * (credibility ** LEMMA_REPUTATION_CREDIBILITY_EXPONENT)
@@ -16,9 +15,10 @@ The shipped default is:
 LEMMA_REPUTATION_CREDIBILITY_EXPONENT=1.0
 ```
 
-That means the credibility multiplier is linear. Setting the exponent to `0`
-disables the multiplier. Operators can explicitly set `2.5`, but it is not the
-live default.
+The live weight path now uses difficulty-weighted `rolling_score_by_uid`.
+`ema_by_uid` and `credibility_by_uid` remain loadable in
+`LEMMA_REPUTATION_STATE_PATH` for compatibility, but the credibility exponent is
+not part of the default chain-weight formula.
 
 Credibility is a reliability signal, not a proof-quality score. It should fall
 when validator Lean verification fails and rise when it passes. It should not try
@@ -38,14 +38,14 @@ patch. It would make lower credibility much more punitive:
 | `0.75` | `0.7500` | `0.4871` |
 | `0.50` | `0.5000` | `0.1768` |
 
-That may be the right policy after calibration, but it should not happen as a
-silent default flip. The current default keeps credibility meaningful while
-reducing the chance that one validator's local verify state over-penalizes a
-miner before the subnet has measured real distributions.
+That may be a future policy after calibration, but it should not happen as a
+silent default flip. Reintroducing it would make one validator's local verify
+state directly affect live miner weights again.
 
 ## Change gate
 
-Before changing the default, do all of the following in one intentional release:
+Before reintroducing a credibility exponent into live weights, do all of the
+following in one intentional release:
 
 - Measure credibility distributions over live or dry-run epochs.
 - Decide how sharply failures should compound.

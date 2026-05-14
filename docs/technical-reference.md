@@ -30,7 +30,12 @@ For the proof-verification design, see [proof-verification-incentives.md](proof-
 
 ## Validators querying your axon many times
 
-Each forward is its own response. **Rewards are not a lifetime XP total.** They come from how you **rank in validator rounds where your answer is actually scored** and validators run **`set_weights`**. Doing well in **several** scored rounds can matter across **those** rounds; repeating the same success **offline** does not by itself stack on-chain.
+Each forward is its own response. A Lean-valid proof is a positive binary event;
+an ordinary miss or Lean failure is a negative event. Validators fold those
+events into a per-UID difficulty-weighted rolling score and then call
+**`set_weights`** from the positive rolling scores. Harder splits move the
+rolling score more than easy splits, and one miss does not instantly erase a
+strong recent history.
 
 ## Prover system prompt (miners)
 
@@ -109,9 +114,9 @@ Timeout values are subnet policy: the operator publishes a single canonical `.en
 
 **Miners** have an explicit **response** deadline: the synapse **`timeout`** / forward HTTP wait (derived from blocks until the next seed edge × `LEMMA_BLOCK_TIME_SEC_ESTIMATE`, then clamped). If your axon does not complete the HTTP response in time, that round does not count as a successful candidate answer from you.
 
-**Validators** do **not** get a matching global rule like “finish verifying and scoring **every** successful miner before block *N* or before the next theorem.” Lemma picks **one** theorem when `run_epoch` **starts** and runs forward → verify → score for that round; advancing blocks do **not** swap the theorem mid-batch or void in-flight scoring. There is **no** separate “validator batch clock” in addition to the per-proof limits below. You still want fast hardware and tuning so each epoch completes in reasonable wall-clock time and stays competitive with other validators.
+**Validators** do **not** get a matching global rule like “finish verifying and scoring **every** successful miner before block *N* or before the next theorem.” Lemma picks the theorem set when `run_epoch` **starts** and runs forward → verify → score for that round; advancing blocks do **not** swap the theorem mid-batch or void in-flight scoring. By default that theorem set is one shared theorem; with `LEMMA_UID_VARIANT_PROBLEMS=1`, it is one deterministic same-split theorem variant per queried UID. There is **no** separate “validator batch clock” in addition to the per-proof limits below. You still want fast hardware and tuning so each epoch completes in reasonable wall-clock time and stays competitive with other validators.
 
-**What happens if one proof hits `LEAN_VERIFY_TIMEOUT_S`?** That miner’s Lean step **fails** (verify reason `timeout`). They are **not** verified for the round, so they get **no** proof score and **no** live weight from that proof. Other miners in the same round are unaffected.
+**What happens if one proof hits `LEAN_VERIFY_TIMEOUT_S`?** That proof is **not** verified for the round (verify reason `timeout`), so it records no positive proof event. Validator-local timeout/OOM/Docker failures are kept separate from ordinary Lean proof failures and do not update that UID's rolling score. Other miners in the same round are unaffected.
 
 Concurrency caps such as **`LEMMA_LEAN_VERIFY_MAX_CONCURRENT`** limit how many proofs are processed at once; extra work **queues**, it is not dropped because the chain moved. With miner attest enabled, **`LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION`** trades CPU vs trust — see [validator_lean_load.md](validator_lean_load.md).
 
