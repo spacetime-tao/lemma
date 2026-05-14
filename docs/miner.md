@@ -40,3 +40,8 @@ proof.
   machines.
 - The validator result is not returned over Axon; chain weights are the visible
   reward signal.
+- Public miner dashboard data is exported from the manifest and solved ledger:
+
+```bash
+uv run lemma dashboard export --output data/miner-dashboard.json
+```

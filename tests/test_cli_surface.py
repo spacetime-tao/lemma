@@ -24,6 +24,7 @@ def test_home_screen_lists_proof_commands() -> None:
     assert "submit" in result.output
     assert "verify" in result.output
     assert "miner" in result.output
+    assert "dashboard" in result.output
     assert "validator" in result.output
     assert "preview" not in result.output
     assert "prover" not in result.output
@@ -141,6 +142,13 @@ def test_miner_help_lists_manual_subcommands() -> None:
     assert result.exit_code == 0
     assert "start" in result.output
     assert "observability" not in result.output
+
+
+def test_dashboard_help_lists_export_command() -> None:
+    result = CliRunner().invoke(main, ["dashboard", "--help"])
+
+    assert result.exit_code == 0
+    assert "export" in result.output
 
 
 def test_validator_help_lists_proof_subcommands() -> None:

@@ -1,0 +1,109 @@
+"""Public miner dashboard export."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import time
+from pathlib import Path
+from typing import Any
+
+from lemma import __version__
+from lemma.common.config import LemmaSettings
+from lemma.ledger import LedgerSolver, SolvedLedgerEntry, load_solved_ledger
+from lemma.problems.base import Problem
+from lemma.problems.known_theorems import KnownTheoremsSource, known_theorems_manifest_sha256
+
+
+def build_miner_dashboard(settings: LemmaSettings, *, generated_unix: int | None = None) -> dict[str, Any]:
+    """Build the public, static miner target board payload."""
+    source = KnownTheoremsSource(settings.known_theorems_manifest_path, settings.solved_ledger_path)
+    problems = source.all_problems()
+    ledger = load_solved_ledger(settings.solved_ledger_path)
+    solved_by_target = {entry.target_id: entry for entry in ledger}
+    active = next((problem for problem in problems if problem.id not in solved_by_target), None)
+    current = ledger[-1] if ledger else None
+
+    return {
+        "schema_version": 1,
+        "generated_unix": int(time.time() if generated_unix is None else generated_unix),
+        "lemma_version": __version__,
+        "problem_source": "known_theorems",
+        "manifest_sha256": known_theorems_manifest_sha256(settings.known_theorems_manifest_path),
+        "reward": {
+            "mode": "binary_lean_verify",
+            "rule": "Lean accepts the proof or it does not.",
+            "tie_policy": "same_batch_equal_split",
+        },
+        "counts": {
+            "total_targets": len(problems),
+            "solved_targets": sum(1 for problem in problems if problem.id in solved_by_target),
+            "remaining_targets": sum(1 for problem in problems if problem.id not in solved_by_target),
+            "current_solver_count": 0 if current is None else len(current.solvers),
+        },
+        "active_target": _target_row(active, solved_by_target, active_id=active.id) if active is not None else None,
+        "targets": [
+            _target_row(problem, solved_by_target, active_id=active.id if active else None) for problem in problems
+        ],
+        "current_solver_set": _solved_entry_row(current) if current is not None else None,
+        "solved_ledger": [_solved_entry_row(entry) for entry in ledger],
+    }
+
+
+def write_miner_dashboard(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+
+
+def _target_row(
+    problem: Problem,
+    solved_by_target: dict[str, SolvedLedgerEntry],
+    *,
+    active_id: str | None = None,
+) -> dict[str, Any]:
+    solved = solved_by_target.get(problem.id)
+    status = "solved" if solved is not None else "active" if problem.id == active_id else "queued"
+    row = {
+        "id": problem.id,
+        "order": int(problem.extra.get("order") or 0),
+        "title": str(problem.extra.get("title") or problem.id),
+        "difficulty": str(problem.extra.get("difficulty") or "unlabeled"),
+        "status": status,
+        "theorem_name": problem.theorem_name,
+        "imports": list(problem.imports),
+        "lean_toolchain": problem.lean_toolchain,
+        "mathlib_rev": problem.mathlib_rev,
+        "theorem_statement_sha256": hashlib.sha256(problem.challenge_source().encode("utf-8")).hexdigest(),
+    }
+    if status == "active":
+        row["challenge_source"] = problem.challenge_source()
+    if solved is not None:
+        row["solved"] = {
+            "accepted_block": solved.accepted_block,
+            "accepted_unix": solved.accepted_unix,
+            "solver_uids": list(solved.solver_uids),
+            "proof_sha256": [solver.proof_sha256 for solver in solved.solvers],
+        }
+    return row
+
+
+def _solved_entry_row(entry: SolvedLedgerEntry) -> dict[str, Any]:
+    return {
+        "target_id": entry.target_id,
+        "accepted_block": entry.accepted_block,
+        "accepted_unix": entry.accepted_unix,
+        "lemma_version": entry.lemma_version,
+        "theorem_statement_sha256": entry.theorem_statement_sha256,
+        "solvers": [_solver_row(solver, len(entry.solvers)) for solver in entry.solvers],
+    }
+
+
+def _solver_row(solver: LedgerSolver, solver_count: int) -> dict[str, Any]:
+    return {
+        "uid": solver.uid,
+        "hotkey": solver.hotkey,
+        "proof_sha256": solver.proof_sha256,
+        "verify_reason": solver.verify_reason,
+        "build_seconds": solver.build_seconds,
+        "weight_share": 1.0 / solver_count,
+    }

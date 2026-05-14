@@ -24,12 +24,15 @@ help, and tests.
 - Validator proof mode for `known_theorems`.
 - Manual miner submission storage and proof-serving Axon flow.
 - `lemma submit` verifies by default and prints validity/serving confirmation.
+- Static public miner dashboard export from the known-theorem manifest and
+  solved ledger.
 - CLI:
   - `lemma target show`;
   - `lemma target ledger`;
   - `lemma submit --problem <target-id> --submission <Submission.lean>`;
   - `lemma verify --problem <target-id> --submission <Submission.lean>`;
   - `lemma miner start`;
+  - `lemma dashboard export --output <path>`;
   - `lemma validator check`;
   - `lemma validator start`;
   - `lemma validator dry-run`;
@@ -61,6 +64,6 @@ help, and tests.
 - `uv lock`: passed after rename.
 - `uv sync --extra dev --extra btcli`: passed.
 - `.venv/bin/ruff check lemma tests`: passed.
-- `.venv/bin/mypy lemma`: passed (`31 source files`).
-- `.venv/bin/pytest tests -q`: passed (`81 passed, 2 skipped`).
+- `.venv/bin/mypy lemma`: passed (`32 source files`).
+- `.venv/bin/pytest tests -q`: passed (`91 passed, 2 skipped`).
 - Docker Lean golden: passed (`tests/test_docker_golden.py`, 1 test).

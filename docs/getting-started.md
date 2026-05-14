@@ -13,6 +13,7 @@ uv run lemma --help
 uv run lemma target show
 uv run lemma target ledger
 uv run lemma meta
+uv run lemma dashboard export --output data/miner-dashboard.json
 ```
 
 The active target is the first known-theorem manifest row that is not present in

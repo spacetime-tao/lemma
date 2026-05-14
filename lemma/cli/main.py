@@ -158,6 +158,28 @@ def miner_start_cmd() -> None:
     MinerService(settings).run()
 
 
+@main.group("dashboard", invoke_without_command=True, help="Export public static dashboard data.")
+@click.pass_context
+def dashboard_group(ctx: click.Context) -> None:
+    if ctx.invoked_subcommand is None:
+        click.echo(ctx.get_help(), color=colors_enabled())
+
+
+@dashboard_group.command("export")
+@click.option(
+    "--output",
+    "output_path",
+    type=click.Path(dir_okay=False, path_type=Path),
+    required=True,
+)
+def dashboard_export_cmd(output_path: Path) -> None:
+    from lemma.dashboard import build_miner_dashboard, write_miner_dashboard
+
+    settings = LemmaSettings()
+    write_miner_dashboard(output_path, build_miner_dashboard(settings))
+    click.echo(f"wrote={output_path}")
+
+
 @main.group("validator", invoke_without_command=True, help="Poll miners, Lean verify, and set miner weights.")
 @click.pass_context
 def validator_group(ctx: click.Context) -> None:

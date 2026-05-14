@@ -57,6 +57,7 @@ uv run lemma submit \
   --problem known/smoke/nat_two_plus_two_eq_four \
   --submission path/to/Submission.lean
 uv run lemma miner start
+uv run lemma dashboard export --output data/miner-dashboard.json
 uv run lemma validator check
 uv run lemma validator start
 ```
@@ -79,6 +80,7 @@ uv run lemma meta --raw
 - If multiple miners verify in the same batch, those UIDs split the reward equally.
 - If no target has been solved yet, validators do not write miner weights.
 - Duplicate proofs for already-solved targets do not change the active solver set.
+- The public miner dashboard is a static export from the manifest and solved ledger.
 - Launch on a fresh or intentionally reset subnet state so old Lemma weights do
   not carry into the proof protocol.
 
