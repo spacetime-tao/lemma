@@ -67,6 +67,15 @@ recomputes from:
 Late commitments, copied commitments under another hotkey, wrong target hashes,
 wrong proof hashes, and wrong nonces are rejected before Lean verification.
 
+The Axon miner daemon is one transport for the reveal. A portal can also host
+wallet-submitted proof packages for registered miner hotkeys. In that path, the
+browser still publishes the same compact commitment from the miner hotkey, the
+portal verifies and stores the proof privately, and validators configured with
+`LEMMA_PORTAL_CANDIDATES_URL` fetch candidates after reveal. Validators do not
+trust the portal as a grader: they map the hotkey to a UID, verify the hotkey
+signature, re-check the on-chain commitment, dedupe against Axon responses, and
+run Lean before writing the solved ledger.
+
 ## Solved Ledger
 
 The solved ledger is JSONL. Each accepted row records:

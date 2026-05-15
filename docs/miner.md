@@ -6,6 +6,15 @@ It does not run an LLM, retry a prover, score prose, or optimize proof
 efficiency. Miners can use any external workflow they want, then submit the
 finished Lean file locally.
 
+Portal-backed mining is the same protocol through a different transport: the
+miner hotkey publishes the same commitment with a browser wallet, and a hosted
+portal can verify the proof after the chain commitment is confirmed, then stores
+the verified proof until reveal. Validators still check the chain commitment and
+run Lean. Validators should continue to run the CLI validator stack.
+The portal service also checks the on-chain commitment before running hosted
+Lean verification, so browser users do not need to reveal proof text before a
+matching commit exists.
+
 ## Guided Mining
 
 ```bash

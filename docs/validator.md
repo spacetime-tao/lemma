@@ -43,6 +43,20 @@ Lean. The earliest valid commitment block wins; same-block valid commitments
 split. If no proof verifies and there is no previous solver set, the validator
 skips `set_weights`.
 
+## Portal Candidates
+
+Validators can optionally merge web-portal candidates during reveal:
+
+```bash
+export LEMMA_PORTAL_CANDIDATES_URL=https://lemmasub.net/api/portal/v1/candidates
+uv run lemma validate
+```
+
+The portal lane is only a submission transport. Validators still require a
+registered miner hotkey, the same pre-reveal chain commitment, and a passing
+Lean verification. If the same proof arrives from Axon and the portal, it is
+verified once.
+
 ## Lean Verify
 
 Validators build the `Solution` bridge target so the submitted theorem must
@@ -56,3 +70,4 @@ Useful knobs:
 - `LEMMA_LEAN_VERIFY_MAX_CONCURRENT`
 - `LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR`
 - `LEMMA_VALIDATOR_MIN_FREE_BYTES`
+- `LEMMA_PORTAL_CANDIDATES_URL`

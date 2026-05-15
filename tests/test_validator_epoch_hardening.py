@@ -9,6 +9,7 @@ from typing import Any
 from lemma.commitments import build_proof_commitment, proof_sha256
 from lemma.common.config import LemmaSettings
 from lemma.lean.sandbox import VerifyResult
+from lemma.portal import PORTAL_SUBMISSION_SCHEMA, PortalCandidate
 from lemma.problems.base import Problem, ProblemSource
 from lemma.problems.known_theorems import known_theorems_manifest_sha256
 from lemma.protocol import LemmaChallenge
@@ -150,6 +151,34 @@ def _commitment(
         nonce=nonce,
     )
     return nonce, commitment.commitment_hash, commitment.payload_text
+
+
+def _portal_candidate(
+    settings: LemmaSettings,
+    *,
+    uid: int,
+    proof: str,
+    nonce: str,
+    commitment_hash: str,
+    problem: Problem = PROBLEM,
+) -> PortalCandidate:
+    return PortalCandidate(
+        schema=PORTAL_SUBMISSION_SCHEMA,
+        netuid=settings.netuid,
+        miner_hotkey=f"miner-hotkey-{uid}",
+        target_id=problem.id,
+        manifest_sha256=known_theorems_manifest_sha256(settings.known_theorems_manifest_path),
+        theorem_statement_sha256=problem.theorem_statement_sha256(),
+        proof_sha256=proof_sha256(proof),
+        proof_nonce=nonce,
+        commitment_hash=commitment_hash,
+        commitment_block=48,
+        commit_cutoff_block=49,
+        reveal_block=50,
+        submitted_unix=123,
+        signature="sig",
+        proof_script=proof,
+    )
 
 
 def _install_epoch_fakes(
@@ -296,6 +325,78 @@ async def test_proof_single_valid_solver_gets_full_weight(monkeypatch, tmp_path:
     assert ledger[0]["solvers"][0]["commitment_hash"] == commitment_hash
     assert ledger[0]["solvers"][0]["commitment_block"] == 48
     assert subtensor.set_weights_calls[0]["weights"] == [1.0, 0.0]
+
+
+async def test_portal_candidate_can_win_without_axon_proof(monkeypatch, tmp_path: Path) -> None:
+    settings = _settings(tmp_path, portal_candidates_url="http://portal.test/api/portal/v1/candidates")
+    proof = "namespace Submission\n-- portal uid 1\n"
+    nonce, commitment_hash, payload = _commitment(settings, uid=1, proof=proof)
+    commitments = {"miner-hotkey-1": payload}
+    subtensor = _Subtensor(n=2, commitments_by_block={48: commitments, 49: commitments})
+    _install_epoch_fakes(
+        monkeypatch,
+        subtensor=subtensor,
+        response_fn=lambda axons, synapse: [_response(synapse, proof=None) for _axon in axons],
+    )
+    monkeypatch.setattr(
+        epoch,
+        "fetch_portal_candidates",
+        lambda url, *, current_block: [
+            _portal_candidate(
+                settings,
+                uid=1,
+                proof=proof,
+                nonce=nonce,
+                commitment_hash=commitment_hash,
+            ),
+        ],
+    )
+    monkeypatch.setattr(epoch, "portal_candidate_signature_ok", lambda candidate: True)
+
+    weights = await epoch.run_epoch(settings, _TwoProblemSource(), dry_run=False)
+    ledger = [json.loads(line) for line in (tmp_path / "solved-ledger.jsonl").read_text().splitlines()]
+
+    assert weights == {1: 1.0}
+    assert [solver["uid"] for solver in ledger[0]["solvers"]] == [1]
+    assert ledger[0]["solvers"][0]["proof_script"] == proof
+    assert subtensor.set_weights_calls[0]["weights"] == [0.0, 1.0]
+
+
+async def test_portal_duplicate_of_axon_response_is_verified_once(monkeypatch, tmp_path: Path) -> None:
+    settings = _settings(tmp_path, portal_candidates_url="http://portal.test/api/portal/v1/candidates")
+    proof = "namespace Submission\n-- duplicate transport\n"
+    nonce, commitment_hash, payload = _commitment(settings, uid=0, proof=proof)
+    commitments = {"miner-hotkey-0": payload}
+    subtensor = _Subtensor(n=2, commitments_by_block={48: commitments, 49: commitments})
+    verify_calls: list[str] = []
+    _install_epoch_fakes(
+        monkeypatch,
+        subtensor=subtensor,
+        response_fn=lambda axons, synapse: [
+            _response(synapse, proof=proof, proof_nonce=nonce, commitment_hash=commitment_hash),
+            _response(synapse, proof=None),
+        ],
+        verify_fn=lambda proof: verify_calls.append(proof) or VerifyResult(passed=True, reason="ok"),
+    )
+    monkeypatch.setattr(
+        epoch,
+        "fetch_portal_candidates",
+        lambda url, *, current_block: [
+            _portal_candidate(
+                settings,
+                uid=0,
+                proof=proof,
+                nonce=nonce,
+                commitment_hash=commitment_hash,
+            ),
+        ],
+    )
+    monkeypatch.setattr(epoch, "portal_candidate_signature_ok", lambda candidate: True)
+
+    weights = await epoch.run_epoch(settings, _TwoProblemSource(), dry_run=False)
+
+    assert weights == {0: 1.0}
+    assert verify_calls == [proof]
 
 
 async def test_proof_same_block_valid_solvers_split_rewards(monkeypatch, tmp_path: Path) -> None:

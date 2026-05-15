@@ -117,6 +117,10 @@ class LemmaSettings(BaseSettings):
         default="https://lemmasub.net/miners/",
         validation_alias="LEMMA_PUBLIC_DASHBOARD_URL",
     )
+    portal_candidates_url: str | None = Field(default=None, validation_alias="LEMMA_PORTAL_CANDIDATES_URL")
+    portal_host: str = Field(default="127.0.0.1", validation_alias="LEMMA_PORTAL_HOST")
+    portal_port: int = Field(default=8092, ge=1, le=65535, validation_alias="LEMMA_PORTAL_PORT")
+    portal_db_path: Path | None = Field(default=None, validation_alias="LEMMA_PORTAL_DB_PATH")
     log_level: str = Field(default="INFO", validation_alias="LOG_LEVEL")
     synapse_max_statement_chars: int = Field(default=500_000, ge=1, validation_alias="SYNAPSE_MAX_STATEMENT_CHARS")
     synapse_max_proof_chars: int = Field(default=500_000, ge=1, validation_alias="SYNAPSE_MAX_PROOF_CHARS")

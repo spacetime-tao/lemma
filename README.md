@@ -75,6 +75,7 @@ uv run lemma submit \
 uv run lemma commit --problem known/smoke/nat_two_plus_two_eq_four
 uv run lemma miner start
 uv run lemma dashboard export --output data/miner-dashboard.json
+uv run lemma portal start
 uv run lemma validator check
 uv run lemma validator start
 ```
@@ -108,6 +109,8 @@ uv run lemma meta --raw
 - Duplicate proofs for already-solved targets do not change the active solver set.
 - The public miner dashboard is a static export from the manifest, solved
   ledger, and accepted-proof receipts.
+- An optional portal candidate lane can host wallet-submitted miner proofs, but
+  validators still require the same commitment and Lean verification.
 - Launch on a fresh or intentionally reset subnet state so old Lemma weights do
   not carry into the proof protocol.
 

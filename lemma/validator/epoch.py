@@ -28,6 +28,7 @@ from lemma.ledger import (
     split_solver_weights,
 )
 from lemma.lifecycle import TargetPhase, target_phase
+from lemma.portal import PORTAL_SUBMISSION_SCHEMA, fetch_portal_candidates, portal_candidate_signature_ok
 from lemma.problems.base import Problem, ProblemSource
 from lemma.problems.known_theorems import known_theorems_manifest_sha256
 from lemma.protocol import LemmaChallenge, synapse_miner_response_integrity_ok
@@ -234,6 +235,101 @@ def _commitment_evidence(
     )
 
 
+def _hotkey_uid_map(metagraph: object) -> dict[str, int]:
+    hotkeys = getattr(metagraph, "hotkeys", None)
+    if hotkeys is None:
+        return {}
+    out: dict[str, int] = {}
+    try:
+        for uid, hotkey in enumerate(hotkeys):
+            out[str(hotkey.item()) if hasattr(hotkey, "item") else str(hotkey)] = uid
+    except TypeError:
+        return {}
+    return out
+
+
+def _candidate_key(uid: int, resp: LemmaChallenge, evidence: CommitmentEvidence) -> tuple[int, str, str, str]:
+    return (uid, evidence.proof_sha256, resp.proof_nonce or "", evidence.commitment_hash)
+
+
+def _append_portal_candidates(
+    settings: LemmaSettings,
+    subtensor: Any,
+    *,
+    netuid: int,
+    cur_block: int,
+    phase: TargetPhase,
+    metagraph: object,
+    problem: Problem,
+    manifest_sha256: str,
+    poll_id: str,
+    commitments_at_cutoff: dict[str, str],
+    first_seen_cache: dict[tuple[str, str], int | None],
+    candidates: list[tuple[int, LemmaChallenge, CommitmentEvidence]],
+) -> None:
+    url = (settings.portal_candidates_url or "").strip()
+    if not url:
+        return
+    uid_by_hotkey = _hotkey_uid_map(metagraph)
+    seen = {_candidate_key(uid, resp, evidence) for uid, resp, evidence in candidates}
+    try:
+        portal_candidates = fetch_portal_candidates(url, current_block=cur_block)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("portal candidates fetch failed url={}: {}", url, exc)
+        return
+    for candidate in portal_candidates:
+        uid = uid_by_hotkey.get(candidate.miner_hotkey)
+        if uid is None:
+            logger.warning("portal dropping hotkey={}: not registered on subnet", candidate.miner_hotkey)
+            continue
+        if candidate.schema != PORTAL_SUBMISSION_SCHEMA or candidate.netuid != netuid:
+            logger.warning("portal dropping uid={}: schema or netuid mismatch", uid)
+            continue
+        if candidate.target_id != problem.id or candidate.manifest_sha256 != manifest_sha256:
+            logger.warning("portal dropping uid={}: target or manifest mismatch", uid)
+            continue
+        if candidate.theorem_statement_sha256 != problem.theorem_statement_sha256():
+            logger.warning("portal dropping uid={}: theorem statement hash mismatch", uid)
+            continue
+        if candidate.commit_cutoff_block != phase.commit_cutoff_block or candidate.reveal_block != phase.reveal_block:
+            logger.warning("portal dropping uid={}: lifecycle mismatch", uid)
+            continue
+        if cur_block < candidate.reveal_block:
+            logger.warning("portal dropping uid={}: proof arrived before reveal", uid)
+            continue
+        if candidate.proof_script is None or candidate.proof_sha256 != proof_sha256(candidate.proof_script):
+            logger.warning("portal dropping uid={}: proof hash mismatch", uid)
+            continue
+        if not portal_candidate_signature_ok(candidate):
+            logger.warning("portal dropping uid={}: bad signature", uid)
+            continue
+        resp = candidate.to_synapse(problem, poll_id=poll_id)
+        payload_err = synapse_payload_error(resp, settings)
+        if payload_err:
+            logger.warning("portal dropping uid={}: {}", uid, payload_err)
+            continue
+        evidence = _commitment_evidence(
+            settings,
+            subtensor,
+            netuid=netuid,
+            phase=phase,
+            problem=problem,
+            manifest_sha256=manifest_sha256,
+            hotkey=candidate.miner_hotkey,
+            resp=resp,
+            commitments_at_cutoff=commitments_at_cutoff,
+            first_seen_cache=first_seen_cache,
+        )
+        if evidence is None:
+            logger.warning("portal dropping uid={}: missing or invalid pre-reveal commitment", uid)
+            continue
+        key = _candidate_key(uid, resp, evidence)
+        if key in seen:
+            continue
+        seen.add(key)
+        candidates.append((uid, resp, evidence))
+
+
 def _select_earliest_commitment_block(
     verified: list[tuple[int, LemmaChallenge, VerifyResult, CommitmentEvidence]],
 ) -> list[tuple[int, LemmaChallenge, VerifyResult, CommitmentEvidence]]:
@@ -349,6 +445,20 @@ async def run_epoch(
                 logger.warning("uid={} dropping response: missing or invalid pre-reveal commitment", uid)
                 continue
             candidates.append((uid, resp, evidence))
+    _append_portal_candidates(
+        settings,
+        subtensor,
+        netuid=netuid,
+        cur_block=cur_block,
+        phase=phase,
+        metagraph=metagraph,
+        problem=problem,
+        manifest_sha256=manifest_sha,
+        poll_id=poll_id,
+        commitments_at_cutoff=commitments_at_cutoff,
+        first_seen_cache=first_seen_cache,
+        candidates=candidates,
+    )
 
     verify_sem = asyncio.Semaphore(max(1, int(settings.lemma_lean_verify_max_concurrent)))
 

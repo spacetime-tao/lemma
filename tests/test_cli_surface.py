@@ -33,6 +33,7 @@ def test_home_screen_lists_proof_commands() -> None:
     assert "\n  verify" not in result.output
     assert "\n  miner" not in result.output
     assert "\n  dashboard" not in result.output
+    assert "\n  portal" not in result.output
     assert "\n  validator" not in result.output
     assert "preview" not in result.output
     assert "prover" not in result.output
@@ -64,6 +65,7 @@ def test_advanced_commands_are_hidden_but_callable() -> None:
         ("validator",),
         ("verify",),
         ("dashboard",),
+        ("portal",),
         ("meta",),
     ]:
         result = CliRunner().invoke(main, [*command, "--help"])
@@ -945,6 +947,13 @@ def test_dashboard_help_lists_export_command() -> None:
 
     assert result.exit_code == 0
     assert "export" in result.output
+
+
+def test_portal_help_lists_start_command() -> None:
+    result = CliRunner().invoke(main, ["portal", "--help"])
+
+    assert result.exit_code == 0
+    assert "start" in result.output
 
 
 def test_validator_help_lists_proof_subcommands() -> None:

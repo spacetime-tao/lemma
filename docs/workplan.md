@@ -10,6 +10,9 @@ help, and tests.
 - Active supply: [`known_theorems_manifest.json`](../lemma/problems/known_theorems_manifest.json).
 - Reward-critical miner artifact: a pre-reveal commitment, then `proof_script`
   plus nonce during reveal.
+- Optional portal mining lane: wallet-submitted proof packages can be hosted
+  out-of-band, but validators still require the same pre-reveal commitment and
+  Lean verification.
 - Ledger: operator-published JSONL solved-target ledger.
 - Solved rows count only when their theorem statement hash matches the current
   manifest.
@@ -39,6 +42,18 @@ help, and tests.
   commitment hash only during reveal phase.
 - Validator commitment checks reject missing, late, malformed, copied, wrong
   target, wrong nonce, and wrong proof-hash commitments before Lean verification.
+- Hidden `lemma portal start` service for wallet-submitted miner proofs. It
+  verifies submissions with Lean, stores them in SQLite, withholds proof text
+  until chain reveal, and serves candidate payloads.
+- Shared commitment fixture coverage for Python and the `lemmasub.net` browser
+  helper, including portal signing-message parity, so the portal UI cannot drift
+  from `lemma/commitments.py` or `lemma/portal.py` unnoticed.
+- Optional validator portal candidate lane via `LEMMA_PORTAL_CANDIDATES_URL`.
+  Validators map portal hotkeys to registered UIDs, verify the portal hotkey
+  signature, re-check the on-chain commitment, dedupe against Axon responses,
+  and run the same Lean verification before ledger acceptance.
+- Portal fetch/client tests cover current-block query shaping, hidden-proof
+  filtering, and malformed candidate-list rejection.
 - Static public miner dashboard export from the known-theorem manifest and
   solved ledger, including schema 3 accepted-proof replay receipts.
 - Public CLI:
@@ -54,6 +69,7 @@ help, and tests.
   - `lemma verify --problem <target-id> --submission <Submission.lean>`;
   - `lemma miner start`;
   - `lemma dashboard export --output <path>`;
+  - `lemma portal start`;
   - `lemma validator check`;
   - `lemma validator start`;
   - `lemma validator dry-run`;
@@ -76,6 +92,11 @@ help, and tests.
   source files; `hasFormalProof=false` only means the site has no external
   formal-proof reference.
 - Decide how the operator will publish and sign the solved-target ledger.
+- Test the `lemmasub.net` `/solve/` frontend against a live testnet portal and
+  browser wallets, including chain readback and portal-side on-chain commitment
+  gating.
+- Add production deployment notes for the portal service after testnet trial:
+  TLS/proxy, SQLite backup, and which validator hosts should trust the URL.
 - Launch only on a fresh or intentionally reset subnet state.
 
 ## Verification Snapshot
@@ -83,6 +104,6 @@ help, and tests.
 - `uv lock`: passed after rename.
 - `uv sync --extra dev --extra btcli`: passed.
 - `.venv/bin/ruff check lemma tests`: passed.
-- `.venv/bin/mypy lemma`: passed (`34 source files`).
-- `.venv/bin/pytest tests -q`: passed (`136 passed, 2 skipped`).
+- `.venv/bin/mypy lemma`: passed (`35 source files`).
+- `.venv/bin/pytest tests -q`: passed (`157 passed, 2 skipped`).
 - Docker Lean golden: passed (`tests/test_docker_golden.py`, 1 test).

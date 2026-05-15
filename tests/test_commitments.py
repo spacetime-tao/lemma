@@ -1,6 +1,14 @@
 from __future__ import annotations
 
-from lemma.commitments import build_proof_commitment, commitment_payload_matches, decode_commitment_payload
+import json
+from pathlib import Path
+
+from lemma.commitments import (
+    build_proof_commitment,
+    canonical_json,
+    commitment_payload_matches,
+    decode_commitment_payload,
+)
 from lemma.problems.base import Problem
 
 
@@ -40,6 +48,32 @@ def test_commitment_hash_is_canonical_and_stable() -> None:
     assert first.commitment_hash == second.commitment_hash
     assert "proof_sha256" not in first.payload
     assert "nonce" not in first.payload
+
+
+def test_commitment_v1_fixture_matches_python_builder() -> None:
+    fixture = json.loads((Path(__file__).parent / "fixtures" / "commitment_v1.json").read_text(encoding="utf-8"))
+    problem = Problem(
+        id=fixture["problem"]["id"],
+        theorem_name=fixture["problem"]["theorem_name"],
+        type_expr=fixture["problem"]["type_expr"],
+        split=fixture["problem"]["split"],
+        lean_toolchain=fixture["problem"]["lean_toolchain"],
+        mathlib_rev=fixture["problem"]["mathlib_rev"],
+        imports=tuple(fixture["problem"]["imports"]),
+    )
+    commitment = build_proof_commitment(
+        netuid=fixture["preimage"]["netuid"],
+        miner_hotkey=fixture["preimage"]["miner_hotkey"],
+        manifest_sha256=fixture["preimage"]["manifest_sha256"],
+        problem=problem,
+        proof_hash=fixture["preimage"]["proof_sha256"],
+        nonce=fixture["preimage"]["nonce"],
+    )
+
+    assert problem.theorem_statement_sha256() == fixture["preimage"]["theorem_statement_sha256"]
+    assert canonical_json(fixture["preimage"]) == fixture["canonical_json"]
+    assert commitment.commitment_hash == fixture["commitment_hash"]
+    assert commitment.payload_text == fixture["payload_text"]
 
 
 def test_copied_commitment_fails_under_different_hotkey() -> None:
