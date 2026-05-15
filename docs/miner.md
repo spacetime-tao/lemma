@@ -6,17 +6,33 @@ It does not run an LLM, retry a prover, score prose, or optimize proof
 efficiency. Miners can use any external workflow they want, then submit the
 finished Lean file locally.
 
-## Store A Proof
+## Guided Mining
+
+```bash
+uv run lemma setup --role miner
+uv run lemma mine
+```
+
+`lemma mine` shows the active theorem, asks whether you are ready, verifies the
+pasted `Submission.lean`, publishes the commitment, and starts the miner server.
+If the proof is already committed, it resumes serving. If commitment failed,
+retry with `uv run lemma mine --retry-commit`.
+
+For advanced scripts:
 
 ```bash
 uv run lemma submit \
   --problem known/smoke/nat_two_plus_two_eq_four \
   --submission path/to/Submission.lean
+uv run lemma commit --problem known/smoke/nat_two_plus_two_eq_four
+uv run lemma miner start
 ```
 
-`lemma submit` verifies by default. A valid proof prints `verified=true`,
-`proof_sha256=...`, `store=...`, and `ready_to_serve=true`. Use `--no-verify`
-only when deliberately storing an unconfirmed proof.
+Validators do not answer the mine command directly. Keep the miner running until
+your UID appears on `https://lemmasub.net/miners/`. `lemma target ledger` is
+useful only when you have the validator/operator ledger locally. Validators poll
+on their own schedule after reveal opens, then run Lean verification; the
+default poll interval is about five minutes.
 
 Proofs are stored under `LEMMA_MINER_SUBMISSIONS_PATH` or
 `~/.lemma/submissions.json`.
@@ -28,9 +44,13 @@ uv run lemma miner start
 ```
 
 When a validator polls, the miner checks that the requested target id,
-statement, imports, Lean toolchain, and Mathlib revision match its stored
-submission. If they match, it returns only `proof_script`. If not, it returns no
-proof.
+statement, imports, Lean toolchain, Mathlib revision, target phase, and stored
+commitment match its stored submission. During commit phase it returns no proof.
+During reveal phase it returns `proof_script`, the nonce, and the commitment
+hash. If anything does not match, it returns no proof.
+
+Once the public dashboard shows your UID for that target, the proof was accepted
+and the miner can be stopped unless you want it online for the next target.
 
 ## Operational Notes
 
@@ -45,3 +65,8 @@ proof.
 ```bash
 uv run lemma dashboard export --output data/miner-dashboard.json
 ```
+
+After a validator accepts a proof, the public export includes an accepted-proof
+receipt: target fingerprint, validator hotkey, solver UID/hotkey, proof hash,
+nonce, commitment hash/timing, and the accepted `proof_script`. Pending local
+submissions are not public, but accepted proofs are replayable.

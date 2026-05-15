@@ -37,6 +37,15 @@ def test_body_hash_includes_proof() -> None:
     assert a.body_hash != b.body_hash
 
 
+def test_body_hash_includes_reveal_fields() -> None:
+    a = _challenge(proof_nonce="nonce-a", commitment_hash="c" * 64)
+    b = _challenge(proof_nonce="nonce-b", commitment_hash="c" * 64)
+    c = _challenge(proof_nonce="nonce-a", commitment_hash="d" * 64)
+
+    assert a.body_hash != b.body_hash
+    assert a.body_hash != c.body_hash
+
+
 def test_synapse_miner_response_integrity_ok_accepts_missing_response_hash() -> None:
     assert synapse_miner_response_integrity_ok(_challenge()) is True
 

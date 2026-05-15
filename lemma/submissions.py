@@ -21,7 +21,7 @@ def resolved_submissions_path(path: Path | None) -> Path:
 
 
 def theorem_statement_sha256(problem: Problem) -> str:
-    return hashlib.sha256(problem.challenge_source().encode("utf-8")).hexdigest()
+    return problem.theorem_statement_sha256()
 
 
 @dataclass(frozen=True)
@@ -31,6 +31,16 @@ class PendingSubmission:
     proof_sha256: str
     proof_script: str
     submitted_unix: int
+    proof_nonce: str | None = None
+    commitment_hash: str | None = None
+    commitment_payload: str | None = None
+    commitment_status: str = "uncommitted"
+    committed_hotkey: str | None = None
+    committed_block: int | None = None
+    manifest_sha256: str | None = None
+    target_start_block: int | None = None
+    commit_cutoff_block: int | None = None
+    reveal_block: int | None = None
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> PendingSubmission:
@@ -40,6 +50,16 @@ class PendingSubmission:
             proof_sha256=str(data["proof_sha256"]),
             proof_script=str(data["proof_script"]),
             submitted_unix=int(data["submitted_unix"]),
+            proof_nonce=_str_or_none(data.get("proof_nonce")),
+            commitment_hash=_str_or_none(data.get("commitment_hash")),
+            commitment_payload=_str_or_none(data.get("commitment_payload")),
+            commitment_status=str(data.get("commitment_status") or "uncommitted"),
+            committed_hotkey=_str_or_none(data.get("committed_hotkey")),
+            committed_block=_int_or_none(data.get("committed_block")),
+            manifest_sha256=_str_or_none(data.get("manifest_sha256")),
+            target_start_block=_int_or_none(data.get("target_start_block")),
+            commit_cutoff_block=_int_or_none(data.get("commit_cutoff_block")),
+            reveal_block=_int_or_none(data.get("reveal_block")),
         )
 
 
@@ -59,7 +79,22 @@ def load_pending_submissions(path: Path | None = None) -> dict[str, PendingSubmi
     return out
 
 
-def save_pending_submission(path: Path | None, problem: Problem, proof_script: str) -> PendingSubmission:
+def save_pending_submission(
+    path: Path | None,
+    problem: Problem,
+    proof_script: str,
+    *,
+    proof_nonce: str | None = None,
+    commitment_hash: str | None = None,
+    commitment_payload: str | None = None,
+    commitment_status: str = "uncommitted",
+    committed_hotkey: str | None = None,
+    committed_block: int | None = None,
+    manifest_sha256: str | None = None,
+    target_start_block: int | None = None,
+    commit_cutoff_block: int | None = None,
+    reveal_block: int | None = None,
+) -> PendingSubmission:
     proof = proof_script.strip() + "\n"
     if not proof.strip():
         raise ValueError("proof_script is empty")
@@ -69,9 +104,29 @@ def save_pending_submission(path: Path | None, problem: Problem, proof_script: s
         proof_sha256=hashlib.sha256(proof.encode("utf-8")).hexdigest(),
         proof_script=proof,
         submitted_unix=int(time.time()),
+        proof_nonce=proof_nonce,
+        commitment_hash=commitment_hash,
+        commitment_payload=commitment_payload,
+        commitment_status=commitment_status,
+        committed_hotkey=committed_hotkey,
+        committed_block=committed_block,
+        manifest_sha256=manifest_sha256,
+        target_start_block=target_start_block,
+        commit_cutoff_block=commit_cutoff_block,
+        reveal_block=reveal_block,
     )
     rows = load_pending_submissions(path)
     rows[problem.id] = entry
+    store_path = resolved_submissions_path(path)
+    store_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {target_id: asdict(row) for target_id, row in sorted(rows.items())}
+    store_path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    return entry
+
+
+def update_pending_submission(path: Path | None, entry: PendingSubmission) -> PendingSubmission:
+    rows = load_pending_submissions(path)
+    rows[entry.target_id] = entry
     store_path = resolved_submissions_path(path)
     store_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {target_id: asdict(row) for target_id, row in sorted(rows.items())}
@@ -86,3 +141,16 @@ def pending_submission_for_problem(path: Path | None, problem: Problem) -> Pendi
     if entry.theorem_statement_sha256 != theorem_statement_sha256(problem):
         return None
     return entry
+
+
+def _str_or_none(value: object) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _int_or_none(value: object) -> int | None:
+    if value is None or value == "":
+        return None
+    return int(str(value))

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -25,6 +25,11 @@ class LedgerSolver:
     proof_sha256: str
     verify_reason: str
     build_seconds: float
+    proof_script: str | None = None
+    proof_nonce: str | None = None
+    commitment_hash: str | None = None
+    commitment_block: int | None = None
+    commit_cutoff_block: int | None = None
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> LedgerSolver:
@@ -35,6 +40,11 @@ class LedgerSolver:
             proof_sha256=str(data["proof_sha256"]),
             verify_reason=str(data["verify_reason"]),
             build_seconds=float(data["build_seconds"]),
+            proof_script=_proof_script_or_none(data.get("proof_script")),
+            proof_nonce=_str_or_none(data.get("proof_nonce")),
+            commitment_hash=_str_or_none(data.get("commitment_hash")),
+            commitment_block=_int_or_none(data.get("commitment_block")),
+            commit_cutoff_block=_int_or_none(data.get("commit_cutoff_block")),
         )
 
 
@@ -97,6 +107,19 @@ def _str_or_none(value: object) -> str | None:
     return text or None
 
 
+def _proof_script_or_none(value: object) -> str | None:
+    if value is None:
+        return None
+    text = str(value)
+    return text if text else None
+
+
+def _int_or_none(value: object) -> int | None:
+    if value is None or value == "":
+        return None
+    return int(str(value))
+
+
 def load_solved_ledger(path: Path | None) -> list[SolvedLedgerEntry]:
     ledger_path = resolved_solved_ledger_path(path)
     if not ledger_path.exists():
@@ -115,19 +138,53 @@ def load_solved_ledger(path: Path | None) -> list[SolvedLedgerEntry]:
     return entries
 
 
-def solved_target_ids(path: Path | None) -> set[str]:
-    return {entry.target_id for entry in load_solved_ledger(path)}
+def _entry_matches_manifest(entry: SolvedLedgerEntry, theorem_statement_sha256_by_target: Mapping[str, str]) -> bool:
+    return theorem_statement_sha256_by_target.get(entry.target_id) == entry.theorem_statement_sha256
 
 
-def current_solver_set(path: Path | None) -> SolvedLedgerEntry | None:
-    entries = load_solved_ledger(path)
+def matching_solved_ledger(
+    path: Path | None,
+    theorem_statement_sha256_by_target: Mapping[str, str],
+) -> list[SolvedLedgerEntry]:
+    return [
+        entry
+        for entry in load_solved_ledger(path)
+        if _entry_matches_manifest(entry, theorem_statement_sha256_by_target)
+    ]
+
+
+def solved_target_ids(
+    path: Path | None,
+    theorem_statement_sha256_by_target: Mapping[str, str] | None = None,
+) -> set[str]:
+    entries = (
+        load_solved_ledger(path)
+        if theorem_statement_sha256_by_target is None
+        else matching_solved_ledger(path, theorem_statement_sha256_by_target)
+    )
+    return {entry.target_id for entry in entries}
+
+
+def current_solver_set(
+    path: Path | None,
+    theorem_statement_sha256_by_target: Mapping[str, str] | None = None,
+) -> SolvedLedgerEntry | None:
+    entries = (
+        load_solved_ledger(path)
+        if theorem_statement_sha256_by_target is None
+        else matching_solved_ledger(path, theorem_statement_sha256_by_target)
+    )
     return entries[-1] if entries else None
 
 
 def append_solved_ledger_entry(path: Path | None, entry: SolvedLedgerEntry) -> None:
     ledger_path = resolved_solved_ledger_path(path)
-    if entry.target_id in solved_target_ids(ledger_path):
-        raise ValueError(f"target already solved in ledger: {entry.target_id}")
+    for existing in load_solved_ledger(ledger_path):
+        if (
+            existing.target_id == entry.target_id
+            and existing.theorem_statement_sha256 == entry.theorem_statement_sha256
+        ):
+            raise ValueError(f"target already solved in ledger: {entry.target_id}")
     ledger_path.parent.mkdir(parents=True, exist_ok=True)
     with ledger_path.open("a", encoding="utf-8") as f:
         f.write(entry.to_json_line())
@@ -141,8 +198,12 @@ def split_solver_weights(solver_uids: Iterable[int], eligible_uids: set[int]) ->
     return {uid: share for uid in eligible_solvers}
 
 
-def active_solver_weights(path: Path | None, eligible_uids: set[int]) -> dict[int, float]:
-    solver_set = current_solver_set(path)
+def active_solver_weights(
+    path: Path | None,
+    eligible_uids: set[int],
+    theorem_statement_sha256_by_target: Mapping[str, str] | None = None,
+) -> dict[int, float]:
+    solver_set = current_solver_set(path, theorem_statement_sha256_by_target)
     if solver_set is None:
         return {}
     return split_solver_weights(solver_set.solver_uids, eligible_uids)

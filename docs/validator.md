@@ -7,18 +7,21 @@ the valid solve set to the solved ledger, and write miner weights.
 
 ```bash
 bash scripts/prebuild_lean_image.sh
-uv run lemma meta --raw
-uv run lemma validator check
-uv run lemma validator start
+uv run lemma setup --role validator
+uv run lemma validate
 ```
 
 Validators require:
 
 - Docker verification enabled with `LEMMA_USE_DOCKER=true`;
+- `LEMMA_TARGET_GENESIS_BLOCK` before the first target can run;
 - `LEMMA_KNOWN_THEOREMS_MANIFEST_SHA256_EXPECTED`;
 - `LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED`.
 
-Copy the two expected hashes from `lemma meta --raw` into `.env`.
+`lemma setup --role validator` prints the expected hashes and asks before
+writing suggested `.env` values. Advanced scripts can still use
+`lemma validator check`, `lemma validator dry-run`, `lemma validator start`, and
+`lemma meta --raw`.
 
 ## Polling
 
@@ -26,9 +29,11 @@ Copy the two expected hashes from `lemma meta --raw` into `.env`.
 chosen by block seed. It is always the first manifest target not already present
 in the solved ledger.
 
-If multiple proofs verify in one poll, those UIDs split the reward equally. If no
-proof verifies and there is no previous solver set, the validator skips
-`set_weights`.
+Validators do not poll proof text during commit phase. They poll during reveal
+phase, then require a matching commitment at the commit cutoff before running
+Lean. The earliest valid commitment block wins; same-block valid commitments
+split. If no proof verifies and there is no previous solver set, the validator
+skips `set_weights`.
 
 ## Lean Verify
 

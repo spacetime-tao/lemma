@@ -22,6 +22,8 @@ def validator_profile_dict(settings: LemmaSettings) -> dict[str, Any]:
         "protocol_policy": {
             "validator_poll_interval_s": float(settings.validator_poll_interval_s),
             "validator_poll_timeout_s": float(settings.validator_poll_timeout_s),
+            "commit_window_blocks": int(settings.commit_window_blocks),
+            "target_genesis_block": settings.target_genesis_block,
         },
         "verification_policy": {
             "lean_sandbox_image": settings.lean_sandbox_image,
@@ -29,7 +31,7 @@ def validator_profile_dict(settings: LemmaSettings) -> dict[str, Any]:
             "lean_verify_timeout_s": int(settings.lean_verify_timeout_s),
             "lean_use_docker": bool(settings.lean_use_docker),
         },
-        "scoring_policy": {"reward_mode": "verified_proof_batch_tie_split"},
+        "scoring_policy": {"reward_mode": "earliest_valid_commitment_block_wins"},
     }
 
 

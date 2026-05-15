@@ -53,3 +53,9 @@ def echo_challenge_separator() -> None:
     click.echo("")
     click.echo(stylize("Challenge.lean (what validators send)", fg="cyan", bold=True))
     click.echo("")
+
+
+def echo_lean_source(source: str) -> None:
+    import click
+
+    click.echo(stylize(source, fg="bright_blue"))

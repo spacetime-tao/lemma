@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any
@@ -41,6 +42,10 @@ class Problem:
 theorem {self.theorem_name} : {self.type_expr} := by
   sorry
 """
+
+    def theorem_statement_sha256(self) -> str:
+        """Hash the exact trusted Challenge.lean source validators poll with."""
+        return hashlib.sha256(self.challenge_source().encode("utf-8")).hexdigest()
 
     def solution_source(self) -> str:
         """Trusted Solution.lean: bridge to Submission."""

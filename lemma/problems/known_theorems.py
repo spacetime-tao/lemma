@@ -129,7 +129,8 @@ class KnownTheoremsSource(ProblemSource):
         return list(self._problems)
 
     def sample(self, seed: int, split: str | None = None) -> Problem:
-        solved = solved_target_ids(self._ledger_path)
+        hashes = {problem.id: problem.theorem_statement_sha256() for problem in self._problems}
+        solved = solved_target_ids(self._ledger_path, hashes)
         for problem in self._problems:
             if problem.id not in solved:
                 return problem

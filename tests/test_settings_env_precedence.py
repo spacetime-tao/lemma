@@ -111,6 +111,8 @@ def test_documented_proof_env_names_work(monkeypatch: pytest.MonkeyPatch, tmp_pa
                 "LEMMA_MINER_SUBMISSIONS_PATH=/tmp/submissions.json",
                 "LEMMA_KNOWN_THEOREMS_MANIFEST_SHA256_EXPECTED=" + ("a" * 64),
                 "LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED=" + ("b" * 64),
+                "LEMMA_TARGET_GENESIS_BLOCK=1000",
+                "LEMMA_COMMIT_WINDOW_BLOCKS=25",
             ],
         ),
     )
@@ -121,6 +123,8 @@ def test_documented_proof_env_names_work(monkeypatch: pytest.MonkeyPatch, tmp_pa
     assert str(s.miner_submissions_path) == "/tmp/submissions.json"
     assert s.known_theorems_manifest_expected_sha256 == "a" * 64
     assert s.validator_profile_expected_sha256 == "b" * 64
+    assert s.target_genesis_block == 1000
+    assert s.commit_window_blocks == 25
 
 
 def test_unknown_ledger_env_name_is_ignored(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

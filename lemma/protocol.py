@@ -18,6 +18,8 @@ class LemmaChallenge(bt.Synapse):
         "lean_toolchain",
         "mathlib_rev",
         "proof_script",
+        "proof_nonce",
+        "commitment_hash",
     )
 
     theorem_id: str = Field(..., description="Stable known-theorem target id.")
@@ -31,6 +33,8 @@ class LemmaChallenge(bt.Synapse):
         default=None,
         description="Full Lean source for Submission.lean when the miner has a matching stored proof.",
     )
+    proof_nonce: str | None = Field(default=None, description="Secret nonce revealed with the accepted proof.")
+    commitment_hash: str | None = Field(default=None, description="On-chain pre-reveal commitment hash.")
 
     def deserialize(self) -> LemmaChallenge:
         return self

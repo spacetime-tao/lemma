@@ -100,6 +100,8 @@ class LemmaSettings(BaseSettings):
         validation_alias="LEMMA_VALIDATOR_POLL_INTERVAL_S",
     )
     validator_poll_timeout_s: float = Field(default=30.0, ge=1.0, validation_alias="LEMMA_VALIDATOR_POLL_TIMEOUT_S")
+    target_genesis_block: int | None = Field(default=None, ge=0, validation_alias="LEMMA_TARGET_GENESIS_BLOCK")
+    commit_window_blocks: int = Field(default=25, ge=1, validation_alias="LEMMA_COMMIT_WINDOW_BLOCKS")
     validator_abort_if_not_registered: bool = Field(
         default=True,
         validation_alias="LEMMA_VALIDATOR_ABORT_IF_NOT_REGISTERED",
@@ -111,6 +113,10 @@ class LemmaSettings(BaseSettings):
     )
     set_weights_max_retries: int = Field(default=3, ge=1, validation_alias="LEMMA_SET_WEIGHTS_MAX_RETRIES")
     set_weights_retry_delay_s: float = Field(default=2.0, ge=0.0, validation_alias="LEMMA_SET_WEIGHTS_RETRY_DELAY_S")
+    public_dashboard_url: str = Field(
+        default="https://lemmasub.net/miners/",
+        validation_alias="LEMMA_PUBLIC_DASHBOARD_URL",
+    )
     log_level: str = Field(default="INFO", validation_alias="LOG_LEVEL")
     synapse_max_statement_chars: int = Field(default=500_000, ge=1, validation_alias="SYNAPSE_MAX_STATEMENT_CHARS")
     synapse_max_proof_chars: int = Field(default=500_000, ge=1, validation_alias="SYNAPSE_MAX_PROOF_CHARS")

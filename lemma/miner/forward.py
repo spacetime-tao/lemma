@@ -1,19 +1,27 @@
 """Miner forward handler for manually stored proofs."""
 
-from __future__ import annotations
-
 from loguru import logger
 
 from lemma.common.config import LemmaSettings
+from lemma.common.subtensor import get_subtensor
 from lemma.common.synapse_limits import synapse_payload_error
+from lemma.ledger import matching_solved_ledger
+from lemma.lifecycle import target_phase
 from lemma.miner.limits import reject_synopsis
-from lemma.problems.factory import resolve_problem
+from lemma.problems.factory import get_problem_source, resolve_problem
 from lemma.protocol import LemmaChallenge
 from lemma.submissions import pending_submission_for_problem
 
 
 def _with_computed_body_hash(synapse: LemmaChallenge) -> LemmaChallenge:
     return synapse.model_copy(update={"computed_body_hash": synapse.body_hash})
+
+
+def _without_proof(synapse: LemmaChallenge) -> LemmaChallenge:
+    synapse.proof_script = None
+    synapse.proof_nonce = None
+    synapse.commitment_hash = None
+    return _with_computed_body_hash(synapse)
 
 
 def make_forward(settings: LemmaSettings):
@@ -34,13 +42,49 @@ def make_forward(settings: LemmaSettings):
         if synapse.lean_toolchain != problem.lean_toolchain or synapse.mathlib_rev != problem.mathlib_rev:
             return reject_synopsis(synapse, 400, "target toolchain mismatch")
 
+        source = get_problem_source(settings)
+        try:
+            active = source.sample(seed=0)
+        except ValueError:
+            logger.info("miner poll target_id={} proof=none all_targets_solved", problem.id)
+            return _without_proof(synapse)
+        if active.id != problem.id:
+            logger.info("miner poll target_id={} proof=none inactive_target", problem.id)
+            return _without_proof(synapse)
+
+        hashes = {p.id: p.theorem_statement_sha256() for p in source.all_problems()}
+        ledger = matching_solved_ledger(settings.solved_ledger_path, hashes)
+        try:
+            current_block = int(get_subtensor(settings).get_current_block())
+            phase = target_phase(settings, ledger, current_block)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("miner poll target_id={} proof=none phase_error={}", problem.id, exc)
+            return _without_proof(synapse)
+        if phase.name != "reveal":
+            logger.info(
+                "miner poll target_id={} proof=none phase={} reveal_block={} current_block={}",
+                problem.id,
+                phase.name,
+                phase.reveal_block,
+                phase.current_block,
+            )
+            return _without_proof(synapse)
+
         pending = pending_submission_for_problem(settings.miner_submissions_path, problem)
         if pending is None:
             logger.info("miner poll target_id={} proof=none", problem.id)
-            synapse.proof_script = None
-            return _with_computed_body_hash(synapse)
+            return _without_proof(synapse)
+        if pending.commitment_status != "committed" or not pending.proof_nonce or not pending.commitment_hash:
+            logger.info(
+                "miner poll target_id={} proof=none commitment_status={}",
+                problem.id,
+                pending.commitment_status,
+            )
+            return _without_proof(synapse)
 
         synapse.proof_script = pending.proof_script
+        synapse.proof_nonce = pending.proof_nonce
+        synapse.commitment_hash = pending.commitment_hash
         err = synapse_payload_error(synapse, settings)
         if err:
             return reject_synopsis(synapse, 413, err)

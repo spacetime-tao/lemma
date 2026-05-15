@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from copy import deepcopy
 from pathlib import Path
@@ -71,6 +72,17 @@ def _write_manifest(path: Path, targets: list[dict[str, object]]) -> None:
     path.write_text(json.dumps(_manifest(targets), sort_keys=True), encoding="utf-8")
 
 
+def _statement_hash(theorem_name: str) -> str:
+    source = (
+        "import Mathlib\n\n"
+        "namespace Submission\n\n"
+        f"theorem {theorem_name} : True := by\n"
+        "  sorry\n\n"
+        "end Submission\n"
+    )
+    return hashlib.sha256((source.strip() + "\n").encode("utf-8")).hexdigest()
+
+
 def test_known_theorem_manifest_is_deterministically_ordered(tmp_path: Path) -> None:
     manifest_path = tmp_path / "manifest.json"
     _write_manifest(
@@ -133,7 +145,7 @@ def test_known_theorem_source_advances_after_ledger_entry(tmp_path: Path) -> Non
                 "lemma_version": "0.1.0",
                 "verify_reason": "ok",
                 "build_seconds": 1.0,
-                "theorem_statement_sha256": "b" * 64,
+                "theorem_statement_sha256": _statement_hash("first"),
             },
             sort_keys=True,
         )
@@ -144,6 +156,43 @@ def test_known_theorem_source_advances_after_ledger_entry(tmp_path: Path) -> Non
     src = KnownTheoremsSource(manifest_path=manifest_path, ledger_path=ledger_path)
 
     assert src.sample(seed=0).id == "known/test/second"
+
+
+def test_known_theorem_source_ignores_stale_ledger_hash(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "manifest.json"
+    ledger_path = tmp_path / "ledger.jsonl"
+    _write_manifest(
+        manifest_path,
+        [
+            _target("known/test/first", 1, "first"),
+            _target("known/test/second", 2, "second"),
+        ],
+    )
+    ledger_path.write_text(
+        json.dumps(
+            {
+                "target_id": "known/test/first",
+                "winner_uid": 7,
+                "winner_hotkey": "hot",
+                "winner_coldkey": "cold",
+                "proof_sha256": "a" * 64,
+                "accepted_block": 10,
+                "accepted_unix": 20,
+                "validator_hotkey": "validator",
+                "lemma_version": "0.1.0",
+                "verify_reason": "ok",
+                "build_seconds": 1.0,
+                "theorem_statement_sha256": "stale",
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    src = KnownTheoremsSource(manifest_path=manifest_path, ledger_path=ledger_path)
+
+    assert src.sample(seed=0).id == "known/test/first"
 
 
 def test_known_theorem_manifest_fingerprint_changes_on_target_contract_changes(tmp_path: Path) -> None:
