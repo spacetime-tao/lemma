@@ -7,7 +7,7 @@ from typing import Tuple  # noqa: UP035
 
 from lemma.common.config import LemmaSettings
 from lemma.miner.forward import make_forward
-from lemma.miner.service import _miner_blacklist, _zero_priority
+from lemma.miner.service import _dashboard_acceptances, _dashboard_json_url, _miner_blacklist, _zero_priority
 from lemma.problems.factory import resolve_problem
 from lemma.protocol import LemmaChallenge
 from lemma.submissions import save_pending_submission
@@ -53,6 +53,37 @@ def test_miner_axon_handlers_have_runtime_synapse_annotations(tmp_path: Path) ->
     assert signature(make_forward(settings)).parameters["synapse"].annotation is LemmaChallenge
     assert signature(_miner_blacklist(settings)) == expected.replace(return_annotation=Tuple[bool, str])  # noqa: UP006
     assert signature(_zero_priority) == expected.replace(return_annotation=float)
+
+
+def test_dashboard_json_url_uses_public_dashboard_origin(tmp_path: Path) -> None:
+    settings = _settings(tmp_path).model_copy(update={"public_dashboard_url": "https://lemmasub.net/miners/"})
+
+    assert _dashboard_json_url(settings) == "https://lemmasub.net/data/miner-dashboard.json"
+
+
+def test_dashboard_acceptance_matches_local_hotkey_and_proof() -> None:
+    data = {
+        "active_target": {"id": "known/test/target_2"},
+        "accepted_proof_receipts": [
+            {
+                "target_id": "known/test/target_1",
+                "solver_uid": 7,
+                "solver_hotkey": "hotkey-7",
+                "proof_sha256": "a" * 64,
+            },
+        ],
+    }
+
+    accepted = _dashboard_acceptances(data, miner_hotkey="hotkey-7", proof_hashes={"a" * 64})
+
+    assert accepted == [
+        {
+            "target_id": "known/test/target_1",
+            "solver_uid": 7,
+            "proof_sha256": "a" * 64,
+            "next_target": "known/test/target_2",
+        },
+    ]
 
 
 async def test_miner_returns_stored_proof_for_matching_target(monkeypatch, tmp_path: Path) -> None:

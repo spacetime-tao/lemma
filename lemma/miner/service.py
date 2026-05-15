@@ -1,7 +1,10 @@
 """Manual-proof miner axon lifecycle."""
 
+import json
 import time
-from typing import Tuple  # noqa: UP035
+from typing import Any, Tuple, cast  # noqa: UP035
+from urllib.parse import urljoin
+from urllib.request import urlopen
 
 import bittensor as bt
 import click
@@ -34,6 +37,52 @@ def _status_line(label: str, message: str, *, fg: str) -> None:
 def _poll_eta(settings: LemmaSettings) -> str:
     minutes = max(1, round(float(settings.validator_poll_interval_s) / 60))
     return f"validators poll about every {minutes} min after reveal, then run Lean"
+
+
+def _dashboard_json_url(settings: LemmaSettings) -> str:
+    url = str(settings.public_dashboard_url).strip()
+    if url.endswith(".json"):
+        return url
+    return urljoin(url.rstrip("/") + "/", "/data/miner-dashboard.json")
+
+
+def _public_dashboard(settings: LemmaSettings) -> dict[str, Any] | None:
+    try:
+        with urlopen(_dashboard_json_url(settings), timeout=5) as response:  # noqa: S310
+            data = json.loads(response.read().decode("utf-8"))
+            return cast(dict[str, Any], data) if isinstance(data, dict) else None
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("public dashboard unavailable: {}", exc)
+        return None
+
+
+def _dashboard_acceptances(
+    data: dict[str, Any] | None,
+    *,
+    miner_hotkey: str,
+    proof_hashes: set[str],
+) -> list[dict[str, Any]]:
+    if not data or not proof_hashes:
+        return []
+    active = data.get("active_target")
+    next_target = None
+    if isinstance(active, dict):
+        next_target = active.get("id") or active.get("theorem_name") or active.get("title")
+    accepted: list[dict[str, Any]] = []
+    for receipt in data.get("accepted_proof_receipts") or []:
+        if not isinstance(receipt, dict):
+            continue
+        proof_hash = str(receipt.get("proof_sha256") or "")
+        if receipt.get("solver_hotkey") == miner_hotkey and proof_hash in proof_hashes:
+            accepted.append(
+                {
+                    "target_id": receipt.get("target_id") or "unknown target",
+                    "solver_uid": receipt.get("solver_uid"),
+                    "proof_sha256": proof_hash,
+                    "next_target": next_target,
+                },
+            )
+    return accepted
 
 
 def _miner_blacklist(settings: LemmaSettings):
@@ -120,6 +169,8 @@ class MinerService:
         logger.info("Miner running - Ctrl+C to stop.")
         try:
             started = time.monotonic()
+            announced_acceptance: set[tuple[str, str]] = set()
+            proof_hashes = {entry.proof_sha256 for entry in pending.values() if entry.proof_sha256}
             while True:
                 time.sleep(60)
                 elapsed = int(time.monotonic() - started)
@@ -140,19 +191,58 @@ class MinerService:
                             phase.blocks_until_reveal,
                         )
                     else:
-                        _status_line(
-                            "WAITING",
-                            f"proof ready, not accepted yet; next poll can take about "
-                            f"{max(1, round(float(s.validator_poll_interval_s) / 60))} min + Lean",
-                            fg="green",
+                        acceptances = _dashboard_acceptances(
+                            _public_dashboard(s),
+                            miner_hotkey=wallet.hotkey.ss58_address,
+                            proof_hashes=proof_hashes,
                         )
-                        logger.info(
-                            "Waiting for validator poll elapsed={}s current_block={}; proof is ready to serve, "
-                            "but acceptance is not confirmed until your UID appears on {} or in `lemma target ledger`.",
-                            elapsed,
-                            phase.current_block,
-                            s.public_dashboard_url,
-                        )
+                        announced_now = False
+                        for accepted in acceptances:
+                            key = (str(accepted["target_id"]), str(accepted["proof_sha256"]))
+                            if key not in announced_acceptance:
+                                announced_now = True
+                                announced_acceptance.add(key)
+                                next_target = accepted.get("next_target") or "all listed targets are solved"
+                                uid = accepted.get("solver_uid") or "unknown"
+                                _status_line(
+                                    "ACCEPTED",
+                                    f"UID {uid} solved {accepted['target_id']}; next theorem {next_target}",
+                                    fg="green",
+                                )
+                                _status_line(
+                                    "NEXT",
+                                    f"stop this miner, then run lemma mine for {next_target}",
+                                    fg="cyan",
+                                )
+                                logger.info(
+                                    "Proof accepted target_id={} solver_uid={} proof_sha256={} next_target={}",
+                                    accepted["target_id"],
+                                    uid,
+                                    accepted["proof_sha256"],
+                                    next_target,
+                                )
+                        if not acceptances:
+                            _status_line(
+                                "WAITING",
+                                f"proof ready, not accepted yet; next poll can take about "
+                                f"{max(1, round(float(s.validator_poll_interval_s) / 60))} min + Lean",
+                                fg="green",
+                            )
+                            logger.info(
+                                "Waiting for validator poll elapsed={}s current_block={}; proof is ready to serve, "
+                                "but acceptance is not confirmed until your UID appears on {} "
+                                "or in `lemma target ledger`.",
+                                elapsed,
+                                phase.current_block,
+                                s.public_dashboard_url,
+                            )
+                        elif not announced_now:
+                            next_target = acceptances[0].get("next_target") or "all listed targets are solved"
+                            _status_line(
+                                "ACCEPTED",
+                                f"already confirmed; stop this miner, then run lemma mine for {next_target}",
+                                fg="green",
+                            )
                 except Exception as exc:  # noqa: BLE001
                     logger.info(
                         "Miner still running elapsed={}s; phase unavailable: {}. Stop after your UID appears on {} "
