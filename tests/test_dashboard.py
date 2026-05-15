@@ -122,6 +122,9 @@ def test_miner_dashboard_empty_ledger_marks_first_target_active(tmp_path: Path) 
     assert payload["counts"]["total_targets"] == 2
     assert payload["counts"]["solved_targets"] == 0
     assert payload["active_target"]["id"] == "known/test/target_1"
+    assert payload["target_window"]["previous"] is None
+    assert payload["target_window"]["current"]["id"] == "known/test/target_1"
+    assert payload["target_window"]["next"]["id"] == "known/test/target_2"
     assert payload["targets"][0]["status"] == "active"
     assert payload["targets"][1]["status"] == "queued"
 
@@ -135,6 +138,9 @@ def test_miner_dashboard_one_solve_advances_active_target(tmp_path: Path) -> Non
     assert payload["counts"]["solved_targets"] == 1
     assert payload["counts"]["remaining_targets"] == 1
     assert payload["active_target"]["id"] == "known/test/target_2"
+    assert payload["target_window"]["previous"]["id"] == "known/test/target_1"
+    assert payload["target_window"]["current"]["id"] == "known/test/target_2"
+    assert payload["target_window"]["next"] is None
     assert payload["targets"][0]["status"] == "solved"
     assert payload["targets"][0]["solved"]["solver_uids"] == [7]
     assert payload["current_solver_set"]["solvers"][0]["uid"] == 7
@@ -208,6 +214,9 @@ def test_miner_dashboard_all_solved_has_no_active_target(tmp_path: Path) -> None
     payload = build_miner_dashboard(settings, generated_unix=1)
 
     assert payload["active_target"] is None
+    assert payload["target_window"]["previous"]["id"] == "known/test/target_2"
+    assert payload["target_window"]["current"] is None
+    assert payload["target_window"]["next"] is None
     assert payload["counts"]["remaining_targets"] == 0
     assert [target["status"] for target in payload["targets"]] == ["solved", "solved"]
 
@@ -243,6 +252,7 @@ def test_dashboard_export_cli_writes_json(monkeypatch, tmp_path: Path) -> None:
     assert payload["schema_version"] == 3
     assert payload["generated_unix"] == 123
     assert payload["active_target"]["id"] == "known/test/target_1"
+    assert payload["target_window"]["current"]["id"] == "known/test/target_1"
     assert "wrote=" in result.output
 
 

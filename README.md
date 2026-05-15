@@ -56,7 +56,9 @@ uv run lemma mine --hotkey lemmaminer2
 
 `lemma mine` shows the active theorem, asks whether to submit a proof, verifies
 the pasted `Submission.lean`, publishes the private commitment, and starts the
-miner server. If a proof is already committed, it resumes serving.
+miner server. `lemma status` shows the previous, current, and next theorem in
+the ordered target window. If a proof is already committed, `lemma mine`
+resumes serving.
 
 Run a validator:
 

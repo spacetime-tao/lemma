@@ -24,6 +24,7 @@ def build_miner_dashboard(settings: LemmaSettings, *, generated_unix: int | None
     ledger = matching_solved_ledger(settings.solved_ledger_path, hashes)
     solved_by_target = {entry.target_id: entry for entry in ledger}
     active = next((problem for problem in problems if problem.id not in solved_by_target), None)
+    previous_target, current_target, next_target = source.target_window()
     current = ledger[-1] if ledger else None
     manifest_sha256 = known_theorems_manifest_sha256(settings.known_theorems_manifest_path)
     receipts = _accepted_proof_receipts(ledger, problems_by_id, manifest_sha256)
@@ -48,6 +49,17 @@ def build_miner_dashboard(settings: LemmaSettings, *, generated_unix: int | None
             "accepted_proof_receipts": len(receipts),
         },
         "active_target": _target_row(active, solved_by_target, active_id=active.id) if active is not None else None,
+        "target_window": {
+            "previous": _target_row(previous_target, solved_by_target, active_id=active.id if active else None)
+            if previous_target is not None
+            else None,
+            "current": _target_row(current_target, solved_by_target, active_id=active.id if active else None)
+            if current_target is not None
+            else None,
+            "next": _target_row(next_target, solved_by_target, active_id=active.id if active else None)
+            if next_target is not None
+            else None,
+        },
         "targets": [
             _target_row(problem, solved_by_target, active_id=active.id if active else None) for problem in problems
         ],

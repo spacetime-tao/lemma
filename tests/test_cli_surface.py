@@ -538,6 +538,9 @@ def test_status_calls_stale_proof_replaceable(monkeypatch, tmp_path: Path) -> No
 
     assert result.exit_code == 0
     assert "stale local proof" in result.output
+    assert "Theorem window" in result.output
+    assert "current theorem" in result.output
+    assert "next theorem" in result.output
     assert "Next: lemma mine --replace" in result.output
 
 
@@ -966,6 +969,9 @@ def test_target_command_shows_active_known_theorem(monkeypatch, tmp_path: Path) 
 
     assert result.exit_code == 0
     assert "Lemma target" in result.output
+    assert "previous theorem" in result.output
+    assert "current theorem" in result.output
+    assert "next theorem" in result.output
     assert "known/smoke/nat_two_plus_two_eq_four" in result.output
     assert "proof_reference=" in result.output
 

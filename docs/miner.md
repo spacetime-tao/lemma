@@ -45,6 +45,8 @@ your UID appears on `https://lemmasub.net/miners/`. `lemma target ledger` is
 useful only when you have the validator/operator ledger locally. Validators poll
 on their own schedule after reveal opens, then run Lean verification; the
 default poll interval is about five minutes.
+`lemma status` and the public miner board show the previous, current, and next
+theorem in the ordered target window.
 
 Proofs are stored under `LEMMA_MINER_SUBMISSIONS_PATH` or
 `~/.lemma/submissions.json`.

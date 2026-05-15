@@ -128,6 +128,18 @@ class KnownTheoremsSource(ProblemSource):
     def all_problems(self) -> list[Problem]:
         return list(self._problems)
 
+    def target_window(self) -> tuple[Problem | None, Problem | None, Problem | None]:
+        hashes = {problem.id: problem.theorem_statement_sha256() for problem in self._problems}
+        solved = solved_target_ids(self._ledger_path, hashes)
+        active_index = next((idx for idx, problem in enumerate(self._problems) if problem.id not in solved), None)
+        if active_index is None:
+            previous = self._problems[-1] if self._problems else None
+            return previous, None, None
+        previous = self._problems[active_index - 1] if active_index > 0 else None
+        current = self._problems[active_index]
+        next_problem = self._problems[active_index + 1] if active_index + 1 < len(self._problems) else None
+        return previous, current, next_problem
+
     def sample(self, seed: int, split: str | None = None) -> Problem:
         hashes = {problem.id: problem.theorem_statement_sha256() for problem in self._problems}
         solved = solved_target_ids(self._ledger_path, hashes)

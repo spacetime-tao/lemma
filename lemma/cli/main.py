@@ -13,6 +13,7 @@ from lemma import __version__
 from lemma.cli.style import colors_enabled, stylize
 from lemma.common.config import LemmaSettings
 from lemma.common.logging import setup_logging
+from lemma.problems.base import Problem
 from lemma.problems.factory import get_problem_source, resolve_problem
 
 
@@ -54,6 +55,30 @@ def _active_problem_or_click(settings: LemmaSettings):
         return src.sample(seed=0)
     except ValueError as exc:
         raise click.ClickException("All known theorem targets are solved.") from exc
+
+
+def _target_summary(problem: Problem | None) -> str:
+    if problem is None:
+        return "none"
+    title = str(problem.extra.get("title") or problem.theorem_name)
+    return f"{problem.id} - {title}"
+
+
+def _echo_theorem_window(settings: LemmaSettings) -> None:
+    from lemma.problems.known_theorems import KnownTheoremsSource
+
+    previous, current, next_problem = KnownTheoremsSource(
+        settings.known_theorems_manifest_path,
+        settings.solved_ledger_path,
+    ).target_window()
+    click.echo(stylize("Theorem window", fg="cyan", bold=True))
+    for label, problem, color in (
+        ("previous theorem", previous, "yellow"),
+        ("current theorem", current, "green"),
+        ("next theorem", next_problem, "cyan"),
+    ):
+        text = _target_summary(problem)
+        click.echo(stylize(f"{label:<17}", dim=True) + stylize(text, fg=color, bold=problem is not None))
 
 
 def _start_miner(settings: LemmaSettings) -> None:
@@ -512,6 +537,9 @@ def target_show_cmd(target_id: str | None) -> None:
         solver_text = f"active_solver_uids={uids} last_solved={solver_set.target_id}"
     click.echo(stylize(solver_text, fg="yellow"))
     click.echo("")
+    if target_id is None:
+        _echo_theorem_window(settings)
+        click.echo("")
     echo_problem_card(problem, heading="Active theorem" if target_id is None else "Theorem")
     ref = problem.extra.get("human_proof_reference")
     if isinstance(ref, dict):
@@ -606,6 +634,7 @@ def status_cmd() -> None:
     except click.ClickException as exc:
         click.echo(_kv("target", str(exc), fg="yellow"))
         problem = None
+    _echo_theorem_window(settings)
 
     current_block, chain_error = _current_block_or_none(settings)
     if current_block is None:
