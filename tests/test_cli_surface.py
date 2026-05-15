@@ -503,7 +503,7 @@ def test_status_prefers_setup_when_genesis_missing(monkeypatch, tmp_path: Path) 
     )
     save_pending_submission(store, problem, "import Mathlib\n", proof_nonce="n" * 64)
     monkeypatch.setattr("lemma.cli.main._current_block_or_none", lambda settings: (100, None))
-    monkeypatch.setattr("lemma.cli.main._wallet_hotkey_address", lambda settings: "hotkey")
+    monkeypatch.setattr("lemma.cli.main._wallet_hotkey_address", lambda settings, role="miner": "hotkey")
     monkeypatch.setattr("lemma.cli.main._registration_text", lambda settings, hotkey: "registered uid=1")
 
     result = CliRunner().invoke(main, ["status"])
@@ -529,7 +529,7 @@ def test_status_calls_stale_proof_replaceable(monkeypatch, tmp_path: Path) -> No
     )
     save_pending_submission(store, problem, "import Mathlib\n")
     monkeypatch.setattr("lemma.cli.main._current_block_or_none", lambda settings: (130, None))
-    monkeypatch.setattr("lemma.cli.main._wallet_hotkey_address", lambda settings: "hotkey")
+    monkeypatch.setattr("lemma.cli.main._wallet_hotkey_address", lambda settings, role="miner": "hotkey")
     monkeypatch.setattr("lemma.cli.main._registration_text", lambda settings, hotkey: "registered uid=1")
 
     result = CliRunner().invoke(main, ["status"])
@@ -561,7 +561,7 @@ def test_status_explains_committed_reveal_needs_serving(monkeypatch, tmp_path: P
         commitment_status="committed",
     )
     monkeypatch.setattr("lemma.cli.main._current_block_or_none", lambda settings: (130, None))
-    monkeypatch.setattr("lemma.cli.main._wallet_hotkey_address", lambda settings: "hotkey")
+    monkeypatch.setattr("lemma.cli.main._wallet_hotkey_address", lambda settings, role="miner": "hotkey")
     monkeypatch.setattr("lemma.cli.main._registration_text", lambda settings, hotkey: "registered uid=1")
 
     result = CliRunner().invoke(main, ["status"])
@@ -586,7 +586,7 @@ def test_setup_prints_btcli_commands_and_asks_before_env_write(monkeypatch, tmp_
     monkeypatch.setenv("SUBTENSOR_NETWORK", "test")
     monkeypatch.setattr("lemma.cli.main.shutil.which", lambda name: None)
     monkeypatch.setattr("lemma.cli.main._current_block_or_none", lambda settings: (123, None))
-    monkeypatch.setattr("lemma.cli.main._wallet_hotkey_address", lambda settings: "hotkey-address")
+    monkeypatch.setattr("lemma.cli.main._wallet_hotkey_address", lambda settings, role="miner": "hotkey-address")
     monkeypatch.setattr("lemma.cli.main._registration_text", lambda settings, hotkey: "not registered")
 
     result = CliRunner().invoke(main, ["setup", "--role", "miner"], input="n\n")
@@ -601,13 +601,34 @@ def test_setup_prints_btcli_commands_and_asks_before_env_write(monkeypatch, tmp_
     assert not (tmp_path / ".env").exists()
 
 
+def test_setup_hotkey_option_writes_role_specific_env(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("LEMMA_TARGET_GENESIS_BLOCK", raising=False)
+    monkeypatch.delenv("LEMMA_KNOWN_THEOREMS_MANIFEST_SHA256_EXPECTED", raising=False)
+    monkeypatch.delenv("LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED", raising=False)
+    monkeypatch.setenv("BT_WALLET_COLD", "lemma")
+    monkeypatch.setenv("BT_WALLET_HOT", "lemmahot")
+    monkeypatch.setattr("lemma.cli.main.shutil.which", lambda name: "/bin/tool")
+    monkeypatch.setattr("lemma.cli.main._current_block_or_none", lambda settings: (123, None))
+    monkeypatch.setattr("lemma.cli.main._wallet_hotkey_address", lambda settings, role="miner": "hotkey-address")
+    monkeypatch.setattr("lemma.cli.main._registration_text", lambda settings, hotkey: "registered uid=2")
+
+    result = CliRunner().invoke(main, ["setup", "--role", "validator", "--hotkey", "lemmaminer2"], input="n\n")
+
+    assert result.exit_code == 0
+    assert "wallet" in result.output
+    assert "lemma/lemmaminer2" in result.output
+    assert "BT_VALIDATOR_WALLET_HOT=lemmaminer2" in result.output
+    assert "No .env changes written" in result.output
+
+
 def test_setup_refreshes_expired_first_genesis(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("LEMMA_TARGET_GENESIS_BLOCK", "100")
     monkeypatch.delenv("LEMMA_KNOWN_THEOREMS_MANIFEST_SHA256_EXPECTED", raising=False)
     monkeypatch.setattr("lemma.cli.main.shutil.which", lambda name: "/bin/tool")
     monkeypatch.setattr("lemma.cli.main._current_block_or_none", lambda settings: (130, None))
-    monkeypatch.setattr("lemma.cli.main._wallet_hotkey_address", lambda settings: "hotkey-address")
+    monkeypatch.setattr("lemma.cli.main._wallet_hotkey_address", lambda settings, role="miner": "hotkey-address")
     monkeypatch.setattr("lemma.cli.main._registration_text", lambda settings, hotkey: "registered uid=1")
 
     result = CliRunner().invoke(main, ["setup", "--role", "miner"], input="n\n")
@@ -647,7 +668,7 @@ def test_setup_auto_retries_commit_after_approved_refresh(monkeypatch, tmp_path:
 
     monkeypatch.setattr("lemma.cli.main.shutil.which", lambda name: "/bin/tool")
     monkeypatch.setattr("lemma.cli.main._current_block_or_none", lambda settings: (130, None))
-    monkeypatch.setattr("lemma.cli.main._wallet_hotkey_address", lambda settings: "hotkey-address")
+    monkeypatch.setattr("lemma.cli.main._wallet_hotkey_address", lambda settings, role="miner": "hotkey-address")
     monkeypatch.setattr("lemma.cli.main._registration_text", lambda settings, hotkey: "registered uid=1")
     monkeypatch.setattr("lemma.cli.main._publish_pending_commitment", fake_publish)
     monkeypatch.setattr("lemma.cli.main._start_miner", lambda settings: started.append(settings.target_genesis_block))
@@ -698,7 +719,7 @@ def test_setup_auto_retries_commit_when_config_is_already_current(monkeypatch, t
 
     monkeypatch.setattr("lemma.cli.main.shutil.which", lambda name: "/bin/tool")
     monkeypatch.setattr("lemma.cli.main._current_block_or_none", lambda settings: (110, None))
-    monkeypatch.setattr("lemma.cli.main._wallet_hotkey_address", lambda settings: "hotkey-address")
+    monkeypatch.setattr("lemma.cli.main._wallet_hotkey_address", lambda settings, role="miner": "hotkey-address")
     monkeypatch.setattr("lemma.cli.main._registration_text", lambda settings, hotkey: "registered uid=1")
     monkeypatch.setattr("lemma.cli.main._publish_pending_commitment", fake_publish)
     monkeypatch.setattr("lemma.cli.main._start_miner", lambda settings: started.append(settings.target_genesis_block))
@@ -750,7 +771,7 @@ def test_setup_refreshes_and_retries_when_stored_proof_window_closed(monkeypatch
 
     monkeypatch.setattr("lemma.cli.main.shutil.which", lambda name: "/bin/tool")
     monkeypatch.setattr("lemma.cli.main._current_block_or_none", lambda settings: (110, None))
-    monkeypatch.setattr("lemma.cli.main._wallet_hotkey_address", lambda settings: "hotkey-address")
+    monkeypatch.setattr("lemma.cli.main._wallet_hotkey_address", lambda settings, role="miner": "hotkey-address")
     monkeypatch.setattr("lemma.cli.main._registration_text", lambda settings, hotkey: "registered uid=1")
     monkeypatch.setattr("lemma.cli.main._publish_pending_commitment", fake_publish)
     monkeypatch.setattr("lemma.cli.main._start_miner", lambda settings: started.append(settings.target_genesis_block))
@@ -786,6 +807,48 @@ def test_validate_runs_check_before_service_start(monkeypatch) -> None:
 
     assert result.exit_code == 0
     assert calls == ["check", "start"]
+
+
+def test_validate_hotkey_option_uses_validator_wallet(monkeypatch) -> None:
+    seen: list[str | None] = []
+
+    class FakeValidatorService:
+        def __init__(self, settings, dry_run=None) -> None:
+            seen.append(settings.validator_wallet_hot)
+            assert dry_run is False
+
+        def run_blocking(self) -> None:
+            seen.append("start")
+
+    def fake_check(settings):
+        seen.append(settings.validator_wallet_hot)
+        return 0
+
+    monkeypatch.setattr("lemma.cli.validator_check.run_validator_check", fake_check)
+    monkeypatch.setattr("lemma.validator.service.ValidatorService", FakeValidatorService)
+
+    result = CliRunner().invoke(main, ["validate", "--hotkey", "lemmaminer2"])
+
+    assert result.exit_code == 0
+    assert seen == ["lemmaminer2", "lemmaminer2", "start"]
+
+
+def test_mine_hotkey_option_uses_miner_wallet(monkeypatch, tmp_path: Path) -> None:
+    from lemma.problems.factory import resolve_problem
+    from lemma.submissions import save_pending_submission
+
+    store = tmp_path / "submissions.json"
+    started: list[str] = []
+    monkeypatch.setenv("LEMMA_MINER_SUBMISSIONS_PATH", str(store))
+    settings = LemmaSettings(_env_file=None, miner_submissions_path=store)
+    problem = resolve_problem(settings, "known/smoke/nat_two_plus_two_eq_four")
+    save_pending_submission(store, problem, "import Mathlib\n", proof_nonce="secret", commitment_status="committed")
+    monkeypatch.setattr("lemma.cli.main._start_miner", lambda settings: started.append(settings.wallet_hot))
+
+    result = CliRunner().invoke(main, ["mine", "--hotkey", "lemmaminer2"])
+
+    assert result.exit_code == 0
+    assert started == ["lemmaminer2"]
 
 
 def test_publish_pending_commitment_writes_public_chain_payload(monkeypatch, tmp_path: Path) -> None:

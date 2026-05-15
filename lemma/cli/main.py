@@ -71,6 +71,42 @@ def _cmd(text: str) -> str:
     return stylize(text, fg="bright_blue", bold=True)
 
 
+def _wallet_names(settings: LemmaSettings, role: str) -> tuple[str, str]:
+    if role == "validator":
+        return settings.validator_wallet_names()
+    return settings.wallet_cold, settings.wallet_hot
+
+
+def _settings_with_wallet_options(
+    settings: LemmaSettings,
+    *,
+    role: str,
+    wallet: str | None,
+    hotkey: str | None,
+) -> LemmaSettings:
+    if wallet is None and hotkey is None:
+        return settings
+    cold, hot = _wallet_names(settings, role)
+    if role == "validator":
+        return settings.model_copy(
+            update={
+                "validator_wallet_cold": wallet or cold,
+                "validator_wallet_hot": hotkey or hot,
+            },
+        )
+    return settings.model_copy(update={"wallet_cold": wallet or cold, "wallet_hot": hotkey or hot})
+
+
+def _wallet_env_updates(*, role: str, wallet: str | None, hotkey: str | None) -> dict[str, str]:
+    updates: dict[str, str] = {}
+    prefix = "BT_VALIDATOR_WALLET" if role == "validator" else "BT_WALLET"
+    if wallet:
+        updates[f"{prefix}_COLD"] = wallet
+    if hotkey:
+        updates[f"{prefix}_HOT"] = hotkey
+    return updates
+
+
 def _poll_eta(settings: LemmaSettings) -> str:
     minutes = max(1, round(float(settings.validator_poll_interval_s) / 60))
     return f"validators poll about every {minutes} min, then run Lean"
@@ -144,6 +180,14 @@ def _settings_with_env_updates(settings: LemmaSettings, updates: dict[str, str])
         ]
     if "LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED" in updates:
         model_updates["validator_profile_expected_sha256"] = updates["LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED"]
+    if "BT_WALLET_COLD" in updates:
+        model_updates["wallet_cold"] = updates["BT_WALLET_COLD"]
+    if "BT_WALLET_HOT" in updates:
+        model_updates["wallet_hot"] = updates["BT_WALLET_HOT"]
+    if "BT_VALIDATOR_WALLET_COLD" in updates:
+        model_updates["validator_wallet_cold"] = updates["BT_VALIDATOR_WALLET_COLD"]
+    if "BT_VALIDATOR_WALLET_HOT" in updates:
+        model_updates["validator_wallet_hot"] = updates["BT_VALIDATOR_WALLET_HOT"]
     return settings.model_copy(update=model_updates) if model_updates else settings
 
 
@@ -222,16 +266,17 @@ def _write_env_updates(path: Path, updates: dict[str, str]) -> None:
     path.write_text("\n".join(out).rstrip() + "\n", encoding="utf-8")
 
 
-def _print_btcli_commands(settings: LemmaSettings) -> None:
+def _print_btcli_commands(settings: LemmaSettings, role: str) -> None:
+    wallet_cold, wallet_hot = _wallet_names(settings, role)
     network = settings.subtensor_network or "finney"
     click.echo(stylize("btcli commands", fg="cyan", bold=True))
     click.echo(_cmd("uv sync --extra btcli"))
-    click.echo(_cmd(f"btcli wallet create --wallet.name {settings.wallet_cold} --wallet.hotkey {settings.wallet_hot}"))
+    click.echo(_cmd(f"btcli wallet create --wallet.name {wallet_cold} --wallet.hotkey {wallet_hot}"))
     click.echo(_cmd(f"btcli subnets show --netuid {settings.netuid} --network {network}"))
     click.echo(
         _cmd(
             f"btcli subnets register --netuid {settings.netuid} "
-            f"--wallet.name {settings.wallet_cold} --wallet.hotkey {settings.wallet_hot} --network {network}",
+            f"--wallet.name {wallet_cold} --wallet.hotkey {wallet_hot} --network {network}",
         ),
     )
 
@@ -256,16 +301,20 @@ def main(ctx: click.Context) -> None:
 
 @main.command("setup", help="Check and write guided setup values.")
 @click.option("--role", type=click.Choice(["miner", "validator"]), help="Setup role.")
-def setup_cmd(role: str | None) -> None:
+@click.option("--wallet", "wallet_cold", help="Coldkey/wallet name to use for this role.")
+@click.option("--hotkey", "wallet_hot", help="Hotkey name to use for this role.")
+def setup_cmd(role: str | None, wallet_cold: str | None, wallet_hot: str | None) -> None:
     from lemma.problems.known_theorems import known_theorems_manifest_sha256
     from lemma.validator.profile import validator_profile_sha256
 
-    settings = LemmaSettings()
+    base_settings = LemmaSettings()
     role = role or click.prompt("Role", type=click.Choice(["miner", "validator"]), default="miner")
+    settings = _settings_with_wallet_options(base_settings, role=role, wallet=wallet_cold, hotkey=wallet_hot)
+    display_wallet_cold, display_wallet_hot = _wallet_names(settings, role)
     click.echo(stylize("Lemma setup", fg="cyan", bold=True))
     click.echo(_kv("role", role, fg="magenta"))
     click.echo(_kv("chain", f"netuid={settings.netuid} network={settings.subtensor_network}", fg="cyan"))
-    click.echo(_kv("wallet", f"{settings.wallet_cold}/{settings.wallet_hot}", fg="green"))
+    click.echo(_kv("wallet", f"{display_wallet_cold}/{display_wallet_hot}", fg="green"))
 
     current_block, chain_error = _current_block_or_none(settings)
     if current_block is None:
@@ -275,14 +324,14 @@ def setup_cmd(role: str | None) -> None:
     else:
         click.echo(_kv("block", current_block, fg="cyan"))
 
-    hotkey = _wallet_hotkey_address(settings)
+    hotkey = _wallet_hotkey_address(settings, role)
     click.echo(_kv("hotkey", hotkey or "unavailable", fg="green" if hotkey else "yellow"))
     registration = _registration_text(settings, hotkey)
     click.echo(_kv("subnet", registration, fg="green" if registration.startswith("registered") else "yellow"))
 
     if shutil.which("btcli") is None:
         click.echo(stylize("btcli  missing", fg="yellow", bold=True))
-        _print_btcli_commands(settings)
+        _print_btcli_commands(settings, role)
     else:
         click.echo(_kv("btcli", "found", fg="green"))
 
@@ -299,7 +348,8 @@ def setup_cmd(role: str | None) -> None:
     else:
         click.echo(_kv("genesis", settings.target_genesis_block, fg="cyan"))
 
-    updates = _env_updates_for_setup(settings, role, current_block)
+    updates = _wallet_env_updates(role=role, wallet=wallet_cold, hotkey=wallet_hot)
+    updates.update(_env_updates_for_setup(settings, role, current_block))
     if not updates:
         if role == "miner" and _auto_retry_commit_after_setup(settings):
             return
@@ -332,6 +382,8 @@ def setup_cmd(role: str | None) -> None:
 @click.option("--retry-commit", is_flag=True, help="Retry the chain commitment for a stored proof.")
 @click.option("--replace", "replace_stored", is_flag=True, help="Replace a stale stored proof.")
 @click.option("--editor", is_flag=True, help="Open an editor instead of paste mode.")
+@click.option("--wallet", "wallet_cold", help="Coldkey/wallet name for the miner.")
+@click.option("--hotkey", "wallet_hot", help="Hotkey name for the miner.")
 @click.option(
     "--submission",
     "submission_path",
@@ -343,6 +395,8 @@ def mine_cmd(
     retry_commit: bool,
     replace_stored: bool,
     editor: bool,
+    wallet_cold: str | None,
+    wallet_hot: str | None,
     submission_path: Path | None,
     host_lean: bool,
 ) -> None:
@@ -351,7 +405,7 @@ def mine_cmd(
 
     if editor and submission_path is not None:
         raise click.ClickException("Use either --editor or --submission, not both.")
-    settings = LemmaSettings()
+    settings = _settings_with_wallet_options(LemmaSettings(), role="miner", wallet=wallet_cold, hotkey=wallet_hot)
     problem = _active_problem_or_click(settings)
 
     click.echo(stylize("Lemma mine", fg="cyan", bold=True))
@@ -515,11 +569,12 @@ def _phase_or_none(settings: LemmaSettings, current_block: int):
     return target_phase(settings, ledger, current_block)
 
 
-def _wallet_hotkey_address(settings: LemmaSettings) -> str | None:
+def _wallet_hotkey_address(settings: LemmaSettings, role: str = "miner") -> str | None:
     try:
         import bittensor as bt
 
-        return str(bt.Wallet(name=settings.wallet_cold, hotkey=settings.wallet_hot).hotkey.ss58_address)
+        wallet_cold, wallet_hot = _wallet_names(settings, role)
+        return str(bt.Wallet(name=wallet_cold, hotkey=wallet_hot).hotkey.ss58_address)
     except Exception:  # noqa: BLE001
         return None
 
@@ -621,11 +676,13 @@ def status_cmd() -> None:
 
 
 @main.command("validate", help="Start validator after setup checks.")
-def validate_cmd() -> None:
+@click.option("--wallet", "wallet_cold", help="Coldkey/wallet name for the validator.")
+@click.option("--hotkey", "wallet_hot", help="Hotkey name for the validator.")
+def validate_cmd(wallet_cold: str | None, wallet_hot: str | None) -> None:
     from lemma.cli.validator_check import run_validator_check
     from lemma.validator.service import ValidatorService
 
-    settings = LemmaSettings()
+    settings = _settings_with_wallet_options(LemmaSettings(), role="validator", wallet=wallet_cold, hotkey=wallet_hot)
     code = run_validator_check(settings)
     if code != 0:
         click.echo(

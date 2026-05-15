@@ -29,6 +29,12 @@ the pasted `Submission.lean`, publishes the commitment, and starts the miner:
 uv run lemma mine
 ```
 
+Pick a specific registered miner hotkey with:
+
+```bash
+uv run lemma mine --hotkey lemmaminer2
+```
+
 If the chain commitment failed after local verification, retry it without
 resubmitting the proof:
 
@@ -63,6 +69,14 @@ minutes after reveal opens.
 bash scripts/prebuild_lean_image.sh
 uv run lemma setup --role validator
 uv run lemma validate
+```
+
+If the validator should use a different registered hotkey than the miner, pass
+it directly:
+
+```bash
+uv run lemma setup --role validator --hotkey lemmaminer2
+uv run lemma validate --hotkey lemmaminer2
 ```
 
 The validator service should stay live for subnet operation: it polls miners,

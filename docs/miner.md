@@ -13,6 +13,14 @@ uv run lemma setup --role miner
 uv run lemma mine
 ```
 
+Use `--wallet` and `--hotkey` when one machine has several registered miner
+hotkeys:
+
+```bash
+uv run lemma setup --role miner --hotkey lemmaminer2
+uv run lemma mine --hotkey lemmaminer2
+```
+
 `lemma mine` shows the active theorem, asks whether you are ready, verifies the
 pasted `Submission.lean`, publishes the commitment, and starts the miner server.
 If the proof is already committed, it resumes serving. If commitment failed,

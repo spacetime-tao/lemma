@@ -49,6 +49,8 @@ Mine the active target:
 
 ```bash
 uv run lemma mine
+# or choose one registered miner hotkey explicitly
+uv run lemma mine --hotkey lemmaminer2
 ```
 
 `lemma mine` shows the active theorem, asks whether to submit a proof, verifies
@@ -60,6 +62,8 @@ Run a validator:
 ```bash
 uv run lemma setup --role validator
 uv run lemma validate
+# or run validation with a separate registered validator hotkey
+uv run lemma validate --hotkey lemmaminer2
 ```
 
 Advanced/script commands remain callable but are hidden from the main help:

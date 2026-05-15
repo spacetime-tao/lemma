@@ -11,6 +11,14 @@ uv run lemma setup --role validator
 uv run lemma validate
 ```
 
+Use `--wallet` and `--hotkey` when the validator should sign with a different
+registered hotkey than the miner:
+
+```bash
+uv run lemma setup --role validator --hotkey lemmaminer2
+uv run lemma validate --hotkey lemmaminer2
+```
+
 Validators require:
 
 - Docker verification enabled with `LEMMA_USE_DOCKER=true`;
