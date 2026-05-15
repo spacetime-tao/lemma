@@ -10,7 +10,7 @@ help, tests, and the public site.
 - Active cadence supply: curated
   [`known_theorems_manifest.json`](../lemma/problems/known_theorems_manifest.json)
   plus deterministic generated cadence builders.
-- Provider setup is OpenAI-compatible, not OpenAI-only:
+- Provider setup is OpenAI-compatible and provider-neutral:
   `LEMMA_PROVER_BASE_URL`, `LEMMA_PROVER_API_KEY`, and
   `LEMMA_PROVER_MODEL`.
 - Reward-critical miner artifact: a pre-reveal commitment, then `proof_script`

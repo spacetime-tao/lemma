@@ -12,6 +12,10 @@ after reveal opens.
 
 ## Guided Mining
 
+Optional prover assistance uses OpenAI-compatible provider settings. For
+copy/paste setup with provider links and model listing, use
+<https://lemmasub.net/setup/>.
+
 ```bash
 uv run lemma setup --role miner
 uv run lemma mine

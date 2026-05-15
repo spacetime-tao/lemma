@@ -21,13 +21,26 @@ the solved ledger, followed by deterministic generated cadence tasks. A fresh
 validator needs `LEMMA_TARGET_GENESIS_BLOCK` so every miner sees the same first
 commit window.
 
-Optional proof search tools use OpenAI-compatible provider settings:
+Optional proof search tools use OpenAI-compatible provider settings. The public
+setup guide lists provider links and base URLs:
+<https://lemmasub.net/setup/>.
 
 ```bash
-LEMMA_PROVER_BASE_URL=https://your-provider.example/v1
+cat >> .env <<'EOF'
+LEMMA_PROVER_BASE_URL=https://api.openai.com/v1
 LEMMA_PROVER_API_KEY=replace_me
-LEMMA_PROVER_MODEL=your-model
+EOF
+
+source .env
+curl -sS "$LEMMA_PROVER_BASE_URL/models" \
+  -H "Authorization: Bearer $LEMMA_PROVER_API_KEY"
+
+cat >> .env <<'EOF'
+LEMMA_PROVER_MODEL=copy_one_model_id_here
+EOF
 ```
+
+Use the chosen provider's returned model `id` exactly as shown by `/models`.
 
 ## Mine
 
