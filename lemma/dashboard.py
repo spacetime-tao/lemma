@@ -35,9 +35,10 @@ def build_miner_dashboard(settings: LemmaSettings, *, generated_unix: int | None
         "problem_source": "known_theorems",
         "manifest_sha256": manifest_sha256,
         "reward": {
-            "mode": "commit_reveal_binary_lean_verify",
-            "rule": "A pre-reveal commitment plus a Lean-accepted proof is eligible.",
-            "tie_policy": "earliest_valid_commitment_block_wins; same_block_valid_commitments_split",
+            "mode": "current_epoch_observed_difficulty_with_owner_burn",
+            "rule": "Verified current-epoch proofs earn (1 - solve_fraction)^2 of the budget.",
+            "rank_policy": "commitment_block_ranked; same_rank_commitments_tie",
+            "owner_burn_uid": int(settings.owner_burn_uid),
         },
         "counts": {
             "total_targets": len(problems),

@@ -1006,25 +1006,6 @@ def dashboard_export_cmd(output_path: Path) -> None:
     click.echo(f"wrote={output_path}")
 
 
-@main.group("portal", invoke_without_command=True, help="Serve wallet-submitted miner proofs.", hidden=True)
-@click.pass_context
-def portal_group(ctx: click.Context) -> None:
-    if ctx.invoked_subcommand is None:
-        click.echo(ctx.get_help(), color=colors_enabled())
-
-
-@portal_group.command("start")
-def portal_start_cmd() -> None:
-    from lemma.portal import resolved_portal_db_path, run_portal_server
-
-    settings = LemmaSettings()
-    setup_logging(settings.log_level)
-    click.echo(stylize("Lemma portal", fg="cyan", bold=True))
-    click.echo(f"url=http://{settings.portal_host}:{settings.portal_port}/api/portal/v1")
-    click.echo(f"db={resolved_portal_db_path(settings.portal_db_path)}")
-    run_portal_server(settings)
-
-
 @main.group(
     "validator",
     invoke_without_command=True,

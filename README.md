@@ -11,7 +11,8 @@ The live reward path is deliberately narrow:
 4. Validators verify the commitment, then verify the Lean file against the locked target.
 5. Passing solvers are written to the solved-target ledger.
 6. Accepted proof receipts make verified proofs replayable after acceptance.
-7. The current verified solver set receives miner weight until the next target is solved.
+7. Current-epoch verified work earns miner weight; unearned weight goes to
+   `LEMMA_OWNER_BURN_UID`.
 
 No prose score, proof-efficiency score, difficulty multiplier, subjective judge,
 or hidden validator discretion is part of the reward path.
@@ -75,7 +76,6 @@ uv run lemma submit \
 uv run lemma commit --problem known/smoke/nat_two_plus_two_eq_four
 uv run lemma miner start
 uv run lemma dashboard export --output data/miner-dashboard.json
-uv run lemma portal start
 uv run lemma validator check
 uv run lemma validator start
 ```
@@ -103,14 +103,16 @@ uv run lemma meta --raw
 - Each target row carries a human proof reference, imports, attribution, and
   reviewer duplicate/faithfulness notes.
 - Difficulty labels are operator planning metadata, not reward weights.
-- The earliest valid commitment block wins. If multiple valid solvers committed
-  in that same block, they split.
-- If no target has been solved yet, validators do not write miner weights.
-- Duplicate proofs for already-solved targets do not change the active solver set.
+- Verified cadence work earns `(1 - solve_fraction)^2` of the epoch budget,
+  ranked by commitment block. The remaining budget routes to `LEMMA_OWNER_BURN_UID`.
+- If nobody solves, the whole epoch routes to `LEMMA_OWNER_BURN_UID`; old solver
+  sets do not keep getting paid.
+- Duplicate proofs for already-solved targets do not change the ledger.
 - The public miner dashboard is a static export from the manifest, solved
   ledger, and accepted-proof receipts.
-- An optional portal candidate lane can host wallet-submitted miner proofs, but
-  validators still require the same commitment and Lean verification.
+- Formal Conjectures tasks are manual owner-emission campaigns: first accepted
+  proof wins the campaign ledger, but campaign rows do not affect validator
+  `set_weights`.
 - Launch on a fresh or intentionally reset subnet state so old Lemma weights do
   not carry into the proof protocol.
 

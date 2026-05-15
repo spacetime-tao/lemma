@@ -3,31 +3,12 @@
   "commitment_hash": "40edfa71fea23f5da63b3ec5a948735da56761363c3dd916789ebe061dfc4e2c",
   "metadata_info": {
     "fields": [
-      [
-        {
-          "Raw73": "0x6c656d6d613a76313a34306564666137316665613233663564613633623365633561393438373335646135363736313336336333646439313637383965626530363164666334653263"
-        }
-      ]
+      {
+        "raw73": "0x6c656d6d613a76313a34306564666137316665613233663564613633623365633561393438373335646135363736313336336333646439313637383965626530363164666334653263"
+      }
     ]
   },
   "payload_text": "lemma:v1:40edfa71fea23f5da63b3ec5a948735da56761363c3dd916789ebe061dfc4e2c",
-  "portal_header": {
-    "commit_cutoff_block": 1240,
-    "commitment_block": 1234,
-    "commitment_hash": "40edfa71fea23f5da63b3ec5a948735da56761363c3dd916789ebe061dfc4e2c",
-    "manifest_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-    "miner_hotkey": "5DjsmLemMa111111111111111111111111111111111111",
-    "netuid": 467,
-    "proof_nonce": "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-    "proof_sha256": "cd1765803eb4fde5152784be256bd25918cab626d9321021f33c56907b64857c",
-    "reveal_block": 1241,
-    "schema": "lemma_portal_submission_v1",
-    "submitted_unix": 1770000000,
-    "target_id": "known/test/commit-fixture",
-    "theorem_statement_sha256": "2b296a6f200cbca3d751711a47dc648dfb3a280f0bab7ea28b0aaa0426647c89"
-  },
-  "portal_header_canonical_json": "{\"commit_cutoff_block\":1240,\"commitment_block\":1234,\"commitment_hash\":\"40edfa71fea23f5da63b3ec5a948735da56761363c3dd916789ebe061dfc4e2c\",\"manifest_sha256\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\",\"miner_hotkey\":\"5DjsmLemMa111111111111111111111111111111111111\",\"netuid\":467,\"proof_nonce\":\"abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789\",\"proof_sha256\":\"cd1765803eb4fde5152784be256bd25918cab626d9321021f33c56907b64857c\",\"reveal_block\":1241,\"schema\":\"lemma_portal_submission_v1\",\"submitted_unix\":1770000000,\"target_id\":\"known/test/commit-fixture\",\"theorem_statement_sha256\":\"2b296a6f200cbca3d751711a47dc648dfb3a280f0bab7ea28b0aaa0426647c89\"}",
-  "portal_signing_message": "lemma:portal:v1:{\"commit_cutoff_block\":1240,\"commitment_block\":1234,\"commitment_hash\":\"40edfa71fea23f5da63b3ec5a948735da56761363c3dd916789ebe061dfc4e2c\",\"manifest_sha256\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\",\"miner_hotkey\":\"5DjsmLemMa111111111111111111111111111111111111\",\"netuid\":467,\"proof_nonce\":\"abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789\",\"proof_sha256\":\"cd1765803eb4fde5152784be256bd25918cab626d9321021f33c56907b64857c\",\"reveal_block\":1241,\"schema\":\"lemma_portal_submission_v1\",\"submitted_unix\":1770000000,\"target_id\":\"known/test/commit-fixture\",\"theorem_statement_sha256\":\"2b296a6f200cbca3d751711a47dc648dfb3a280f0bab7ea28b0aaa0426647c89\"}",
   "preimage": {
     "manifest_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
     "miner_hotkey": "5DjsmLemMa111111111111111111111111111111111111",

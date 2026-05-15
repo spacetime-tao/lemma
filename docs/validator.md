@@ -1,7 +1,8 @@
 # Validator
 
 Validators poll miners on a fixed interval, verify returned Lean proofs, append
-the valid solve set to the solved ledger, and write miner weights.
+the valid solve set to the solved ledger, and write current-epoch miner plus
+owner/burn weights.
 
 ## Startup
 
@@ -24,7 +25,8 @@ Validators require:
 - Docker verification enabled with `LEMMA_USE_DOCKER=true`;
 - `LEMMA_TARGET_GENESIS_BLOCK` before the first target can run;
 - `LEMMA_KNOWN_THEOREMS_MANIFEST_SHA256_EXPECTED`;
-- `LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED`.
+- `LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED`;
+- `LEMMA_OWNER_BURN_UID` for the unearned epoch budget.
 
 `lemma setup --role validator` prints the expected hashes and asks before
 writing suggested `.env` values. Advanced scripts can still use
@@ -40,22 +42,8 @@ in the solved ledger.
 Validators do not poll proof text during commit phase. They poll during reveal
 phase, then require a matching commitment at the commit cutoff before running
 Lean. The earliest valid commitment block wins; same-block valid commitments
-split. If no proof verifies and there is no previous solver set, the validator
-skips `set_weights`.
-
-## Portal Candidates
-
-Validators can optionally merge web-portal candidates during reveal:
-
-```bash
-export LEMMA_PORTAL_CANDIDATES_URL=https://lemmasub.net/api/portal/v1/candidates
-uv run lemma validate
-```
-
-The portal lane is only a submission transport. Validators still require a
-registered miner hotkey, the same pre-reveal chain commitment, and a passing
-Lean verification. If the same proof arrives from Axon and the portal, it is
-verified once.
+split. Unearned weight always routes to `LEMMA_OWNER_BURN_UID`; previous solver
+sets do not keep getting paid for failed later epochs.
 
 ## Lean Verify
 
@@ -70,4 +58,4 @@ Useful knobs:
 - `LEMMA_LEAN_VERIFY_MAX_CONCURRENT`
 - `LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR`
 - `LEMMA_VALIDATOR_MIN_FREE_BYTES`
-- `LEMMA_PORTAL_CANDIDATES_URL`
+- `LEMMA_OWNER_BURN_UID`

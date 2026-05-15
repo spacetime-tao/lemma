@@ -9,7 +9,7 @@ from typing import Any
 from lemma.common.config import LemmaSettings
 from lemma.problems.known_theorems import known_theorems_manifest_sha256
 
-PROFILE_SCHEMA = "lemma_manual_proof_profile_v2"
+PROFILE_SCHEMA = "lemma_cadence_profile_v3"
 
 
 def validator_profile_dict(settings: LemmaSettings) -> dict[str, Any]:
@@ -31,7 +31,11 @@ def validator_profile_dict(settings: LemmaSettings) -> dict[str, Any]:
             "lean_verify_timeout_s": int(settings.lean_verify_timeout_s),
             "lean_use_docker": bool(settings.lean_use_docker),
         },
-        "scoring_policy": {"reward_mode": "earliest_valid_commitment_block_wins"},
+        "scoring_policy": {
+            "reward_mode": "current_epoch_observed_difficulty_with_owner_burn",
+            "base_reward": "(1 - solve_fraction)^2",
+            "owner_burn_uid": int(settings.owner_burn_uid),
+        },
     }
 
 

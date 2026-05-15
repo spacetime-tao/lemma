@@ -67,14 +67,9 @@ recomputes from:
 Late commitments, copied commitments under another hotkey, wrong target hashes,
 wrong proof hashes, and wrong nonces are rejected before Lean verification.
 
-The Axon miner daemon is one transport for the reveal. A portal can also host
-wallet-submitted proof packages for registered miner hotkeys. In that path, the
-browser still publishes the same compact commitment from the miner hotkey, the
-portal verifies and stores the proof privately, and validators configured with
-`LEMMA_PORTAL_CANDIDATES_URL` fetch candidates after reveal. Validators do not
-trust the portal as a grader: they map the hotkey to a UID, verify the hotkey
-signature, re-check the on-chain commitment, dedupe against Axon responses, and
-run Lean before writing the solved ledger.
+The Axon miner daemon is the supported reveal transport. Browser solve-portal
+submission code has been removed; miners work offline, commit on-chain, then
+serve the proof to validators after reveal opens.
 
 ## Solved Ledger
 
@@ -101,14 +96,26 @@ local; accepted proofs are public so third parties can rerun Lean.
 
 ## Rewards
 
-Before the first solved target, validators write no miner weights.
+Each epoch composes miner weights plus an owner/burn remainder:
 
-After a solve, the current verified solver set receives miner weight until the
-next target is solved. Among all revealed proofs that pass Lean and have valid
-pre-cutoff commitments, the earliest valid commitment block wins. If multiple
-valid solvers committed in that same block, those UIDs split the weight equally.
+```text
+sum(miner_weights) + owner_burn_weight = 1.0
+```
 
-Duplicate submissions for an already-solved target do not change rewards.
+For cadence targets, verified current-epoch work earns:
+
+```text
+base_reward = (1 - solve_fraction)^2
+```
+
+Valid solvers share that earned budget by commitment rank. Same-rank solvers
+tie deterministically; later commitment blocks receive lower rank weight. The
+unearned remainder is assigned to `LEMMA_OWNER_BURN_UID`.
+
+If nobody solves, the whole epoch routes to `LEMMA_OWNER_BURN_UID`. Previous
+winners do not keep getting paid for later failed epochs.
+
+Duplicate submissions for an already-solved target do not change the ledger.
 
 Difficulty labels are operator planning metadata. They do not change reward
 weight.
@@ -133,6 +140,11 @@ Before a launch target is eligible, the manifest row records:
 Formal Conjectures is useful target-discovery material, but `hasFormalProof=false`
 only means the site has no external formal-proof reference. Source files still
 need inspection because some simple `test` entries are already proved in-repo.
+
+Formal Conjectures campaign tasks are manual owner-emission work, separate from
+cadence validator weights. The repo keeps a campaign registry and append-only
+acceptance ledger; the subnet owner pays the first accepted proof winner
+manually from owner/burn emission.
 
 ## Launch Note
 

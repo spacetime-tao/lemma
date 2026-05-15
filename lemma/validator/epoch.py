@@ -22,16 +22,14 @@ from lemma.lean.verify_runner import run_lean_verify
 from lemma.ledger import (
     LedgerSolver,
     SolvedLedgerEntry,
-    active_solver_weights,
     append_solved_ledger_entry,
     matching_solved_ledger,
-    split_solver_weights,
 )
 from lemma.lifecycle import TargetPhase, target_phase
-from lemma.portal import PORTAL_SUBMISSION_SCHEMA, fetch_portal_candidates, portal_candidate_signature_ok
 from lemma.problems.base import Problem, ProblemSource
 from lemma.problems.known_theorems import known_theorems_manifest_sha256
 from lemma.protocol import LemmaChallenge, synapse_miner_response_integrity_ok
+from lemma.validator.rewards import RewardCandidate, cadence_epoch_weights
 
 
 def _validator_poll_challenge(problem: Problem, *, poll_id: str) -> LemmaChallenge:
@@ -235,108 +233,14 @@ def _commitment_evidence(
     )
 
 
-def _hotkey_uid_map(metagraph: object) -> dict[str, int]:
-    hotkeys = getattr(metagraph, "hotkeys", None)
-    if hotkeys is None:
-        return {}
-    out: dict[str, int] = {}
-    try:
-        for uid, hotkey in enumerate(hotkeys):
-            out[str(hotkey.item()) if hasattr(hotkey, "item") else str(hotkey)] = uid
-    except TypeError:
-        return {}
-    return out
-
-
-def _candidate_key(uid: int, resp: LemmaChallenge, evidence: CommitmentEvidence) -> tuple[int, str, str, str]:
-    return (uid, evidence.proof_sha256, resp.proof_nonce or "", evidence.commitment_hash)
-
-
-def _append_portal_candidates(
-    settings: LemmaSettings,
-    subtensor: Any,
-    *,
-    netuid: int,
-    cur_block: int,
-    phase: TargetPhase,
-    metagraph: object,
-    problem: Problem,
-    manifest_sha256: str,
-    poll_id: str,
-    commitments_at_cutoff: dict[str, str],
-    first_seen_cache: dict[tuple[str, str], int | None],
-    candidates: list[tuple[int, LemmaChallenge, CommitmentEvidence]],
-) -> None:
-    url = (settings.portal_candidates_url or "").strip()
-    if not url:
-        return
-    uid_by_hotkey = _hotkey_uid_map(metagraph)
-    seen = {_candidate_key(uid, resp, evidence) for uid, resp, evidence in candidates}
-    try:
-        portal_candidates = fetch_portal_candidates(url, current_block=cur_block)
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("portal candidates fetch failed url={}: {}", url, exc)
-        return
-    for candidate in portal_candidates:
-        uid = uid_by_hotkey.get(candidate.miner_hotkey)
-        if uid is None:
-            logger.warning("portal dropping hotkey={}: not registered on subnet", candidate.miner_hotkey)
-            continue
-        if candidate.schema != PORTAL_SUBMISSION_SCHEMA or candidate.netuid != netuid:
-            logger.warning("portal dropping uid={}: schema or netuid mismatch", uid)
-            continue
-        if candidate.target_id != problem.id or candidate.manifest_sha256 != manifest_sha256:
-            logger.warning("portal dropping uid={}: target or manifest mismatch", uid)
-            continue
-        if candidate.theorem_statement_sha256 != problem.theorem_statement_sha256():
-            logger.warning("portal dropping uid={}: theorem statement hash mismatch", uid)
-            continue
-        if candidate.commit_cutoff_block != phase.commit_cutoff_block or candidate.reveal_block != phase.reveal_block:
-            logger.warning("portal dropping uid={}: lifecycle mismatch", uid)
-            continue
-        if cur_block < candidate.reveal_block:
-            logger.warning("portal dropping uid={}: proof arrived before reveal", uid)
-            continue
-        if candidate.proof_script is None or candidate.proof_sha256 != proof_sha256(candidate.proof_script):
-            logger.warning("portal dropping uid={}: proof hash mismatch", uid)
-            continue
-        if not portal_candidate_signature_ok(candidate):
-            logger.warning("portal dropping uid={}: bad signature", uid)
-            continue
-        resp = candidate.to_synapse(problem, poll_id=poll_id)
-        payload_err = synapse_payload_error(resp, settings)
-        if payload_err:
-            logger.warning("portal dropping uid={}: {}", uid, payload_err)
-            continue
-        evidence = _commitment_evidence(
-            settings,
-            subtensor,
-            netuid=netuid,
-            phase=phase,
-            problem=problem,
-            manifest_sha256=manifest_sha256,
-            hotkey=candidate.miner_hotkey,
-            resp=resp,
-            commitments_at_cutoff=commitments_at_cutoff,
-            first_seen_cache=first_seen_cache,
-        )
-        if evidence is None:
-            logger.warning("portal dropping uid={}: missing or invalid pre-reveal commitment", uid)
-            continue
-        key = _candidate_key(uid, resp, evidence)
-        if key in seen:
-            continue
-        seen.add(key)
-        candidates.append((uid, resp, evidence))
-
-
-def _select_earliest_commitment_block(
+def _rank_verified(
     verified: list[tuple[int, LemmaChallenge, VerifyResult, CommitmentEvidence]],
 ) -> list[tuple[int, LemmaChallenge, VerifyResult, CommitmentEvidence]]:
-    if not verified:
-        return []
-    earliest_block = min(item[3].commitment_block for item in verified)
-    return sorted((item for item in verified if item[3].commitment_block == earliest_block), key=lambda item: item[0])
+    return sorted(verified, key=lambda item: (item[3].commitment_block, item[0]))
+
+
+def _burn_weights(settings: LemmaSettings, *, eligible_count: int) -> dict[int, float]:
+    return cadence_epoch_weights(candidates=[], eligible_count=eligible_count, owner_burn_uid=settings.owner_burn_uid)
 
 
 async def run_epoch(
@@ -358,6 +262,9 @@ async def run_epoch(
     metagraph = subtensor.metagraph(netuid)
     raw_n = metagraph.n
     n = int(raw_n.item()) if hasattr(raw_n, "item") else int(raw_n)
+    if settings.owner_burn_uid >= n:
+        logger.error("owner_burn_uid={} is outside metagraph size n={}; skipping weights", settings.owner_burn_uid, n)
+        return {}
     my_uid = subtensor.get_uid_for_hotkey_on_subnet(wallet.hotkey.ss58_address, netuid)
     if settings.validator_abort_if_not_registered and my_uid is None:
         logger.warning("Validator wallet has no UID on subnet {}; skipping poll", netuid)
@@ -372,12 +279,8 @@ async def run_epoch(
     try:
         problem = problem_source.sample(seed=0)
     except ValueError:
-        weights_by_uid = active_solver_weights(
-            settings.solved_ledger_path,
-            set(uids),
-            statement_hashes,
-        )
-        logger.info("all known-theorem targets solved; preserving solver weights={}", weights_by_uid)
+        weights_by_uid = _burn_weights(settings, eligible_count=len(uids))
+        logger.info("all targets solved; routing epoch budget to owner_burn_uid={}", settings.owner_burn_uid)
         return await _write_weights(settings, subtensor, wallet, netuid, n, weights_by_uid, dry_run=dry_run)
 
     try:
@@ -386,7 +289,7 @@ async def run_epoch(
         logger.error("validator cannot run target lifecycle: {}", exc)
         return {}
     if phase.name != "reveal":
-        weights_by_uid = active_solver_weights(settings.solved_ledger_path, set(uids), statement_hashes)
+        weights_by_uid = _burn_weights(settings, eligible_count=len(uids))
         logger.info(
             "target_not_revealable target_id={} phase={} current_block={} reveal_block={}",
             problem.id,
@@ -445,21 +348,6 @@ async def run_epoch(
                 logger.warning("uid={} dropping response: missing or invalid pre-reveal commitment", uid)
                 continue
             candidates.append((uid, resp, evidence))
-    _append_portal_candidates(
-        settings,
-        subtensor,
-        netuid=netuid,
-        cur_block=cur_block,
-        phase=phase,
-        metagraph=metagraph,
-        problem=problem,
-        manifest_sha256=manifest_sha,
-        poll_id=poll_id,
-        commitments_at_cutoff=commitments_at_cutoff,
-        first_seen_cache=first_seen_cache,
-        candidates=candidates,
-    )
-
     verify_sem = asyncio.Semaphore(max(1, int(settings.lemma_lean_verify_max_concurrent)))
 
     async def verify_one(
@@ -484,8 +372,7 @@ async def run_epoch(
         return uid, resp, vr, evidence
 
     raw_verified = await asyncio.gather(*(verify_one(uid, resp, evidence) for uid, resp, evidence in candidates))
-    verified = _select_earliest_commitment_block([item for item in raw_verified if item is not None])
-    dry_run_solver_weights: dict[int, float] = {}
+    verified = _rank_verified([item for item in raw_verified if item is not None])
     if verified:
         solvers = tuple(
             LedgerSolver(
@@ -512,9 +399,7 @@ async def run_epoch(
             lemma_version=__version__,
             theorem_statement_sha256=problem.theorem_statement_sha256(),
         )
-        if dry_run:
-            dry_run_solver_weights = split_solver_weights(entry.solver_uids, set(uids))
-        else:
+        if not dry_run:
             try:
                 append_solved_ledger_entry(settings.solved_ledger_path, entry)
                 logger.info(
@@ -526,20 +411,23 @@ async def run_epoch(
             except ValueError as exc:
                 logger.warning("solved ledger append skipped: {}", exc)
 
-    weights_by_uid = active_solver_weights(
-        settings.solved_ledger_path,
-        set(uids),
-        statement_hashes,
+    weights_by_uid = cadence_epoch_weights(
+        candidates=[
+            RewardCandidate(uid=uid, commitment_block=evidence.commitment_block)
+            for uid, _resp, _vr, evidence in verified
+        ],
+        eligible_count=len(uids),
+        owner_burn_uid=settings.owner_burn_uid,
     )
-    if dry_run and not weights_by_uid and dry_run_solver_weights:
-        weights_by_uid = dry_run_solver_weights
     logger.info(
-        "lemma_poll_summary block={} target_id={} candidates={} verified={} weight_entries={} seconds={:.2f}",
+        "lemma_poll_summary block={} target_id={} candidates={} verified={} "
+        "earned_weight={:.6f} burn_uid={} seconds={:.2f}",
         cur_block,
         problem.id,
         len(candidates),
         len(verified),
-        len(weights_by_uid),
+        1.0 - float(weights_by_uid.get(settings.owner_burn_uid, 0.0)),
+        settings.owner_burn_uid,
         time.perf_counter() - t0,
     )
     return await _write_weights(settings, subtensor, wallet, netuid, n, weights_by_uid, dry_run=dry_run)

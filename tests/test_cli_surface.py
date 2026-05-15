@@ -50,6 +50,7 @@ def test_removed_commands_fail() -> None:
         ("configure", "prover-retries"),
         ("target", "review"),
         ("miner", "dry-run"),
+        ("portal",),
     ]:
         result = CliRunner().invoke(main, [*command, "--help"])
         assert result.exit_code != 0
@@ -65,7 +66,6 @@ def test_advanced_commands_are_hidden_but_callable() -> None:
         ("validator",),
         ("verify",),
         ("dashboard",),
-        ("portal",),
         ("meta",),
     ]:
         result = CliRunner().invoke(main, [*command, "--help"])
@@ -947,13 +947,6 @@ def test_dashboard_help_lists_export_command() -> None:
 
     assert result.exit_code == 0
     assert "export" in result.output
-
-
-def test_portal_help_lists_start_command() -> None:
-    result = CliRunner().invoke(main, ["portal", "--help"])
-
-    assert result.exit_code == 0
-    assert "start" in result.output
 
 
 def test_validator_help_lists_proof_subcommands() -> None:
