@@ -59,3 +59,19 @@ Useful knobs:
 - `LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR`
 - `LEMMA_VALIDATOR_MIN_FREE_BYTES`
 - `LEMMA_OWNER_BURN_UID`
+
+## Live Task JSON
+
+The validator droplet owns the private solved-target ledger and bounty
+acceptance ledger. Publish only stripped JSON from that host:
+
+```bash
+uv run lemma dashboard publish --output-dir /var/www/lemma-live
+```
+
+Install `deploy/systemd/lemma-live-publisher.service` and
+`deploy/systemd/lemma-live-publisher.timer` to refresh
+`/var/www/lemma-live/cadence.json` and `/var/www/lemma-live/bounties.json` every
+minute. Serve that directory as `live.lemmasub.net` with
+`deploy/nginx/lemma-live.conf`. The live JSON files are overwritten in place;
+do not publish them through Git commits.

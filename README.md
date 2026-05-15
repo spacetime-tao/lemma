@@ -3,16 +3,20 @@
 **Lemma is a Bittensor subnet for turning formal mathematics targets
 into machine-checked Lean proofs.**
 
-The live reward path is deliberately narrow:
+The live work surface has two lanes:
 
-1. Validators publish one ordered known-theorem target at a time from a pinned manifest.
+1. Cadence tasks: validators publish one ordered theorem target at a time from
+   hybrid curated/generated supply.
 2. Miners locally verify a proof, keep it private, and publish an on-chain commitment.
 3. After the commit window closes, miners reveal `proof_script` plus the secret nonce.
 4. Validators verify the commitment, then verify the Lean file against the locked target.
 5. Passing solvers are written to the solved-target ledger.
-6. Accepted proof receipts make verified proofs replayable after acceptance.
-7. Current-epoch verified work earns miner weight; unearned weight goes to
+6. Public cadence data shows task state, UIDs, and full hotkeys, but not proof
+   bodies, proof hashes, nonces, or commitment hashes.
+7. Current-epoch verified cadence work earns miner weight; unearned weight goes to
    `LEMMA_OWNER_BURN_UID`.
+8. Formal Conjectures bounty campaigns are manual owner-emission work: first
+   accepted proof wins the listed campaign reward, outside validator weights.
 
 No prose score, proof-efficiency score, difficulty multiplier, subjective judge,
 or hidden validator discretion is part of the reward path.
@@ -22,16 +26,17 @@ or hidden validator discretion is part of the reward path.
 The public package, command, and docs are `lemma`. The internal Python package is
 also `lemma`.
 
-The default problem source is:
+The default cadence problem source is:
 
 ```bash
-LEMMA_PROBLEM_SOURCE=known_theorems
+LEMMA_PROBLEM_SOURCE=hybrid
 ```
 
-The active target supply is vendored in
-[`lemma/problems/known_theorems_manifest.json`](lemma/problems/known_theorems_manifest.json).
-The current queue is Mathlib-only smoke-test material for proving the protocol
-and CLI flow before launch-quality targets are curated.
+Hybrid cadence starts with the curated
+[`lemma/problems/known_theorems_manifest.json`](lemma/problems/known_theorems_manifest.json),
+then continues into deterministic generated cadence tasks. Formal Conjectures
+campaigns live in
+[`lemma/formal_conjectures_campaigns.json`](lemma/formal_conjectures_campaigns.json).
 
 ## Quick Start
 
@@ -44,6 +49,14 @@ uv sync --extra btcli
 uv run lemma --help
 uv run lemma setup
 uv run lemma status
+```
+
+Optional local prover tools use OpenAI-compatible provider settings:
+
+```bash
+LEMMA_PROVER_BASE_URL=https://your-provider.example/v1
+LEMMA_PROVER_API_KEY=replace_me
+LEMMA_PROVER_MODEL=your-model
 ```
 
 Mine the active target:
@@ -69,6 +82,12 @@ uv run lemma validate
 uv run lemma validate --hotkey lemmaminer2
 ```
 
+Verify and package a bounty proof:
+
+```bash
+uv run lemma mine --bounty <campaign-id> --submission path/to/Submission.lean
+```
+
 Advanced/script commands remain callable but are hidden from the main help:
 
 ```bash
@@ -77,7 +96,10 @@ uv run lemma submit \
   --submission path/to/Submission.lean
 uv run lemma commit --problem known/smoke/nat_two_plus_two_eq_four
 uv run lemma miner start
-uv run lemma dashboard export --output data/miner-dashboard.json
+uv run lemma dashboard export --output data/cadence.json
+uv run lemma dashboard export-bounties --output data/bounties.json
+uv run lemma dashboard publish --output-dir /var/www/lemma-live
+uv run lemma bounty-accept --package path/to/bounty-package.json
 uv run lemma validator check
 uv run lemma validator start
 ```
@@ -98,9 +120,9 @@ uv run lemma meta --raw
   at the previous target's accepted block plus one.
 - The default commit window is `LEMMA_COMMIT_WINDOW_BLOCKS=25`; validators poll
   for proofs only after reveal opens.
-- Accepted proof receipts include proof text, nonce, commitment hash/timing,
-  target fingerprint, validator hotkey, solver UID/hotkey, and proof hash for
-  public replay.
+- Public cadence export includes target state, validator hotkey, solver UID, and
+  full solver hotkey. It omits proof text, proof hashes, nonces, and commitment
+  hashes.
 - Targets with known accepted Lean proofs are not launch-eligible.
 - Each target row carries a human proof reference, imports, attribution, and
   reviewer duplicate/faithfulness notes.
@@ -110,11 +132,12 @@ uv run lemma meta --raw
 - If nobody solves, the whole epoch routes to `LEMMA_OWNER_BURN_UID`; old solver
   sets do not keep getting paid.
 - Duplicate proofs for already-solved targets do not change the ledger.
-- The public miner dashboard is a static export from the manifest, solved
-  ledger, and accepted-proof receipts.
+- The public cadence feed is a tiny JSON export from the cadence source and
+  solved ledger. The public bounty feed is a tiny JSON export from the campaign
+  registry and acceptance ledger.
 - Formal Conjectures tasks are manual owner-emission campaigns: first accepted
   proof wins the campaign ledger, but campaign rows do not affect validator
-  `set_weights`.
+  `set_weights`. Bounty identity is hotkey-first; a subnet UID is optional.
 - Launch on a fresh or intentionally reset subnet state so old Lemma weights do
   not carry into the proof protocol.
 

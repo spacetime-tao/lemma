@@ -7,7 +7,7 @@ from pathlib import Path
 from click.testing import CliRunner
 from lemma.cli.main import main
 from lemma.common.config import LemmaSettings
-from lemma.dashboard import build_miner_dashboard, write_miner_dashboard
+from lemma.dashboard import build_miner_dashboard, publish_public_dashboards, write_miner_dashboard
 from lemma.ledger import LedgerSolver, SolvedLedgerEntry
 
 
@@ -106,9 +106,61 @@ def _write_ledger(path: Path, *entries: SolvedLedgerEntry) -> Path:
     return path
 
 
+def _campaign_registry(path: Path, *, status: str = "accepted") -> Path:
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "lemma_formal_conjectures_campaigns_v1",
+                "campaigns": [
+                    {
+                        "id": "fc.example",
+                        "title": "Example bounty",
+                        "status": status,
+                        "source_url": "https://google-deepmind.github.io/formal-conjectures/",
+                        "upstream_repo": "google-deepmind/formal-conjectures",
+                        "upstream_commit": "abc123",
+                        "lean_file": "FormalConjectures/Example.lean",
+                        "declaration": "Example.theorem_one",
+                        "statement_sha256": "a" * 64,
+                        "reward_label": "1k SN467 alpha",
+                        "type_expr": "True",
+                        "challenge_full": "import Mathlib\n\ntheorem theorem_one : True := by\n  sorry\n",
+                        "submission_stub": "import Mathlib\n\ntheorem theorem_one : True := by\n  sorry\n",
+                        "lean_toolchain": "leanprover/lean4:v4.30.0-rc2",
+                        "mathlib_rev": "5450b53e5ddc",
+                    },
+                ],
+            },
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
+def _acceptance_ledger(path: Path) -> Path:
+    path.write_text(
+        json.dumps(
+            {
+                "campaign_id": "fc.example",
+                "solver_hotkey": "hotkey-full",
+                "solver_uid": None,
+                "proof_sha256": "b" * 64,
+                "accepted_unix": 456,
+                "reward_mode": "manual_winner_take_all_owner_emission",
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
 def _settings(tmp_path: Path) -> LemmaSettings:
     return LemmaSettings(
         _env_file=None,
+        problem_source="known_theorems",
         known_theorems_manifest_path=_manifest(tmp_path / "manifest.json"),
         solved_ledger_path=tmp_path / "ledger.jsonl",
     )
@@ -117,8 +169,9 @@ def _settings(tmp_path: Path) -> LemmaSettings:
 def test_miner_dashboard_empty_ledger_marks_first_target_active(tmp_path: Path) -> None:
     payload = build_miner_dashboard(_settings(tmp_path), generated_unix=1)
 
-    assert payload["schema_version"] == 3
+    assert payload["schema_version"] == 4
     assert payload["generated_unix"] == 1
+    assert payload["problem_source"] == "known_theorems"
     assert payload["counts"]["total_targets"] == 2
     assert payload["counts"]["solved_targets"] == 0
     assert payload["active_target"]["id"] == "known/test/target_1"
@@ -143,9 +196,9 @@ def test_miner_dashboard_one_solve_advances_active_target(tmp_path: Path) -> Non
     assert payload["target_window"]["next"] is None
     assert payload["targets"][0]["status"] == "solved"
     assert payload["targets"][0]["solved"]["solver_uids"] == [7]
+    assert payload["targets"][0]["solved"]["solver_hotkeys"] == ["hotkey-7"]
     assert payload["current_solver_set"]["solvers"][0]["uid"] == 7
     assert payload["current_solver_set"]["solvers"][0]["hotkey"] == "hotkey-7"
-    assert payload["current_solver_set"]["solvers"][0]["proof_sha256"] == "7" * 64
 
 
 def test_miner_dashboard_ignores_stale_ledger_hash(tmp_path: Path) -> None:
@@ -168,28 +221,24 @@ def test_miner_dashboard_ignores_stale_ledger_hash(tmp_path: Path) -> None:
     assert payload["active_target"]["id"] == "known/test/target_1"
     assert payload["targets"][0]["status"] == "active"
     assert payload["solved_ledger"] == []
-    assert payload["accepted_proof_receipts"] == []
+    assert payload["accepted_solver_receipts"] == []
 
 
-def test_miner_dashboard_exports_accepted_proof_receipts(tmp_path: Path) -> None:
+def test_miner_dashboard_exports_public_accepted_solver_receipts(tmp_path: Path) -> None:
     settings = _settings(tmp_path)
     _write_ledger(settings.solved_ledger_path, _entry("known/test/target_1", 7, include_proofs=True))
 
     payload = build_miner_dashboard(settings, generated_unix=1)
-    receipts = payload["accepted_proof_receipts"]
+    receipts = payload["accepted_solver_receipts"]
 
-    assert payload["counts"]["accepted_proof_receipts"] == 1
+    assert payload["counts"]["accepted_solver_receipts"] == 1
     assert receipts[0]["target_id"] == "known/test/target_1"
     assert receipts[0]["solver_uid"] == 7
+    assert receipts[0]["solver_hotkey"] == "hotkey-7"
     assert receipts[0]["validator_hotkey"] == "validator-hotkey"
-    assert receipts[0]["proof_nonce"] == "n" * 64
-    assert receipts[0]["commitment_hash"] == "c" * 64
-    assert receipts[0]["commitment_first_seen_block"] == 90
-    assert receipts[0]["commit_cutoff_block"] == 99
-    assert receipts[0]["challenge_source"].startswith("import Mathlib")
-    assert receipts[0]["proof_script"].startswith("import Mathlib")
-    assert receipts[0]["proof_sha256"] == hashlib.sha256(receipts[0]["proof_script"].encode()).hexdigest()
-    assert len(receipts[0]["receipt_sha256"]) == 64
+    assert "proof_sha256" not in receipts[0]
+    assert "proof_nonce" not in receipts[0]
+    assert "commitment_hash" not in receipts[0]
 
 
 def test_miner_dashboard_tied_solvers_split_current_weight(tmp_path: Path) -> None:
@@ -227,15 +276,27 @@ def test_miner_dashboard_omits_private_or_local_fields(tmp_path: Path) -> None:
 
     text = json.dumps(build_miner_dashboard(settings, generated_unix=1), sort_keys=True)
 
-    assert "proof_script" in text
+    assert "proof_script" not in text
+    assert "proof_sha256" not in text
+    assert "commitment_hash" not in text
     assert "coldkey" not in text
     assert "validator-hotkey" in text
     assert str(tmp_path) not in text
 
 
+def test_miner_dashboard_hybrid_source_includes_generated_cadence(tmp_path: Path) -> None:
+    settings = _settings(tmp_path).model_copy(update={"problem_source": "hybrid"})
+
+    payload = build_miner_dashboard(settings, generated_unix=1)
+
+    assert payload["problem_source"] == "hybrid"
+    assert payload["counts"]["total_targets"] > 2
+    assert any(target["id"].startswith("gen/") for target in payload["targets"])
+
+
 def test_dashboard_export_cli_writes_json(monkeypatch, tmp_path: Path) -> None:
     manifest = _manifest(tmp_path / "manifest.json")
-    output = tmp_path / "miner-dashboard.json"
+    output = tmp_path / "cadence.json"
     monkeypatch.setattr("lemma.dashboard.time.time", lambda: 123.0)
 
     result = CliRunner().invoke(
@@ -249,7 +310,7 @@ def test_dashboard_export_cli_writes_json(monkeypatch, tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     payload = json.loads(output.read_text(encoding="utf-8"))
-    assert payload["schema_version"] == 3
+    assert payload["schema_version"] == 4
     assert payload["generated_unix"] == 123
     assert payload["active_target"]["id"] == "known/test/target_1"
     assert payload["target_window"]["current"]["id"] == "known/test/target_1"
@@ -257,8 +318,54 @@ def test_dashboard_export_cli_writes_json(monkeypatch, tmp_path: Path) -> None:
 
 
 def test_write_miner_dashboard_creates_parent_directory(tmp_path: Path) -> None:
-    output = tmp_path / "data" / "miner-dashboard.json"
+    output = tmp_path / "data" / "cadence.json"
 
     write_miner_dashboard(output, {"schema_version": 1})
 
     assert json.loads(output.read_text(encoding="utf-8")) == {"schema_version": 1}
+
+
+def test_publish_public_dashboards_writes_safe_atomic_feeds(tmp_path: Path) -> None:
+    settings = _settings(tmp_path).model_copy(
+        update={
+            "formal_campaign_registry_path": _campaign_registry(tmp_path / "campaigns.json"),
+            "campaign_acceptance_ledger_path": _acceptance_ledger(tmp_path / "campaign-ledger.jsonl"),
+        },
+    )
+    _write_ledger(settings.solved_ledger_path, _entry("known/test/target_1", 7, include_proofs=True))
+
+    cadence_path, bounties_path = publish_public_dashboards(tmp_path / "live", settings)
+
+    cadence = json.loads(cadence_path.read_text(encoding="utf-8"))
+    bounties = json.loads(bounties_path.read_text(encoding="utf-8"))
+    combined = json.dumps({"cadence": cadence, "bounties": bounties}, sort_keys=True)
+    assert cadence["schema_version"] == 4
+    assert bounties["campaigns"][0]["accepted"]["solver_hotkey"] == "hotkey-full"
+    assert "solver_uid" not in bounties["campaigns"][0]["accepted"]
+    assert "proof_script" not in combined
+    assert "proof_sha256" not in combined
+    assert "commitment_hash" not in combined
+    assert not list((tmp_path / "live").glob(".*.tmp"))
+
+
+def test_dashboard_publish_cli_writes_both_json_files(monkeypatch, tmp_path: Path) -> None:
+    manifest = _manifest(tmp_path / "manifest.json")
+    registry = _campaign_registry(tmp_path / "campaigns.json", status="open")
+    output_dir = tmp_path / "live"
+    monkeypatch.setattr("lemma.dashboard.time.time", lambda: 123.0)
+
+    result = CliRunner().invoke(
+        main,
+        ["dashboard", "publish", "--output-dir", str(output_dir)],
+        env={
+            "LEMMA_KNOWN_THEOREMS_MANIFEST_PATH": str(manifest),
+            "LEMMA_LEDGER_PATH": str(tmp_path / "ledger.jsonl"),
+            "LEMMA_FORMAL_CAMPAIGNS_PATH": str(registry),
+            "LEMMA_CAMPAIGN_ACCEPTANCE_LEDGER_PATH": str(tmp_path / "campaign-ledger.jsonl"),
+        },
+    )
+
+    assert result.exit_code == 0
+    assert json.loads((output_dir / "cadence.json").read_text(encoding="utf-8"))["generated_unix"] == 123
+    assert json.loads((output_dir / "bounties.json").read_text(encoding="utf-8"))["generated_unix"] == 123
+    assert "wrote=" in result.output

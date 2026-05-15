@@ -1,5 +1,6 @@
 """Public Lemma CLI surface."""
 
+import json
 import tomllib
 from dataclasses import replace
 from pathlib import Path
@@ -9,6 +10,7 @@ import click
 from click.testing import CliRunner
 from lemma.cli.main import main
 from lemma.common.config import LemmaSettings
+from lemma.formal_campaigns import proof_sha256
 from lemma.lean.sandbox import VerifyResult
 
 
@@ -65,6 +67,7 @@ def test_advanced_commands_are_hidden_but_callable() -> None:
         ("miner",),
         ("validator",),
         ("verify",),
+        ("bounty-accept",),
         ("dashboard",),
         ("meta",),
     ]:
@@ -364,6 +367,194 @@ def test_mine_chain_commit_failure_keeps_retryable_store(monkeypatch, tmp_path: 
     assert store.exists()
 
 
+def test_mine_bounty_verifies_and_writes_package(monkeypatch, tmp_path: Path) -> None:
+    registry = tmp_path / "campaigns.json"
+    package_dir = tmp_path / "packages"
+    submission = tmp_path / "Submission.lean"
+    registry.write_text(
+        json.dumps(
+            {
+                "schema": "lemma_formal_conjectures_campaigns_v1",
+                "campaigns": [
+                    {
+                        "id": "fc.example",
+                        "title": "Example bounty",
+                        "status": "open",
+                        "source_url": "https://google-deepmind.github.io/formal-conjectures/",
+                        "upstream_repo": "google-deepmind/formal-conjectures",
+                        "upstream_commit": "abc123",
+                        "lean_file": "FormalConjectures/Example.lean",
+                        "declaration": "Example.theorem_one",
+                        "statement_sha256": "a" * 64,
+                        "reward_label": "1k SN467 alpha",
+                        "type_expr": "True",
+                        "challenge_full": "import Mathlib\n\ntheorem theorem_one : True := by\n  sorry\n",
+                        "submission_stub": (
+                            "import Mathlib\n\nnamespace Submission\n\n"
+                            "theorem theorem_one : True := by\n  sorry\n\nend Submission\n"
+                        ),
+                        "lean_toolchain": "leanprover/lean4:v4.30.0-rc2",
+                        "mathlib_rev": "5450b53e5ddc",
+                    },
+                ],
+            },
+        ),
+        encoding="utf-8",
+    )
+    submission.write_text(
+        "import Mathlib\n\nnamespace Submission\n\ntheorem theorem_one : True := by\n  trivial\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("LEMMA_FORMAL_CAMPAIGNS_PATH", str(registry))
+    monkeypatch.setenv("LEMMA_BOUNTY_PACKAGE_DIR", str(package_dir))
+
+    class FakeHotkey:
+        ss58_address = "hotkey-full"
+
+        def sign(self, message: bytes) -> bytes:
+            assert message.startswith(b"lemma-bounty-v1:fc.example:")
+            return b"signature"
+
+    monkeypatch.setattr("bittensor.Wallet", lambda name, hotkey: SimpleNamespace(hotkey=FakeHotkey()))
+    monkeypatch.setattr(
+        "lemma.lean.verify_runner.run_lean_verify",
+        lambda *args, **kwargs: VerifyResult(passed=True, reason="ok", build_seconds=0.5),
+    )
+
+    result = CliRunner().invoke(main, ["mine", "--bounty", "fc.example", "--submission", str(submission)])
+
+    assert result.exit_code == 0
+    assert "Lemma bounty" in result.output
+    assert "solver_hotkey=hotkey-full" in result.output
+    packages = list(package_dir.glob("fc.example-*.json"))
+    assert len(packages) == 1
+
+
+def _write_bounty_accept_inputs(tmp_path: Path) -> tuple[Path, Path, Path]:
+    registry = tmp_path / "campaigns.json"
+    ledger = tmp_path / "campaign-ledger.jsonl"
+    package_path = tmp_path / "package.json"
+    proof = "import Mathlib\n\nnamespace Submission\n\ntheorem theorem_one : True := by\n  trivial\n"
+    proof_hash = proof_sha256(proof)
+    registry.write_text(
+        json.dumps(
+            {
+                "schema": "lemma_formal_conjectures_campaigns_v1",
+                "campaigns": [
+                    {
+                        "id": "fc.example",
+                        "title": "Example bounty",
+                        "status": "open",
+                        "source_url": "https://google-deepmind.github.io/formal-conjectures/",
+                        "upstream_repo": "google-deepmind/formal-conjectures",
+                        "upstream_commit": "abc123",
+                        "lean_file": "FormalConjectures/Example.lean",
+                        "declaration": "Example.theorem_one",
+                        "statement_sha256": "a" * 64,
+                        "reward_label": "1k SN467 alpha",
+                        "type_expr": "True",
+                        "challenge_full": "import Mathlib\n\ntheorem theorem_one : True := by\n  sorry\n",
+                        "submission_stub": "import Mathlib\n\ntheorem theorem_one : True := by\n  sorry\n",
+                        "lean_toolchain": "leanprover/lean4:v4.30.0-rc2",
+                        "mathlib_rev": "5450b53e5ddc",
+                    },
+                ],
+            },
+        ),
+        encoding="utf-8",
+    )
+    package_path.write_text(
+        json.dumps(
+            {
+                "schema": "lemma_bounty_proof_package_v1",
+                "campaign": {"id": "fc.example"},
+                "solver": {
+                    "hotkey": "hotkey-full",
+                    "signature": b"sig".hex(),
+                    "signature_message": f"lemma-bounty-v1:fc.example:{proof_hash}",
+                },
+                "proof": {"proof_script": proof, "proof_sha256": proof_hash},
+            },
+        ),
+        encoding="utf-8",
+    )
+    return registry, ledger, package_path
+
+
+def test_bounty_accept_verifies_signature_and_appends_ledger(monkeypatch, tmp_path: Path) -> None:
+    registry, ledger, package_path = _write_bounty_accept_inputs(tmp_path)
+    monkeypatch.setenv("LEMMA_FORMAL_CAMPAIGNS_PATH", str(registry))
+    monkeypatch.setenv("LEMMA_CAMPAIGN_ACCEPTANCE_LEDGER_PATH", str(ledger))
+
+    class FakeKeypair:
+        def __init__(self, ss58_address: str) -> None:
+            assert ss58_address == "hotkey-full"
+
+        def verify(self, message: bytes, signature: bytes) -> bool:
+            return message.startswith(b"lemma-bounty-v1:fc.example:") and signature == b"sig"
+
+    monkeypatch.setattr("bittensor_wallet.Keypair", FakeKeypair)
+    monkeypatch.setattr(
+        "lemma.lean.verify_runner.run_lean_verify",
+        lambda *args, **kwargs: VerifyResult(passed=True, reason="ok", build_seconds=0.5),
+    )
+
+    result = CliRunner().invoke(main, ["bounty-accept", "--package", str(package_path)])
+
+    assert result.exit_code == 0
+    assert "Bounty accepted" in result.output
+    row = json.loads(ledger.read_text(encoding="utf-8"))
+    assert row["campaign_id"] == "fc.example"
+    assert row["solver_hotkey"] == "hotkey-full"
+    assert row["solver_uid"] is None
+
+
+def test_bounty_accept_rejects_bad_signature(monkeypatch, tmp_path: Path) -> None:
+    registry, ledger, package_path = _write_bounty_accept_inputs(tmp_path)
+    monkeypatch.setenv("LEMMA_FORMAL_CAMPAIGNS_PATH", str(registry))
+    monkeypatch.setenv("LEMMA_CAMPAIGN_ACCEPTANCE_LEDGER_PATH", str(ledger))
+
+    class FakeKeypair:
+        def __init__(self, ss58_address: str) -> None:
+            pass
+
+        def verify(self, message: bytes, signature: bytes) -> bool:
+            return False
+
+    monkeypatch.setattr("bittensor_wallet.Keypair", FakeKeypair)
+
+    result = CliRunner().invoke(main, ["bounty-accept", "--package", str(package_path)])
+
+    assert result.exit_code != 0
+    assert "solver signature verification failed" in result.output
+    assert not ledger.exists()
+
+
+def test_bounty_accept_rejects_lean_failure(monkeypatch, tmp_path: Path) -> None:
+    registry, ledger, package_path = _write_bounty_accept_inputs(tmp_path)
+    monkeypatch.setenv("LEMMA_FORMAL_CAMPAIGNS_PATH", str(registry))
+    monkeypatch.setenv("LEMMA_CAMPAIGN_ACCEPTANCE_LEDGER_PATH", str(ledger))
+
+    class FakeKeypair:
+        def __init__(self, ss58_address: str) -> None:
+            pass
+
+        def verify(self, message: bytes, signature: bytes) -> bool:
+            return True
+
+    monkeypatch.setattr("bittensor_wallet.Keypair", FakeKeypair)
+    monkeypatch.setattr(
+        "lemma.lean.verify_runner.run_lean_verify",
+        lambda *args, **kwargs: VerifyResult(passed=False, reason="compile_error", stderr_tail="bad proof"),
+    )
+
+    result = CliRunner().invoke(main, ["bounty-accept", "--package", str(package_path)])
+
+    assert result.exit_code != 0
+    assert "Lean rejected this bounty proof" in result.output
+    assert not ledger.exists()
+
+
 def test_commit_retries_stored_proof(monkeypatch, tmp_path: Path) -> None:
     from lemma.problems.factory import resolve_problem
     from lemma.submissions import save_pending_submission
@@ -575,7 +766,7 @@ def test_status_explains_committed_reveal_needs_serving(monkeypatch, tmp_path: P
     assert "committed; reveal open" in result.output
     assert "keep lemma mine running; proof is ready for validator polling" in result.output
     assert "validators poll about every 5 min, then run Lean" in result.output
-    assert "https://lemmasub.net/miners/" in result.output
+    assert "https://lemmasub.net/cadence/" in result.output
     assert "lemma target ledger (local validator/operator ledger)" in result.output
     assert "Next: lemma mine" in result.output
 
@@ -625,6 +816,27 @@ def test_setup_hotkey_option_writes_role_specific_env(monkeypatch, tmp_path: Pat
     assert "lemma/lemmaminer2" in result.output
     assert "BT_VALIDATOR_WALLET_HOT=lemmaminer2" in result.output
     assert "No .env changes written" in result.output
+
+
+def test_setup_uses_openai_compatible_provider_env_names(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("LEMMA_PROVER_API_KEY", "sk-provider-secret")
+    monkeypatch.setenv("LEMMA_PROVER_BASE_URL", "https://provider.example/v1")
+    monkeypatch.setenv("LEMMA_PROVER_MODEL", "lean-agent")
+    monkeypatch.delenv("LEMMA_TARGET_GENESIS_BLOCK", raising=False)
+    monkeypatch.delenv("LEMMA_KNOWN_THEOREMS_MANIFEST_SHA256_EXPECTED", raising=False)
+    monkeypatch.setattr("lemma.cli.main.shutil.which", lambda name: "/bin/tool")
+    monkeypatch.setattr("lemma.cli.main._current_block_or_none", lambda settings: (123, None))
+    monkeypatch.setattr("lemma.cli.main._wallet_hotkey_address", lambda settings, role="miner": "hotkey-address")
+    monkeypatch.setattr("lemma.cli.main._registration_text", lambda settings, hotkey: "registered uid=1")
+
+    result = CliRunner().invoke(main, ["setup", "--role", "miner"], input="n\n")
+
+    assert result.exit_code == 0
+    assert "LEMMA_PROVER_API_KEY=sk-prov...cret" in result.output
+    assert "sk-provider-secret" not in result.output
+    assert "LEMMA_PROVER_BASE_URL=https://provider.example/v1" in result.output
+    assert "LEMMA_PROVER_MODEL=lean-agent" in result.output
 
 
 def test_setup_refreshes_expired_first_genesis(monkeypatch, tmp_path: Path) -> None:

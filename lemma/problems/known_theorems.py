@@ -128,6 +128,10 @@ class KnownTheoremsSource(ProblemSource):
     def all_problems(self) -> list[Problem]:
         return list(self._problems)
 
+    @property
+    def ledger_path(self) -> Path | None:
+        return self._ledger_path
+
     def target_window(self) -> tuple[Problem | None, Problem | None, Problem | None]:
         hashes = {problem.id: problem.theorem_statement_sha256() for problem in self._problems}
         solved = solved_target_ids(self._ledger_path, hashes)

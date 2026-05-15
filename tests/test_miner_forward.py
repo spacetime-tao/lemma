@@ -56,20 +56,19 @@ def test_miner_axon_handlers_have_runtime_synapse_annotations(tmp_path: Path) ->
 
 
 def test_dashboard_json_url_uses_public_dashboard_origin(tmp_path: Path) -> None:
-    settings = _settings(tmp_path).model_copy(update={"public_dashboard_url": "https://lemmasub.net/miners/"})
+    settings = _settings(tmp_path).model_copy(update={"public_dashboard_url": "https://lemmasub.net/cadence/"})
 
-    assert _dashboard_json_url(settings) == "https://lemmasub.net/data/miner-dashboard.json"
+    assert _dashboard_json_url(settings) == "https://lemmasub.net/data/cadence.json"
 
 
 def test_dashboard_acceptance_matches_local_hotkey_and_proof() -> None:
     data = {
         "active_target": {"id": "known/test/target_2"},
-        "accepted_proof_receipts": [
+        "accepted_solver_receipts": [
             {
                 "target_id": "known/test/target_1",
                 "solver_uid": 7,
                 "solver_hotkey": "hotkey-7",
-                "proof_sha256": "a" * 64,
             },
         ],
     }
@@ -80,7 +79,6 @@ def test_dashboard_acceptance_matches_local_hotkey_and_proof() -> None:
         {
             "target_id": "known/test/target_1",
             "solver_uid": 7,
-            "proof_sha256": "a" * 64,
             "next_target": "known/test/target_2",
         },
     ]

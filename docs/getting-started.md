@@ -17,8 +17,17 @@ uv run lemma status
 ```
 
 The active target is the first known-theorem manifest row that is not present in
-the solved ledger. A fresh validator needs `LEMMA_TARGET_GENESIS_BLOCK` so every
-miner sees the same first commit window.
+the solved ledger, followed by deterministic generated cadence tasks. A fresh
+validator needs `LEMMA_TARGET_GENESIS_BLOCK` so every miner sees the same first
+commit window.
+
+Optional proof search tools use OpenAI-compatible provider settings:
+
+```bash
+LEMMA_PROVER_BASE_URL=https://your-provider.example/v1
+LEMMA_PROVER_API_KEY=replace_me
+LEMMA_PROVER_MODEL=your-model
+```
 
 ## Mine
 
@@ -58,10 +67,19 @@ droplets are optional proof-serving hosts; proof search itself can happen
 offline on a laptop or workstation.
 
 Keep the miner running until your UID appears on
-`https://lemmasub.net/miners/`. `lemma target ledger` is useful only when you
+`https://lemmasub.net/cadence/`. `lemma target ledger` is useful only when you
 have the validator/operator ledger locally. Validators poll on their own
 schedule, then run Lean verification; the default poll interval is about five
 minutes after reveal opens.
+
+## Verify A Bounty
+
+Formal Conjectures bounties are manual winner-take-all campaigns and do not
+require a subnet UID:
+
+```bash
+uv run lemma mine --bounty <campaign-id> --submission Submission.lean
+```
 
 ## Run A Validator
 
@@ -81,8 +99,8 @@ uv run lemma validate --hotkey lemmaminer2
 
 The validator service should stay live for subnet operation: it polls miners,
 verifies proofs with Lean, appends the solved ledger, and sets miner weights.
-Accepted proofs are exported as public replay receipts after validation; pending
-local miner submissions are not public.
+The public cadence export shows task state and full solver hotkeys. Proof text,
+proof hashes, nonces, and commitments stay out of the public site feed.
 
 More detail: [protocol.md](protocol.md), [miner.md](miner.md),
 [validator.md](validator.md), and `.env.example`.

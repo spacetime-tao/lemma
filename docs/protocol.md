@@ -9,28 +9,29 @@ explanation about the proof.
 
 ## Target Supply
 
-Targets come from a vendored known-theorem manifest:
+Cadence targets come from hybrid supply:
 
-- fixed source snapshot;
+- a curated known-theorem manifest with a fixed source snapshot;
+- deterministic generated cadence builders;
 - fixed Lean toolchain and Mathlib revision;
 - deterministic `order`;
 - human proof reference;
 - attribution, duplicate-review notes, and statement-faithfulness notes;
 - fixed `Challenge.lean` and `Submission.lean` skeleton.
 
-The current manifest is a Mathlib-only smoke queue. Replace it with reviewed
-launch-quality targets before live use.
+The curated manifest is still reviewed before live use. Generated builder order
+is append-only.
 
 ## Active Target
 
 Validators compute the active target as:
 
 ```text
-first manifest target without a matching solved-ledger row
+first cadence target without a matching solved-ledger row
 ```
 
-The chain seed still controls validator timing, but it does not randomize the
-target. Everyone works down the same list.
+The chain seed still controls validator timing. Everyone works down the same
+ordered cadence list.
 
 A solved-ledger row only matches when both the target id and theorem statement
 hash match the current manifest. Stale rows from an older target definition do
@@ -89,10 +90,9 @@ The solved ledger is JSONL. Each accepted row records:
 
 The operator-published ledger is the source of truth for solved targets.
 
-The static public dashboard export turns accepted proofs into replay receipts:
-target fingerprint, validator hotkey, solver UID/hotkey, proof hash, nonce,
-commitment hash/timing, and `proof_script`. Pending miner submissions stay
-local; accepted proofs are public so third parties can rerun Lean.
+The public cadence export is intentionally smaller than the solved ledger. It
+shows task state, validator hotkey, solver UID, and full solver hotkey. It does
+not publish proof text, proof hashes, nonces, or commitment hashes.
 
 ## Rewards
 
@@ -144,7 +144,9 @@ need inspection because some simple `test` entries are already proved in-repo.
 Formal Conjectures campaign tasks are manual owner-emission work, separate from
 cadence validator weights. The repo keeps a campaign registry and append-only
 acceptance ledger; the subnet owner pays the first accepted proof winner
-manually from owner/burn emission.
+manually from owner/burn emission. The private acceptance ledger stores the
+winning proof hash, hotkey, optional UID, and accepted time; the public bounty
+feed publishes only the hotkey, optional UID, accepted time, and reward status.
 
 ## Launch Note
 

@@ -109,10 +109,14 @@ def test_documented_proof_env_names_work(monkeypatch: pytest.MonkeyPatch, tmp_pa
                 "LEMMA_VALIDATOR_POLL_TIMEOUT_S=7",
                 "LEMMA_LEDGER_PATH=/tmp/solved-ledger.jsonl",
                 "LEMMA_MINER_SUBMISSIONS_PATH=/tmp/submissions.json",
+                "LEMMA_CAMPAIGN_ACCEPTANCE_LEDGER_PATH=/tmp/campaign-acceptance.jsonl",
                 "LEMMA_KNOWN_THEOREMS_MANIFEST_SHA256_EXPECTED=" + ("a" * 64),
                 "LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED=" + ("b" * 64),
                 "LEMMA_TARGET_GENESIS_BLOCK=1000",
                 "LEMMA_COMMIT_WINDOW_BLOCKS=25",
+                "LEMMA_PROVER_API_KEY=secret",
+                "LEMMA_PROVER_BASE_URL=https://provider.example/v1",
+                "LEMMA_PROVER_MODEL=lean-agent",
             ],
         ),
     )
@@ -121,10 +125,14 @@ def test_documented_proof_env_names_work(monkeypatch: pytest.MonkeyPatch, tmp_pa
     assert s.validator_poll_timeout_s == 7
     assert str(s.solved_ledger_path) == "/tmp/solved-ledger.jsonl"
     assert str(s.miner_submissions_path) == "/tmp/submissions.json"
+    assert str(s.campaign_acceptance_ledger_path) == "/tmp/campaign-acceptance.jsonl"
     assert s.known_theorems_manifest_expected_sha256 == "a" * 64
     assert s.validator_profile_expected_sha256 == "b" * 64
     assert s.target_genesis_block == 1000
     assert s.commit_window_blocks == 25
+    assert s.prover_api_key == "secret"
+    assert s.prover_base_url == "https://provider.example/v1"
+    assert s.prover_model == "lean-agent"
 
 
 def test_unknown_ledger_env_name_is_ignored(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -154,4 +162,4 @@ def test_removed_legacy_env_names_are_ignored(monkeypatch: pytest.MonkeyPatch, t
     assert not hasattr(s, "lemma_commit_reveal_enabled")
     assert not hasattr(s, "lemma_miner_verify_attest_enabled")
     assert not hasattr(s, "lemma_scoring_rolling_alpha")
-    assert not hasattr(s, "prover_model")
+    assert s.prover_model is None

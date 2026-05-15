@@ -45,7 +45,10 @@ class LemmaSettings(BaseSettings):
         return (init_settings, dotenv_settings, env_settings, file_secret_settings)
 
     netuid: int = Field(default=0, ge=0, validation_alias="NETUID")
-    problem_source: Literal["known_theorems"] = Field(default="known_theorems", validation_alias="LEMMA_PROBLEM_SOURCE")
+    problem_source: Literal["known_theorems", "hybrid"] = Field(
+        default="hybrid",
+        validation_alias="LEMMA_PROBLEM_SOURCE",
+    )
     known_theorems_manifest_path: Path | None = Field(
         default=None,
         validation_alias="LEMMA_KNOWN_THEOREMS_MANIFEST_PATH",
@@ -56,6 +59,15 @@ class LemmaSettings(BaseSettings):
     )
     solved_ledger_path: Path | None = Field(default=None, validation_alias="LEMMA_LEDGER_PATH")
     miner_submissions_path: Path | None = Field(default=None, validation_alias="LEMMA_MINER_SUBMISSIONS_PATH")
+    formal_campaign_registry_path: Path | None = Field(default=None, validation_alias="LEMMA_FORMAL_CAMPAIGNS_PATH")
+    campaign_acceptance_ledger_path: Path = Field(
+        default_factory=lambda: Path.home() / ".lemma" / "campaign-acceptance-ledger.jsonl",
+        validation_alias="LEMMA_CAMPAIGN_ACCEPTANCE_LEDGER_PATH",
+    )
+    bounty_package_dir: Path | None = Field(default=None, validation_alias="LEMMA_BOUNTY_PACKAGE_DIR")
+    prover_api_key: str | None = Field(default=None, validation_alias="LEMMA_PROVER_API_KEY")
+    prover_base_url: str | None = Field(default=None, validation_alias="LEMMA_PROVER_BASE_URL")
+    prover_model: str | None = Field(default=None, validation_alias="LEMMA_PROVER_MODEL")
 
     subtensor_network: str = Field(default="finney", validation_alias="SUBTENSOR_NETWORK")
     subtensor_chain_endpoint: str | None = Field(default=None, validation_alias="SUBTENSOR_CHAIN_ENDPOINT")
@@ -115,7 +127,7 @@ class LemmaSettings(BaseSettings):
     set_weights_retry_delay_s: float = Field(default=2.0, ge=0.0, validation_alias="LEMMA_SET_WEIGHTS_RETRY_DELAY_S")
     owner_burn_uid: int = Field(default=0, ge=0, validation_alias="LEMMA_OWNER_BURN_UID")
     public_dashboard_url: str = Field(
-        default="https://lemmasub.net/miners/",
+        default="https://lemmasub.net/cadence/",
         validation_alias="LEMMA_PUBLIC_DASHBOARD_URL",
     )
     log_level: str = Field(default="INFO", validation_alias="LOG_LEVEL")

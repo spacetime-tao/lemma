@@ -1,0 +1,10 @@
+[Unit]
+Description=Publish Lemma live task JSON every minute
+
+[Timer]
+OnBootSec=30
+OnUnitActiveSec=60
+Unit=lemma-live-publisher.service
+
+[Install]
+WantedBy=timers.target

@@ -7,17 +7,19 @@ import json
 from typing import Any
 
 from lemma.common.config import LemmaSettings
+from lemma.problems.generated import generated_registry_sha256
 from lemma.problems.known_theorems import known_theorems_manifest_sha256
 
-PROFILE_SCHEMA = "lemma_cadence_profile_v3"
+PROFILE_SCHEMA = "lemma_cadence_profile_v4"
 
 
 def validator_profile_dict(settings: LemmaSettings) -> dict[str, Any]:
     return {
         "profile_schema": PROFILE_SCHEMA,
         "problem_policy": {
-            "problem_source": "known_theorems",
+            "problem_source": settings.problem_source,
             "known_theorems_manifest_sha256": known_theorems_manifest_sha256(settings.known_theorems_manifest_path),
+            "generated_registry_sha256": generated_registry_sha256(),
         },
         "protocol_policy": {
             "validator_poll_interval_s": float(settings.validator_poll_interval_s),

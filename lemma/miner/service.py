@@ -43,7 +43,7 @@ def _dashboard_json_url(settings: LemmaSettings) -> str:
     url = str(settings.public_dashboard_url).strip()
     if url.endswith(".json"):
         return url
-    return urljoin(url.rstrip("/") + "/", "/data/miner-dashboard.json")
+    return urljoin(url.rstrip("/") + "/", "/data/cadence.json")
 
 
 def _public_dashboard(settings: LemmaSettings) -> dict[str, Any] | None:
@@ -62,23 +62,21 @@ def _dashboard_acceptances(
     miner_hotkey: str,
     proof_hashes: set[str],
 ) -> list[dict[str, Any]]:
-    if not data or not proof_hashes:
+    if not data:
         return []
     active = data.get("active_target")
     next_target = None
     if isinstance(active, dict):
         next_target = active.get("id") or active.get("theorem_name") or active.get("title")
     accepted: list[dict[str, Any]] = []
-    for receipt in data.get("accepted_proof_receipts") or []:
+    for receipt in data.get("accepted_solver_receipts") or []:
         if not isinstance(receipt, dict):
             continue
-        proof_hash = str(receipt.get("proof_sha256") or "")
-        if receipt.get("solver_hotkey") == miner_hotkey and proof_hash in proof_hashes:
+        if receipt.get("solver_hotkey") == miner_hotkey:
             accepted.append(
                 {
                     "target_id": receipt.get("target_id") or "unknown target",
                     "solver_uid": receipt.get("solver_uid"),
-                    "proof_sha256": proof_hash,
                     "next_target": next_target,
                 },
             )
@@ -198,7 +196,7 @@ class MinerService:
                         )
                         announced_now = False
                         for accepted in acceptances:
-                            key = (str(accepted["target_id"]), str(accepted["proof_sha256"]))
+                            key = (str(accepted["target_id"]), wallet.hotkey.ss58_address)
                             if key not in announced_acceptance:
                                 announced_now = True
                                 announced_acceptance.add(key)
@@ -215,10 +213,9 @@ class MinerService:
                                     fg="cyan",
                                 )
                                 logger.info(
-                                    "Proof accepted target_id={} solver_uid={} proof_sha256={} next_target={}",
+                                    "Proof accepted target_id={} solver_uid={} next_target={}",
                                     accepted["target_id"],
                                     uid,
-                                    accepted["proof_sha256"],
                                     next_target,
                                 )
                         if not acceptances:

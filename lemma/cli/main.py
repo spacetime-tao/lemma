@@ -65,12 +65,11 @@ def _target_summary(problem: Problem | None) -> str:
 
 
 def _echo_theorem_window(settings: LemmaSettings) -> None:
-    from lemma.problems.known_theorems import KnownTheoremsSource
-
-    previous, current, next_problem = KnownTheoremsSource(
-        settings.known_theorems_manifest_path,
-        settings.solved_ledger_path,
-    ).target_window()
+    source = get_problem_source(settings)
+    target_window = getattr(source, "target_window", None)
+    if not callable(target_window):
+        return
+    previous, current, next_problem = target_window()
     click.echo(stylize("Theorem window", fg="cyan", bold=True))
     for label, problem, color in (
         ("previous theorem", previous, "yellow"),
@@ -159,7 +158,21 @@ def _env_updates_for_setup(settings: LemmaSettings, role: str, current_block: in
         and not (settings.validator_profile_expected_sha256 or "").strip()
     ):
         updates["LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED"] = validator_profile_sha256(effective)
+    if role == "miner":
+        if settings.prover_api_key and not _env_file_has_key(Path(".env"), "LEMMA_PROVER_API_KEY"):
+            updates["LEMMA_PROVER_API_KEY"] = settings.prover_api_key
+        if settings.prover_base_url and not _env_file_has_key(Path(".env"), "LEMMA_PROVER_BASE_URL"):
+            updates["LEMMA_PROVER_BASE_URL"] = settings.prover_base_url
+        if settings.prover_model and not _env_file_has_key(Path(".env"), "LEMMA_PROVER_MODEL"):
+            updates["LEMMA_PROVER_MODEL"] = settings.prover_model
     return updates
+
+
+def _env_file_has_key(path: Path, key: str) -> bool:
+    if not path.exists():
+        return False
+    prefix = f"{key}="
+    return any(line.strip().startswith(prefix) for line in path.read_text(encoding="utf-8").splitlines())
 
 
 def _first_target_window_expired(settings: LemmaSettings, current_block: int) -> bool:
@@ -213,7 +226,21 @@ def _settings_with_env_updates(settings: LemmaSettings, updates: dict[str, str])
         model_updates["validator_wallet_cold"] = updates["BT_VALIDATOR_WALLET_COLD"]
     if "BT_VALIDATOR_WALLET_HOT" in updates:
         model_updates["validator_wallet_hot"] = updates["BT_VALIDATOR_WALLET_HOT"]
+    if "LEMMA_PROVER_API_KEY" in updates:
+        model_updates["prover_api_key"] = updates["LEMMA_PROVER_API_KEY"]
+    if "LEMMA_PROVER_BASE_URL" in updates:
+        model_updates["prover_base_url"] = updates["LEMMA_PROVER_BASE_URL"]
+    if "LEMMA_PROVER_MODEL" in updates:
+        model_updates["prover_model"] = updates["LEMMA_PROVER_MODEL"]
     return settings.model_copy(update=model_updates) if model_updates else settings
+
+
+def _display_env_value(key: str, value: str) -> str:
+    if key != "LEMMA_PROVER_API_KEY":
+        return value
+    if len(value) <= 10:
+        return "***"
+    return value[:7] + "..." + value[-4:]
 
 
 def _auto_retry_commit_after_setup(settings: LemmaSettings) -> bool:
@@ -383,7 +410,8 @@ def setup_cmd(role: str | None, wallet_cold: str | None, wallet_hot: str | None)
     click.echo("")
     click.echo(stylize("Suggested .env values", fg="cyan", bold=True))
     for key, value in updates.items():
-        click.echo(stylize(key, fg="bright_blue", bold=True) + "=" + stylize(value, fg="green"))
+        display_value = _display_env_value(key, value)
+        click.echo(stylize(key, fg="bright_blue", bold=True) + "=" + stylize(display_value, fg="green"))
     wrote_env = False
     if click.confirm("Write these values to .env?", default=False):
         _write_env_updates(Path(".env"), updates)
@@ -404,6 +432,7 @@ def setup_cmd(role: str | None, wallet_cold: str | None, wallet_hot: str | None)
 
 
 @main.command("mine", help="Solve the active target.")
+@click.option("--bounty", "bounty_id", help="Verify and package a Formal Conjectures bounty proof.")
 @click.option("--retry-commit", is_flag=True, help="Retry the chain commitment for a stored proof.")
 @click.option("--replace", "replace_stored", is_flag=True, help="Replace a stale stored proof.")
 @click.option("--editor", is_flag=True, help="Open an editor instead of paste mode.")
@@ -417,6 +446,7 @@ def setup_cmd(role: str | None, wallet_cold: str | None, wallet_hot: str | None)
 )
 @click.option("--host-lean", is_flag=True, help="Run local verification with host lake.")
 def mine_cmd(
+    bounty_id: str | None,
     retry_commit: bool,
     replace_stored: bool,
     editor: bool,
@@ -428,6 +458,9 @@ def mine_cmd(
     from lemma.cli.problem_views import echo_challenge_separator, echo_lean_source, echo_problem_card
     from lemma.submissions import pending_submission_for_problem
 
+    if bounty_id is not None:
+        _mine_bounty(bounty_id, submission_path=submission_path, host_lean=host_lean)
+        return
     if editor and submission_path is not None:
         raise click.ClickException("Use either --editor or --submission, not both.")
     settings = _settings_with_wallet_options(LemmaSettings(), role="miner", wallet=wallet_cold, hotkey=wallet_hot)
@@ -503,6 +536,156 @@ def mine_cmd(
         + stylize(" if you have the validator/operator ledger locally.", fg="cyan"),
     )
     _start_miner(miner_settings)
+
+
+def _mine_bounty(bounty_id: str, *, submission_path: Path | None, host_lean: bool) -> None:
+    import bittensor as bt
+
+    from lemma.formal_campaigns import (
+        bounty_signature_message,
+        build_bounty_package,
+        campaign_by_id,
+        proof_declares_campaign_theorem,
+        write_bounty_package,
+    )
+    from lemma.lean.verify_runner import run_lean_verify
+
+    if submission_path is None:
+        raise click.ClickException("Bounty mode requires --submission path/to/Submission.lean.")
+    settings = LemmaSettings()
+    try:
+        campaign = campaign_by_id(bounty_id, settings.formal_campaign_registry_path)
+    except KeyError as exc:
+        raise click.ClickException(f"unknown bounty campaign: {bounty_id}") from exc
+    if campaign.status != "open":
+        raise click.ClickException(f"bounty campaign is not open: {campaign.status}")
+    if host_lean and not settings.allow_host_lean:
+        raise click.ClickException("Host Lean is disabled. Set LEMMA_ALLOW_HOST_LEAN=1 or omit --host-lean.")
+
+    proof_script = submission_path.read_text(encoding="utf-8")
+    if not proof_declares_campaign_theorem(campaign, proof_script):
+        raise click.ClickException(f"submission must declare theorem {campaign.declaration.rsplit('.', 1)[-1]}")
+    problem = campaign.to_problem()
+    eff = settings.model_copy(update={"lean_use_docker": not host_lean and settings.lean_use_docker})
+    click.echo(stylize("Lemma bounty", fg="cyan", bold=True))
+    click.echo(stylize(campaign.title, fg="green", bold=True))
+    click.echo(stylize(f"reward={campaign.reward_label}", fg="yellow", bold=True))
+    click.echo(stylize("Checking proof with Lean...", fg="cyan"))
+    vr = run_lean_verify(
+        eff,
+        verify_timeout_s=settings.lean_verify_timeout_s,
+        problem=problem,
+        proof_script=proof_script,
+    )
+    if not vr.passed:
+        raise click.ClickException(f"Lean rejected this bounty proof: {vr.reason}\n{vr.stderr_tail}")
+
+    wallet = bt.Wallet(name=settings.wallet_cold, hotkey=settings.wallet_hot)
+    proof_hash = build_bounty_package(
+        campaign=campaign,
+        proof_script=proof_script,
+        solver_hotkey=wallet.hotkey.ss58_address,
+        signature_hex="",
+        verify_reason=vr.reason,
+        build_seconds=vr.build_seconds,
+    )["proof"]["proof_sha256"]
+    signature = wallet.hotkey.sign(bounty_signature_message(campaign, proof_hash)).hex()
+    package = build_bounty_package(
+        campaign=campaign,
+        proof_script=proof_script,
+        solver_hotkey=wallet.hotkey.ss58_address,
+        signature_hex=signature,
+        verify_reason=vr.reason,
+        build_seconds=vr.build_seconds,
+    )
+    path = write_bounty_package(settings.bounty_package_dir, package)
+    click.echo(stylize("Lean accepted this bounty proof. Package written.", fg="green", bold=True))
+    click.echo(f"campaign_id={campaign.id}")
+    click.echo(f"solver_hotkey={wallet.hotkey.ss58_address}")
+    click.echo(f"proof_sha256={proof_hash}")
+    click.echo(f"package={path}")
+
+
+@main.command("bounty-accept", hidden=True)
+@click.option(
+    "--package",
+    "package_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    required=True,
+)
+@click.option("--solver-uid", type=int, help="Optional registered subnet UID for the solver.")
+@click.option("--host-lean", is_flag=True, help="Run local verification with host lake.")
+def bounty_accept_cmd(package_path: Path, solver_uid: int | None, host_lean: bool) -> None:
+    import json
+
+    from bittensor_wallet import Keypair
+
+    from lemma.formal_campaigns import (
+        append_campaign_acceptance,
+        bounty_signature_message,
+        campaign_by_id,
+        new_campaign_acceptance,
+        proof_sha256,
+    )
+    from lemma.lean.verify_runner import run_lean_verify
+
+    settings = LemmaSettings()
+    if host_lean and not settings.allow_host_lean:
+        raise click.ClickException("Host Lean is disabled. Set LEMMA_ALLOW_HOST_LEAN=1 or omit --host-lean.")
+    package = json.loads(package_path.read_text(encoding="utf-8"))
+    if package.get("schema") != "lemma_bounty_proof_package_v1":
+        raise click.ClickException("package schema is not lemma_bounty_proof_package_v1")
+    campaign_id = str(package.get("campaign", {}).get("id") or "").strip()
+    try:
+        campaign = campaign_by_id(campaign_id, settings.formal_campaign_registry_path)
+    except KeyError as exc:
+        raise click.ClickException(f"unknown bounty campaign: {campaign_id}") from exc
+    if campaign.status != "open":
+        raise click.ClickException(f"bounty campaign is not open: {campaign.status}")
+
+    proof = str(package.get("proof", {}).get("proof_script") or "")
+    proof_hash = proof_sha256(proof)
+    if proof_hash != str(package.get("proof", {}).get("proof_sha256") or ""):
+        raise click.ClickException("package proof hash does not match proof_script")
+    hotkey = str(package.get("solver", {}).get("hotkey") or "").strip()
+    signature_hex = str(package.get("solver", {}).get("signature") or "").strip()
+    message = bounty_signature_message(campaign, proof_hash)
+    if str(package.get("solver", {}).get("signature_message") or "") != message.decode("utf-8"):
+        raise click.ClickException("package signature message does not match campaign and proof")
+    try:
+        valid_signature = Keypair(ss58_address=hotkey).verify(message, bytes.fromhex(signature_hex))
+    except Exception as exc:  # noqa: BLE001
+        raise click.ClickException(f"invalid solver signature: {exc}") from exc
+    if not valid_signature:
+        raise click.ClickException("solver signature verification failed")
+
+    eff = settings.model_copy(update={"lean_use_docker": not host_lean and settings.lean_use_docker})
+    vr = run_lean_verify(
+        eff,
+        verify_timeout_s=settings.lean_verify_timeout_s,
+        problem=campaign.to_problem(),
+        proof_script=proof,
+    )
+    if not vr.passed:
+        raise click.ClickException(f"Lean rejected this bounty proof: {vr.reason}\n{vr.stderr_tail}")
+    acceptance = new_campaign_acceptance(
+        campaign_id=campaign.id,
+        solver_hotkey=hotkey,
+        solver_uid=solver_uid,
+        proof_sha256=proof_hash,
+    )
+    try:
+        append_campaign_acceptance(settings.campaign_acceptance_ledger_path, acceptance)
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    click.echo(stylize("Bounty accepted.", fg="green", bold=True))
+    click.echo(f"campaign_id={campaign.id}")
+    click.echo(f"solver_hotkey={hotkey}")
+    if solver_uid is not None:
+        click.echo(f"solver_uid={solver_uid}")
+    click.echo(f"accepted_unix={acceptance.accepted_unix}")
+    click.echo(f"ledger={settings.campaign_acceptance_ledger_path}")
 
 
 @main.group("target", invoke_without_command=True, hidden=True)
@@ -1035,6 +1218,37 @@ def dashboard_export_cmd(output_path: Path) -> None:
     click.echo(f"wrote={output_path}")
 
 
+@dashboard_group.command("export-bounties")
+@click.option(
+    "--output",
+    "output_path",
+    type=click.Path(dir_okay=False, path_type=Path),
+    required=True,
+)
+def dashboard_export_bounties_cmd(output_path: Path) -> None:
+    from lemma.dashboard import build_bounty_dashboard, write_miner_dashboard
+
+    settings = LemmaSettings()
+    write_miner_dashboard(output_path, build_bounty_dashboard(settings))
+    click.echo(f"wrote={output_path}")
+
+
+@dashboard_group.command("publish")
+@click.option(
+    "--output-dir",
+    "output_dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    required=True,
+)
+def dashboard_publish_cmd(output_dir: Path) -> None:
+    from lemma.dashboard import publish_public_dashboards
+
+    settings = LemmaSettings()
+    cadence_path, bounties_path = publish_public_dashboards(output_dir, settings)
+    click.echo(f"wrote={cadence_path}")
+    click.echo(f"wrote={bounties_path}")
+
+
 @main.group(
     "validator",
     invoke_without_command=True,
@@ -1110,7 +1324,7 @@ def meta_cmd(raw: bool) -> None:
     profile_sha = validator_profile_sha256(settings)
     if raw:
         click.echo(f"lemma_version={__version__}")
-        click.echo("problem_source=known_theorems")
+        click.echo(f"problem_source={settings.problem_source}")
         click.echo(f"known_theorems_manifest_sha256={manifest_sha}")
         click.echo(
             "known_theorems_manifest_json="

@@ -41,11 +41,11 @@ uv run lemma miner start
 ```
 
 Validators do not answer the mine command directly. Keep the miner running until
-your UID appears on `https://lemmasub.net/miners/`. `lemma target ledger` is
+your UID appears on `https://lemmasub.net/cadence/`. `lemma target ledger` is
 useful only when you have the validator/operator ledger locally. Validators poll
 on their own schedule after reveal opens, then run Lean verification; the
 default poll interval is about five minutes.
-`lemma status` and the public miner board show the previous, current, and next
+`lemma status` and the public cadence page show the previous, current, and next
 theorem in the ordered target window.
 
 Proofs are stored under `LEMMA_MINER_SUBMISSIONS_PATH` or
@@ -63,8 +63,21 @@ commitment match its stored submission. During commit phase it returns no proof.
 During reveal phase it returns `proof_script`, the nonce, and the commitment
 hash. If anything does not match, it returns no proof.
 
-Once the public dashboard shows your UID for that target, the proof was accepted
+Once the public cadence page shows your UID for that target, the proof was accepted
 and the miner can be stopped unless you want it online for the next target.
+
+## Bounty Proofs
+
+Formal Conjectures bounties are not normal subnet-weight work and do not require
+a registered UID. They do require a hotkey signature so the operator can identify
+the solver.
+
+```bash
+uv run lemma mine --bounty <campaign-id> --submission Submission.lean
+```
+
+That command verifies the pinned bounty theorem locally and writes a signed proof
+package under `LEMMA_BOUNTY_PACKAGE_DIR` or `~/.lemma/bounty-packages/`.
 
 ## Operational Notes
 
@@ -76,13 +89,11 @@ and the miner can be stopped unless you want it online for the next target.
   reward signal.
 - If no current-epoch proof verifies, old winners do not keep getting paid; the
   epoch budget routes to the owner/burn UID.
-- Public miner dashboard data is exported from the manifest and solved ledger:
+- Public cadence task data is exported from the cadence source and solved ledger:
 
 ```bash
-uv run lemma dashboard export --output data/miner-dashboard.json
+uv run lemma dashboard export --output data/cadence.json
 ```
 
-After a validator accepts a proof, the public export includes an accepted-proof
-receipt: target fingerprint, validator hotkey, solver UID/hotkey, proof hash,
-nonce, commitment hash/timing, and the accepted `proof_script`. Pending local
-submissions are not public, but accepted proofs are replayable.
+The public export shows task state, UIDs, and full hotkeys. It does not publish
+proof text, proof hashes, nonces, or commitment hashes.
