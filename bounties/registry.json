@@ -1,4 +1,30 @@
 {
-  "schema_version": 1,
-  "bounties": []
+  "bounties": [
+    {
+      "id": "smoke.two_plus_two",
+      "problem": {
+        "extra": {
+          "informal_statement": "Prove that two plus two equals four."
+        },
+        "id": "smoke.two_plus_two",
+        "imports": [
+          "Mathlib"
+        ],
+        "lean_toolchain": "leanprover/lean4:v4.30.0-rc2",
+        "mathlib_rev": "5450b53e5ddc",
+        "split": "smoke",
+        "theorem_name": "two_plus_two_eq_four",
+        "type_expr": "(2 : Nat) + 2 = 4"
+      },
+      "reward": "Demo / no payout",
+      "source": {
+        "name": "Lemma smoke test",
+        "url": "https://lemmasub.net/bounties/"
+      },
+      "status": "open",
+      "terms_url": "https://lemmasub.net/bounties/",
+      "title": "Smoke test: two plus two"
+    }
+  ],
+  "schema_version": 1
 }

@@ -1,82 +1,92 @@
 # Miner
 
-## Reference miner boundary
+A Lemma miner receives theorem challenges, asks a prover model for a Lean
+`Submission.lean`, and returns the proof for validators to check.
 
-The bundled miner is a **reference Axon service** for the current Lemma subnet
-protocol. It keeps the repo runnable end to end, gives operators a standard
-prover path, and supports compatibility features such as local Lean verify,
-miner attest, and commit-reveal.
+Start with [getting-started.md](getting-started.md) if the repo, keys, and
+`.env` are not configured yet.
 
-It is not the long-term answer to the audit's "validator-only development" or
-"container execution" ideals. Do not grow this package with competitive solver
-strategy, broad onboarding UX, model experimentation dashboards, or alternate
-transport stacks. Keep operator flows in the `lemma` command; major miner-artifact or
-container-execution designs should be planned as separate protocol work.
+## Miner command map
 
-Walkthrough: [getting-started.md](getting-started.md) — **`uv sync --extra btcli`** if you need repo-local **`uv run btcli`** (Bittensor CLI), `uv run lemma setup`, then `uv run lemma miner start` from the repo root. Prefer prompts over hand-editing `.env`.
+| Goal | Command |
+| --- | --- |
+| Configure env, wallet, prover, and axon port | `uv run lemma setup` |
+| See current chain/theorem state | `uv run lemma status` |
+| Check miner readiness | `uv run lemma miner check` |
+| Print config without binding a port | `uv run lemma miner dry-run` |
+| Start the axon | `uv run lemma miner start` |
+| Explain logs and score visibility | `uv run lemma miner observability` |
+| Try one theorem locally | `uv run lemma proof preview` |
 
-**Short checklist:** `uv run lemma setup` → coldkey funded → `uv run btcli subnet register` on the same network/netuid as `.env` → open `AXON_PORT` → `uv run lemma miner check` → `uv run lemma miner start`.
+## Setup checklist
 
-### Prover LLM (`lemma setup`)
+1. `uv sync --extra btcli`
+2. Create a coldkey and miner hotkey with `uv run btcli`.
+3. Run `uv run lemma setup`.
+4. Register the miner hotkey on the same network/netuid as `.env`.
+5. Open `AXON_PORT`.
+6. Run `uv run lemma miner check`.
+7. Run `uv run lemma miner start`.
 
-Choose **which API** runs first (numbered menu), then follow prompts. **Chutes**, **Gemini** (preset tiers + custom id), **Anthropic**, **OpenAI**, or **custom** OpenAI-compatible URL — URLs are preset for all but **custom**. In-terminal blurbs show example **`PROVER_MODEL`** strings (catalog ids on Chutes, Gemini names, Claude ids, OpenAI model names; custom depends on the upstream host). Details and env vars: [models.md](models.md).
+For the current public test deployment, use Bittensor testnet subnet 467.
 
-Inference: Chutes is the usual default when prompted.
+## Prover model
+
+Miners need a prover model that can write valid Lean. The setup flow asks which
+provider to use and then asks for the model and key values.
+
+Supported paths are provider-neutral:
+
+- Chutes, the documented default OpenAI-compatible host.
+- Hosted OpenAI through the same OpenAI-compatible shape.
+- Gemini through Google's OpenAI-compatible endpoint.
+- Anthropic, installed with `uv sync --extra anthropic`.
+- A custom OpenAI-compatible base URL such as vLLM, LiteLLM, or another gateway.
+
+Details and example environment variables are in [models.md](models.md).
 
 ## Run
 
 ```bash
+uv run lemma status
 uv run lemma miner check
 uv run lemma miner start
 ```
 
-While the axon is up, each validator forward **starts the prover immediately** — there is no intentional delay for “new theorem” windows; you compete as soon as traffic hits your axon. By contrast, `lemma proof preview` is a manual one-off (same API billing pattern, but you pressed Enter).
+The miner starts solving as soon as a validator forwards a challenge. It does
+not wait for a new block window after the request arrives.
 
-Daily forward cap: `MINER_MAX_FORWARDS_PER_DAY` or `uv run lemma miner start --max-forwards-per-day N`.
-
-## Multiple hotkeys on one cold wallet
-
-Each registered hotkey is a separate miner identity. If you run more than one
-miner on the same machine, give each hotkey its own axon port:
+Useful options:
 
 ```bash
-uv run lemma miner start --hotkey lemmahot --port 8091
-uv run lemma miner start --hotkey lemmahot2 --port 8092
+uv run lemma miner start --max-forwards-per-day 100
+uv run lemma miner start --hotkey my_second_hotkey --port 8092
 ```
 
-The cold wallet still comes from `BT_WALLET_COLD` unless you pass `--coldkey`.
-Open each port you actually run.
+Each hotkey is a separate miner identity. If multiple hotkeys run on one
+machine, give each one its own axon port and open only the ports you actually
+use.
 
-## Seeing replies, correctness, and Lean status
+## What the miner can see
 
-Validators decide whether your proof typechecks; the miner process does not receive scores back on the axon path.
+Validators decide whether the submitted proof passes Lean. The miner axon does
+not receive final validator scores back over the request path.
 
-- Advanced: `lemma proof preview` runs the **prover once** on whatever theorem `lemma status` would sample right now, then prints `proof_script` and verifies it by default (uses your prover API and Docker unless configured otherwise). Use `--no-verify` to skip Lean.
+Useful local signals:
 
-- When a validator forward starts, logs include **`my_uid`** and **`my_incentive`** from the **chain metagraph** (same kind of aggregate view as `uv run btcli subnet show --netuid 467 --network test`) — a snapshot of subnet incentive for your hotkey, not a grade on this theorem.
-- At **INFO** you get **`miner answered`** when the reply is ready; **`local_lean=`** is `PASS` / `FAIL` / … only if **`LEMMA_MINER_LOCAL_VERIFY=1`**. That flag is **optional**: validators always run Lean on your submission — enable local verify only if you want early PASS/FAIL on your machine (costs Docker CPU per forward while debugging). **`miner_forward_summary`** (default on) adds session rollups.
+- `miner answered` means the miner produced a reply.
+- `LEMMA_MINER_LOCAL_VERIFY=1` runs the same local Lean verification path after
+  the prover returns, if Docker and the sandbox image are available.
+- `LEMMA_MINER_FORWARD_TIMELINE=1` adds receive, solved, and outcome timeline
+  logs for each forward.
+- `uv run lemma proof preview` runs one prover attempt against the current
+  theorem and verifies by default.
 
-- Set `LEMMA_MINER_FORWARD_TIMELINE=1` for **three INFO lines per forward**: **`miner timeline 1 RECEIVE`** (theorem, `deadline_block` vs current head, HTTP/wall time budgets, short statement preview), **`miner timeline 2 SOLVED`** (prover wall time, sizes), **`miner timeline 3 OUTCOME`** (`local_lean` if `LEMMA_MINER_LOCAL_VERIFY=1`, else a hint). Then **`miner answered`** as today. Final validator weights are not returned on the axon — only optional **local Lean** mirrors validator proof-checking on your machine.
+Final miner ranking still comes from validator-published weights and the chain
+metagraph, not from a local miner log line.
 
-- Set `LEMMA_MINER_LOG_FORWARDS=1` to log each forward: `proof_script` excerpt at INFO; raw model output is logged at DEBUG (enable e.g. `LOG_LEVEL=DEBUG` to see it).
-- Set `LEMMA_MINER_LOCAL_VERIFY=1` to run the same sandbox `lake build` as validators after the prover returns (requires Docker and `LEAN_SANDBOX_IMAGE` / timeouts aligned with your subnet). Logs `miner local verify OK` or `FAIL` with reason.
+## Proof contract
 
-For frozen catalog problems, `LEMMA_MINER_LOCAL_VERIFY` needs the same `LEMMA_MINIF2F_CATALOG_PATH` as validators so `theorem_id` resolves.
-
-## Generated mode
-
-Templates span easy/medium/hard/extreme; how long validators wait on the wire follows **block height** (blocks to the next seed edge × `LEMMA_BLOCK_TIME_SEC_ESTIMATE`, clamped) — see [generated-problems.md](generated-problems.md).
-
-## Compose
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.local.yml up miner
-```
-
-## Output contract
-
-`proof_script` must be complete `Submission.lean` for the challenge theorem name.
-
-## Models
-
-Miners should use a prover model that writes valid Lean reliably (documented in [models.md](models.md) — e.g. `deepseek-ai/DeepSeek-V3.2-TEE` on Chutes or another strong reasoning model you run well).
+The returned `proof_script` must be a complete Lean file in the `Submission`
+namespace, proving the exact theorem name the validator sent. `sorry`, new
+axioms, changed theorem statements, and incomplete files are rejected.

@@ -7,10 +7,10 @@ rounds, and you do not need to be a registered miner to attempt one.
 
 ```bash
 uv run lemma bounty list
-uv run lemma bounty show BOUNTY_ID
-uv run lemma bounty verify BOUNTY_ID --submission Submission.lean
-uv run lemma bounty package BOUNTY_ID --submission Submission.lean --payout <SS58>
-uv run lemma bounty submit BOUNTY_ID --submission Submission.lean --payout <SS58>
+uv run lemma bounty show smoke.two_plus_two
+uv run lemma bounty verify smoke.two_plus_two --submission Submission.lean
+uv run lemma bounty package smoke.two_plus_two --submission Submission.lean --payout <SS58>
+uv run lemma bounty submit smoke.two_plus_two --submission Submission.lean --payout <SS58>
 ```
 
 `verify` runs the same Lean verification path used by validators, against the
@@ -37,25 +37,26 @@ Registry schema v1:
   "schema_version": 1,
   "bounties": [
     {
-      "id": "fc.example",
-      "title": "Example bounty",
+      "id": "smoke.two_plus_two",
+      "title": "Smoke test: two plus two",
       "status": "open",
-      "reward": "100 TEST",
-      "deadline": "2026-06-01T00:00:00Z",
-      "terms_url": "https://lemmasub.net/bounties/fc.example",
+      "reward": "Demo / no payout",
+      "terms_url": "https://lemmasub.net/bounties/",
       "source": {
-        "name": "Formal Conjectures",
-        "url": "https://google-deepmind.github.io/formal-conjectures/"
+        "name": "Lemma smoke test",
+        "url": "https://lemmasub.net/bounties/"
       },
       "problem": {
-        "id": "fc.example",
-        "theorem_name": "example_theorem",
-        "type_expr": "True",
-        "split": "bounty",
-        "lean_toolchain": "leanprover/lean4:v4.15.0",
-        "mathlib_rev": "<sha>",
+        "id": "smoke.two_plus_two",
+        "theorem_name": "two_plus_two_eq_four",
+        "type_expr": "(2 : Nat) + 2 = 4",
+        "split": "smoke",
+        "lean_toolchain": "leanprover/lean4:v4.30.0-rc2",
+        "mathlib_rev": "5450b53e5ddc",
         "imports": ["Mathlib"],
-        "extra": {}
+        "extra": {
+          "informal_statement": "Prove that two plus two equals four."
+        }
       }
     }
   ]
