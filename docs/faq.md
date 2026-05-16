@@ -238,6 +238,10 @@ default. Lean can support them in general, but Lemma keeps the timed loop narrow
 because those rounds are frequent validator traffic and should be easy to check
 the same way every time.
 
+Said simply: cadence is about speed and time constraints. It is the fast,
+regular loop where validators need to publish a theorem, collect answers, check
+proofs, and move rewards without turning each round into a custom proof project.
+
 Bounties are more flexible. A bounty proof may use helper definitions and helper
 lemmas because harder proofs often need smaller pieces along the way. Those
 helpers are still checked. They cannot change the target, add new assumptions,
