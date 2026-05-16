@@ -33,9 +33,10 @@ For the proof-verification design, see [proof-verification-incentives.md](proof-
 Each forward is its own response. A Lean-valid proof is a positive binary event;
 an ordinary miss or Lean failure is a negative event. Validators fold those
 events into a per-UID difficulty-weighted rolling score and then call
-**`set_weights`** from the positive rolling scores. Harder splits move the
-rolling score more than easy splits, and one miss does not instantly erase a
-strong recent history.
+**`set_weights`** from the positive rolling scores. Passes and misses use
+separate split weights: hard and extreme proofs lift scores faster, while easy
+misses decay scores faster than hard or extreme misses. One miss does not
+instantly erase a strong recent history.
 
 ## Prover system prompt (miners)
 

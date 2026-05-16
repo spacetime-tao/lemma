@@ -99,6 +99,17 @@ def test_difficulty_weight_changes_rolling_impact() -> None:
     assert hard[1] > easy[1]
 
 
+def test_miss_uses_inverse_difficulty_weight() -> None:
+    easy = {1: 0.9}
+    hard = {1: 0.9}
+
+    apply_rolling_outcomes(easy, {1: False}, alpha=0.08, difficulty_weight=1.0)
+    apply_rolling_outcomes(hard, {1: False}, alpha=0.08, difficulty_weight=4.0)
+
+    assert hard[1] > easy[1]
+    assert abs(hard[1] - (0.9 * (1.0 - rolling_effective_alpha(0.08, 0.25)))) < 1e-9
+
+
 def test_rolling_weights_normalize_positive_scores() -> None:
     assert rolling_weights({1: 0.0, 2: 0.25, 3: 0.75}) == {2: 0.25, 3: 0.75}
 

@@ -94,9 +94,13 @@ def apply_rolling_outcomes(
     difficulty_weight: float,
 ) -> dict[int, float]:
     """Update per-UID rolling pass/fail scores in place and return them."""
-    eff_alpha = rolling_effective_alpha(alpha, difficulty_weight)
+    pass_weight = max(0.0, float(difficulty_weight))
+    miss_weight = (1.0 / pass_weight) if pass_weight > 0.0 else 0.0
+    pass_alpha = rolling_effective_alpha(alpha, pass_weight)
+    miss_alpha = rolling_effective_alpha(alpha, miss_weight)
     for uid, passed in outcomes.items():
         old = _clamp_score(scores.get(int(uid), 0.0))
+        eff_alpha = pass_alpha if passed else miss_alpha
         target = 1.0 if passed else 0.0
         scores[int(uid)] = _clamp_score((1.0 - eff_alpha) * old + eff_alpha * target)
     return scores

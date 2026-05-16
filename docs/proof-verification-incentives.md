@@ -23,9 +23,10 @@ accepts the proof or rejects it.
 3. **Verifier reuse:** validators may reuse a Lean result for identical proof
    payloads inside one epoch, but that does not remove a miner from rewards.
 4. **Rolling weights:** per-UID rolling scores are updated by pass/fail events.
-   Harder splits move the rolling score more than easier splits. Positive
-   rolling scores become normalized miner weights; same-coldkey hotkeys share
-   one coldkey allocation instead of multiplying it.
+   Passes and misses are asymmetric: harder splits lift the rolling score more,
+   while easier misses decay it more. Positive rolling scores become normalized
+   miner weights; same-coldkey hotkeys share one coldkey allocation instead of
+   multiplying it.
 
 ## Current Live Rollout
 
@@ -33,10 +34,11 @@ The live validator path is intentionally simple: a submitted proof either passes
 Lean verification for the published theorem and enters scoring, or it does not.
 
 That binary gate is separate from final allocation. A Lean-valid proof moves the
-miner score upward; an ordinary miss or Lean failure moves it downward. The move
-is difficulty-weighted and smoothed over time, so one miss should not erase a
-strong recent history. Verifier-local infrastructure failures are excluded from
-the score update for that UID.
+miner score upward; an ordinary miss or Lean failure moves it downward. Harder
+proofs move scores up faster; easier misses move scores down faster because an
+easy miss is more informative than a hard miss. The move is smoothed over time,
+so one miss should not erase a strong recent history. Verifier-local
+infrastructure failures are excluded from the score update for that UID.
 
 By default, all queried UIDs share one theorem. `LEMMA_UID_VARIANT_PROBLEMS=1`
 is an opt-in anti-Sybil mode where each queried UID receives a deterministic

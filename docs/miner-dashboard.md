@@ -79,6 +79,17 @@ problem map is already public and deterministic. The page should still include
 the seed metadata it used, so readers can tell which chain head and seed rule
 produced the theorem cards.
 
+Public theorem metadata should be explained plainly:
+
+| Field | Meaning |
+| --- | --- |
+| theorem id | Stable public identifier for the sampled theorem row. |
+| name | Lean theorem name miners prove inside `Submission.lean`. |
+| seed | Public chain-derived seed used to sample the theorem. |
+| difficulty | Easy / medium / hard / extreme split used for cadence and scoring. |
+| set/topic | Human grouping such as generated family, curated area, or theorem topic. |
+| source | Public origin of the statement, such as generated cadence, curated catalog, or a future bounty source. |
+
 Generate a local public snapshot with:
 
 ```bash
@@ -98,9 +109,10 @@ uv run python -m tools.public_dashboard \
 ```
 
 Publish only `public-dashboard.json` and `public-dashboard.html`. Do not publish
-`ops-dashboard.html`, raw validator logs, `.env` files, wallet files, private
-training exports, proof scripts, theorem solutions, Droplet IPs, SSH usernames,
-or Lean worker endpoints.
+`ops-dashboard.html`, raw validator logs, `.env` files, wallet files, local
+paths, private training exports, private exports, proof scripts, theorem
+solutions, nonces, commitments, Droplet IPs, SSH usernames, or Lean worker
+endpoints.
 
 This can be hosted as a static page, for example at `lemmasub.net/dashboard`,
 as long as the deployment uploads only the generated public files.

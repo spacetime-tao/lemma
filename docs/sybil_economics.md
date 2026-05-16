@@ -11,7 +11,7 @@ Canonical machine-readable notes: [`knowledge/sybil.realities.yaml`](../knowledg
 | Mechanism | Env | Purpose |
 | --- | --- | --- |
 | **Lean verification gate** | None | A miner entry is reward-eligible only when its submitted proof verifies against the published theorem. |
-| **Difficulty-weighted rolling score** | `LEMMA_SCORING_ROLLING_ALPHA=0.08` | Pass/fail events update a per-UID rolling score; hard and extreme problems move the score more than easy problems. |
+| **Difficulty-weighted rolling score** | `LEMMA_SCORING_ROLLING_ALPHA=0.08` | Pass/fail events update a per-UID rolling score; hard and extreme passes lift faster, while easy misses decay faster. |
 | **Identical-payload verify reuse** | None | Validators may reuse one Lean verification result for identical payloads inside an epoch. This saves verifier work; it does not drop a miner reward entry. |
 | **Same-coldkey partition** | `LEMMA_SCORING_COLDKEY_PARTITION=1` (default on) | After weights are computed, hotkeys sharing one coldkey are capped to one coldkey allocation and that allocation is split among those successful hotkeys. |
 | **UID-specific variants** | `LEMMA_UID_VARIANT_PROBLEMS=0` by default | Optional mode where each queried UID receives a deterministic same-split theorem variant, making extra accounts require extra proof work. |

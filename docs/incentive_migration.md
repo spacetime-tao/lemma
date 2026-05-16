@@ -12,7 +12,7 @@ expanded templates, and optional protocol hooks (env-gated).
 |-----------|----------------|
 | Proof-only target | A submitted proof must pass Lean verification for the published theorem before it can receive score. See [proof-verification-incentives.md](proof-verification-incentives.md). |
 | Identical-payload verify reuse | Same normalized proof payloads can reuse one Lean verification result inside an epoch. This saves validator CPU; it does not remove reward entries. |
-| Difficulty-weighted rolling score | `LEMMA_SCORING_ROLLING_ALPHA=0.08`; live weights are normalized from persisted `rolling_score_by_uid`. Easy / medium / hard / extreme defaults are `1 / 2 / 4 / 8`, so harder rounds move the rolling score more. |
+| Difficulty-weighted rolling score | `LEMMA_SCORING_ROLLING_ALPHA=0.08`; live weights are normalized from persisted `rolling_score_by_uid`. Pass weights use easy / medium / hard / extreme defaults of `1 / 2 / 4 / 8`; miss weights are derived as the inverse `1 / 0.5 / 0.25 / 0.125`, so harder proofs lift faster while easier misses decay faster. |
 | Same-coldkey partition | `LEMMA_SCORING_COLDKEY_PARTITION=1` — after rolling weights are computed, hotkeys under the same coldkey share one coldkey allocation. |
 | Legacy reputation fields | `LEMMA_REPUTATION_STATE_PATH` still stores older `ema_by_uid` / `credibility_by_uid` fields for compatibility, but live chain weights use `rolling_score_by_uid`. |
 | Proof-only live score | A Lean-verified proof moves the rolling score up; an ordinary miss or Lean failure moves it down. Verifier-local infra failures do not update that UID. |

@@ -351,6 +351,56 @@ async def test_epoch_updates_rolling_score_for_all_queried_uids(monkeypatch, tmp
     assert state["rolling_score_by_uid"] == {"0": 0.5, "1": 0.0}
 
 
+async def test_epoch_easy_miss_decays_more_than_extreme_miss(monkeypatch, tmp_path) -> None:
+    async def score_after_miss(split: str) -> float:
+        reputation_path = tmp_path / f"{split}.json"
+        reputation_path.write_text(
+            json.dumps(
+                {
+                    "version": 3,
+                    "rolling_score_by_uid": {"0": 0.9},
+                    "ema_by_uid": {},
+                    "credibility_by_uid": {},
+                },
+            ),
+            encoding="utf-8",
+        )
+        source = _OneProblemSource()
+        source.problem = Problem(
+            id=f"gen/{split}",
+            theorem_name="t",
+            type_expr="True",
+            split=split,
+            lean_toolchain="lt",
+            mathlib_rev="mr",
+            imports=("Mathlib",),
+        )
+        _install_epoch_fakes(
+            monkeypatch,
+            subtensor=_Subtensor(),
+            verify_result=VerifyResult(passed=False, reason="compile_error"),
+        )
+
+        weights = await epoch.run_epoch(
+            _settings(
+                tmp_path,
+                lemma_reputation_state_path=reputation_path,
+                lemma_scoring_rolling_alpha=0.08,
+            ),
+            source,
+            dry_run=False,
+        )
+
+        state = json.loads(reputation_path.read_text(encoding="utf-8"))
+        assert weights == {0: 1.0}
+        return float(state["rolling_score_by_uid"]["0"])
+
+    easy_score = await score_after_miss("easy")
+    extreme_score = await score_after_miss("extreme")
+
+    assert easy_score < extreme_score < 0.9
+
+
 async def test_epoch_weights_ignore_stale_and_validator_rolling_scores(monkeypatch, tmp_path) -> None:
     reputation_path = tmp_path / "reputation.json"
     reputation_path.write_text(
