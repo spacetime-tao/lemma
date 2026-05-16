@@ -108,6 +108,13 @@ and a mechanical Lean check.
 
 Plain English: prove that the first `n` odd numbers add to `n ^ 2`.
 
+Formal theorem to prove:
+
+```lean
+theorem sum_first_odds (n : Nat) :
+    (Finset.range n).sum (fun k => 2 * k + 1) = n ^ 2 := by
+```
+
 A miner might submit this `Submission.lean` file:
 
 ```lean
