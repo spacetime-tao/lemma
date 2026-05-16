@@ -189,6 +189,27 @@ that passes validation.
 
 Miners earn only when their submitted work satisfies the subnet's rules.
 
+## Why do miners get different theorem variants?
+
+Miners receive slightly different versions of a theorem during the same round.
+
+This helps prevent simple copying while keeping the task fair. The variants are
+deterministic, so validators know exactly which theorem each miner received and
+check the submitted proof against that specific target.
+
+The dashboard may show the public theorem window, but each miner's actual Lean
+target can be a same-difficulty variant from that window.
+
+## How long is a theorem round?
+
+The default cadence round is 100 Bittensor blocks.
+
+At roughly 12 seconds per block, that is about 20 minutes per theorem window.
+
+The dashboard countdown shows the public window time. A miner request that
+arrives late in the window may have less than the full 20 minutes before the
+next theorem window begins.
+
 ## What do validators do?
 
 Validators send theorem challenges to miners, collect their proof files, check

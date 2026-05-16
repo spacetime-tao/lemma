@@ -94,8 +94,9 @@ path is a ladder:
 
 1. a reliable cadence of generated and curated theorem tasks;
 2. broader theorem supply across more mathematical fields;
-3. steadily harder formal statements as the network scales;
-4. winner-take-all rewards for especially difficult targets and open
+3. selected Formal Conjectures targets as harder bounty work;
+4. steadily harder formal statements as the network scales;
+5. winner-take-all rewards for especially difficult targets and open
    mathematical problems.
 
 ## Concrete Example
@@ -113,7 +114,11 @@ Formal theorem to prove:
 ```lean
 theorem sum_first_odds (n : Nat) :
     (Finset.range n).sum (fun k => 2 * k + 1) = n ^ 2 := by
+  sorry
 ```
+
+Here `sorry` is Lean's placeholder for an unfinished proof. In a real Lemma
+submission, the miner replaces it with proof code that Lean accepts.
 
 A miner might submit this `Submission.lean` file:
 
@@ -134,6 +139,8 @@ theorem sum_first_odds (n : Nat) :
 
 end Submission
 ```
+
+Blank lines in this example are only for readability; Lean ignores them.
 
 This is still a compact example, but it shows the shape Lemma cares about:
 a formal theorem, a proof strategy, and a final mechanical check. The proof uses
