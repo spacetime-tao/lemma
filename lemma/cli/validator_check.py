@@ -1,4 +1,4 @@
-"""Pre-flight checks before ``lemma validator`` (RPC, registration, Lean image, pins)."""
+"""Pre-flight checks before ``lemma validator start`` (RPC, registration, Lean image, pins)."""
 
 from __future__ import annotations
 
@@ -19,16 +19,11 @@ from lemma.problems.hybrid import problem_supply_registry_sha256
 from lemma.validator.service import validator_startup_issues
 
 
-def _print_ready_footer(*, outcome: Literal["ok", "warn"]) -> None:
+def _print_ready_footer(*, outcome: Literal["ok", "warn"], ready_next: str) -> None:
     """READY banner + next-step line + status line + trailing newline."""
     click.echo("")
     click.echo(stylize("READY", fg="green", bold=True))
-    click.echo(
-        stylize(
-            "  Next: lemma validator start    (or `lemma validator dry-run` to skip set_weights)",
-            dim=True,
-        )
-    )
+    click.echo(stylize(f"  {ready_next}", dim=True))
     if outcome == "warn":
         click.echo(
             stylize("validator check: WARN — see above (risky for mainnet scoring)", fg="yellow"),
@@ -63,11 +58,12 @@ def _docker_image_available(image: str) -> bool:
         return False
 
 
-def run_validator_check(settings: LemmaSettings) -> int:
+def run_validator_check(settings: LemmaSettings, *, ready_next: str | None = None) -> int:
     """Print checklist; return 0 if OK to start, 1 if blocking issues."""
+    ready_next = ready_next or "Next: lemma validator start    (or `lemma validator dry-run` to skip set_weights)"
     click.echo(stylize("Validator pre-flight", fg="cyan", bold=True))
     click.echo(
-        stylize("(run before `lemma validator start` — not the same as `lemma validator config`)\n", dim=True),
+        stylize("(run before `lemma validator start`)\n", dim=True),
         nl=False,
     )
     fatal, warn = validator_startup_issues(settings, dry_run=False)
@@ -140,7 +136,7 @@ def run_validator_check(settings: LemmaSettings) -> int:
         if actual_j != exp_j:
             click.echo(
                 stylize(
-                    "FAIL profile pin  LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED mismatch vs live `lemma meta`",
+                    "FAIL profile pin  LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED mismatch vs live `lemma config meta`",
                     fg="red",
                     bold=True,
                 ),
@@ -252,7 +248,7 @@ def run_validator_check(settings: LemmaSettings) -> int:
     if remote_u:
         click.echo(
             stylize(
-                f"OK Lean remote  verify delegated to worker ({remote_u!r}) — run `lemma lean-worker` there "
+                f"OK Lean remote  verify delegated to worker ({remote_u!r}) — run `lemma validator lean-worker` there "
                 "with matching `.env` (Docker/cache on worker host)",
                 fg="green",
             ),
@@ -275,7 +271,7 @@ def run_validator_check(settings: LemmaSettings) -> int:
     else:
         click.echo(
             stylize(
-                "FAIL Lean      LEMMA_USE_DOCKER=false — `lemma validator` cannot start "
+                "FAIL Lean      LEMMA_USE_DOCKER=false — `lemma validator start` cannot start "
                 "(validators must use Docker). Set LEMMA_USE_DOCKER=true.",
                 fg="red",
                 bold=True,
@@ -358,10 +354,10 @@ def run_validator_check(settings: LemmaSettings) -> int:
         return 1
 
     if warn:
-        _print_ready_footer(outcome="warn")
+        _print_ready_footer(outcome="warn", ready_next=ready_next)
         finish_cli_output()
         return 0
 
-    _print_ready_footer(outcome="ok")
+    _print_ready_footer(outcome="ok", ready_next=ready_next)
     finish_cli_output()
     return 0

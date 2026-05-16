@@ -52,7 +52,7 @@ def resolve_preview_use_docker(
 
     ``base_use_docker`` is ``LemmaSettings.lean_use_docker`` from ``.env``.
 
-    Validators/miners are unchanged — this only applies to ``lemma preview``.
+    Validators/miners are unchanged — this only applies to ``lemma proof preview``.
     """
     if explicit_use_docker is not None:
         return explicit_use_docker
@@ -440,9 +440,9 @@ def _run_preview_session(
                     click.echo(
                         stylize(
                             "Hint: Remote Lean verify could not reach LEMMA_LEAN_VERIFY_REMOTE_URL (connection "
-                            "refused, timeout, or TLS). Start `lemma lean-worker` if you use localhost:8787, fix "
-                            "the URL, or unset LEMMA_LEAN_VERIFY_REMOTE_URL to verify locally (Docker or "
-                            "`--host-lean` with LEMMA_ALLOW_HOST_LEAN=1).",
+                            "refused, timeout, or TLS). Start `lemma validator lean-worker` if you use "
+                            "localhost:8787, fix the URL, or unset LEMMA_LEAN_VERIFY_REMOTE_URL to verify locally "
+                            "(Docker or `--host-lean` with LEMMA_ALLOW_HOST_LEAN=1).",
                             dim=True,
                         ),
                         err=True,
@@ -519,7 +519,7 @@ def _run_preview_session(
         click.echo(
             stylize(
                     f"{session_label}: finished — LLM OK (exit 0). Lean was not run; run "
-                    "`lemma preview --verify` to compile Submission.lean locally.",
+                    "`lemma proof preview --verify` to compile Submission.lean locally.",
                 fg="green",
             ),
         )

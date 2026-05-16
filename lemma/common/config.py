@@ -142,12 +142,33 @@ class LemmaSettings(BaseSettings):
         validation_alias="LEMMA_MINIF2F_CATALOG_PATH",
         description="Optional path to frozen JSON array (default: bundled lemma/problems/minif2f_frozen.json).",
     )
+    bounty_registry_url: str = Field(
+        default="https://raw.githubusercontent.com/spacetime-tao/lemma/main/bounties/registry.json",
+        validation_alias="LEMMA_BOUNTY_REGISTRY_URL",
+        description="Remote JSON registry for off-cadence bounty targets.",
+    )
+    bounty_registry_sha256_expected: str | None = Field(
+        default=None,
+        validation_alias="LEMMA_BOUNTY_REGISTRY_SHA256_EXPECTED",
+        description="Optional SHA256 pin for the downloaded bounty registry JSON.",
+    )
+    bounty_api_url: str = Field(
+        default="https://api.lemmasub.net",
+        validation_alias="LEMMA_BOUNTY_API_URL",
+        description="Base URL for the Lemma bounty submission API.",
+    )
+    bounty_http_timeout_s: float = Field(
+        default=30.0,
+        gt=0.0,
+        validation_alias="LEMMA_BOUNTY_HTTP_TIMEOUT_S",
+        description="HTTP timeout for bounty registry fetches and submission posts.",
+    )
     generated_registry_expected_sha256: str | None = Field(
         default=None,
         validation_alias="LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED",
         description=(
             "Validators with LEMMA_PROBLEM_SOURCE=generated must set this; startup fails unless it matches "
-            "the live generated-registry hash (`lemma meta`)."
+            "the live generated-registry hash (`lemma config meta`)."
         ),
     )
     problem_supply_registry_expected_sha256: str | None = Field(
@@ -155,7 +176,7 @@ class LemmaSettings(BaseSettings):
         validation_alias="LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED",
         description=(
             "Validators with LEMMA_PROBLEM_SOURCE=hybrid must set this; startup fails unless it matches "
-            "the live hybrid supply hash (`lemma meta`)."
+            "the live hybrid supply hash (`lemma config meta`)."
         ),
     )
     lemma_generated_legacy_plain_rng: bool = Field(
@@ -239,7 +260,7 @@ class LemmaSettings(BaseSettings):
         default=True,
         validation_alias="LEMMA_USE_DOCKER",
         description=(
-            "When true (default), validators/miners/`lemma verify` use Docker for LeanSandbox — subnet parity. "
+            "When true (default), validators/miners/`lemma proof verify` use Docker for LeanSandbox — subnet parity. "
             "Set false only for host `lake` when toolchain matches `LEAN_SANDBOX_IMAGE` and policy allows."
         ),
     )
@@ -247,7 +268,7 @@ class LemmaSettings(BaseSettings):
         default=False,
         validation_alias="LEMMA_ALLOW_HOST_LEAN",
         description=(
-            "If true, allow `lemma verify --host-lean`, `lemma preview --host-lean`, and "
+            "If true, allow `lemma proof verify --host-lean`, `lemma proof preview --host-lean`, and "
             "`LEMMA_PREVIEW_HOST_VERIFY` for local debugging. Production validators should leave this false."
         ),
     )
@@ -336,7 +357,7 @@ class LemmaSettings(BaseSettings):
         validation_alias="LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED",
         description=(
             "Expected validator profile hash. Validators must set this; startup fails unless it matches live "
-            "`lemma meta`."
+            "`lemma config meta`."
         ),
     )
     prover_provider: str = Field(
@@ -536,7 +557,7 @@ class LemmaSettings(BaseSettings):
         validation_alias="LEMMA_LEAN_VERIFY_REMOTE_URL",
         description=(
             "Optional base URL (http/https) of a dedicated Lean verify worker process "
-            "(POST `/verify` JSON — see `lemma lean-worker`). When unset, verification runs in-process "
+            "(POST `/verify` JSON — see `lemma validator lean-worker`). When unset, verification runs in-process "
             "via `LeanSandbox` on this machine."
         ),
     )
@@ -552,7 +573,7 @@ class LemmaSettings(BaseSettings):
         default=False,
         validation_alias="LEMMA_LEAN_WORKER_ALLOW_UNAUTHENTICATED_NON_LOOPBACK",
         description=(
-            "Explicit dev override for `lemma lean-worker --host` values outside loopback when no "
+            "Explicit dev override for `lemma validator lean-worker --host` values outside loopback when no "
             "LEMMA_LEAN_VERIFY_REMOTE_BEARER is configured."
         ),
     )
@@ -724,7 +745,7 @@ class LemmaSettings(BaseSettings):
         validation_alias="LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_SALT",
         description=(
             "Optional validator/operator salt mixed into attest spot-verify selection. Keep non-empty salts "
-            "out of public docs; lemma meta exposes only a SHA256 fingerprint."
+            "out of public docs; lemma config meta exposes only a SHA256 fingerprint."
         ),
     )
     lemma_judge_profile_attest_enabled: bool = Field(

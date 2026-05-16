@@ -153,7 +153,7 @@ services, and validator were then restarted in order.
 - The first validator restart failed closed because the old
   `LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED` pin did not match the profile after
   the extreme-split supply change. Running
-  `lemma configure subnet-pins --env-file /opt/lemma/.env --yes` wrote profile
+  `lemma config subnet-pins --env-file /opt/lemma/.env --yes` wrote profile
   pin `85155229a2c1a0dd9537434d89a7c924368f888e4602b6d909757b09285b0a9c` and
   problem-supply pin
   `f4ae425ad437c97b00d47b7ba97f97e1ff4cec8d5d66290c8b2364d91f822311`.

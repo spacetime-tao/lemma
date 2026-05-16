@@ -44,7 +44,7 @@ set_weights follow-up still needs its own push and CI confirmation.
 
 2. **Remote Lean worker defaults are safer.**
 
-   Non-loopback `lemma lean-worker` binds require bearer auth unless the
+   Non-loopback `lemma validator lean-worker` binds require bearer auth unless the
    explicit dev-only unauthenticated override is set.
 
 3. **Export writes no longer block grading.**

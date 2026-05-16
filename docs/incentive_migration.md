@@ -38,7 +38,7 @@ expanded templates, and optional protocol hooks (env-gated).
 
 ## Problem supply registry
 
-Changing hybrid weights, curated rows, or generated templates changes `problem_supply_registry_sha256`. Operators must run `uv run lemma configure subnet-pins` (or update `LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED`) after upgrading. Generated-only rollback mode still pins `generated_registry_sha256`.
+Changing hybrid weights, curated rows, or generated templates changes `problem_supply_registry_sha256`. Operators must run `uv run lemma config subnet-pins` (or update `LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED`) after upgrading. Generated-only rollback mode still pins `generated_registry_sha256`.
 
 ## References
 

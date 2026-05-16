@@ -4,7 +4,7 @@
 
 **`LEMMA_PROBLEM_SOURCE=hybrid`** is the default live supply. It deterministically picks the published split first (**10 easy / 35 medium / 50 hard / 5 extreme**), then mixes seed-generated templates with a bundled curated catalog using published source weights: **60 generated / 40 catalog**.
 
-Validators agree because they share head + seed mode + hybrid weights + registry pins. `uv run lemma meta --raw` prints `problem_supply_registry_sha256`, which covers the generated registry hash, curated catalog hash, and hybrid weights. Validators set `LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED` from that value.
+Validators agree because they share head + seed mode + hybrid weights + registry pins. `uv run lemma config meta --raw` prints `problem_supply_registry_sha256`, which covers the generated registry hash, curated catalog hash, and hybrid weights. Validators set `LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED` from that value.
 
 The curated live pack lives in [`lemma/problems/curated_catalog.json`](../lemma/problems/curated_catalog.json). Each row carries the formal Lean theorem data plus authored dashboard text in `informal_statement`.
 
@@ -12,7 +12,7 @@ The curated live pack lives in [`lemma/problems/curated_catalog.json`](../lemma/
 
 **`LEMMA_PROBLEM_SOURCE=generated`** keeps only the generated-template lane (`gen/<seed>` ids). Template selection uses a **deterministic SHA256 mix** of that seed before `random.Random` (see [`generated.py`](../lemma/problems/generated.py)). That decorrelates **adjacent** chain seeds (same window still shares one `problem_seed` in quantize mode). It does **not** remove the public, deterministic map from seed → problem: anyone can still precompute. This is documented as an accepted supply boundary in [problem-supply-policy.md](problem-supply-policy.md). To match an **older** Lemma release’s expansion exactly, set **`LEMMA_GENERATED_LEGACY_PLAIN_RNG=1`** (rollback only).
 
-**RPC head slack:** Optional **`LEMMA_PROBLEM_SEED_CHAIN_HEAD_SLACK_BLOCKS`** (default **0**) subtracts that many blocks from the RPC head **before** `resolve_problem_seed` and forward HTTP deadline math (validators, `lemma status`, `lemma preview`, `lemma problems show`). Setting **`1`** often removes **one-block** disagreements on `get_current_block()` at quantize boundaries (e.g. head **199** vs **200** with `quantize_blocks=100` can disagree without slack; both map to the same seed with slack **1**).
+**RPC head slack:** Optional **`LEMMA_PROBLEM_SEED_CHAIN_HEAD_SLACK_BLOCKS`** (default **0**) subtracts that many blocks from the RPC head **before** `resolve_problem_seed` and forward HTTP deadline math (validators, `lemma status`, `lemma proof preview`, `lemma theorem show`). Setting **`1`** often removes **one-block** disagreements on `get_current_block()` at quantize boundaries (e.g. head **199** vs **200** with `quantize_blocks=100` can disagree without slack; both map to the same seed with slack **1**).
 
 ## Frozen catalog (`frozen` mode)
 

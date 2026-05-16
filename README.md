@@ -21,7 +21,7 @@ Anything that can be formalized as a Lean statement can become work for Lemma:
 algebra, number theory, logic, combinatorics, geometry, computer science,
 cryptography, and more.
 
-Lemma is still proof-of-concept software. It currently runs on Bittensor testnet as **subnet 467** (`--network test`; run `uv run lemma configure chain` to set `NETUID=467`). Mainnet, also known as Finney, is separate. Only treat mainnet rewards or tokens as relevant when the deployment you are following is registered, active, and matched to the correct **network** and **netuid**.
+Lemma is still proof-of-concept software. It currently runs on Bittensor testnet as **subnet 467** (`--network test`; run `uv run lemma setup` to write `NETUID=467`). Mainnet, also known as Finney, is separate. Only treat mainnet rewards or tokens as relevant when the deployment you are following is registered, active, and matched to the correct **network** and **netuid**.
 
 For the full mechanism and reward model, start with the [litepaper](docs/litepaper.md).
 
@@ -44,9 +44,13 @@ uv sync --extra btcli
 uv run lemma --help
 ```
 
-Use one environment and one tool: `uv`. The Lemma `.venv` holds subnet dependencies and the `lemma` command (`setup`, `doctor`, `preview`, miner, validator). Wallets use `btcli` from [bittensor-cli](https://pypi.org/project/bittensor-cli/); install it here with `uv sync --extra btcli` (or `uv sync --extra dev --extra btcli` for development).
+Use one environment and one tool: `uv`. The Lemma `.venv` holds subnet dependencies and the grouped `lemma` command. Wallets use `btcli` from [bittensor-cli](https://pypi.org/project/bittensor-cli/); install it here with `uv sync --extra btcli` (or `uv sync --extra dev --extra btcli` for development).
 
-**Validators:** start with `lemma validator start` (or Docker `ENTRYPOINT ["lemma"]` / `CMD ["validator", "start"]`).
+**Miners:** `uv run lemma setup`, register your hotkey, then `uv run lemma miner start`.
+
+**Validators:** build the Lean image, then `uv run lemma validator start`.
+
+**Bounties:** `uv run lemma bounty list`, verify locally, then `uv run lemma bounty submit ...`.
 
 ### Operators
 
@@ -68,6 +72,7 @@ In the miner docs, **axon** is Bittensor’s term for the network address and po
 | Codebase audit (Codex) | [codex-audit.md](docs/codex-audit.md) |
 | Miner | [miner.md](docs/miner.md) |
 | Validator | [validator.md](docs/validator.md) |
+| Bounties | [bounties.md](docs/bounties.md) |
 | Models / APIs | [models.md](docs/models.md) |
 | Production / ops | [production.md](docs/production.md) |
 | VPS safety / key custody | [vps-safety.md](docs/vps-safety.md) |

@@ -13,11 +13,11 @@ strategy, broad onboarding UX, model experimentation dashboards, or alternate
 transport stacks. Keep operator flows in the `lemma` command; major miner-artifact or
 container-execution designs should be planned as separate protocol work.
 
-Walkthrough: [getting-started.md](getting-started.md) — **`uv sync --extra btcli`** if you need repo-local **`uv run btcli`** (Bittensor CLI), `uv run lemma setup`, then `uv run lemma …` from the repo root. Prefer prompts over hand-editing `.env` (`uv run lemma configure chain`, `configure prover`, `configure axon`).
+Walkthrough: [getting-started.md](getting-started.md) — **`uv sync --extra btcli`** if you need repo-local **`uv run btcli`** (Bittensor CLI), `uv run lemma setup`, then `uv run lemma miner start` from the repo root. Prefer prompts over hand-editing `.env`.
 
-**Short checklist:** `uv run lemma setup` → coldkey funded → `uv run btcli subnet register` on the same network/netuid as `.env` → `uv run lemma miner dry-run` → **`uv run lemma preview`** (see prover + Lean on the live theorem) → fix axon IP/port if needed → `uv run lemma miner start`.
+**Short checklist:** `uv run lemma setup` → coldkey funded → `uv run btcli subnet register` on the same network/netuid as `.env` → open `AXON_PORT` → `uv run lemma miner check` → `uv run lemma miner start`.
 
-### Prover LLM (`lemma configure prover`)
+### Prover LLM (`lemma setup`)
 
 Choose **which API** runs first (numbered menu), then follow prompts. **Chutes**, **Gemini** (preset tiers + custom id), **Anthropic**, **OpenAI**, or **custom** OpenAI-compatible URL — URLs are preset for all but **custom**. In-terminal blurbs show example **`PROVER_MODEL`** strings (catalog ids on Chutes, Gemini names, Claude ids, OpenAI model names; custom depends on the upstream host). Details and env vars: [models.md](models.md).
 
@@ -26,19 +26,32 @@ Inference: Chutes is the usual default when prompted.
 ## Run
 
 ```bash
-uv run lemma miner dry-run
+uv run lemma miner check
 uv run lemma miner start
 ```
 
-While the axon is up, each validator forward **starts the prover immediately** — there is no intentional delay for “new theorem” windows; you compete as soon as traffic hits your axon. By contrast, `lemma preview` is a manual one-off (same API billing pattern, but you pressed Enter).
+While the axon is up, each validator forward **starts the prover immediately** — there is no intentional delay for “new theorem” windows; you compete as soon as traffic hits your axon. By contrast, `lemma proof preview` is a manual one-off (same API billing pattern, but you pressed Enter).
 
 Daily forward cap: `MINER_MAX_FORWARDS_PER_DAY` or `uv run lemma miner start --max-forwards-per-day N`.
+
+## Multiple hotkeys on one cold wallet
+
+Each registered hotkey is a separate miner identity. If you run more than one
+miner on the same machine, give each hotkey its own axon port:
+
+```bash
+uv run lemma miner start --hotkey lemmahot --port 8091
+uv run lemma miner start --hotkey lemmahot2 --port 8092
+```
+
+The cold wallet still comes from `BT_WALLET_COLD` unless you pass `--coldkey`.
+Open each port you actually run.
 
 ## Seeing replies, correctness, and Lean status
 
 Validators decide whether your proof typechecks; the miner process does not receive scores back on the axon path.
 
-- `lemma preview` runs the **prover once** on whatever theorem `lemma status` would sample right now, then prints `proof_script` and verifies it by default (uses your prover API and Docker unless configured otherwise). Use `--no-verify` to skip Lean.
+- Advanced: `lemma proof preview` runs the **prover once** on whatever theorem `lemma status` would sample right now, then prints `proof_script` and verifies it by default (uses your prover API and Docker unless configured otherwise). Use `--no-verify` to skip Lean.
 
 - When a validator forward starts, logs include **`my_uid`** and **`my_incentive`** from the **chain metagraph** (same kind of aggregate view as `uv run btcli subnet show --netuid 467 --network test`) — a snapshot of subnet incentive for your hotkey, not a grade on this theorem.
 - At **INFO** you get **`miner answered`** when the reply is ready; **`local_lean=`** is `PASS` / `FAIL` / … only if **`LEMMA_MINER_LOCAL_VERIFY=1`**. That flag is **optional**: validators always run Lean on your submission — enable local verify only if you want early PASS/FAIL on your machine (costs Docker CPU per forward while debugging). **`miner_forward_summary`** (default on) adds session rollups.

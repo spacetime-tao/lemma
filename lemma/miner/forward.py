@@ -1,7 +1,7 @@
 """Axon forward handler.
 
 Each validator query runs the prover as soon as the synapse passes gating — no intentional delay
-waiting for block/time windows (manual ``lemma preview`` is separate and operator-triggered).
+waiting for block/time windows (manual ``lemma proof preview`` is separate and operator-triggered).
 """
 
 import asyncio

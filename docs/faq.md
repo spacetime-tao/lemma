@@ -141,7 +141,7 @@ More detail: [validator.md](validator.md).
 
 Bittensor provides wallet accounts, a shared view of who is registered, validator
 weights, and token reward flow. You still run Lemma locally with commands such
-as `lemma miner ...` and `lemma validator ...`.
+as `lemma miner start` and `lemma validator start`.
 
 ## Rewards at a high level
 

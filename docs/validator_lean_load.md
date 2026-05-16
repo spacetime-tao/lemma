@@ -83,7 +83,7 @@ Requires **`LEMMA_MINER_VERIFY_ATTEST_ENABLED=1`**. Miners must run local Lean P
 | **`(0, 1)`** | Deterministic subset: [`attest_spot_should_full_verify`](../lemma/protocol_attest.py) hashes `(salt, uid, theorem_id, metronome_id)` — roughly **fraction ×** tuples get full verify; the rest skip Lean with **`VerifyResult(passed=True, reason="attest_trusted")`** (still scored downstream, but neutral for verify-credibility updates). |
 | **`0.0`** | Never full verify — **trust attest only**. Dangerous unless you fully accept cheating risk. |
 
-**Operational order:** keep **`1.0`** until miners reliably run **`LEMMA_MINER_LOCAL_VERIFY=1`** and attest signatures validate; then set a non-empty **`LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_SALT`**, lower gradually (e.g. **0.5**, **0.25**), and monitor full-verify failures and miner fraud reports. `lemma meta` pins only the salt SHA-256, not the salt text.
+**Operational order:** keep **`1.0`** until miners reliably run **`LEMMA_MINER_LOCAL_VERIFY=1`** and attest signatures validate; then set a non-empty **`LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_SALT`**, lower gradually (e.g. **0.5**, **0.25**), and monitor full-verify failures and miner fraud reports. `lemma config meta` pins only the salt SHA-256, not the salt text.
 
 Attest **disabled**: spot fraction is ignored (full verify path uses normal Lean unless other shortcuts apply).
 
@@ -114,7 +114,7 @@ mental model simple: validators fully verify passing candidate proofs.
 
 ## Offload Lean to another host
 
-**`LEMMA_LEAN_VERIFY_REMOTE_URL`** POSTs proofs to **`lemma lean-worker`** — validator CPU drops; network + worker capacity become the limit ([`verify_runner.py`](../lemma/lean/verify_runner.py)). Non-loopback workers require **`LEMMA_LEAN_VERIFY_REMOTE_BEARER`** unless **`LEMMA_LEAN_WORKER_ALLOW_UNAUTHENTICATED_NON_LOOPBACK=1`** is set for dev-only exposure. Align bearer auth and timeouts with production.
+**`LEMMA_LEAN_VERIFY_REMOTE_URL`** POSTs proofs to **`lemma validator lean-worker`** — validator CPU drops; network + worker capacity become the limit ([`verify_runner.py`](../lemma/lean/verify_runner.py)). Non-loopback workers require **`LEMMA_LEAN_VERIFY_REMOTE_BEARER`** unless **`LEMMA_LEAN_WORKER_ALLOW_UNAUTHENTICATED_NON_LOOPBACK=1`** is set for dev-only exposure. Align bearer auth and timeouts with production.
 
 ## References
 

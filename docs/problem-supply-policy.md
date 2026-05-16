@@ -103,8 +103,8 @@ is a new security model.
      uv run python scripts/ci_verify_generated_templates.py
    ```
 
-3. Record the old and new `problem_supply_registry_sha256` and `generated_registry_sha256` from `uv run lemma meta`.
-4. Record the new `validator_profile_sha256` from `uv run lemma meta`.
+3. Record the old and new `problem_supply_registry_sha256` and `generated_registry_sha256` from `uv run lemma config meta`.
+4. Record the new `validator_profile_sha256` from `uv run lemma config meta`.
 5. Summarize the old and new builder counts by split.
 6. Check whether any new builder family is a near-duplicate of an existing one.
 7. Confirm verification costs fit the published timeout policy.

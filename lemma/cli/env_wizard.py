@@ -446,7 +446,7 @@ def collect_prover_model_updates() -> dict[str, str]:
     """Set only PROVER_MODEL for miner/prover runs."""
     click.echo(
         stylize(
-            "This name is sent to your prover API as the model id (miner and `lemma preview`).",
+            "This name is sent to your prover API as the model id (miner and `lemma proof preview`).",
             dim=True,
         )
     )
@@ -485,7 +485,7 @@ def collect_prover_model_updates() -> dict[str, str]:
 
 
 def collect_subnet_pin_updates(settings: LemmaSettings) -> dict[str, str]:
-    """Expected-hash pins matching **current** `lemma meta`."""
+    """Expected-hash pins matching **current** `lemma config meta`."""
     from lemma.judge.profile import judge_profile_sha256
     from lemma.problems.generated import generated_registry_sha256
     from lemma.problems.hybrid import problem_supply_registry_sha256
@@ -555,7 +555,7 @@ def run_setup(env_path: Path, role: str) -> None:
             stylize("  • Miner: open ", dim=True)
             + stylize("AXON_PORT", fg="yellow")
             + stylize(" to the internet; check with ", dim=True)
-            + stylize("lemma miner dry-run", fg="green")
+            + stylize("lemma miner check", fg="green")
             + stylize(".\n", dim=True),
             nl=False,
         )

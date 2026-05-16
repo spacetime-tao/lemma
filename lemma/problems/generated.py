@@ -2131,7 +2131,7 @@ def _template_source_sha256(template: GeneratedTemplate) -> str:
 
 
 def generated_registry_canonical_dict() -> dict[str, object]:
-    """Stable description of template registry (for ``lemma meta`` and optional pinning)."""
+    """Stable description of template registry (for ``lemma config meta`` and optional pinning)."""
     split_counts = {
         split: sum(1 for template in _RAW_BUILDERS if template.split == split) for split in VALID_SPLITS
     }

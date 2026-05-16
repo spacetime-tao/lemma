@@ -7,7 +7,7 @@ Lean verification is objective; validator scoring must stay deterministic and co
 Validators map block seed → theorem via [`hybrid.py`](../lemma/problems/hybrid.py), generated builders, and the curated catalog pack. Consensus needs the same registry, weights, catalog, and release. The map is public and precomputable; [problem-supply-policy.md](problem-supply-policy.md) records that this is a supply/governance boundary, not a secrecy mechanism.
 
 ```bash
-uv run lemma meta
+uv run lemma config meta
 ```
 
 Publish `problem_supply_registry_sha256`; validators set `LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED`. The current hybrid source defaults to 60% generated templates and 40% curated catalog rows. The generated registry has 100 builders with explicit 10% / 35% / 50% / 5% easy / medium / hard / extreme split weights. Difficulty mix: [generated-problems.md](generated-problems.md). Builder/catalog promotion checklist: [problem-supply-policy.md](problem-supply-policy.md).
@@ -36,7 +36,7 @@ Requires **`LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`** (public eval catalog — 
 The validator profile covers problem cadence, verification policy, live proof scoring policy, same-coldkey partitioning, reputation, and response-acceptance hooks.
 
 ```bash
-uv run lemma meta
+uv run lemma config meta
 ```
 
 - `validator_profile_sha256`: current profile hash name for validator scoring policy.
@@ -72,7 +72,7 @@ code does not enforce equality — parity relies on the published policy
 
 1. Pin one Git tag and one immutable sandbox image ref ([toolchain-image-policy.md](toolchain-image-policy.md)).
 2. Publish a shared env template.
-3. Pin `uv run lemma meta`: `LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED` and `LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED` (hybrid mode).
+3. Pin `uv run lemma config meta`: `LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED` and `LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED` (hybrid mode).
 4. Announce upgrades with changelog and cutover.
 
 Hashes reduce drift; they do not prove honest validators. Epoch tempo comes from Bittensor; forward HTTP wait per query is derived from block height and shared clamps — not a per-node dial.
@@ -100,7 +100,7 @@ adding protocol machinery until the minimal public evidence format is clear.
 
 ## Config drift detection
 
-Operators can already compare `lemma meta --raw` output against published pins.
+Operators can already compare `lemma config meta --raw` output against published pins.
 The next trust-minimization step is to make drift easier to spot: a compact
 health/report command should print the deployed commit, sandbox image ref,
 profile hash, problem-supply hash, generated-registry hash, current problem

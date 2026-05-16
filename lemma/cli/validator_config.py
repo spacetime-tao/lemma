@@ -61,7 +61,7 @@ def print_validator_config() -> None:
     )
     click.echo(stylize("See also", fg="cyan", bold=True))
     click.echo("")
-    click.echo(stylize("  * `lemma preview` - live theorem -> prover -> Lean.\n", dim=True))
+    click.echo(stylize("  * `lemma proof preview` - live theorem -> prover -> Lean.\n", dim=True))
     click.echo(
         stylize(
             "  * `lemma validator dry-run` - proof-verification epochs without set_weights.\n",

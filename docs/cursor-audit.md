@@ -35,7 +35,7 @@ This document records a **read-only engineering and security posture review** of
 
 1. **Transitive dependency CVEs** — Some issues require upstream relaxation (e.g. `setuptools` range required by `bittensor`) or dependency replacements; CI documents `pip-audit --ignore-vuln` IDs until resolved.
 2. **No published independent security review** — Reasonable for OSS; for mainnet or high value, **budget for external review** (infra / ops focus: validator, Docker path, remote Lean verify). See **Independent security review** in `docs/production.md`.
-3. **Configuration surface** — Large env surface in `LemmaSettings` (`lemma/common/config.py`); misconfiguration is a top operational risk (mitigated by `lemma meta` / expected hashes where used).
+3. **Configuration surface** — Large env surface in `LemmaSettings` (`lemma/common/config.py`); misconfiguration is a top operational risk (mitigated by `lemma config meta` / expected hashes where used).
 4. **Docker and remote workers** — High privilege (`docker.sock` in compose); remote Lean verify needs **network + bearer** discipline (`docs/technical-reference.md`, `docs/vps-safety.md`).
 5. **Economic / game-theoretic attacks** — Documented under `knowledge/` and related docs; code can only **bound**, not **solve**, token incentives.
 

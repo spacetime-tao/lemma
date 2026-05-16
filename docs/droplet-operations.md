@@ -30,7 +30,7 @@ server on the internet. Put only hotkeys on it.
 | Local machine | `btcli` funding, registration, staking, reviews | Coldkeys and hotkeys before copying |
 | Miner Droplet | `lemma miner start` | Miner hotkey only |
 | Validator Droplet | `lemma validator start`, Docker, Lean cache | Validator hotkey only |
-| Optional Lean Droplet | `lemma lean-worker` | No wallet keys required |
+| Optional Lean Droplet | `lemma validator lean-worker` | No wallet keys required |
 
 Start with one miner hotkey and one validator. Add more miner hotkeys only after
 the single-hotkey path stays online and answers inside the validator window.
@@ -231,7 +231,7 @@ export PATH=/home/lemma/.local/bin:$PATH
 cd /opt/lemma
 bash scripts/prebuild_lean_image.sh
 ./scripts/start_lean_docker_worker.sh --update-dotenv
-uv run lemma preview
+uv run lemma proof preview
 uv run lemma validator check
 '
 ```
@@ -294,7 +294,7 @@ cd /opt/lemma
 uv sync --extra btcli
 bash scripts/prebuild_lean_image.sh
 ./scripts/start_lean_docker_worker.sh --update-dotenv
-uv run lemma lean-worker --host 0.0.0.0 --port 8787
+uv run lemma validator lean-worker --host 0.0.0.0 --port 8787
 '
 ```
 
@@ -324,7 +324,7 @@ User=lemma
 WorkingDirectory=/opt/lemma
 Environment=PATH=/home/lemma/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Environment=PYTHONUNBUFFERED=1
-ExecStart=/home/lemma/.local/bin/uv run lemma lean-worker --host 0.0.0.0 --port 8787
+ExecStart=/home/lemma/.local/bin/uv run lemma validator lean-worker --host 0.0.0.0 --port 8787
 Restart=on-failure
 RestartSec=10
 
@@ -374,7 +374,7 @@ sudo journalctl -u lemma-validator -n 100 --no-pager
 
 Record after each run:
 
-- commit SHA and `uv run lemma meta`;
+- commit SHA and `uv run lemma config meta`;
 - Droplet size, region, public IP, and private IP if used;
 - `.env` pins without secrets;
 - miner forward latency and prover timeout/retry reasons;

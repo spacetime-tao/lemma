@@ -10,7 +10,7 @@ Prerequisites: [getting-started.md](getting-started.md).
 
 ## Validator profile
 
-- `uv run lemma meta`; distribute `validator_profile_sha256`.
+- `uv run lemma config meta`; distribute `validator_profile_sha256`.
 - `LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED` to fail on misconfiguration.
 - Miners: prover can use any operator-chosen host via `PROVER_OPENAI_BASE_URL` / `PROVER_MODEL`; from containers use a host-reachable URL (`host.docker.internal` on macOS/Windows, bridge gateway on Linux).
 
@@ -104,7 +104,7 @@ supervisor, and regular log review. For a simple operator checklist, see
 Use this sequence before adding more miner hotkeys or tuning validator shortcuts:
 
 1. Run one miner hotkey on one VPS and one validator on a separate VPS.
-2. Record host shape, commit SHA, `lemma meta`, `.env` pins, subnet/netuid, and
+2. Record host shape, commit SHA, `lemma config meta`, `.env` pins, subnet/netuid, and
    current `btcli subnet show` snapshot.
 3. Enable timing logs: `LEMMA_MINER_FORWARD_TIMELINE=1`,
    `LEMMA_LEAN_VERIFY_TIMING=1`, persistent
@@ -143,7 +143,7 @@ allocation across its successful hotkeys, so same-coldkey hotkeys should not be
 treated as independent economic identities. Separate coldkeys are an independent
 economic-identity test and should be labeled as such on testnet.
 
-## Remote Lean verify worker (`lemma lean-worker`)
+## Remote Lean verify worker (`lemma validator lean-worker`)
 
 When `LEMMA_LEAN_VERIFY_REMOTE_URL` points at an HTTP worker:
 

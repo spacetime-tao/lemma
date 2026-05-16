@@ -65,7 +65,7 @@ def judge_profile_dict(settings: LemmaSettings) -> dict[str, object]:
 
 
 def judge_profile_sha256(settings: LemmaSettings) -> str:
-    """SHA-256 of canonical JSON for ``lemma meta`` and optional enforcement."""
+    """SHA-256 of canonical JSON for ``lemma config meta`` and optional enforcement."""
     payload = judge_profile_dict(settings)
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()

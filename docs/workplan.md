@@ -110,7 +110,7 @@ not let parallel checklists drift.
   `resp.proof_script` payloads with `SYNAPSE_MAX_PROOF_CHARS` before scheduling
   Lean verification.
 - Remote Lean worker safe default: unauthenticated non-loopback
-  `lemma lean-worker` binds fail unless the explicit dev-only override is set.
+  `lemma validator lean-worker` binds fail unless the explicit dev-only override is set.
 - Binary proof eligibility docs: high-traffic docs separate the binary Lean
   eligibility gate from downstream allocation policy.
 - Generated problem supply expansion: local working registry now has 100

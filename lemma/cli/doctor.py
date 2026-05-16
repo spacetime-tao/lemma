@@ -159,7 +159,7 @@ def run_doctor() -> int:
         click.echo(
             stylize(
                 "   Tip   Validators: set LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED "
-                "(`lemma configure subnet-pins`; copy from `lemma meta --raw`).",
+                "(`lemma config subnet-pins`; copy from `lemma config meta --raw`).",
                 dim=True,
             ),
         )
@@ -173,10 +173,9 @@ def run_doctor() -> int:
     click.echo(
         stylize(
             "\n5  Next commands\n"
-            "     lemma meta             - validator profile + supply hashes\n"
-            "     lemma validator check  - before `lemma validator start`\n"
-            "     lemma preview          - prover + Lean proof preview\n"
-            "     lemma configure --help\n",
+            "     lemma status            - current theorem window\n"
+            "     lemma miner check       - miner readiness\n"
+            "     lemma validator check   - validator readiness\n",
             dim=True,
         ),
         nl=False,

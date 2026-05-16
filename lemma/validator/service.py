@@ -25,7 +25,7 @@ from lemma.problems.hybrid import problem_supply_registry_sha256
 from lemma.validator.judge_profile_attest import judge_profile_peer_check_errors
 
 _DOCKER_REQUIRED_ERROR = (
-    "lemma validator requires Docker for Lean verify (LEMMA_USE_DOCKER=true).\n"
+    "lemma validator start requires Docker for Lean verify (LEMMA_USE_DOCKER=true).\n"
     "Host `lake` is not supported for validators — set LEMMA_USE_DOCKER=true in `.env`."
 )
 
@@ -84,7 +84,7 @@ def _require_docker_for_validator(settings: LemmaSettings) -> None:
 
 
 def validator_startup_issues(settings: LemmaSettings, *, dry_run: bool) -> tuple[list[str], list[str]]:
-    """Consensus-critical gates shared by `validator start` and `validator check`."""
+    """Consensus-critical gates shared by validator start and pre-flight checks."""
     fatal: list[str] = []
     warn: list[str] = []
 
@@ -93,8 +93,8 @@ def validator_startup_issues(settings: LemmaSettings, *, dry_run: bool) -> tuple
 
     if not (settings.judge_profile_expected_sha256 or "").strip():
         fatal.append(
-            "lemma validator requires LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED in `.env` "
-            "(run `lemma configure subnet-pins` or copy from `lemma meta --raw`).",
+            "lemma validator start requires LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED in `.env` "
+            "(run `lemma config subnet-pins` or copy from `lemma config meta --raw`).",
         )
     else:
         expected_raw = (settings.judge_profile_expected_sha256 or "").strip()
@@ -103,16 +103,16 @@ def validator_startup_issues(settings: LemmaSettings, *, dry_run: bool) -> tuple
             fatal.append(
                 f"validator profile mismatch: expected LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED={expected_raw!r} "
                 f"but current config hashes to {actual_judge!r}.\n"
-                "Align validator profile env with the subnet, then run `lemma configure subnet-pins` "
-                "(or set the pin to match `lemma meta` / `lemma meta --raw` manually).",
+                "Align validator profile env with the subnet, then run `lemma config subnet-pins` "
+                "(or set the pin to match `lemma config meta` / `lemma config meta --raw` manually).",
             )
 
     problem_source = (settings.problem_source or "").strip().lower()
     if problem_source == "hybrid":
         if not (settings.problem_supply_registry_expected_sha256 or "").strip():
             fatal.append(
-                "lemma validator requires LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED when "
-                "LEMMA_PROBLEM_SOURCE=hybrid (run `lemma configure subnet-pins`).",
+                "lemma validator start requires LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED when "
+                "LEMMA_PROBLEM_SOURCE=hybrid (run `lemma config subnet-pins`).",
             )
         else:
             actual = problem_supply_registry_sha256(
@@ -124,14 +124,14 @@ def validator_startup_issues(settings: LemmaSettings, *, dry_run: bool) -> tuple
                 fatal.append(
                     f"problem supply mismatch: expected LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED={expected!r} "
                     f"but current code hashes to {actual!r}.\n"
-                    "Use the same lemma commit as the subnet, then `lemma configure subnet-pins` "
-                    "(or update the supply pin from `lemma meta --raw`).",
+                    "Use the same lemma commit as the subnet, then `lemma config subnet-pins` "
+                    "(or update the supply pin from `lemma config meta --raw`).",
                 )
     elif problem_source == "generated":
         if not (settings.generated_registry_expected_sha256 or "").strip():
             fatal.append(
-                "lemma validator requires LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED when "
-                "LEMMA_PROBLEM_SOURCE=generated (run `lemma configure subnet-pins`).",
+                "lemma validator start requires LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED when "
+                "LEMMA_PROBLEM_SOURCE=generated (run `lemma config subnet-pins`).",
             )
         else:
             gr_actual = generated_registry_sha256()
@@ -140,8 +140,8 @@ def validator_startup_issues(settings: LemmaSettings, *, dry_run: bool) -> tuple
                 fatal.append(
                     f"generated registry mismatch: expected LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED={gre!r} "
                     f"but current code hashes to {gr_actual!r}.\n"
-                    "Use the same lemma commit as the subnet, then `lemma configure subnet-pins` "
-                    "(or update the registry pin from `lemma meta --raw`).",
+                    "Use the same lemma commit as the subnet, then `lemma config subnet-pins` "
+                    "(or update the registry pin from `lemma config meta --raw`).",
                 )
     elif problem_source == "frozen" and not settings.lemma_dev_allow_frozen_problem_source:
         fatal.append(

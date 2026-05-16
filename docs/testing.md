@@ -54,8 +54,8 @@ Production should use a subnet-published immutable tag or digest, not the mutabl
 
 ## LLM keys
 
-Only prover-preview commands such as **`lemma preview`** need inference keys.
+Only prover-preview commands such as **`lemma proof preview`** need inference keys.
 
-`lemma preview` runs **prover + Lean** on the current subnet theorem
+`lemma proof preview` runs **prover + Lean** on the current subnet theorem
 (chain RPC required). Live scoring accepts only proofs that pass Lean
 verification for that theorem.
