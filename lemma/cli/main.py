@@ -2,14 +2,19 @@
 
 from __future__ import annotations
 
+import json
+import re
 import shutil
 import sys
+import urllib.error
+import urllib.request
 from dataclasses import replace
 from pathlib import Path
 
 import click
 
 from lemma import __version__
+from lemma.cadence import cadence_problem, cadence_window, format_eta, uid_cadence_problem
 from lemma.cli.style import colors_enabled, stylize
 from lemma.common.config import LemmaSettings
 from lemma.common.logging import setup_logging
@@ -49,10 +54,23 @@ def _chain_outcome(result: object) -> tuple[bool, str]:
     return ok, "" if raw_message is None else str(raw_message)
 
 
-def _active_problem_or_click(settings: LemmaSettings):
+def _active_problem_or_click(settings: LemmaSettings, current_block: int | None = None, uid: int | None = None):
     src = get_problem_source(settings)
     try:
-        return src.sample(seed=0)
+        block = current_block
+        if block is None:
+            block, _chain_error = _current_block_or_none(settings)
+        seed = cadence_window(int(block or 0), settings.cadence_window_blocks).seed
+        anchor = cadence_problem(src, seed)
+        if uid is None:
+            return anchor
+        return uid_cadence_problem(
+            src,
+            anchor,
+            seed=seed,
+            uid=uid,
+            variants_enabled=bool(settings.lemma_uid_variant_problems),
+        )
     except ValueError as exc:
         raise click.ClickException("All known theorem targets are solved.") from exc
 
@@ -66,10 +84,11 @@ def _target_summary(problem: Problem | None) -> str:
 
 def _echo_theorem_window(settings: LemmaSettings) -> None:
     source = get_problem_source(settings)
-    target_window = getattr(source, "target_window", None)
-    if not callable(target_window):
-        return
-    previous, current, next_problem = target_window()
+    current_block, _chain_error = _current_block_or_none(settings)
+    window = cadence_window(int(current_block or 0), settings.cadence_window_blocks)
+    previous = cadence_problem(source, max(0, window.seed - window.window_blocks))
+    current = cadence_problem(source, window.seed)
+    next_problem = cadence_problem(source, window.seed + window.window_blocks)
     click.echo(stylize("Theorem window", fg="cyan", bold=True))
     for label, problem, color in (
         ("previous theorem", previous, "yellow"),
@@ -142,21 +161,11 @@ def _env_updates_for_setup(settings: LemmaSettings, role: str, current_block: in
 
     updates: dict[str, str] = {}
     effective = settings
-    if settings.target_genesis_block is None and current_block is not None:
-        updates["LEMMA_TARGET_GENESIS_BLOCK"] = str(current_block)
-        effective = settings.model_copy(update={"target_genesis_block": current_block})
-    elif current_block is not None and _first_target_window_expired(settings, current_block):
-        updates["LEMMA_TARGET_GENESIS_BLOCK"] = str(current_block)
-        effective = settings.model_copy(update={"target_genesis_block": current_block})
     if role == "validator" and not (settings.known_theorems_manifest_expected_sha256 or "").strip():
         updates["LEMMA_KNOWN_THEOREMS_MANIFEST_SHA256_EXPECTED"] = known_theorems_manifest_sha256(
             settings.known_theorems_manifest_path,
         )
-    if (
-        role == "validator"
-        and effective.target_genesis_block is not None
-        and not (settings.validator_profile_expected_sha256 or "").strip()
-    ):
+    if role == "validator" and not (settings.validator_profile_expected_sha256 or "").strip():
         updates["LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED"] = validator_profile_sha256(effective)
     if role == "miner":
         if settings.prover_api_key and not _env_file_has_key(Path(".env"), "LEMMA_PROVER_API_KEY"):
@@ -173,22 +182,6 @@ def _env_file_has_key(path: Path, key: str) -> bool:
         return False
     prefix = f"{key}="
     return any(line.strip().startswith(prefix) for line in path.read_text(encoding="utf-8").splitlines())
-
-
-def _first_target_window_expired(settings: LemmaSettings, current_block: int) -> bool:
-    if settings.target_genesis_block is None:
-        return False
-    try:
-        from lemma.ledger import matching_solved_ledger
-
-        source = get_problem_source(settings)
-        hashes = {problem.id: problem.theorem_statement_sha256() for problem in source.all_problems()}
-        if matching_solved_ledger(settings.solved_ledger_path, hashes):
-            return False
-    except Exception:  # noqa: BLE001
-        return False
-    cutoff = int(settings.target_genesis_block) + int(settings.commit_window_blocks) - 1
-    return int(current_block) > cutoff
 
 
 def _next_command_after_setup(settings: LemmaSettings) -> str:
@@ -260,43 +253,10 @@ def _auto_retry_commit_after_setup(settings: LemmaSettings) -> bool:
         _publish_pending_commitment(settings, problem, pending)
         miner_settings = settings
     except CommitWindowClosedError as exc:
-        _entry, miner_settings = _refresh_genesis_and_retry_commit(
-            settings,
-            problem,
-            exc.entry,
-            current_block=exc.current_block,
-        )
+        raise click.ClickException(str(exc)) from exc
     click.echo(stylize("Commitment published. Starting miner.", fg="green", bold=True))
     _start_miner(miner_settings)
     return True
-
-
-def _refresh_genesis_and_retry_commit(
-    settings: LemmaSettings,
-    problem,
-    entry,
-    *,
-    current_block: int,
-):
-    if not _first_target_window_expired(settings, current_block):
-        raise CommitWindowClosedError(
-            "Commit window is closed for this target; this proof cannot be accepted now.",
-            current_block=current_block,
-            entry=entry,
-        )
-    click.echo("")
-    click.echo(stylize("Commit window closed while this proof was being prepared.", fg="yellow", bold=True))
-    if not click.confirm("Refresh the first target window and retry the commitment now?", default=True):
-        raise CommitWindowClosedError(
-            "Proof is verified and stored, but it is not committed yet. Run `lemma mine` to recover.",
-            current_block=current_block,
-            entry=entry,
-        )
-    updates = {"LEMMA_TARGET_GENESIS_BLOCK": str(current_block)}
-    _write_env_updates(Path(".env"), updates)
-    refreshed = _settings_with_env_updates(settings, updates)
-    click.echo(stylize("Updated .env", fg="green", bold=True))
-    return _publish_pending_commitment(refreshed, problem, entry), refreshed
 
 
 def _write_env_updates(path: Path, updates: dict[str, str]) -> None:
@@ -363,12 +323,11 @@ def _mine_preflight(settings: LemmaSettings) -> LemmaSettings:
         _print_btcli_commands(settings, "miner")
     if shutil.which("docker") is None:
         click.echo(stylize("docker missing", fg="yellow", bold=True))
-    if not any((settings.prover_base_url, settings.prover_api_key, settings.prover_model)):
-        click.echo(_kv("prover", "optional; not needed for a prepared Lean proof", fg="cyan"))
-    if settings.target_genesis_block is None:
-        click.echo(stylize("genesis  missing LEMMA_TARGET_GENESIS_BLOCK", fg="yellow", bold=True))
+    if all((settings.prover_base_url, settings.prover_api_key, settings.prover_model)):
+        click.echo(_kv("prover", settings.prover_model, fg="green"))
     else:
-        click.echo(_kv("genesis", settings.target_genesis_block, fg="cyan"))
+        click.echo(_kv("prover", "required unless --submission is used", fg="yellow"))
+    click.echo(_kv("cadence", f"{settings.cadence_window_blocks} blocks", fg="cyan"))
 
     updates = _env_updates_for_setup(settings, "miner", current_block)
     if not updates:
@@ -381,6 +340,81 @@ def _mine_preflight(settings: LemmaSettings) -> LemmaSettings:
         return _settings_with_env_updates(settings, updates)
     click.echo(stylize("Continuing without .env changes.", fg="yellow"))
     return settings
+
+
+def _require_prover_settings(settings: LemmaSettings) -> None:
+    missing = [
+        key
+        for key, value in (
+            ("LEMMA_PROVER_BASE_URL", settings.prover_base_url),
+            ("LEMMA_PROVER_API_KEY", settings.prover_api_key),
+            ("LEMMA_PROVER_MODEL", settings.prover_model),
+        )
+        if not (value or "").strip()
+    ]
+    if missing:
+        raise click.ClickException(
+            "Missing prover config for `lemma mine`: "
+            + ", ".join(missing)
+            + ". Advanced/manual override: pass --submission path/to/Submission.lean.",
+        )
+
+
+def _prove_with_openai_compatible_chat(settings: LemmaSettings, problem: Problem) -> str:
+    base_url = str(settings.prover_base_url or "").rstrip("/")
+    url = base_url + "/chat/completions"
+    click.echo(stylize("Calling prover for complete Submission.lean.", fg="cyan", bold=True))
+    payload = {
+        "model": settings.prover_model,
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "You write Lean 4 proofs. Return only a complete Submission.lean file. "
+                    "Do not include markdown fences or explanation."
+                ),
+            },
+            {
+                "role": "user",
+                "content": (
+                    "Fill this Lean file so it verifies. Keep the namespace and theorem statement unchanged.\n\n"
+                    + problem.submission_stub()
+                ),
+            },
+        ],
+        "temperature": 0,
+        "max_tokens": int(settings.prover_max_tokens),
+    }
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {settings.prover_api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=120) as response:
+            data = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:500]
+        raise click.ClickException(f"prover request failed: HTTP {exc.code} {detail}") from exc
+    except (OSError, json.JSONDecodeError) as exc:
+        raise click.ClickException(f"prover request failed: {exc}") from exc
+    try:
+        content = data["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, TypeError) as exc:
+        raise click.ClickException("prover response did not contain choices[0].message.content") from exc
+    proof = _extract_submission_lean(str(content))
+    click.echo(stylize("Prover returned Submission.lean; checking with Lean.", fg="green", bold=True))
+    return proof
+
+
+def _extract_submission_lean(text: str) -> str:
+    match = re.search(r"```(?:lean|lean4)?\s*(.*?)```", text, flags=re.DOTALL | re.IGNORECASE)
+    proof = match.group(1) if match else text
+    return proof.strip() + "\n"
 
 
 @click.group(name="lemma", invoke_without_command=True, context_settings={"max_content_width": 100})
@@ -447,10 +481,7 @@ def setup_cmd(role: str | None, wallet_cold: str | None, wallet_hot: str | None)
     manifest_sha = known_theorems_manifest_sha256(settings.known_theorems_manifest_path)
     click.echo(_kv("manifest", manifest_sha, fg="blue"))
     click.echo(_kv("profile", validator_profile_sha256(settings), fg="blue"))
-    if settings.target_genesis_block is None:
-        click.echo(stylize("genesis  missing LEMMA_TARGET_GENESIS_BLOCK", fg="yellow", bold=True))
-    else:
-        click.echo(_kv("genesis", settings.target_genesis_block, fg="cyan"))
+    click.echo(_kv("cadence", f"{settings.cadence_window_blocks} blocks", fg="cyan"))
 
     updates = _wallet_env_updates(role=role, wallet=wallet_cold, hotkey=wallet_hot)
     updates.update(_env_updates_for_setup(settings, role, current_block))
@@ -475,8 +506,6 @@ def setup_cmd(role: str | None, wallet_cold: str | None, wallet_hot: str | None)
     next_command = _next_command_after_setup(effective_settings)
     click.echo("")
     click.echo(stylize("Next: ", fg="cyan", bold=True) + _cmd(next_command))
-    if "LEMMA_TARGET_GENESIS_BLOCK" in updates:
-        click.echo(stylize("Run it soon; the commit window starts from the refreshed genesis block.", fg="yellow"))
 
 
 @main.command("mine", help="Solve the active target.")
@@ -511,9 +540,12 @@ def mine_cmd(
         return
     if editor and submission_path is not None:
         raise click.ClickException("Use either --editor or --submission, not both.")
+    if editor:
+        raise click.ClickException("Manual cadence proof work uses --submission path/to/Submission.lean.")
     settings = _settings_with_wallet_options(LemmaSettings(), role="miner", wallet=wallet_cold, hotkey=wallet_hot)
     settings = _mine_preflight(settings)
-    problem = _active_problem_or_click(settings)
+    current_block, _chain_error = _current_block_or_none(settings)
+    problem = _active_problem_or_click(settings, current_block, _miner_uid_or_none(settings))
 
     click.echo(stylize("Lemma mine", fg="cyan", bold=True))
     echo_problem_card(problem, heading="Active theorem")
@@ -546,21 +578,8 @@ def mine_cmd(
     if submission_path is not None:
         proof_script = submission_path.read_text(encoding="utf-8")
     else:
-        if not click.confirm("Submit a proof now?", default=False):
-            click.echo(stylize("No proof submitted.", fg="yellow"))
-            return
-        if editor:
-            click.echo(stylize("Opening Submission.lean. Replace sorry, save, and close.", fg="cyan"))
-            edited = click.edit(text=problem.submission_stub(), extension=".lean")
-            if edited is None or edited == problem.submission_stub():
-                click.echo(stylize("No proof submitted. The file was empty or unchanged.", fg="yellow"))
-                return
-            proof_script = edited
-        else:
-            click.echo(stylize("Paste your full Submission.lean below.", fg="cyan"))
-            click.echo(stylize("After the final line, press Enter once, then Ctrl-D on the empty line.", fg="cyan"))
-            click.echo(stylize("Keep `namespace Submission`, the theorem name, and the target statement.", fg="yellow"))
-            proof_script = click.get_text_stream("stdin").read()
+        _require_prover_settings(settings)
+        proof_script = _prove_with_openai_compatible_chat(settings, problem)
     if not proof_script.strip():
         click.echo(stylize("No proof submitted. The proof was empty.", fg="yellow"))
         return
@@ -755,7 +774,9 @@ def target_show_cmd(target_id: str | None) -> None:
     settings = LemmaSettings()
     src = get_problem_source(settings)
     try:
-        problem = src.get(target_id.strip()) if target_id else src.sample(seed=0)
+        current_block, _chain_error = _current_block_or_none(settings)
+        seed = cadence_window(int(current_block or 0), settings.cadence_window_blocks).seed
+        problem = src.get(target_id.strip()) if target_id else cadence_problem(src, seed)
     except KeyError as exc:
         raise click.ClickException(f"unknown target id: {target_id}") from exc
     solver_set = current_solver_set(settings.solved_ledger_path)
@@ -851,24 +872,36 @@ def _registration_text(settings: LemmaSettings, hotkey: str | None) -> str:
     return "not registered" if uid is None else f"registered uid={uid}"
 
 
+def _miner_uid_or_none(settings: LemmaSettings) -> int | None:
+    hotkey = _wallet_hotkey_address(settings, "miner")
+    if hotkey is None:
+        return None
+    try:
+        from lemma.common.subtensor import get_subtensor
+
+        uid = get_subtensor(settings).get_uid_for_hotkey_on_subnet(hotkey, settings.netuid)
+    except Exception:  # noqa: BLE001
+        return None
+    return None if uid is None else int(uid)
+
+
 @main.command("status", help="Show your next Lemma step.")
 def status_cmd() -> None:
     from lemma.submissions import pending_submission_for_problem
 
     settings = LemmaSettings()
     click.echo(stylize("Lemma status", fg="cyan", bold=True))
-    next_step_override: str | None = None
     phase_name: str | None = None
     proof_hint: str | None = None
+    current_block, chain_error = _current_block_or_none(settings)
     try:
-        problem = _active_problem_or_click(settings)
+        problem = _active_problem_or_click(settings, current_block, _miner_uid_or_none(settings))
         click.echo(_kv("target", problem.id, fg="green"))
     except click.ClickException as exc:
         click.echo(_kv("target", str(exc), fg="yellow"))
         problem = None
     _echo_theorem_window(settings)
 
-    current_block, chain_error = _current_block_or_none(settings)
     if current_block is None:
         click.echo(_kv("chain", "unavailable", fg="yellow"))
         if chain_error:
@@ -882,13 +915,11 @@ def status_cmd() -> None:
             click.echo(_kv("phase", phase.name, fg=phase_color))
             click.echo(_kv("reveal", f"block {phase.reveal_block}", fg="cyan"))
             if phase.blocks_until_reveal:
-                minutes = max(1, round(phase.blocks_until_reveal * 12 / 60))
-                click.echo(_kv("eta", f"about {minutes} min", fg="magenta"))
+                eta_seconds = int(phase.blocks_until_reveal * settings.block_time_sec_estimate)
+                click.echo(_kv("eta", format_eta(eta_seconds), fg="magenta"))
         except Exception as exc:  # noqa: BLE001
             phase_error = str(exc)
             click.echo(_kv("phase", phase_error, fg="yellow"))
-            if "LEMMA_TARGET_GENESIS_BLOCK" in phase_error:
-                next_step_override = "lemma mine"
 
     if problem is not None:
         pending = pending_submission_for_problem(settings.miner_submissions_path, problem)
@@ -924,8 +955,6 @@ def status_cmd() -> None:
             click.echo(_kv("ledger", "lemma target ledger (local validator/operator ledger)", fg="cyan"))
     else:
         next_step = "lemma target ledger"
-    if next_step_override is not None:
-        next_step = next_step_override
 
     hotkey = _wallet_hotkey_address(settings)
     click.echo(_kv("wallet", f"{settings.wallet_cold}/{settings.wallet_hot}", fg="green"))
@@ -1085,12 +1114,7 @@ def _submit_proof(
         try:
             entry = _publish_pending_commitment(settings, problem, entry)
         except CommitWindowClosedError as exc:
-            entry, active_settings = _refresh_genesis_and_retry_commit(
-                settings,
-                problem,
-                exc.entry,
-                current_block=exc.current_block,
-            )
+            raise click.ClickException(str(exc)) from exc
     if concise:
         if entry.commitment_status == "committed":
             click.echo(stylize("Your private commitment is on-chain.", fg="green", bold=True))
@@ -1134,18 +1158,14 @@ def _publish_pending_commitment(settings: LemmaSettings, problem, entry):
 
     from lemma.commitments import build_proof_commitment
     from lemma.common.subtensor import get_subtensor
-    from lemma.ledger import matching_solved_ledger
     from lemma.lifecycle import target_phase
     from lemma.problems.known_theorems import known_theorems_manifest_sha256
     from lemma.submissions import update_pending_submission
 
-    src = get_problem_source(settings)
-    hashes = {p.id: p.theorem_statement_sha256() for p in src.all_problems()}
-    ledger = matching_solved_ledger(settings.solved_ledger_path, hashes)
     subtensor = get_subtensor(settings)
     current_block = int(subtensor.get_current_block())
     try:
-        phase = target_phase(settings, ledger, current_block)
+        phase = target_phase(settings, [], current_block)
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc
     if phase.name != "commit":
@@ -1162,8 +1182,7 @@ def _publish_pending_commitment(settings: LemmaSettings, problem, entry):
             raise CommitWindowClosedError(
                 "Commit window is closed for this target. The proof is verified and stored, "
                 "but it cannot be committed to this window.\n"
-                "Next: run `lemma mine`, accept the refreshed genesis block, "
-                "then run `lemma mine --retry-commit`.",
+                "Next: wait for the next 100-block cadence window, then run `lemma mine` again.",
                 current_block=current_block,
                 entry=updated,
             )

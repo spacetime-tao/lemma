@@ -7,7 +7,6 @@ import json
 from pathlib import Path
 from typing import Any, cast
 
-from lemma.ledger import solved_target_ids
 from lemma.problems.base import Problem, ProblemSource
 
 KNOWN_THEOREMS_MANIFEST_PATH = Path(__file__).resolve().parent / "known_theorems_manifest.json"
@@ -116,7 +115,7 @@ def known_theorems_manifest_sha256(path: Path | None = None) -> str:
 
 
 class KnownTheoremsSource(ProblemSource):
-    """Ordered source: first unsolved known-theorem target is active."""
+    """Ordered known-theorem source sampled by cadence seed."""
 
     def __init__(self, manifest_path: Path | None = None, ledger_path: Path | None = None) -> None:
         self._manifest_path = _manifest_path(manifest_path)
@@ -133,24 +132,17 @@ class KnownTheoremsSource(ProblemSource):
         return self._ledger_path
 
     def target_window(self) -> tuple[Problem | None, Problem | None, Problem | None]:
-        hashes = {problem.id: problem.theorem_statement_sha256() for problem in self._problems}
-        solved = solved_target_ids(self._ledger_path, hashes)
-        active_index = next((idx for idx, problem in enumerate(self._problems) if problem.id not in solved), None)
-        if active_index is None:
-            previous = self._problems[-1] if self._problems else None
-            return previous, None, None
-        previous = self._problems[active_index - 1] if active_index > 0 else None
-        current = self._problems[active_index]
-        next_problem = self._problems[active_index + 1] if active_index + 1 < len(self._problems) else None
+        if not self._problems:
+            return None, None, None
+        previous = self.sample(-1)
+        current = self.sample(0)
+        next_problem = self.sample(1)
         return previous, current, next_problem
 
     def sample(self, seed: int, split: str | None = None) -> Problem:
-        hashes = {problem.id: problem.theorem_statement_sha256() for problem in self._problems}
-        solved = solved_target_ids(self._ledger_path, hashes)
-        for problem in self._problems:
-            if problem.id not in solved:
-                return problem
-        raise ValueError("all known-theorem targets in the manifest are solved")
+        if not self._problems:
+            raise ValueError("known-theorem manifest is empty")
+        return self._problems[(int(seed) // 100) % len(self._problems)]
 
     def get(self, problem_id: str) -> Problem:
         for problem in self._problems:

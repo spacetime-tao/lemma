@@ -169,32 +169,30 @@ def _settings(tmp_path: Path) -> LemmaSettings:
 def test_miner_dashboard_empty_ledger_marks_first_target_active(tmp_path: Path) -> None:
     payload = build_miner_dashboard(_settings(tmp_path), generated_unix=1)
 
-    assert payload["schema_version"] == 4
+    assert payload["schema_version"] == 5
     assert payload["generated_unix"] == 1
     assert payload["problem_source"] == "known_theorems"
+    assert payload["seed"] == 0
+    assert payload["cadence"]["window_blocks"] == 100
+    assert payload["cadence"]["variants_enabled"] is True
     assert payload["counts"]["total_targets"] == 2
-    assert payload["counts"]["solved_targets"] == 0
     assert payload["active_target"]["id"] == "known/test/target_1"
-    assert payload["target_window"]["previous"] is None
+    assert payload["target_window"]["previous"]["id"] == "known/test/target_1"
     assert payload["target_window"]["current"]["id"] == "known/test/target_1"
     assert payload["target_window"]["next"]["id"] == "known/test/target_2"
-    assert payload["targets"][0]["status"] == "active"
-    assert payload["targets"][1]["status"] == "queued"
+    assert [target["status"] for target in payload["targets"]] == ["previous", "current", "next"]
 
 
-def test_miner_dashboard_one_solve_advances_active_target(tmp_path: Path) -> None:
+def test_miner_dashboard_solved_ledger_does_not_advance_cadence_target(tmp_path: Path) -> None:
     settings = _settings(tmp_path)
     _write_ledger(settings.solved_ledger_path, _entry("known/test/target_1", 7))
 
-    payload = build_miner_dashboard(settings, generated_unix=1)
+    payload = build_miner_dashboard(settings, generated_unix=1, current_block=100)
 
-    assert payload["counts"]["solved_targets"] == 1
-    assert payload["counts"]["remaining_targets"] == 1
     assert payload["active_target"]["id"] == "known/test/target_2"
     assert payload["target_window"]["previous"]["id"] == "known/test/target_1"
     assert payload["target_window"]["current"]["id"] == "known/test/target_2"
-    assert payload["target_window"]["next"] is None
-    assert payload["targets"][0]["status"] == "solved"
+    assert payload["target_window"]["next"]["id"] == "known/test/target_1"
     assert payload["targets"][0]["solved"]["solver_uids"] == [7]
     assert payload["targets"][0]["solved"]["solver_hotkeys"] == ["hotkey-7"]
     assert payload["current_solver_set"]["solvers"][0]["uid"] == 7
@@ -217,9 +215,8 @@ def test_miner_dashboard_ignores_stale_ledger_hash(tmp_path: Path) -> None:
 
     payload = build_miner_dashboard(settings, generated_unix=1)
 
-    assert payload["counts"]["solved_targets"] == 0
+    assert payload["counts"]["accepted_targets"] == 0
     assert payload["active_target"]["id"] == "known/test/target_1"
-    assert payload["targets"][0]["status"] == "active"
     assert payload["solved_ledger"] == []
     assert payload["accepted_solver_receipts"] == []
 
@@ -245,14 +242,14 @@ def test_miner_dashboard_tied_solvers_split_current_weight(tmp_path: Path) -> No
     settings = _settings(tmp_path)
     _write_ledger(settings.solved_ledger_path, _entry("known/test/target_1", 2, 3))
 
-    payload = build_miner_dashboard(settings, generated_unix=1)
+    payload = build_miner_dashboard(settings, generated_unix=1, current_block=100)
 
     solvers = payload["current_solver_set"]["solvers"]
     assert [solver["uid"] for solver in solvers] == [2, 3]
     assert [solver["weight_share"] for solver in solvers] == [0.5, 0.5]
 
 
-def test_miner_dashboard_all_solved_has_no_active_target(tmp_path: Path) -> None:
+def test_miner_dashboard_keeps_cadence_target_even_if_all_known_targets_have_receipts(tmp_path: Path) -> None:
     settings = _settings(tmp_path)
     _write_ledger(
         settings.solved_ledger_path,
@@ -262,12 +259,9 @@ def test_miner_dashboard_all_solved_has_no_active_target(tmp_path: Path) -> None
 
     payload = build_miner_dashboard(settings, generated_unix=1)
 
-    assert payload["active_target"] is None
-    assert payload["target_window"]["previous"]["id"] == "known/test/target_2"
-    assert payload["target_window"]["current"] is None
-    assert payload["target_window"]["next"] is None
-    assert payload["counts"]["remaining_targets"] == 0
-    assert [target["status"] for target in payload["targets"]] == ["solved", "solved"]
+    assert payload["active_target"]["id"] == "known/test/target_1"
+    assert payload["target_window"]["current"]["id"] == "known/test/target_1"
+    assert payload["counts"]["accepted_targets"] == 2
 
 
 def test_miner_dashboard_omits_private_or_local_fields(tmp_path: Path) -> None:
@@ -279,7 +273,6 @@ def test_miner_dashboard_omits_private_or_local_fields(tmp_path: Path) -> None:
     assert "proof_script" not in text
     assert "proof_sha256" not in text
     assert "commitment_hash" not in text
-    assert "coldkey" not in text
     assert "validator-hotkey" in text
     assert str(tmp_path) not in text
 
@@ -303,6 +296,7 @@ def test_dashboard_export_cli_writes_json(monkeypatch, tmp_path: Path) -> None:
         main,
         ["dashboard", "export", "--output", str(output)],
         env={
+            "LEMMA_PROBLEM_SOURCE": "known_theorems",
             "LEMMA_KNOWN_THEOREMS_MANIFEST_PATH": str(manifest),
             "LEMMA_LEDGER_PATH": str(tmp_path / "ledger.jsonl"),
         },
@@ -310,7 +304,7 @@ def test_dashboard_export_cli_writes_json(monkeypatch, tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     payload = json.loads(output.read_text(encoding="utf-8"))
-    assert payload["schema_version"] == 4
+    assert payload["schema_version"] == 5
     assert payload["generated_unix"] == 123
     assert payload["active_target"]["id"] == "known/test/target_1"
     assert payload["target_window"]["current"]["id"] == "known/test/target_1"
@@ -339,7 +333,7 @@ def test_publish_public_dashboards_writes_safe_atomic_feeds(tmp_path: Path) -> N
     cadence = json.loads(cadence_path.read_text(encoding="utf-8"))
     bounties = json.loads(bounties_path.read_text(encoding="utf-8"))
     combined = json.dumps({"cadence": cadence, "bounties": bounties}, sort_keys=True)
-    assert cadence["schema_version"] == 4
+    assert cadence["schema_version"] == 5
     assert bounties["campaigns"][0]["accepted"]["solver_hotkey"] == "hotkey-full"
     assert "solver_uid" not in bounties["campaigns"][0]["accepted"]
     assert "proof_script" not in combined

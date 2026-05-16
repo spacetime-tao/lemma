@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pytest
 from lemma.common.config import LemmaSettings
 from lemma.ledger import LedgerSolver, SolvedLedgerEntry
 from lemma.lifecycle import target_phase, target_start_block
@@ -33,27 +32,26 @@ def _entry(accepted_block: int = 200) -> SolvedLedgerEntry:
     )
 
 
-def test_missing_genesis_blocks_empty_ledger_start() -> None:
-    with pytest.raises(ValueError, match="LEMMA_TARGET_GENESIS_BLOCK"):
-        target_start_block(_settings(target_genesis_block=None), [])
+def test_target_start_defaults_without_genesis() -> None:
+    assert target_start_block(_settings(target_genesis_block=None), []) == 0
 
 
-def test_first_target_phases_from_genesis() -> None:
-    settings = _settings(target_genesis_block=100, commit_window_blocks=3)
+def test_target_phases_from_fixed_chain_window() -> None:
+    settings = _settings(target_genesis_block=None, commit_window_blocks=3)
 
-    assert target_phase(settings, [], 99).name == "pending"
     commit = target_phase(settings, [], 100)
     assert commit.name == "commit"
+    assert commit.target_start_block == 100
     assert commit.commit_cutoff_block == 102
     reveal = target_phase(settings, [], 103)
     assert reveal.name == "reveal"
     assert reveal.reveal_block == 103
 
 
-def test_next_target_starts_after_previous_acceptance() -> None:
-    settings = _settings(target_genesis_block=100, commit_window_blocks=2)
+def test_ledger_does_not_advance_fixed_window() -> None:
+    settings = _settings(target_genesis_block=None, commit_window_blocks=2)
     phase = target_phase(settings, [_entry(accepted_block=200)], 201)
 
-    assert phase.target_start_block == 201
+    assert phase.target_start_block == 200
     assert phase.name == "commit"
-    assert phase.reveal_block == 203
+    assert phase.reveal_block == 202

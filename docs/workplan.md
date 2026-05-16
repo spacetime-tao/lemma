@@ -10,9 +10,9 @@ help, tests, and the public site.
 - Active cadence supply: curated
   [`known_theorems_manifest.json`](../lemma/problems/known_theorems_manifest.json)
   plus deterministic generated cadence builders.
-- Optional prover assistance is OpenAI-compatible and provider-neutral:
+- Cadence mining is prover-first with OpenAI-compatible provider settings:
   `LEMMA_PROVER_BASE_URL`, `LEMMA_PROVER_API_KEY`, and
-  `LEMMA_PROVER_MODEL`; it is not required for manually prepared Lean proofs.
+  `LEMMA_PROVER_MODEL`; `--submission` is the advanced/manual override.
 - Reward-critical miner artifact: a pre-reveal commitment, then `proof_script`
   plus nonce during reveal.
 - Ledger: operator-published JSONL solved-target ledger.
@@ -22,13 +22,16 @@ help, tests, and the public site.
   bodies, proof hashes, proof nonces, or commitment hashes.
 - Public live JSON is generated on the validator droplet with
   `lemma dashboard publish --output-dir /var/www/lemma-live`.
-- Target lifecycle: first target starts at `LEMMA_TARGET_GENESIS_BLOCK`; each
-  next target starts at previous `accepted_block + 1`; default commit window is
-  `LEMMA_COMMIT_WINDOW_BLOCKS=25`.
-- Reward rule: current-epoch verified cadence work earns
-  `(1 - solve_fraction)^2`, ranked by commitment block; unearned weight routes
-  to `LEMMA_OWNER_BURN_UID`.
-- Formal Conjectures campaigns are manual owner-emission bounties. They use the
+- Target lifecycle: fixed 100-block cadence windows by default:
+  `seed = floor(chain_head / 100) * 100`; solved rows do not advance cadence.
+- UID-specific same-split variants are enabled by default with
+  `LEMMA_UID_VARIANT_PROBLEMS=1`.
+- Reward rule: verified cadence work updates difficulty-weighted rolling
+  scores; positive rolling scores normalize into weights; no positive scores
+  means skip `set_weights`.
+- Same-coldkey partitioning is default-on as work/reward pressure, not
+  Sybil-proof identity.
+- Formal Conjectures campaigns are manual operator-funded bounties. They use the
   campaign registry and append-only campaign ledger, but do not affect validator
   `set_weights`. Bounty winner identity is hotkey-first; UID is optional.
 
@@ -40,10 +43,11 @@ help, tests, and the public site.
   target order.
 - Solved-ledger helpers and public accepted-solver rows.
 - Validator proof mode for `known_theorems`.
-- Current-epoch cadence reward math with owner/burn remainder.
+- Difficulty-weighted rolling score rewards with coldkey partitioning.
 - Manual miner submission storage and proof-serving Axon flow.
-- `lemma mine` is the guided theorem-to-proof path: it runs miner preflight,
-  verifies by default, publishes the compact commitment, and starts the miner.
+- `lemma mine` is the guided prover-to-proof path: it runs miner preflight,
+  calls the configured prover unless `--submission` is used, verifies locally,
+  publishes the compact commitment, and starts the miner.
 - `lemma submit` remains as a hidden advanced command for scripts that only need
   to verify and store a proof.
 - `lemma commit --problem <target-id>` retries a stored proof commitment.
@@ -52,7 +56,7 @@ help, tests, and the public site.
 - Validator commitment checks reject missing, late, malformed, copied, wrong
   target, wrong nonce, and wrong proof-hash commitments before Lean verification.
 - Static/public cadence export from the hybrid cadence source and solved ledger,
-  schema 4, with no proof/commit fields.
+  schema 5, with no proof/commit fields.
 - Static/public bounty export from the Formal Conjectures campaign registry.
 - Atomic live feed publishing for `cadence.json` and `bounties.json`.
 - Formal Conjectures campaign registry helpers:
@@ -101,13 +105,11 @@ help, tests, and the public site.
 
 ## Verification Snapshot
 
-- `.venv/bin/ruff check lemma tests`
-- `.venv/bin/mypy lemma`
-- `.venv/bin/pytest tests -q` passed (`163 passed, 2 skipped`).
-- Site checks passed:
-  `node --check assets/tasks.js`,
-  `node --check scripts/check-task-pages.js`,
-  `node scripts/check-task-pages.js`.
-- Browser QA passed for `/`, `/cadence/`, `/bounties/`, `/setup/`, and `/faq/`
-  at desktop and mobile widths with no horizontal overflow; `/setup/` redirects
-  home.
+- `.venv/bin/ruff check lemma tests` passed.
+- `.venv/bin/mypy lemma` passed.
+- `.venv/bin/pytest tests -q` passed (`167 passed, 2 skipped`).
+- Site checks passed: `node --check assets/tasks.js`,
+  `node --check assets/theme.js`, and `node scripts/check-task-pages.js`.
+- Browser QA passed for `/`, `/dashboard/`, and `/faq/` at desktop and mobile
+  widths with no horizontal overflow. Reduced-motion CSS is present for the
+  theorem rotation animation.

@@ -96,7 +96,7 @@ def test_known_theorem_manifest_is_deterministically_ordered(tmp_path: Path) -> 
     src = KnownTheoremsSource(manifest_path=manifest_path, ledger_path=tmp_path / "ledger.jsonl")
 
     assert [p.id for p in src.all_problems()] == ["known/test/first", "known/test/second"]
-    assert src.sample(seed=999).id == "known/test/first"
+    assert src.sample(seed=999).id == "known/test/second"
     assert src.all_problems()[0].imports == ("Mathlib",)
     assert len(known_theorems_manifest_sha256(manifest_path)) == 64
 
@@ -121,7 +121,7 @@ def test_known_theorem_manifest_requires_human_proof_citation() -> None:
         validate_known_theorems_manifest(_manifest([row]))
 
 
-def test_known_theorem_source_advances_after_ledger_entry(tmp_path: Path) -> None:
+def test_known_theorem_source_ignores_ledger_for_fixed_cadence(tmp_path: Path) -> None:
     manifest_path = tmp_path / "manifest.json"
     ledger_path = tmp_path / "ledger.jsonl"
     _write_manifest(
@@ -155,7 +155,7 @@ def test_known_theorem_source_advances_after_ledger_entry(tmp_path: Path) -> Non
 
     src = KnownTheoremsSource(manifest_path=manifest_path, ledger_path=ledger_path)
 
-    assert src.sample(seed=0).id == "known/test/second"
+    assert src.sample(seed=0).id == "known/test/first"
 
 
 def test_known_theorem_source_ignores_stale_ledger_hash(tmp_path: Path) -> None:

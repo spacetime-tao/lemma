@@ -16,7 +16,8 @@ def run_validator_check(settings: LemmaSettings | None = None) -> int:
     fatal, warn = validator_startup_issues(settings, dry_run=True)
     click.echo(stylize("Lemma validator check", fg="cyan", bold=True))
     click.echo(f"problem_source={settings.problem_source}")
-    click.echo(f"owner_burn_uid={settings.owner_burn_uid}")
+    click.echo(f"cadence_window_blocks={settings.cadence_window_blocks}")
+    click.echo(f"uid_variant_problems={settings.lemma_uid_variant_problems}")
     click.echo(f"known_theorems_manifest_sha256={known_theorems_manifest_sha256(settings.known_theorems_manifest_path)}")
     click.echo(f"validator_profile_sha256={validator_profile_sha256(settings)}")
     for msg in warn:

@@ -12,8 +12,8 @@ def test_hybrid_cadence_default() -> None:
     src = get_problem_source(LemmaSettings(_env_file=None))
 
     assert isinstance(src, HybridCadenceSource)
-    assert src.all_problems()[0].id.startswith("known/")
-    assert any(problem.id.startswith("gen/") for problem in src.all_problems())
+    assert len(src.all_problems()) == 100
+    assert src.all_problems()[0].id.startswith("gen/easy/")
 
 
 def test_known_theorems_source_is_still_available() -> None:
@@ -36,7 +36,7 @@ def test_resolve_known_theorem_id() -> None:
 
 
 def test_resolve_generated_cadence_id() -> None:
-    p = resolve_problem(LemmaSettings(_env_file=None), "gen/0000")
+    p = resolve_problem(LemmaSettings(_env_file=None), "gen/easy/0")
 
-    assert p.id == "gen/0000"
+    assert p.id == "gen/easy/0"
     assert p.extra["source_lane"] == "generated"

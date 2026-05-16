@@ -68,6 +68,7 @@ class LemmaSettings(BaseSettings):
     prover_api_key: str | None = Field(default=None, validation_alias="LEMMA_PROVER_API_KEY")
     prover_base_url: str | None = Field(default=None, validation_alias="LEMMA_PROVER_BASE_URL")
     prover_model: str | None = Field(default=None, validation_alias="LEMMA_PROVER_MODEL")
+    prover_max_tokens: int = Field(default=8192, ge=512, validation_alias="LEMMA_PROVER_MAX_TOKENS")
 
     subtensor_network: str = Field(default="finney", validation_alias="SUBTENSOR_NETWORK")
     subtensor_chain_endpoint: str | None = Field(default=None, validation_alias="SUBTENSOR_CHAIN_ENDPOINT")
@@ -114,6 +115,8 @@ class LemmaSettings(BaseSettings):
     validator_poll_timeout_s: float = Field(default=30.0, ge=1.0, validation_alias="LEMMA_VALIDATOR_POLL_TIMEOUT_S")
     target_genesis_block: int | None = Field(default=None, ge=0, validation_alias="LEMMA_TARGET_GENESIS_BLOCK")
     commit_window_blocks: int = Field(default=25, ge=1, validation_alias="LEMMA_COMMIT_WINDOW_BLOCKS")
+    cadence_window_blocks: int = Field(default=100, ge=1, validation_alias="LEMMA_CADENCE_WINDOW_BLOCKS")
+    block_time_sec_estimate: float = Field(default=12.0, gt=0.0, validation_alias="LEMMA_BLOCK_TIME_SEC_ESTIMATE")
     validator_abort_if_not_registered: bool = Field(
         default=True,
         validation_alias="LEMMA_VALIDATOR_ABORT_IF_NOT_REGISTERED",
@@ -126,8 +129,32 @@ class LemmaSettings(BaseSettings):
     set_weights_max_retries: int = Field(default=3, ge=1, validation_alias="LEMMA_SET_WEIGHTS_MAX_RETRIES")
     set_weights_retry_delay_s: float = Field(default=2.0, ge=0.0, validation_alias="LEMMA_SET_WEIGHTS_RETRY_DELAY_S")
     owner_burn_uid: int = Field(default=0, ge=0, validation_alias="LEMMA_OWNER_BURN_UID")
+    lemma_uid_variant_problems: bool = Field(default=True, validation_alias="LEMMA_UID_VARIANT_PROBLEMS")
+    lemma_scoring_coldkey_partition: bool = Field(
+        default=True,
+        validation_alias="LEMMA_SCORING_COLDKEY_PARTITION",
+    )
+    lemma_scoring_rolling_alpha: float = Field(
+        default=0.08,
+        ge=0.0,
+        le=1.0,
+        validation_alias="LEMMA_SCORING_ROLLING_ALPHA",
+    )
+    lemma_scoring_difficulty_easy: float = Field(default=1.0, ge=0.0, validation_alias="LEMMA_SCORING_DIFFICULTY_EASY")
+    lemma_scoring_difficulty_medium: float = Field(
+        default=2.0,
+        ge=0.0,
+        validation_alias="LEMMA_SCORING_DIFFICULTY_MEDIUM",
+    )
+    lemma_scoring_difficulty_hard: float = Field(default=4.0, ge=0.0, validation_alias="LEMMA_SCORING_DIFFICULTY_HARD")
+    lemma_scoring_difficulty_extreme: float = Field(
+        default=8.0,
+        ge=0.0,
+        validation_alias="LEMMA_SCORING_DIFFICULTY_EXTREME",
+    )
+    lemma_reputation_state_path: Path | None = Field(default=None, validation_alias="LEMMA_REPUTATION_STATE_PATH")
     public_dashboard_url: str = Field(
-        default="https://lemmasub.net/cadence/",
+        default="https://lemmasub.net/dashboard/",
         validation_alias="LEMMA_PUBLIC_DASHBOARD_URL",
     )
     log_level: str = Field(default="INFO", validation_alias="LOG_LEVEL")

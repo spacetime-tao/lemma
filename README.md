@@ -13,13 +13,13 @@ The live work surface has two lanes:
 5. Passing solvers are written to the solved-target ledger.
 6. Public cadence data shows task state, UIDs, and full hotkeys, but not proof
    bodies, proof hashes, nonces, or commitment hashes.
-7. Current-epoch verified cadence work earns miner weight; unearned weight goes to
-   `LEMMA_OWNER_BURN_UID`.
-8. Formal Conjectures bounty campaigns are manual owner-emission work: first
+7. Verified cadence work updates difficulty-weighted rolling scores; positive
+   rolling scores normalize into miner weights.
+8. Formal Conjectures bounty campaigns are manual operator-funded work: first
    accepted proof wins the listed campaign reward, outside validator weights.
 
-No prose score, proof-efficiency score, difficulty multiplier, subjective judge,
-or hidden validator discretion is part of the reward path.
+No prose score, proof-efficiency score, subjective judge, or hidden validator
+discretion is part of the reward path.
 
 ## Current Scope
 
@@ -51,12 +51,11 @@ uv run lemma mine
 uv run lemma status
 ```
 
-`lemma mine` runs a compact preflight before proof entry. It shows wallet,
-hotkey, subnet registration, chain/genesis state, and exact `btcli` commands
-when something is missing.
+`lemma mine` runs a compact preflight before cadence work. It shows wallet,
+hotkey, subnet registration, chain/cadence state, prover status, and exact
+`btcli` commands when something is missing.
 
-Optional local prover tools use OpenAI-compatible provider settings. They are
-not required for a manually prepared Lean proof.
+Cadence mining is prover-first. Configure an OpenAI-compatible provider:
 
 ```bash
 cat >> .env <<'EOF'
@@ -84,11 +83,12 @@ uv run lemma mine
 uv run lemma mine --hotkey lemmaminer2
 ```
 
-`lemma mine` shows the active theorem, asks whether to submit a proof, verifies
-the pasted `Submission.lean`, publishes the private commitment, and starts the
-miner server. `lemma status` shows the previous, current, and next theorem in
-the ordered target window. If a proof is already committed, `lemma mine`
-resumes serving.
+`lemma mine` shows the active theorem, asks the prover for a complete
+`Submission.lean`, verifies it locally, publishes the private commitment, and
+starts the miner server. Use `--submission path/to/Submission.lean` for the
+advanced/manual override. `lemma status` shows the previous, current, and next
+theorem in the ordered target window. If a proof is already committed,
+`lemma mine` resumes serving.
 
 Run a validator:
 
@@ -130,29 +130,31 @@ uv run lemma meta --raw
 
 ## Protocol Notes
 
-- The operator-published ledger is the source of truth for solved targets.
-- Validators choose the active target as `manifest - solved_ledger`, but a row
-  only counts when its theorem statement hash matches the current manifest.
-- The first target requires `LEMMA_TARGET_GENESIS_BLOCK`; each next target starts
-  at the previous target's accepted block plus one.
-- The default commit window is `LEMMA_COMMIT_WINDOW_BLOCKS=25`; validators poll
-  for proofs only after reveal opens.
+- Cadence windows are fixed at `LEMMA_CADENCE_WINDOW_BLOCKS=100` by default:
+  `seed = floor(chain_head / 100) * 100`.
+- Solved-ledger entries do not advance the next cadence task.
+- UID-specific same-split variants are enabled by default with
+  `LEMMA_UID_VARIANT_PROBLEMS=1`.
+- The default commit window is `LEMMA_COMMIT_WINDOW_BLOCKS=25` inside each
+  100-block cadence window; validators poll for proofs only after reveal opens.
 - Public cadence export includes target state, validator hotkey, solver UID, and
   full solver hotkey. It omits proof text, proof hashes, nonces, and commitment
   hashes.
 - Targets with known accepted Lean proofs are not launch-eligible.
 - Each target row carries a human proof reference, imports, attribution, and
   reviewer duplicate/faithfulness notes.
-- Difficulty labels are operator planning metadata, not reward weights.
-- Verified cadence work earns `(1 - solve_fraction)^2` of the epoch budget,
-  ranked by commitment block. The remaining budget routes to `LEMMA_OWNER_BURN_UID`.
-- If nobody solves, the whole epoch routes to `LEMMA_OWNER_BURN_UID`; old solver
-  sets do not keep getting paid.
+- Difficulty weights are `easy=1`, `medium=2`, `hard=4`, and `extreme=8`.
+- Verified cadence work updates per-UID rolling scores with
+  `1 - (1 - alpha) ** difficulty_weight`; positive rolling scores normalize
+  into weights.
+- Same-coldkey partitioning is default-on as work/reward pressure. It is not
+  Sybil-proof identity.
+- If no UID has a positive rolling score, validators skip `set_weights`.
 - Duplicate proofs for already-solved targets do not change the ledger.
 - The public cadence feed is a tiny JSON export from the cadence source and
   solved ledger. The public bounty feed is a tiny JSON export from the campaign
   registry and acceptance ledger.
-- Formal Conjectures tasks are manual owner-emission campaigns: first accepted
+- Formal Conjectures tasks are manual operator-funded campaigns: first accepted
   proof wins the campaign ledger, but campaign rows do not affect validator
   `set_weights`. Bounty identity is hotkey-first; a subnet UID is optional.
 - Launch on a fresh or intentionally reset subnet state so old Lemma weights do

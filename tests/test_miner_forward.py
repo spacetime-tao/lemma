@@ -19,6 +19,7 @@ def _settings(tmp_path: Path) -> LemmaSettings:
         miner_submissions_path=tmp_path / "submissions.json",
         solved_ledger_path=tmp_path / "ledger.jsonl",
         target_genesis_block=10,
+        cadence_window_blocks=10,
         commit_window_blocks=2,
     )
 
@@ -56,7 +57,7 @@ def test_miner_axon_handlers_have_runtime_synapse_annotations(tmp_path: Path) ->
 
 
 def test_dashboard_json_url_uses_public_dashboard_origin(tmp_path: Path) -> None:
-    settings = _settings(tmp_path).model_copy(update={"public_dashboard_url": "https://lemmasub.net/cadence/"})
+    settings = _settings(tmp_path).model_copy(update={"public_dashboard_url": "https://lemmasub.net/dashboard/"})
 
     assert _dashboard_json_url(settings) == "https://lemmasub.net/data/cadence.json"
 

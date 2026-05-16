@@ -24,23 +24,22 @@ is append-only.
 
 ## Active Target
 
-Validators compute the active target as:
+Validators compute the cadence window from the current chain head:
 
 ```text
-first cadence target without a matching solved-ledger row
+seed = floor(chain_head / 100) * 100
 ```
 
-The chain seed still controls validator timing. Everyone works down the same
-ordered cadence list.
+The default window is 100 blocks. Solved-ledger entries no longer advance the
+next cadence task.
 
-A solved-ledger row only matches when both the target id and theorem statement
-hash match the current manifest. Stale rows from an older target definition do
-not advance the queue or keep weights alive.
+The public dashboard shows the anchor theorem for the previous, current, and
+next windows. By default, each registered UID gets a deterministic same-split
+variant derived from the window seed and UID. This makes copying less useful
+without claiming Sybil-proof identity.
 
-The first target starts at `LEMMA_TARGET_GENESIS_BLOCK`. Each next target starts
-at the previous target's accepted block plus one. The commit window lasts
-`LEMMA_COMMIT_WINDOW_BLOCKS` blocks, default `25`; reveal opens at the next
-block.
+The commit window lasts `LEMMA_COMMIT_WINDOW_BLOCKS` blocks, default `25`,
+inside each 100-block cadence window; reveal opens at the next block.
 
 ## Commit And Reveal
 
@@ -96,29 +95,21 @@ not publish proof text, proof hashes, nonces, or commitment hashes.
 
 ## Rewards
 
-Each epoch composes miner weights plus an owner/burn remainder:
+Each epoch updates per-UID rolling scores. Proof correctness is binary: Lean
+passes or fails. Passing a cadence proof contributes a difficulty-weighted
+positive outcome; failing contributes a zero outcome. Infrastructure failures do
+not penalize miners.
 
 ```text
-sum(miner_weights) + owner_burn_weight = 1.0
+effective_alpha = 1 - (1 - alpha) ** difficulty_weight
 ```
 
-For cadence targets, verified current-epoch work earns:
+Difficulty weights are `easy=1`, `medium=2`, `hard=4`, and `extreme=8`.
+Positive rolling scores normalize into Bittensor weights. If there are no
+positive rolling scores, validators skip `set_weights`.
 
-```text
-base_reward = (1 - solve_fraction)^2
-```
-
-Valid solvers share that earned budget by commitment rank. Same-rank solvers
-tie deterministically; later commitment blocks receive lower rank weight. The
-unearned remainder is assigned to `LEMMA_OWNER_BURN_UID`.
-
-If nobody solves, the whole epoch routes to `LEMMA_OWNER_BURN_UID`. Previous
-winners do not keep getting paid for later failed epochs.
-
-Duplicate submissions for an already-solved target do not change the ledger.
-
-Difficulty labels are operator planning metadata. They do not change reward
-weight.
+Same-coldkey partitioning is default-on as work/reward pressure. It is not
+Sybil-proof identity.
 
 ## Verification
 
@@ -141,12 +132,11 @@ Formal Conjectures is useful target-discovery material, but `hasFormalProof=fals
 only means the site has no external formal-proof reference. Source files still
 need inspection because some simple `test` entries are already proved in-repo.
 
-Formal Conjectures campaign tasks are manual owner-emission work, separate from
-cadence validator weights. The repo keeps a campaign registry and append-only
-acceptance ledger; the subnet owner pays the first accepted proof winner
-manually from owner/burn emission. The private acceptance ledger stores the
-winning proof hash, hotkey, optional UID, and accepted time; the public bounty
-feed publishes only the hotkey, optional UID, accepted time, and reward status.
+Formal Conjectures campaign tasks are manual operator-funded work, separate
+from cadence validator weights. The repo keeps a campaign registry and
+append-only acceptance ledger. The private acceptance ledger stores the winning
+proof hash, hotkey, optional UID, and accepted time; the public bounty feed
+publishes only the hotkey, optional UID, accepted time, and reward status.
 
 ## Launch Note
 

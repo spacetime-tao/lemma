@@ -2,9 +2,9 @@
 
 The miner is a tiny proof-serving Axon daemon.
 
-It does not run an LLM, retry a prover, score prose, or optimize proof
-efficiency. Miners can use any external workflow they want, then submit the
-finished Lean file locally.
+It does not score prose or optimize proof efficiency. The guided cadence path
+uses a prover API to draft `Submission.lean`, then local Lean verification is
+the gate.
 
 Browser solve-portal mining has been removed. Miners work offline, use the CLI
 to commit from a registered hotkey, and serve the proof through the Axon miner
@@ -17,10 +17,9 @@ uv run lemma mine
 ```
 
 `lemma mine` starts with a compact preflight: wallet, hotkey, subnet
-registration, chain/genesis state, optional prover status, and exact `btcli`
-commands when something is missing. Optional prover assistance uses
-OpenAI-compatible provider settings, but a manually prepared Lean proof does not
-need prover config.
+registration, chain/cadence state, prover status, and exact `btcli` commands
+when something is missing. It requires `LEMMA_PROVER_BASE_URL`,
+`LEMMA_PROVER_API_KEY`, and `LEMMA_PROVER_MODEL` unless `--submission` is used.
 
 Use `--wallet` and `--hotkey` when one machine has several registered miner
 hotkeys:
@@ -29,10 +28,12 @@ hotkeys:
 uv run lemma mine --hotkey lemmaminer2
 ```
 
-`lemma mine` shows the active theorem, asks whether you are ready, verifies the
-pasted `Submission.lean`, publishes the commitment, and starts the miner server.
-If the proof is already committed, it resumes serving. If commitment failed,
-retry with `uv run lemma mine --retry-commit`.
+`lemma mine` shows the active theorem, asks the prover for a complete
+`Submission.lean`, verifies it locally, publishes the commitment, and starts the
+miner server. If the proof is already committed, it resumes serving. If
+commitment failed, retry with `uv run lemma mine --retry-commit`.
+
+Use `--submission path/to/Submission.lean` for the advanced/manual override.
 
 For advanced scripts:
 
@@ -45,7 +46,7 @@ uv run lemma miner start
 ```
 
 Validators do not answer the mine command directly. Keep the miner running until
-your UID appears on `https://lemmasub.net/cadence/`. `lemma target ledger` is
+your UID appears on `https://lemmasub.net/dashboard/`. `lemma target ledger` is
 useful only when you have the validator/operator ledger locally. Validators poll
 on their own schedule after reveal opens, then run Lean verification; the
 default poll interval is about five minutes.
@@ -91,8 +92,8 @@ package under `LEMMA_BOUNTY_PACKAGE_DIR` or `~/.lemma/bounty-packages/`.
   machines.
 - The validator result is not returned over Axon; chain weights are the visible
   reward signal.
-- If no current-epoch proof verifies, old winners do not keep getting paid; the
-  epoch budget routes to the owner/burn UID.
+- Positive rolling scores normalize into weights. If nobody has a positive
+  rolling score, validators skip `set_weights`.
 - Public cadence task data is exported from the cadence source and solved ledger:
 
 ```bash

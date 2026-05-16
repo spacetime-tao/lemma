@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
+from lemma.cadence import cadence_window
 from lemma.common.config import LemmaSettings
 from lemma.ledger import SolvedLedgerEntry
 
@@ -25,15 +26,13 @@ class TargetPhase:
 
 
 def target_start_block(settings: LemmaSettings, matching_ledger: list[SolvedLedgerEntry]) -> int:
-    if matching_ledger:
-        return int(matching_ledger[-1].accepted_block) + 1
-    if settings.target_genesis_block is None:
-        raise ValueError("LEMMA_TARGET_GENESIS_BLOCK is required before the first target can run")
-    return int(settings.target_genesis_block)
+    del matching_ledger
+    return cadence_window(int(settings.target_genesis_block or 0), int(settings.cadence_window_blocks)).seed
 
 
 def target_phase(settings: LemmaSettings, matching_ledger: list[SolvedLedgerEntry], current_block: int) -> TargetPhase:
-    start = target_start_block(settings, matching_ledger)
+    del matching_ledger
+    start = cadence_window(int(current_block), int(settings.cadence_window_blocks)).seed
     cutoff = start + int(settings.commit_window_blocks) - 1
     reveal = cutoff + 1
     if current_block < start:

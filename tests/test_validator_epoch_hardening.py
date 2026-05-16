@@ -110,7 +110,10 @@ def _settings(tmp_path: Path, **updates: object) -> LemmaSettings:
         "validator_abort_if_not_registered": False,
         "target_genesis_block": 48,
         "commit_window_blocks": 2,
+        "cadence_window_blocks": 48,
         "owner_burn_uid": 1,
+        "lemma_uid_variant_problems": False,
+        "lemma_reputation_state_path": tmp_path / "rolling-scores.json",
     }
     base.update(updates)
     return LemmaSettings(**base)
@@ -263,7 +266,7 @@ def test_set_weights_outcome_handles_bittensor_shapes() -> None:
     assert message == "success=False without message"
 
 
-async def test_proof_no_proof_routes_epoch_to_owner_burn_uid(monkeypatch, tmp_path: Path) -> None:
+async def test_proof_no_proof_with_no_positive_scores_skips_weights(monkeypatch, tmp_path: Path) -> None:
     subtensor = _Subtensor()
     _install_epoch_fakes(
         monkeypatch,
@@ -273,12 +276,12 @@ async def test_proof_no_proof_routes_epoch_to_owner_burn_uid(monkeypatch, tmp_pa
 
     weights = await epoch.run_epoch(_settings(tmp_path), _TwoProblemSource(), dry_run=False)
 
-    assert weights == {1: 1.0}
-    assert subtensor.set_weights_calls[0]["weights"] == [0.0, 1.0]
+    assert weights == {}
+    assert subtensor.set_weights_calls == []
     assert not (tmp_path / "solved-ledger.jsonl").exists()
 
 
-async def test_invalid_owner_burn_uid_skips_weight_write(monkeypatch, tmp_path: Path) -> None:
+async def test_owner_burn_uid_no_longer_controls_weight_write(monkeypatch, tmp_path: Path) -> None:
     subtensor = _Subtensor(n=2)
     _install_epoch_fakes(
         monkeypatch,
@@ -309,14 +312,14 @@ async def test_proof_single_valid_solver_gets_observed_difficulty_weight(monkeyp
     weights = await epoch.run_epoch(settings, _TwoProblemSource(), dry_run=False)
     ledger = [json.loads(line) for line in (tmp_path / "solved-ledger.jsonl").read_text().splitlines()]
 
-    _assert_weights(weights, {0: 0.25, 1: 0.75})
+    _assert_weights(weights, {0: 1.0})
     assert ledger[0]["target_id"] == PROBLEM.id
     assert [solver["uid"] for solver in ledger[0]["solvers"]] == [0]
     assert ledger[0]["solvers"][0]["proof_script"] == "namespace Submission\n-- uid 0\n"
     assert ledger[0]["solvers"][0]["proof_nonce"] == nonce
     assert ledger[0]["solvers"][0]["commitment_hash"] == commitment_hash
     assert ledger[0]["solvers"][0]["commitment_block"] == 48
-    assert subtensor.set_weights_calls[0]["weights"] == [0.25, 0.75]
+    assert subtensor.set_weights_calls[0]["weights"] == [1.0, 0.0]
 
 
 async def test_proof_same_block_valid_solvers_split_rewards(monkeypatch, tmp_path: Path) -> None:
@@ -341,10 +344,10 @@ async def test_proof_same_block_valid_solvers_split_rewards(monkeypatch, tmp_pat
     weights = await epoch.run_epoch(settings, _TwoProblemSource(), dry_run=False)
     ledger = [json.loads(line) for line in (tmp_path / "solved-ledger.jsonl").read_text().splitlines()]
 
-    _assert_weights(weights, {0: 0.125, 1: 0.125, 3: 0.75})
+    _assert_weights(weights, {0: 0.5, 1: 0.5})
     assert ledger[0]["target_id"] == PROBLEM.id
     assert [solver["uid"] for solver in ledger[0]["solvers"]] == [0, 1]
-    assert subtensor.set_weights_calls[0]["weights"] == [0.125, 0.125, 0.0, 0.75]
+    assert subtensor.set_weights_calls[0]["weights"] == [0.5, 0.5, 0.0, 0.0]
 
 
 async def test_proof_later_commitment_gets_lower_rank_reward(monkeypatch, tmp_path: Path) -> None:
@@ -374,7 +377,7 @@ async def test_proof_later_commitment_gets_lower_rank_reward(monkeypatch, tmp_pa
     weights = await epoch.run_epoch(settings, _TwoProblemSource(), dry_run=False)
     ledger = [json.loads(line) for line in (tmp_path / "solved-ledger.jsonl").read_text().splitlines()]
 
-    _assert_weights(weights, {0: 1.0 / 6.0, 1: 1.0 / 12.0, 3: 0.75})
+    _assert_weights(weights, {0: 0.5, 1: 0.5})
     assert [solver["uid"] for solver in ledger[0]["solvers"]] == [0, 1]
 
 
@@ -404,7 +407,7 @@ async def test_proof_duplicate_hash_credits_earliest_commitment(monkeypatch, tmp
     weights = await epoch.run_epoch(settings, _TwoProblemSource(), dry_run=False)
     ledger = [json.loads(line) for line in (tmp_path / "solved-ledger.jsonl").read_text().splitlines()]
 
-    _assert_weights(weights, {0: 1.0 / 12.0, 1: 1.0 / 6.0, 3: 0.75})
+    _assert_weights(weights, {0: 0.5, 1: 0.5})
     assert [solver["uid"] for solver in ledger[0]["solvers"]] == [0, 1]
 
 
@@ -429,7 +432,7 @@ async def test_proof_duplicate_hash_same_commitment_block_splits(monkeypatch, tm
     weights = await epoch.run_epoch(settings, _TwoProblemSource(), dry_run=False)
     ledger = [json.loads(line) for line in (tmp_path / "solved-ledger.jsonl").read_text().splitlines()]
 
-    _assert_weights(weights, {0: 0.125, 1: 0.125, 3: 0.75})
+    _assert_weights(weights, {0: 0.5, 1: 0.5})
     assert [solver["uid"] for solver in ledger[0]["solvers"]] == [0, 1]
 
 
@@ -451,7 +454,7 @@ async def test_proof_rejects_missing_or_late_commitment(monkeypatch, tmp_path: P
 
     weights = await epoch.run_epoch(settings, _TwoProblemSource(), dry_run=False)
 
-    assert weights == {1: 1.0}
+    assert weights == {}
     assert verify_calls == []
     assert not (tmp_path / "solved-ledger.jsonl").exists()
 
@@ -477,7 +480,7 @@ async def test_proof_rejects_copied_commitment_under_different_hotkey(monkeypatc
 
     weights = await epoch.run_epoch(settings, _TwoProblemSource(), dry_run=False)
 
-    assert weights == {1: 1.0}
+    assert weights == {}
     assert verify_calls == []
     assert not (tmp_path / "solved-ledger.jsonl").exists()
 
@@ -501,8 +504,8 @@ async def test_proof_invalid_lean_cannot_win(monkeypatch, tmp_path: Path) -> Non
 
     weights = await epoch.run_epoch(settings, _TwoProblemSource(), dry_run=False)
 
-    assert weights == {1: 1.0}
-    assert subtensor.set_weights_calls[0]["weights"] == [0.0, 1.0]
+    assert weights == {}
+    assert subtensor.set_weights_calls == []
     assert not (tmp_path / "solved-ledger.jsonl").exists()
 
 
@@ -520,9 +523,9 @@ async def test_proof_mismatched_response_is_ignored_before_verify(monkeypatch, t
 
     weights = await epoch.run_epoch(_settings(tmp_path), _OneProblemSource(), dry_run=False)
 
-    assert weights == {1: 1.0}
+    assert weights == {}
     assert verify_calls == []
-    assert subtensor.set_weights_calls[0]["weights"] == [0.0, 1.0]
+    assert subtensor.set_weights_calls == []
 
 
 async def test_proof_existing_solver_set_does_not_keep_weights_while_next_target_unsolved(
@@ -540,8 +543,8 @@ async def test_proof_existing_solver_set_does_not_keep_weights_while_next_target
 
     weights = await epoch.run_epoch(_settings(tmp_path), _TwoProblemSource(), dry_run=False)
 
-    assert weights == {1: 1.0}
-    assert subtensor.set_weights_calls[0]["weights"] == [0.0, 1.0]
+    assert weights == {}
+    assert subtensor.set_weights_calls == []
 
 
 async def test_proof_existing_tied_solvers_do_not_keep_split_weights(monkeypatch, tmp_path: Path) -> None:
@@ -556,8 +559,8 @@ async def test_proof_existing_tied_solvers_do_not_keep_split_weights(monkeypatch
 
     weights = await epoch.run_epoch(_settings(tmp_path), _TwoProblemSource(), dry_run=False)
 
-    assert weights == {1: 1.0}
-    assert subtensor.set_weights_calls[0]["weights"] == [0.0, 1.0]
+    assert weights == {}
+    assert subtensor.set_weights_calls == []
 
 
 async def test_proof_duplicate_target_does_not_change_solver_set(monkeypatch, tmp_path: Path) -> None:
@@ -575,9 +578,9 @@ async def test_proof_duplicate_target_does_not_change_solver_set(monkeypatch, tm
 
     weights = await epoch.run_epoch(_settings(tmp_path), _OneProblemSource(), dry_run=False)
 
-    assert weights == {1: 1.0}
+    assert weights == {}
     assert ledger_path.read_text(encoding="utf-8") == original
-    assert subtensor.set_weights_calls[0]["weights"] == [0.0, 1.0]
+    assert subtensor.set_weights_calls == []
 
 
 async def test_proof_stale_ledger_hash_does_not_keep_weights(monkeypatch, tmp_path: Path) -> None:
@@ -594,11 +597,11 @@ async def test_proof_stale_ledger_hash_does_not_keep_weights(monkeypatch, tmp_pa
 
     weights = await epoch.run_epoch(_settings(tmp_path), _TwoProblemSource(), dry_run=False)
 
-    assert weights == {1: 1.0}
-    assert subtensor.set_weights_calls[0]["weights"] == [0.0, 1.0]
+    assert weights == {}
+    assert subtensor.set_weights_calls == []
 
 
-async def test_proof_all_targets_solved_routes_to_owner_burn_uid(monkeypatch, tmp_path: Path) -> None:
+async def test_unavailable_cadence_source_skips_without_positive_scores(monkeypatch, tmp_path: Path) -> None:
     ledger_path = tmp_path / "solved-ledger.jsonl"
     ledger_path.write_text(_ledger_row(PROBLEM.id, 0), encoding="utf-8")
     subtensor = _Subtensor(n=2)
@@ -607,8 +610,8 @@ async def test_proof_all_targets_solved_routes_to_owner_burn_uid(monkeypatch, tm
 
     weights = await epoch.run_epoch(_settings(tmp_path), _SolvedProblemSource(), dry_run=False)
 
-    assert weights == {1: 1.0}
-    assert subtensor.set_weights_calls[0]["weights"] == [0.0, 1.0]
+    assert weights == {}
+    assert subtensor.set_weights_calls == []
 
 
 async def test_disk_preflight_skips_before_chain_query(monkeypatch, tmp_path: Path) -> None:

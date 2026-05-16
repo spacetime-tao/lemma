@@ -5,10 +5,9 @@ from loguru import logger
 from lemma.common.config import LemmaSettings
 from lemma.common.subtensor import get_subtensor
 from lemma.common.synapse_limits import synapse_payload_error
-from lemma.ledger import matching_solved_ledger
 from lemma.lifecycle import target_phase
 from lemma.miner.limits import reject_synopsis
-from lemma.problems.factory import get_problem_source, resolve_problem
+from lemma.problems.factory import resolve_problem
 from lemma.protocol import LemmaChallenge
 from lemma.submissions import pending_submission_for_problem
 
@@ -42,21 +41,9 @@ def make_forward(settings: LemmaSettings):
         if synapse.lean_toolchain != problem.lean_toolchain or synapse.mathlib_rev != problem.mathlib_rev:
             return reject_synopsis(synapse, 400, "target toolchain mismatch")
 
-        source = get_problem_source(settings)
-        try:
-            active = source.sample(seed=0)
-        except ValueError:
-            logger.info("miner poll target_id={} proof=none all_targets_solved", problem.id)
-            return _without_proof(synapse)
-        if active.id != problem.id:
-            logger.info("miner poll target_id={} proof=none inactive_target", problem.id)
-            return _without_proof(synapse)
-
-        hashes = {p.id: p.theorem_statement_sha256() for p in source.all_problems()}
-        ledger = matching_solved_ledger(settings.solved_ledger_path, hashes)
         try:
             current_block = int(get_subtensor(settings).get_current_block())
-            phase = target_phase(settings, ledger, current_block)
+            phase = target_phase(settings, [], current_block)
         except Exception as exc:  # noqa: BLE001
             logger.warning("miner poll target_id={} proof=none phase_error={}", problem.id, exc)
             return _without_proof(synapse)

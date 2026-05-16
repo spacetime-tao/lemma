@@ -10,7 +10,6 @@ from loguru import logger
 import lemma.validator.epoch as ep
 from lemma.common.config import LemmaSettings
 from lemma.common.logging import setup_logging
-from lemma.ledger import matching_solved_ledger
 from lemma.problems.factory import get_problem_source
 from lemma.problems.known_theorems import known_theorems_manifest_sha256
 from lemma.validator.profile import validator_profile_sha256
@@ -28,14 +27,9 @@ def validator_startup_issues(settings: LemmaSettings, *, dry_run: bool) -> tuple
         fatal.append(_DOCKER_REQUIRED_ERROR)
 
     try:
-        source = get_problem_source(settings)
-        statement_hashes = {problem.id: problem.theorem_statement_sha256() for problem in source.all_problems()}
-        matching_ledger = matching_solved_ledger(settings.solved_ledger_path, statement_hashes)
+        get_problem_source(settings).all_problems()
     except Exception as exc:  # noqa: BLE001
         fatal.append(f"validator could not inspect target lifecycle: {exc}")
-        matching_ledger = []
-    if not matching_ledger and settings.target_genesis_block is None:
-        fatal.append("lemma validator requires LEMMA_TARGET_GENESIS_BLOCK before the first target can run.")
 
     expected_profile = (settings.validator_profile_expected_sha256 or "").strip()
     if not expected_profile:
@@ -88,8 +82,8 @@ class ValidatorService:
         logger.info("validator_profile_sha256={}", validator_profile_sha256(s))
         logger.info("validator poll interval={}s", s.validator_poll_interval_s)
         logger.info(
-            "target lifecycle genesis_block={} commit_window_blocks={}",
-            s.target_genesis_block,
+            "cadence window_blocks={} commit_window_blocks={}",
+            s.cadence_window_blocks,
             s.commit_window_blocks,
         )
         source = get_problem_source(s)

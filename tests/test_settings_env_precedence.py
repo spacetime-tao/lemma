@@ -161,5 +161,5 @@ def test_removed_legacy_env_names_are_ignored(monkeypatch: pytest.MonkeyPatch, t
 
     assert not hasattr(s, "lemma_commit_reveal_enabled")
     assert not hasattr(s, "lemma_miner_verify_attest_enabled")
-    assert not hasattr(s, "lemma_scoring_rolling_alpha")
+    assert s.lemma_scoring_rolling_alpha == 0.5
     assert s.prover_model is None

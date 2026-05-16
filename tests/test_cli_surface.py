@@ -16,6 +16,15 @@ from lemma.lean.sandbox import VerifyResult
 
 def _skip_mine_preflight(monkeypatch) -> None:
     monkeypatch.setattr("lemma.cli.main._mine_preflight", lambda settings: settings)
+    monkeypatch.setattr("lemma.cli.main._current_block_or_none", lambda settings: (0, None))
+    monkeypatch.setattr("lemma.cli.main._miner_uid_or_none", lambda settings: None)
+
+
+def _fake_prover(monkeypatch, proof: str) -> None:
+    monkeypatch.setenv("LEMMA_PROVER_BASE_URL", "https://prover.example/v1")
+    monkeypatch.setenv("LEMMA_PROVER_API_KEY", "sk-test")
+    monkeypatch.setenv("LEMMA_PROVER_MODEL", "lean-agent")
+    monkeypatch.setattr("lemma.cli.main._prove_with_openai_compatible_chat", lambda settings, problem: proof)
 
 
 def test_public_script_is_lemma_only() -> None:
@@ -172,7 +181,7 @@ def test_submit_interactive_decline_shows_active_target(monkeypatch, tmp_path: P
     assert result.exit_code == 0
     assert "Lemma submit" in result.output
     assert "Current theorem" in result.output
-    assert "known/smoke/nat_two_plus_two_eq_four" in result.output
+    assert "gen/easy/0" in result.output
     assert "Ready to enter a proof" in result.output
     assert "No proof stored" in result.output
     assert not (tmp_path / "submissions.json").exists()
@@ -311,7 +320,7 @@ def test_submit_rejects_paste_with_submission(tmp_path: Path) -> None:
     assert "Use either --paste or --submission" in result.output
 
 
-def test_mine_accepts_pasted_proof_commits_and_starts(monkeypatch, tmp_path: Path) -> None:
+def test_mine_uses_prover_commits_and_starts(monkeypatch, tmp_path: Path) -> None:
     store = tmp_path / "submissions.json"
     _skip_mine_preflight(monkeypatch)
     monkeypatch.setenv("LEMMA_LEDGER_PATH", str(tmp_path / "solved-ledger.jsonl"))
@@ -329,19 +338,19 @@ def test_mine_accepts_pasted_proof_commits_and_starts(monkeypatch, tmp_path: Pat
     monkeypatch.setattr("lemma.lean.verify_runner.run_lean_verify", fake_run_lean_verify)
     monkeypatch.setattr("lemma.cli.main._publish_pending_commitment", _committed_entry)
     monkeypatch.setattr("lemma.cli.main._start_miner", lambda settings: started.append(True))
+    _fake_prover(monkeypatch, proof)
 
-    result = CliRunner().invoke(main, ["mine"], input="y\n" + proof)
+    result = CliRunner().invoke(main, ["mine"])
 
     assert result.exit_code == 0
     assert "Active theorem" in result.output
-    assert "Submit a proof now?" in result.output
     assert "Your private commitment is on-chain" in result.output
     assert "Starting miner now" in result.output
     assert started == [True]
     assert store.exists()
 
 
-def test_mine_preflight_prints_btcli_commands_and_optional_provider(monkeypatch, tmp_path: Path) -> None:
+def test_mine_preflight_prints_btcli_commands_and_requires_provider(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("LEMMA_LEDGER_PATH", str(tmp_path / "solved-ledger.jsonl"))
     monkeypatch.setenv("LEMMA_MINER_SUBMISSIONS_PATH", str(tmp_path / "submissions.json"))
@@ -357,19 +366,20 @@ def test_mine_preflight_prints_btcli_commands_and_optional_provider(monkeypatch,
     monkeypatch.setattr("lemma.cli.main._wallet_hotkey_address", lambda settings, role="miner": None)
     monkeypatch.setattr("lemma.cli.main._registration_text", lambda settings, hotkey: "not registered")
 
-    result = CliRunner().invoke(main, ["mine"], input="n\n")
+    result = CliRunner().invoke(main, ["mine"])
 
-    assert result.exit_code == 0
+    assert result.exit_code != 0
     assert "Preflight" in result.output
     assert "uv sync --extra btcli" in result.output
     assert "btcli wallet create --wallet.name cold --wallet.hotkey hot" in result.output
     assert "btcli subnets register --netuid 467" in result.output
     assert "prover" in result.output
-    assert "optional; not needed for a prepared Lean proof" in result.output
+    assert "required unless --submission is used" in result.output
+    assert "Missing prover config" in result.output
     assert "Suggested .env values" not in result.output
 
 
-def test_mine_preflight_writes_missing_genesis(monkeypatch, tmp_path: Path) -> None:
+def test_mine_preflight_does_not_write_genesis_for_fixed_cadence(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("LEMMA_LEDGER_PATH", str(tmp_path / "solved-ledger.jsonl"))
     monkeypatch.setenv("LEMMA_MINER_SUBMISSIONS_PATH", str(tmp_path / "submissions.json"))
@@ -380,13 +390,12 @@ def test_mine_preflight_writes_missing_genesis(monkeypatch, tmp_path: Path) -> N
     monkeypatch.setattr("lemma.cli.main._wallet_hotkey_address", lambda settings, role="miner": "hotkey-address")
     monkeypatch.setattr("lemma.cli.main._registration_text", lambda settings, hotkey: "registered uid=1")
 
-    result = CliRunner().invoke(main, ["mine"], input="y\nn\n")
+    result = CliRunner().invoke(main, ["mine"])
 
-    assert result.exit_code == 0
-    assert "LEMMA_TARGET_GENESIS_BLOCK=123" in result.output
-    assert "Updated .env" in result.output
-    assert "No proof submitted" in result.output
-    assert "LEMMA_TARGET_GENESIS_BLOCK=123" in (tmp_path / ".env").read_text(encoding="utf-8")
+    assert result.exit_code != 0
+    assert "cadence" in result.output
+    assert "LEMMA_TARGET_GENESIS_BLOCK" not in result.output
+    assert not (tmp_path / ".env").exists()
 
 
 def test_mine_chain_commit_failure_keeps_retryable_store(monkeypatch, tmp_path: Path) -> None:
@@ -418,7 +427,7 @@ def test_mine_chain_commit_failure_keeps_retryable_store(monkeypatch, tmp_path: 
 
     assert result.exit_code != 0
     assert "Lean accepted this proof" in result.output
-    assert "lemma commit --problem known/smoke/nat_two_plus_two_eq_four" in result.output
+    assert "lemma commit --problem gen/easy/0" in result.output
     assert store.exists()
 
 
@@ -643,7 +652,7 @@ def test_mine_retry_commit_starts_miner(monkeypatch, tmp_path: Path) -> None:
     _skip_mine_preflight(monkeypatch)
     monkeypatch.setenv("LEMMA_MINER_SUBMISSIONS_PATH", str(store))
     settings = LemmaSettings(_env_file=None, miner_submissions_path=store)
-    problem = resolve_problem(settings, "known/smoke/nat_two_plus_two_eq_four")
+    problem = resolve_problem(settings, "gen/easy/0")
     save_pending_submission(store, problem, "import Mathlib\n", proof_nonce="n" * 64)
     monkeypatch.setattr("lemma.cli.main._publish_pending_commitment", _committed_entry)
     monkeypatch.setattr("lemma.cli.main._start_miner", lambda settings: started.append(True))
@@ -664,7 +673,7 @@ def test_mine_retry_commit_rejects_legacy_stored_proof(monkeypatch, tmp_path: Pa
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("LEMMA_MINER_SUBMISSIONS_PATH", str(store))
     settings = LemmaSettings(_env_file=None, miner_submissions_path=store)
-    problem = resolve_problem(settings, "known/smoke/nat_two_plus_two_eq_four")
+    problem = resolve_problem(settings, "gen/easy/0")
     save_pending_submission(store, problem, "import Mathlib\n")
 
     result = CliRunner().invoke(main, ["mine", "--retry-commit"])
@@ -684,7 +693,7 @@ def test_mine_replace_overwrites_stale_proof(monkeypatch, tmp_path: Path) -> Non
     monkeypatch.setenv("LEMMA_MINER_SUBMISSIONS_PATH", str(store))
     monkeypatch.setenv("LEMMA_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
     settings = LemmaSettings(_env_file=None, miner_submissions_path=store)
-    problem = resolve_problem(settings, "known/smoke/nat_two_plus_two_eq_four")
+    problem = resolve_problem(settings, "gen/easy/0")
     save_pending_submission(store, problem, "import Mathlib\n")
 
     def fake_run_lean_verify(*args, **kwargs):
@@ -702,13 +711,12 @@ def test_mine_replace_overwrites_stale_proof(monkeypatch, tmp_path: Path) -> Non
     assert started == [True]
 
 
-def test_mine_refreshes_genesis_and_retries_commit_when_window_closes(monkeypatch, tmp_path: Path) -> None:
+def test_mine_reports_closed_commit_window_without_refreshing_genesis(monkeypatch, tmp_path: Path) -> None:
     from lemma.cli.main import CommitWindowClosedError
 
     store = tmp_path / "submissions.json"
     ledger = tmp_path / "ledger.jsonl"
     calls: list[int | None] = []
-    started: list[int | None] = []
     _skip_mine_preflight(monkeypatch)
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("LEMMA_MINER_SUBMISSIONS_PATH", str(store))
@@ -720,27 +728,20 @@ def test_mine_refreshes_genesis_and_retries_commit_when_window_closes(monkeypatc
 
     def fake_publish(settings, problem, entry):
         calls.append(settings.target_genesis_block)
-        if len(calls) == 1:
-            raise CommitWindowClosedError("closed", current_block=130, entry=entry)
-        return replace(entry, commitment_status="committed", committed_block=130, reveal_block=155)
+        raise CommitWindowClosedError("closed", current_block=130, entry=entry)
 
     monkeypatch.setattr("lemma.lean.verify_runner.run_lean_verify", fake_run_lean_verify)
     monkeypatch.setattr("lemma.cli.main._publish_pending_commitment", fake_publish)
-    monkeypatch.setattr("lemma.cli.main._start_miner", lambda settings: started.append(settings.target_genesis_block))
 
-    result = CliRunner().invoke(main, ["mine", "--submission", str(_proof_file(tmp_path))], input="y\n")
+    result = CliRunner().invoke(main, ["mine", "--submission", str(_proof_file(tmp_path))])
 
-    assert result.exit_code == 0
-    assert "Commit window closed while this proof was being prepared." in result.output
-    assert "Refresh the first target window and retry the commitment now?" in result.output
-    assert "Updated .env" in result.output
-    assert "Your private commitment is on-chain" in result.output
-    assert calls == [100, 130]
-    assert started == [130]
-    assert "LEMMA_TARGET_GENESIS_BLOCK=130" in (tmp_path / ".env").read_text(encoding="utf-8")
+    assert result.exit_code != 0
+    assert "closed" in result.output
+    assert calls == [100]
+    assert not (tmp_path / ".env").exists()
 
 
-def test_status_prefers_setup_when_genesis_missing(monkeypatch, tmp_path: Path) -> None:
+def test_status_uses_fixed_cadence_without_genesis(monkeypatch, tmp_path: Path) -> None:
     from lemma.problems.factory import resolve_problem
     from lemma.submissions import save_pending_submission
 
@@ -751,7 +752,7 @@ def test_status_prefers_setup_when_genesis_missing(monkeypatch, tmp_path: Path) 
     monkeypatch.delenv("LEMMA_TARGET_GENESIS_BLOCK", raising=False)
     problem = resolve_problem(
         LemmaSettings(_env_file=None, miner_submissions_path=store),
-        "known/smoke/nat_two_plus_two_eq_four",
+        "gen/easy/100",
     )
     save_pending_submission(store, problem, "import Mathlib\n", proof_nonce="n" * 64)
     monkeypatch.setattr("lemma.cli.main._current_block_or_none", lambda settings: (100, None))
@@ -761,7 +762,7 @@ def test_status_prefers_setup_when_genesis_missing(monkeypatch, tmp_path: Path) 
     result = CliRunner().invoke(main, ["status"])
 
     assert result.exit_code == 0
-    assert "LEMMA_TARGET_GENESIS_BLOCK is required" in result.output
+    assert "LEMMA_TARGET_GENESIS_BLOCK is required" not in result.output
     assert "proof" in result.output
     assert "uncommitted" in result.output
     assert "Next: lemma mine" in result.output
@@ -777,7 +778,7 @@ def test_status_calls_stale_proof_replaceable(monkeypatch, tmp_path: Path) -> No
     monkeypatch.setenv("LEMMA_TARGET_GENESIS_BLOCK", "100")
     problem = resolve_problem(
         LemmaSettings(_env_file=None, miner_submissions_path=store),
-        "known/smoke/nat_two_plus_two_eq_four",
+        "gen/easy/100",
     )
     save_pending_submission(store, problem, "import Mathlib\n")
     monkeypatch.setattr("lemma.cli.main._current_block_or_none", lambda settings: (130, None))
@@ -805,7 +806,7 @@ def test_status_explains_committed_reveal_needs_serving(monkeypatch, tmp_path: P
     monkeypatch.setenv("LEMMA_TARGET_GENESIS_BLOCK", "100")
     problem = resolve_problem(
         LemmaSettings(_env_file=None, miner_submissions_path=store),
-        "known/smoke/nat_two_plus_two_eq_four",
+        "gen/easy/100",
     )
     save_pending_submission(
         store,
@@ -825,7 +826,7 @@ def test_status_explains_committed_reveal_needs_serving(monkeypatch, tmp_path: P
     assert "committed; reveal open" in result.output
     assert "keep lemma mine running; proof is ready for validator polling" in result.output
     assert "validators poll about every 5 min, then run Lean" in result.output
-    assert "https://lemmasub.net/cadence/" in result.output
+    assert "https://lemmasub.net/dashboard/" in result.output
     assert "lemma target ledger (local validator/operator ledger)" in result.output
     assert "Next: lemma mine" in result.output
 
@@ -851,8 +852,8 @@ def test_setup_prints_btcli_commands_and_asks_before_env_write(monkeypatch, tmp_
     assert "uv sync --extra btcli" in result.output
     assert "btcli wallet create --wallet.name cold --wallet.hotkey hot" in result.output
     assert "btcli subnets register --netuid 467" in result.output
-    assert "LEMMA_TARGET_GENESIS_BLOCK=123" in result.output
-    assert "No .env changes written" in result.output
+    assert "LEMMA_TARGET_GENESIS_BLOCK" not in result.output
+    assert "No .env changes suggested" in result.output
     assert not (tmp_path / ".env").exists()
 
 
@@ -898,7 +899,7 @@ def test_setup_uses_openai_compatible_provider_env_names(monkeypatch, tmp_path: 
     assert "LEMMA_PROVER_MODEL=lean-agent" in result.output
 
 
-def test_setup_refreshes_expired_first_genesis(monkeypatch, tmp_path: Path) -> None:
+def test_setup_does_not_refresh_genesis_for_fixed_cadence(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("LEMMA_TARGET_GENESIS_BLOCK", "100")
     monkeypatch.delenv("LEMMA_KNOWN_THEOREMS_MANIFEST_SHA256_EXPECTED", raising=False)
@@ -910,8 +911,8 @@ def test_setup_refreshes_expired_first_genesis(monkeypatch, tmp_path: Path) -> N
     result = CliRunner().invoke(main, ["setup", "--role", "miner"], input="n\n")
 
     assert result.exit_code == 0
-    assert "LEMMA_TARGET_GENESIS_BLOCK=130" in result.output
-    assert "No .env changes written" in result.output
+    assert "LEMMA_TARGET_GENESIS_BLOCK=130" not in result.output
+    assert "No .env changes suggested" in result.output
 
 
 def test_setup_auto_retries_commit_after_approved_refresh(monkeypatch, tmp_path: Path) -> None:
@@ -932,7 +933,7 @@ def test_setup_auto_retries_commit_after_approved_refresh(monkeypatch, tmp_path:
             solved_ledger_path=ledger,
             target_genesis_block=100,
         ),
-        "known/smoke/nat_two_plus_two_eq_four",
+        "gen/easy/100",
     )
     save_pending_submission(store, problem, "import Mathlib\n", proof_nonce="secret")
     started: list[int | None] = []
@@ -949,16 +950,16 @@ def test_setup_auto_retries_commit_after_approved_refresh(monkeypatch, tmp_path:
     monkeypatch.setattr("lemma.cli.main._publish_pending_commitment", fake_publish)
     monkeypatch.setattr("lemma.cli.main._start_miner", lambda settings: started.append(settings.target_genesis_block))
 
-    result = CliRunner().invoke(main, ["setup", "--role", "miner"], input="y\n")
+    result = CliRunner().invoke(main, ["setup", "--role", "miner"])
 
     assert result.exit_code == 0
-    assert "Updated .env" in result.output
+    assert "Updated .env" not in result.output
     assert "Stored proof found. Publishing commitment now." in result.output
     assert "Commitment published. Starting miner." in result.output
     assert "Next:" not in result.output
-    assert committed_genesis == [130]
-    assert started == [130]
-    assert "LEMMA_TARGET_GENESIS_BLOCK=130" in (tmp_path / ".env").read_text(encoding="utf-8")
+    assert committed_genesis == [100]
+    assert started == [100]
+    assert not (tmp_path / ".env").exists()
 
 
 def test_setup_auto_retries_commit_when_config_is_already_current(monkeypatch, tmp_path: Path) -> None:
@@ -983,7 +984,7 @@ def test_setup_auto_retries_commit_when_config_is_already_current(monkeypatch, t
             solved_ledger_path=ledger,
             target_genesis_block=100,
         ),
-        "known/smoke/nat_two_plus_two_eq_four",
+        "gen/easy/100",
     )
     save_pending_submission(store, problem, "import Mathlib\n", proof_nonce="secret")
     committed: list[int | None] = []
@@ -1010,7 +1011,7 @@ def test_setup_auto_retries_commit_when_config_is_already_current(monkeypatch, t
     assert started == [100]
 
 
-def test_setup_refreshes_and_retries_when_stored_proof_window_closed(monkeypatch, tmp_path: Path) -> None:
+def test_setup_reports_closed_stored_proof_without_refreshing_genesis(monkeypatch, tmp_path: Path) -> None:
     from lemma.cli.main import CommitWindowClosedError
     from lemma.problems.factory import resolve_problem
     from lemma.problems.known_theorems import known_theorems_manifest_sha256
@@ -1033,34 +1034,27 @@ def test_setup_refreshes_and_retries_when_stored_proof_window_closed(monkeypatch
             solved_ledger_path=ledger,
             target_genesis_block=100,
         ),
-        "known/smoke/nat_two_plus_two_eq_four",
+        "gen/easy/100",
     )
     save_pending_submission(store, problem, "import Mathlib\n", proof_nonce="secret")
     committed: list[int | None] = []
-    started: list[int | None] = []
 
     def fake_publish(settings, problem, entry):
         committed.append(settings.target_genesis_block)
-        if len(committed) == 1:
-            raise CommitWindowClosedError("closed", current_block=130, entry=entry)
-        return replace(entry, commitment_status="committed")
+        raise CommitWindowClosedError("closed", current_block=130, entry=entry)
 
     monkeypatch.setattr("lemma.cli.main.shutil.which", lambda name: "/bin/tool")
     monkeypatch.setattr("lemma.cli.main._current_block_or_none", lambda settings: (110, None))
     monkeypatch.setattr("lemma.cli.main._wallet_hotkey_address", lambda settings, role="miner": "hotkey-address")
     monkeypatch.setattr("lemma.cli.main._registration_text", lambda settings, hotkey: "registered uid=1")
     monkeypatch.setattr("lemma.cli.main._publish_pending_commitment", fake_publish)
-    monkeypatch.setattr("lemma.cli.main._start_miner", lambda settings: started.append(settings.target_genesis_block))
 
-    result = CliRunner().invoke(main, ["setup", "--role", "miner"], input="y\n")
+    result = CliRunner().invoke(main, ["setup", "--role", "miner"])
 
-    assert result.exit_code == 0
-    assert "Commit window closed while this proof was being prepared." in result.output
-    assert "Refresh the first target window and retry the commitment now?" in result.output
-    assert "Commitment published. Starting miner." in result.output
-    assert committed == [100, 130]
-    assert started == [130]
-    assert "LEMMA_TARGET_GENESIS_BLOCK=130" in (tmp_path / ".env").read_text(encoding="utf-8")
+    assert result.exit_code != 0
+    assert "closed" in result.output
+    assert committed == [100]
+    assert not (tmp_path / ".env").exists()
 
 
 def test_validate_runs_check_before_service_start(monkeypatch) -> None:
@@ -1118,7 +1112,7 @@ def test_mine_hotkey_option_uses_miner_wallet(monkeypatch, tmp_path: Path) -> No
     _skip_mine_preflight(monkeypatch)
     monkeypatch.setenv("LEMMA_MINER_SUBMISSIONS_PATH", str(store))
     settings = LemmaSettings(_env_file=None, miner_submissions_path=store)
-    problem = resolve_problem(settings, "known/smoke/nat_two_plus_two_eq_four")
+    problem = resolve_problem(settings, "gen/easy/0")
     save_pending_submission(store, problem, "import Mathlib\n", proof_nonce="secret", commitment_status="committed")
     monkeypatch.setattr("lemma.cli.main._start_miner", lambda settings: started.append(settings.wallet_hot))
 
@@ -1234,7 +1228,7 @@ def test_validator_help_lists_proof_subcommands() -> None:
     assert "config" not in result.output
 
 
-def test_target_command_shows_active_known_theorem(monkeypatch, tmp_path: Path) -> None:
+def test_target_command_shows_active_cadence_theorem(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("LEMMA_LEDGER_PATH", str(tmp_path / "solved-ledger.jsonl"))
 
     result = CliRunner().invoke(main, ["target", "show"])
@@ -1244,8 +1238,7 @@ def test_target_command_shows_active_known_theorem(monkeypatch, tmp_path: Path) 
     assert "previous theorem" in result.output
     assert "current theorem" in result.output
     assert "next theorem" in result.output
-    assert "known/smoke/nat_two_plus_two_eq_four" in result.output
-    assert "proof_reference=" in result.output
+    assert "gen/easy/0" in result.output
 
 
 def test_target_ledger_empty(monkeypatch, tmp_path: Path) -> None:
