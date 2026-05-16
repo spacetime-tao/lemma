@@ -218,12 +218,14 @@ Timed rounds keep the subnet moving with regular challenges. Bounties are for
 selected Lean statements that may need more time, stronger search, or more
 advanced proving systems.
 
-Lemma uses Google DeepMind's public Formal Conjectures database as one source of
-bounty targets. These are formal mathematical statements that can be attempted
-in Lean. Lemma is not affiliated with or partnered with Google DeepMind.
+Lemma uses Google DeepMind's public [Formal Conjectures](https://google-deepmind.github.io/formal-conjectures/)
+database as the source of bounty targets. These are formal mathematical
+statements that can be attempted in Lean.
 
 The point of bounties is to give miners a path toward harder, more meaningful
 proofs while keeping the regular subnet loop simple and steady.
+
+Note: Lemma is not affiliated with or partnered with Google DeepMind.
 
 ## What rules do proof files follow?
 
