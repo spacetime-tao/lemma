@@ -1,229 +1,297 @@
 # Lemma FAQ
 
-Plain-language answers about Lemma, Lean proofs, Bittensor roles, rewards, and
-operational risks. For the full mechanism, read the [litepaper](litepaper.md).
-To run the software, start with [getting-started.md](getting-started.md).
-
----
+Plain-language answers about Lemma, theorem proving, miners, validators, and why
+verified reasoning matters.
 
 ## What is Lemma?
 
-**Lemma is a Bittensor subnet for using AI to prove mathematical theorems.**
+Lemma is a Bittensor subnet for using AI to prove mathematical theorems.
 
-Lemma posts theorem challenges. Miners use AI to write Lean proof files.
-Validators use Lean to check them. Valid proofs become eligible for miner
-rewards.
+Lemma posts theorem challenges. Miners use AI systems to generate Lean proof
+files. Validators check those files with Lean. If the proof is correct, it
+passes. If it is incomplete, invalid, or changes the theorem, it fails.
 
-Bitcoin rewards miners for securing the network. Bittensor rewards miners for
-producing useful intelligence. Lemma rewards miners for producing correct
-proofs. The analogy is not perfect, but it helps: open participants compete
-under public rules, and the network rewards work that can be checked.
+Bitcoin rewards miners for securing a network. Bittensor rewards miners for
+useful machine intelligence. Lemma rewards miners for producing correct,
+machine-checkable proofs.
+
+## How is this subnet useful?
+
+Lemma creates a market for verified reasoning.
+
+Most AI systems produce text that may sound convincing but can still be wrong.
+Lemma focuses on a stricter kind of output: formal proofs that software can
+check.
+
+That is useful because it gives the network an objective way to reward correct
+reasoning. Miners are not rewarded for persuasive answers, style, or claims.
+They are rewarded for proof files that actually verify.
+
+Over time, better AI theorem provers can support mathematics, software
+verification, cryptography, algorithms, science, engineering, and other fields
+where correctness matters.
+
+## What do you mean by verified reasoning?
+
+Verified reasoning means the answer can be checked by software, not just trusted
+by humans.
+
+In Lemma, miners submit proofs written in Lean. Lean checks whether every step
+follows from the theorem statement, the allowed definitions, and the rules of
+logic.
+
+If the proof is valid, Lean accepts it. If even one required step is missing,
+invalid, or based on an illegal shortcut, Lean rejects it.
+
+So when Lemma says it rewards verified reasoning, it means miners are rewarded
+for producing reasoning that survives an independent mechanical correctness
+check.
 
 ## Why do miners solve math?
 
-Because proof search is hard, open-ended work. Many miners can try different
-models, prompts, search loops, repair tools, and compute budgets at the same
-time. Validators do the cheaper part: they check whether a submitted proof is
-actually valid.
+Miners solve math because formal proofs are one of the cleanest ways to measure
+real AI reasoning.
 
-That split is the core idea. Finding proofs can be difficult. Checking proofs
-with Lean is objective and reproducible.
+A normal AI answer can be hard to judge. It might sound right while still being
+wrong. A Lean proof is different: it either checks or it does not.
 
-## Are miners manually watching for theorems?
+That makes theorem proving a good task for a subnet. Finding proofs can be hard,
+creative, and compute-intensive. Checking them is objective and reproducible.
 
-No. The current reference miner runs automatically. It receives theorem
-challenges from validators, calls an AI proving model or proof-search loop, and
-returns a proof file when it finds one.
+Miners are not solving math by hand. They run AI proving systems, search loops,
+repair tools, and models that try to generate valid Lean proof files.
 
-Human-in-the-loop flows may make sense later for longer open-problem work,
-but the base round design is automated.
+The goal is not "math for math's sake." The goal is to reward machines for
+producing reasoning that can be independently verified.
 
 ## Who needs this math to be solved?
 
-Mathematics sits under science, cryptography, algorithms, software, physics,
-engineering, and AI reasoning. Verified proofs can become useful knowledge,
-training data, benchmarks, formal libraries, and building blocks for harder
-results.
+Some theorem challenges may be small on their own, but formal proofs can become
+building blocks.
 
-Some proofs may be small. Some may only matter because they help prove something
-bigger later. That is why the name fits: in mathematics, a lemma is a proven
-result that helps prove another result.
+Mathematics supports cryptography, algorithms, physics, engineering, software,
+machine learning, and scientific reasoning. Verified proofs can also become
+training data, benchmarks, reusable formal-library contributions, and stepping
+stones toward harder results.
+
+That is why the name Lemma fits: in mathematics, a lemma is often a smaller
+proven result used to prove something larger.
+
+## Is Lemma only useful if it solves famous open problems?
+
+No.
+
+A subnet needs a reliable proving loop before it can aim at the hardest problems
+in the world.
+
+If every task is impossibly hard, miners get almost no feedback, validators have
+few successful results to compare, and the subnet cannot produce a useful reward
+signal. Lemma starts with theorem challenges that make the loop work: publish a
+theorem, generate proofs, verify them, and reward valid work.
+
+As miners improve, the theorem windows can become harder. Larger bounties and
+harder curated problems can come later.
+
+## Why not start with Millennium Prize Problems?
+
+Because the first goal is to build proof capacity.
+
+Millennium Prize Problems are among the hardest open problems in mathematics.
+Starting there would give miners almost no feedback and validators almost no
+useful reward signal.
+
+Lemma starts with a working market for machine-checkable proofs. Once that
+market becomes stronger, it can move toward harder problem sets and
+longer-horizon bounties.
+
+## What is formal mathematics?
+
+Formal mathematics is mathematics written in a precise language that software
+can check.
+
+In ordinary math, a proof is usually written for humans. In formal math,
+definitions, assumptions, and allowed reasoning steps are written explicitly
+enough for a proof assistant to verify them.
+
+Lemma uses this because it makes correctness objective. A validator does not
+need to decide whether an explanation "seems right." It can run the proof
+through Lean and see whether it verifies.
+
+## What is Lean?
+
+Lean is a proof assistant.
+
+It lets people and AI systems write mathematical definitions, theorem
+statements, and proofs in a formal language. Lean then checks whether the proof
+is logically valid.
+
+For Lemma, Lean acts like the judge. Miners submit proof files. Validators run
+Lean. If Lean accepts the file under Lemma's rules, the proof is valid.
+
+## What is a theorem?
+
+A theorem is a precise claim that can be proven true.
+
+In Lemma, theorem statements are written in Lean. This removes ambiguity. Every
+miner receives a formal target, and validators check whether the submitted proof
+proves that exact target.
+
+## What is a proof?
+
+A proof is a correct argument showing why a theorem is true.
+
+In Lemma, a proof is not an essay. It is a Lean file. The file must contain code
+that Lean can verify.
+
+Human explanations can help people understand the proof, but the proof credit
+comes from the Lean file itself.
+
+## What does a proof assistant do?
+
+A proof assistant checks whether a proof follows the rules of a formal system.
+
+Lean verifies the proof step by step. If the reasoning is valid, the proof
+passes. If something is missing, false, or unsupported, the proof fails.
+
+This is similar to a compiler checking code, except the thing being checked is
+mathematical reasoning.
+
+## Why use Lean instead of normal text answers?
+
+Because normal text answers are hard to score objectively.
+
+A written explanation might look correct but hide a gap. A language model might
+produce a fluent answer that is wrong. Different people may disagree about
+whether an argument is detailed enough.
+
+Lean gives Lemma a stricter standard. The proof must compile and verify.
+Validators can run the same checker against the same theorem and proof file.
+
+That makes rewards much harder to fake.
+
+## What is a Bittensor subnet?
+
+A Bittensor subnet is a specialized market for machine intelligence.
+
+Each subnet defines the work it wants miners to perform, the rules validators
+use to judge that work, and the reward signal that determines which miners earn.
+
+Lemma's work is theorem proving. Miners try to produce Lean proofs. Validators
+check those proofs. Correct proofs receive reward weight.
+
+## What do miners do?
+
+Miners receive theorem challenges and try to produce valid Lean proofs.
+
+A miner may use language models, search algorithms, proof repair loops,
+specialized provers, or other tools. The miner's job is to return a proof file
+that passes validation.
+
+Miners earn only when their submitted work satisfies the subnet's rules.
+
+## What do validators do?
+
+Validators send theorem challenges to miners, collect their proof files, check
+the submissions with Lean, reject invalid shortcuts, and publish reward weights.
+
+Those weights tell Bittensor how rewards should be distributed among miners.
+
+Validators are not grading opinions. They are checking whether submitted proof
+files verify under the required rules.
+
+## Are miners manually watching for theorems?
+
+No. The reference miner is designed to run automatically.
+
+It receives theorem challenges, calls an AI proving model or proof-search loop,
+and returns a Lean file when it finds a candidate proof.
+
+Humans may help design better miners, models, prompts, and search systems, but
+the normal subnet loop is automated.
+
+## What are bounties?
+
+Bounties are harder proof targets that do not fit the normal timed theorem
+rounds.
+
+Timed rounds keep the subnet moving with regular challenges. Bounties are for
+selected Lean statements that may need more time, stronger search, or more
+advanced proving systems.
+
+Lemma uses Google DeepMind's public Formal Conjectures database as one source of
+bounty targets. These are formal mathematical statements that can be attempted
+in Lean. Lemma is not affiliated with or partnered with Google DeepMind.
+
+The point of bounties is to give miners a path toward harder, more meaningful
+proofs while keeping the regular subnet loop simple and steady.
+
+## What are `sorry` and new axioms?
+
+In Lean, `sorry` is a placeholder for an unfinished proof. It tells Lean to
+temporarily accept a missing proof while someone is still working.
+
+That is useful during development, but it is not a real proof. Lemma rejects
+submissions that rely on `sorry`.
+
+A new axiom is an extra assumption added by the submitted file. If miners could
+add their own axioms, they could change the rules instead of proving the
+theorem. Lemma rejects that too.
+
+The point is simple: miners must prove the target, not bypass it.
+
+## Can miners fake a proof?
+
+They can try, but validators are designed to reject shortcuts.
+
+A valid submission must prove the exact theorem under the allowed rules. If the
+file changes the theorem, uses `sorry`, adds unsafe assumptions, or fails Lean's
+checker, it should not earn proof credit.
+
+This is why formal verification matters. The proof has to pass the checker, not
+just look convincing.
 
 ## Is this subnet focused on revenue?
 
-No. Lemma is not built around a revenue model.
+No. Lemma is not built around a traditional revenue model.
 
-The value is solved mathematics, better reasoning systems, and a growing public
-record of computer-verified proofs. How valuable that is should be decided by
-the market, similar to how markets decide the value of Bitcoin's security or
-Bittensor's intelligence.
+The value comes from rewarding AI systems for correct, machine-checkable
+reasoning. Today that means formal theorem proofs. Over time, the same
+capability can support harder mathematics, safer software, cryptography,
+algorithms, and other domains where correctness is valuable.
 
-## Why not start with Millennium Problems?
+The market decides how valuable that capability is.
 
-Because a subnet needs an economy before it can aim at the hardest problems in
-the world.
+## What are UID, weights, and alpha?
 
-If every task is nearly impossible, miners cannot learn, earn, or improve. Lemma
-starts with a range of solvable theorem tasks so miners can build proof
-capacity. Harder curated problem sets and winner-take-all rewards for open
-mathematical problems can come later.
+A UID is a numbered participant slot on a subnet.
 
-## Foundations
+Weights are validator-published reward signals. They tell Bittensor which
+miners produced valuable work.
 
-### What is formal mathematics?
+Alpha is the reward token for a Bittensor subnet.
 
-Formal mathematics is mathematics written in a fully specified logical language.
-The definitions, axioms, and allowed inference steps are fixed in advance.
-Because the rules are explicit, software can check a proof step by step.
+Lemma currently runs on testnet, so public reward information should be treated
+as test deployment data unless a mainnet deployment is announced.
 
-### What is a theorem?
+## What is the difference between testnet and mainnet?
 
-A theorem is a precise mathematical claim: under these assumptions, this
-conclusion follows. Lemma broadcasts theorem statements in Lean so every miner
-works on the same target.
+Testnet is for testing software, validator behavior, miner behavior, and subnet
+design.
 
-### What is a proof?
+Mainnet, also called Finney, is the live Bittensor network where economic
+rewards matter.
 
-A proof is a correct argument for a theorem. In Lemma, the proof must be written
-as code that Lean can verify. Prose explanations can help humans understand the
-work, but they are not what earns proof credit.
+Lemma currently runs on testnet. Only rely on mainnet rewards if the Lemma
+deployment you are following is registered, live, and configured for the correct
+network and subnet ID.
 
-### What is a proof script?
+## Where do I start?
 
-A `proof_script` is the source file a miner submits. It contains the proof
-written in the formal language Lemma expects.
+If you want to understand the project, start with the [litepaper](litepaper.md).
 
-### What does a proof assistant do?
+If you want to participate, read the [getting started guide](getting-started.md)
+and run a [miner](miner.md) or [validator](validator.md).
 
-A proof assistant checks whether a proof script follows the rules of the formal
-system. Lemma uses Lean. If every step is valid, Lean accepts the proof. If
-something is missing or incorrect, Lean rejects it, much like a compiler
-reporting errors.
-
-### What do `sorry` and new axioms mean?
-
-In Lean, `sorry` is a temporary placeholder for an unfinished proof. It is
-useful while someone is still writing, but it is not a real proof for Lemma.
-
-A new axiom is an extra assumption added by the submitted file. If miners could
-add their own assumptions, they could change the rules instead of proving the
-theorem. Lemma rejects both shortcuts.
-
-### Is this "Bitcoin for math"?
-
-Only as an analogy. Bitcoin miners compete to produce valid blocks. Lemma miners
-compete to produce Lean-valid proofs for published theorem statements. Both
-involve networks and tokens; the work and reward mechanics are different.
-
-## Lean
-
-### Why Lean?
-
-Lean gives Lemma an objective checker. Validators do not grade style or
-persuasive writing. They run the same pinned verifier against the exact theorem
-statement sent to that UID and the submitted proof file.
-
-## Bittensor roles
-
-### What does a miner do?
-
-A miner uses AI to receive theorem challenges and try to prove them. When it
-finds a proof, it returns a Lean `proof_script` for validators to check. More
-detail: [miner.md](miner.md).
-
-### What does a validator do?
-
-A validator sends theorem challenges to miners, collects replies, verifies
-submissions with Lean inside Docker, and publishes weights for eligible work.
-More detail: [validator.md](validator.md).
-
-### What does Bittensor provide?
-
-Bittensor provides wallet accounts, a shared view of who is registered, validator
-weights, and token reward flow. You still run Lemma locally with commands such
-as `lemma miner start` and `lemma validator start`.
-
-## Rewards at a high level
-
-### Do miners earn alpha?
-
-Yes. Alpha is the subnet reward token. Miners can earn alpha when their
-submissions pass Lean and receive weight under Lemma's rules. The first gate is
-Lean verification: if a proof does not pass Lean, it is not eligible for miner
-rewards.
-See [Rewards and Weights](litepaper.md#rewards-and-weights).
-
-### What is the difference between testnet and mainnet?
-
-Lemma currently runs on Bittensor testnet at the netuid listed in
-[Current Status](litepaper.md#current-status). Mainnet, also called Finney, is
-separate. Only rely on mainnet rewards if the Lemma deployment you are following
-is registered, live, and configured for the correct network and netuid.
-
-### What costs should I expect?
-
-Miners may pay for prover APIs, servers, and registration fees. Validators may
-pay for hardware, Docker storage, disk, and uptime. Estimate costs before
-scaling.
-
-## Risks and operations
-
-### What key and VPS mistakes hurt the most?
-
-Leaked keys or sloppy hosting can drain accounts or hurt reputation scores. See
-[vps-safety.md](vps-safety.md).
-
-### What operational failures are common?
-
-Closed firewall ports, full disks, cold caches, mismatched pinned toolchains,
-and drifting Docker images are common operational problems. See
-[production.md](production.md).
-
-## Software maturity
-
-Lemma is still largely proof-of-concept software. Expect rough edges, try
-testnet first, pin versions, and back up keys and config.
-
-## Trust and fairness
-
-### Who decides if my proof is accepted?
-
-Lean decides whether the submitted `proof_script` proves the exact theorem
-statement under the pinned toolchain. Validators do not grade style or prose
-before this Lean verification gate.
-
-### What happens after Lean accepts?
-
-A passing proof becomes eligible for Lemma's reward rules. Those rules can
-evolve through governance, but they sit after the Lean verification gate; they
-do not replace it.
-
-### Can validators cheat by changing the theorem?
-
-Not silently on the wire. Each challenge includes the theorem id, theorem
-statement, imports, and toolchain pins. Those fields participate in the synapse
-body hash; transport integrity checks reject mismatched hashes, so casual
-tampering between validator and miner should fail loudly instead of swapping the
-theorem unnoticed.
-
-Matching the subnet's agreed theorem is still a coordination problem, not a
-chain-enforced proof. Operators should compare published pins, follow
-[governance.md](governance.md), and treat drift as misconfiguration or foul play
-until proven otherwise.
-
-## Why now?
-
-Formal theorem proving is becoming a serious AI frontier. Useful references:
-
-- [Olympiad-level formal mathematical reasoning with reinforcement learning](https://www.nature.com/articles/s41586-025-09833-y)
-- [The Millennium Prize Problems](https://www.claymath.org/millennium-problems/)
-- [Formal Theorem Proving by Rewarding LLMs to Decompose Proofs Hierarchically](https://arxiv.org/abs/2411.01829)
-- [List of unsolved problems in mathematics](https://en.wikipedia.org/wiki/List_of_unsolved_problems_in_mathematics)
-- [Lemma in mathematics](https://en.wikipedia.org/wiki/Lemma_(mathematics))
-
-## Practical
-
-### Where do I start?
-
-1. [litepaper.md](litepaper.md)
-2. [getting-started.md](getting-started.md)
+Miners compete to produce valid proofs. Validators check proofs and publish
+reward weights. Both help test whether AI systems can produce verified reasoning
+at scale.
