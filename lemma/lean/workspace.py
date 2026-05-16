@@ -7,6 +7,7 @@ import shutil
 from pathlib import Path
 
 from lemma.lean.proof_metrics import write_proof_metrics_probe
+from lemma.lean.submission_policy import submission_axiom_check_names, submission_policy_for_problem
 from lemma.problems.base import Problem
 
 
@@ -52,6 +53,7 @@ def materialize_workspace(
     *,
     preserve_lake: bool = False,
     include_proof_metrics_probe: bool = False,
+    submission_policy: str | None = None,
 ) -> None:
     """
     Write Challenge, Solution, Submission, lakefile, toolchain, and axiom check driver.
@@ -60,6 +62,8 @@ def materialize_workspace(
     If ``preserve_lake`` is True and ``dest/.lake`` already exists, source files are
     overwritten in place so Lake can incrementally rebuild ``Submission`` only.
     """
+    policy = submission_policy_for_problem(problem, submission_policy)
+    thm = problem.theorem_name
     if preserve_lake and dest.exists() and (dest / ".lake").is_dir():
         (dest / "Challenge.lean").write_text(problem.challenge_source(), encoding="utf-8")
         (dest / "Solution.lean").write_text(problem.solution_source(), encoding="utf-8")
@@ -67,12 +71,7 @@ def materialize_workspace(
         (dest / "lean-toolchain").write_text(problem.lean_toolchain.strip() + "\n", encoding="utf-8")
         lake = _lakefile_toml(problem)
         (dest / "lakefile.toml").write_text(lake, encoding="utf-8")
-        thm = problem.theorem_name
-        axiom_check = f"""import Submission
-
-#print axioms Submission.{thm}
-"""
-        (dest / "AxiomCheck.lean").write_text(axiom_check, encoding="utf-8")
+        (dest / "AxiomCheck.lean").write_text(_axiom_check_source(problem, submission_lean, policy), encoding="utf-8")
         if include_proof_metrics_probe:
             write_proof_metrics_probe(dest, thm)
         return
@@ -89,15 +88,10 @@ def materialize_workspace(
 
     (dest / "lakefile.toml").write_text(_lakefile_toml(problem), encoding="utf-8")
 
-    thm = problem.theorem_name
     # Check axioms on the miner's theorem in ``Submission`` (not ``Solution``): the
     # Solution module only bridges Challenge ↔ Submission and may not expose names
     # the way ``lake env lean`` expects for every workspace layout.
-    axiom_check = f"""import Submission
-
-#print axioms Submission.{thm}
-"""
-    (dest / "AxiomCheck.lean").write_text(axiom_check, encoding="utf-8")
+    (dest / "AxiomCheck.lean").write_text(_axiom_check_source(problem, submission_lean, policy), encoding="utf-8")
     if include_proof_metrics_probe:
         write_proof_metrics_probe(dest, thm)
 
@@ -126,3 +120,10 @@ name = "Solution"
 [[lean_lib]]
 name = "Submission"
 '''
+
+
+def _axiom_check_source(problem: Problem, submission_lean: str, policy: str) -> str:
+    lines = ["import Submission", ""]
+    for name in submission_axiom_check_names(problem, submission_lean, policy=policy):
+        lines.append(f"#print axioms Submission.{name}")
+    return "\n".join(lines) + "\n"

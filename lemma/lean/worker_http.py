@@ -115,7 +115,8 @@ class _VerifyHandler(BaseHTTPRequestHandler):
             vt = settings.lean_verify_timeout_s
 
         sandbox = lean_sandbox_from_settings(settings, vt)
-        vr = sandbox.verify(prob, proof_script)
+        policy = str(body.get("submission_policy") or "")
+        vr = sandbox.verify(prob, proof_script, submission_policy=policy or None)
         self._send_json(200, vr.model_dump())
 
 

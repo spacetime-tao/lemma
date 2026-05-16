@@ -16,18 +16,17 @@ from typing import Any, Literal
 from loguru import logger
 from pydantic import BaseModel
 
-from lemma.lean.cheats import (
-    axiom_scan_ok,
-    cheat_scan_stderr_tail,
-    lake_build_environment_failed,
-    lean_driver_failed,
-    scan_submission_for_cheats,
-)
+from lemma.lean.cheats import axiom_scan_ok, lake_build_environment_failed, lean_driver_failed
 from lemma.lean.proof_metrics import (
     LeanProofMetrics,
     collect_host_proof_metrics,
     docker_proof_metrics_shell_fragment,
     parse_proof_metrics_line,
+)
+from lemma.lean.submission_policy import (
+    scan_submission_policy,
+    submission_policy_for_problem,
+    submission_policy_stderr_tail,
 )
 from lemma.lean.workspace import materialize_workspace, workspace_verify_cache_key
 from lemma.problems.base import Problem
@@ -121,6 +120,7 @@ VerifyReason = Literal[
     "compile_error",
     "axiom_violation",
     "cheat_token",
+    "policy_violation",
     "timeout",
     "oom",
     "docker_error",
@@ -173,13 +173,20 @@ class LeanSandbox:
         _dw = docker_worker if docker_worker is not None else os.environ.get("LEMMA_LEAN_DOCKER_WORKER")
         self.docker_worker = (_dw or "").strip()
 
-    def verify(self, problem: Problem, submission_src: str) -> VerifyResult:
-        cheat = scan_submission_for_cheats(submission_src)
-        if not cheat.ok:
+    def verify(
+        self,
+        problem: Problem,
+        submission_src: str,
+        *,
+        submission_policy: str | None = None,
+    ) -> VerifyResult:
+        policy = submission_policy_for_problem(problem, submission_policy)
+        scan = scan_submission_policy(problem, submission_src, policy=policy)
+        if not scan.ok:
             return VerifyResult(
                 passed=False,
-                reason="cheat_token",
-                stderr_tail=cheat_scan_stderr_tail(cheat),
+                reason="policy_violation",
+                stderr_tail=submission_policy_stderr_tail(scan),
             )
 
         if self.workspace_cache_dir is None:
@@ -191,6 +198,7 @@ class LeanSandbox:
                     submission_src,
                     preserve_lake=False,
                     include_proof_metrics_probe=self.proof_metrics_enabled,
+                    submission_policy=policy,
                 )
                 return self._verify_docker(work) if self.use_docker else self._verify_host(work)
             finally:
@@ -215,6 +223,7 @@ class LeanSandbox:
                     submission_src,
                     preserve_lake=True,
                     include_proof_metrics_probe=self.proof_metrics_enabled,
+                    submission_policy=policy,
                 )
                 return self._verify_docker(slot) if self.use_docker else self._verify_host(slot)
 
@@ -226,6 +235,7 @@ class LeanSandbox:
                     submission_src,
                     preserve_lake=False,
                     include_proof_metrics_probe=self.proof_metrics_enabled,
+                    submission_policy=policy,
                 )
                 vr = self._verify_docker(work) if self.use_docker else self._verify_host(work)
                 if self._workspace_cache_publishable(work, vr):

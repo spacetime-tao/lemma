@@ -31,6 +31,7 @@ def test_remote_verify_http_success(monkeypatch: pytest.MonkeyPatch, tiny_proble
         assert body["verify_timeout_s"] == 120
         assert body["problem"]["id"] == "test-id"
         assert "proof_script" in body
+        assert body["submission_policy"] == "strict_envelope"
         return httpx.Response(
             200,
             json={
@@ -57,7 +58,8 @@ def test_remote_verify_http_success(monkeypatch: pytest.MonkeyPatch, tiny_proble
             "lean_verify_timeout_s": 120,
         },
     )
-    vr = run_lean_verify(s, verify_timeout_s=120, problem=tiny_problem, proof_script="theorem p : True := rfl")
+    proof = "import Mathlib\n\nnamespace Submission\n\ntheorem p : True := by\n  trivial\n\nend Submission\n"
+    vr = run_lean_verify(s, verify_timeout_s=120, problem=tiny_problem, proof_script=proof)
     assert vr.passed is True
     assert vr.reason == "ok"
 
@@ -73,12 +75,13 @@ def test_remote_verify_transport_error(monkeypatch: pytest.MonkeyPatch, tiny_pro
     monkeypatch.setattr("lemma.lean.verify_runner.httpx.Client", _client)
 
     s = LemmaSettings().model_copy(update={"lean_verify_remote_url": "http://worker.invalid"})
-    vr = run_lean_verify(s, verify_timeout_s=60, problem=tiny_problem, proof_script="theorem p : True := rfl")
+    proof = "import Mathlib\n\nnamespace Submission\n\ntheorem p : True := by\n  trivial\n\nend Submission\n"
+    vr = run_lean_verify(s, verify_timeout_s=60, problem=tiny_problem, proof_script=proof)
     assert vr.passed is False
     assert vr.reason == "remote_error"
 
 
-def test_remote_verify_cheat_scan_happens_before_http(
+def test_remote_verify_policy_scan_happens_before_http(
     monkeypatch: pytest.MonkeyPatch,
     tiny_problem: Problem,
 ) -> None:
@@ -90,13 +93,13 @@ def test_remote_verify_cheat_scan_happens_before_http(
     s = LemmaSettings().model_copy(update={"lean_verify_remote_url": "http://127.0.0.1:8787"})
     vr = run_lean_verify(s, verify_timeout_s=60, problem=tiny_problem, proof_script="theorem p : True := by sorry")
     assert vr.passed is False
-    assert vr.reason == "cheat_token"
+    assert vr.reason == "policy_violation"
 
 
 def test_remote_verify_skipped_when_url_unset(tiny_problem: Problem, monkeypatch: pytest.MonkeyPatch) -> None:
     """Without remote URL, run_lean_verify uses LeanSandbox — stub verify to avoid lake."""
 
-    def fake_verify(self: object, problem: Problem, submission_src: str):  # noqa: ARG001
+    def fake_verify(self: object, problem: Problem, submission_src: str, **kwargs: object):  # noqa: ARG001
         from lemma.lean.sandbox import VerifyResult
 
         return VerifyResult(passed=True, reason="ok", build_seconds=0.1)
@@ -109,19 +112,17 @@ def test_remote_verify_skipped_when_url_unset(tiny_problem: Problem, monkeypatch
             "lean_use_docker": False,
         },
     )
-    vr = run_lean_verify(s, verify_timeout_s=300, problem=tiny_problem, proof_script="theorem p : True := rfl")
+    proof = "import Mathlib\n\nnamespace Submission\n\ntheorem p : True := by\n  trivial\n\nend Submission\n"
+    vr = run_lean_verify(s, verify_timeout_s=300, problem=tiny_problem, proof_script=proof)
     assert vr.passed is True
 
 
-def test_local_verify_delegates_cheat_scan_to_sandbox(
+def test_local_verify_policy_scan_happens_before_sandbox(
     tiny_problem: Problem,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    def fake_verify(self: object, problem: Problem, submission_src: str):  # noqa: ARG001
-        from lemma.lean.sandbox import VerifyResult
-
-        assert "sorry" in submission_src
-        return VerifyResult(passed=False, reason="cheat_token", stderr_tail="sandbox scan")
+    def fake_verify(self: object, problem: Problem, submission_src: str, **kwargs: object):  # noqa: ARG001
+        raise AssertionError("sandbox should not run for a policy violation")
 
     monkeypatch.setattr("lemma.lean.verify_runner.LeanSandbox.verify", fake_verify)
 
@@ -133,12 +134,11 @@ def test_local_verify_delegates_cheat_scan_to_sandbox(
     )
     vr = run_lean_verify(s, verify_timeout_s=300, problem=tiny_problem, proof_script="theorem p : True := by sorry")
     assert vr.passed is False
-    assert vr.reason == "cheat_token"
-    assert vr.stderr_tail == "sandbox scan"
+    assert vr.reason == "policy_violation"
 
 
 def test_local_verify_passes_proof_metrics_flag(tiny_problem: Problem, monkeypatch: pytest.MonkeyPatch) -> None:
-    def fake_verify(self: object, problem: Problem, submission_src: str):  # noqa: ARG001
+    def fake_verify(self: object, problem: Problem, submission_src: str, **kwargs: object):  # noqa: ARG001
         from lemma.lean.sandbox import LeanSandbox, VerifyResult
 
         assert isinstance(self, LeanSandbox)
@@ -154,5 +154,6 @@ def test_local_verify_passes_proof_metrics_flag(tiny_problem: Problem, monkeypat
             "lemma_lean_proof_metrics_enabled": True,
         },
     )
-    vr = run_lean_verify(s, verify_timeout_s=300, problem=tiny_problem, proof_script="theorem p : True := rfl")
+    proof = "import Mathlib\n\nnamespace Submission\n\ntheorem p : True := by\n  trivial\n\nend Submission\n"
+    vr = run_lean_verify(s, verify_timeout_s=300, problem=tiny_problem, proof_script=proof)
     assert vr.passed is True

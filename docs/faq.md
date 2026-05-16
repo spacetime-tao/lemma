@@ -225,6 +225,27 @@ in Lean. Lemma is not affiliated with or partnered with Google DeepMind.
 The point of bounties is to give miners a path toward harder, more meaningful
 proofs while keeping the regular subnet loop simple and steady.
 
+## What rules do proof files follow?
+
+Every submitted proof file must prove the exact theorem Lemma published. Miners
+cannot change the theorem, add extra assumptions, use `sorry`, or add Lean
+features that change the rules instead of proving the target.
+
+Timed cadence tasks are intentionally strict. A cadence submission uses the exact
+imports, opens `namespace Submission`, proves one exact target theorem, and ends
+the namespace. Helper definitions and helper lemmas are not part of the cadence
+default. Lean can support them in general, but Lemma keeps the timed loop narrow
+because those rounds are frequent validator traffic and should be easy to check
+the same way every time.
+
+Bounties are more flexible. A bounty proof may use helper definitions and helper
+lemmas because harder proofs often need smaller pieces along the way. Those
+helpers are still checked. They cannot change the target, add new assumptions,
+add unsafe shortcuts, or bypass Lean's checker.
+
+The same policy travels with local and remote verification, so a proof should
+not pass locally under one set of rules and fail remotely under another.
+
 ## What are `sorry` and new axioms?
 
 In Lean, `sorry` is a placeholder for an unfinished proof. It tells Lean to
@@ -249,17 +270,6 @@ checker, it should not earn proof credit.
 
 This is why formal verification matters. The proof has to pass the checker, not
 just look convincing.
-
-## Is this subnet focused on revenue?
-
-No. Lemma is not built around a traditional revenue model.
-
-The value comes from rewarding AI systems for correct, machine-checkable
-reasoning. Today that means formal theorem proofs. Over time, the same
-capability can support harder mathematics, safer software, cryptography,
-algorithms, and other domains where correctness is valuable.
-
-The market decides how valuable that capability is.
 
 ## What are UID, weights, and alpha?
 

@@ -88,5 +88,10 @@ metagraph, not from a local miner log line.
 ## Proof contract
 
 The returned `proof_script` must be a complete Lean file in the `Submission`
-namespace, proving the exact theorem name the validator sent. `sorry`, new
-axioms, changed theorem statements, and incomplete files are rejected.
+namespace, proving the exact theorem name and statement the validator sent.
+
+Cadence submissions are allowlisted: exact imports, `namespace Submission`, one
+exact target theorem, the proof body, and `end Submission`. Extra imports,
+helper declarations, custom syntax/macros/elaborators, notation, attributes,
+unsafe/native/debug hooks, new assumptions, changed theorem statements, and
+incomplete files are rejected.

@@ -4,8 +4,11 @@ import hashlib
 import json
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
+from lemma.bounty.client import BountyError, load_registry, target_sha256
 from lemma.cli.main import main
+from lemma.lean.problem_codec import problem_from_payload
 
 PROBLEM = {
     "id": "fc.test",
@@ -95,6 +98,8 @@ def test_bounty_list_and_show_use_registry(monkeypatch, tmp_path) -> None:
     assert shown.exit_code == 0
     assert "Test bounty" in shown.output
     assert "lemma bounty verify fc.test" in shown.output
+    assert "target_sha256" in shown.output
+    assert "policy:       restricted_helpers" in shown.output
 
 
 def test_bounty_registry_hash_pin_mismatch_fails(monkeypatch, tmp_path) -> None:
@@ -108,6 +113,75 @@ def test_bounty_registry_hash_pin_mismatch_fails(monkeypatch, tmp_path) -> None:
 
     assert result.exit_code != 0
     assert "sha256 mismatch" in result.output
+
+
+def test_bounty_registry_rejects_target_hash_mismatch() -> None:
+    payload = {
+        "schema_version": 1,
+        "bounties": [
+            {
+                "id": "fc.test",
+                "title": "Test bounty",
+                "status": "open",
+                "reward": "100 TEST",
+                "source": {"name": "Formal Conjectures"},
+                "target_sha256": "0" * 64,
+                "problem": PROBLEM,
+            }
+        ],
+    }
+
+    with pytest.raises(BountyError, match="target_sha256 mismatch"):
+        load_registry(json.dumps(payload).encode())
+
+
+def test_bounty_registry_rejects_formal_proof_normal_bounty() -> None:
+    payload = {
+        "schema_version": 1,
+        "bounties": [
+            {
+                "id": "fc.test",
+                "title": "Test bounty",
+                "status": "open",
+                "reward": "100 TEST",
+                "source": {
+                    "name": "Formal Conjectures",
+                    "formal_conjectures": {"formal_proof": True, "formal_proof_url": "https://example.com/proof.lean"},
+                },
+                "problem": PROBLEM,
+            }
+        ],
+    }
+
+    with pytest.raises(BountyError, match="formal_proof"):
+        load_registry(json.dumps(payload).encode())
+
+
+def test_bounty_registry_allows_formal_proof_porting_bounty() -> None:
+    problem = problem_from_payload(PROBLEM)
+    payload = {
+        "schema_version": 1,
+        "bounties": [
+            {
+                "id": "fc.test",
+                "kind": "proof_porting",
+                "title": "Test bounty",
+                "status": "open",
+                "reward": "100 TEST",
+                "source": {
+                    "name": "Formal Conjectures",
+                    "formal_conjectures": {"formal_proof_url": "https://example.com/proof.lean"},
+                },
+                "target_sha256": target_sha256(problem),
+                "problem": PROBLEM,
+            }
+        ],
+    }
+
+    registry = load_registry(json.dumps(payload).encode())
+
+    assert registry.get("fc.test").kind == "proof_porting"
+    assert registry.get("fc.test").submission_policy == "restricted_helpers"
 
 
 def test_bounty_verify_calls_lean_verify(monkeypatch, tmp_path) -> None:

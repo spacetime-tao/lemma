@@ -1,20 +1,6 @@
-"""Cheat scanner."""
+"""Lean verifier axiom and environment-output helpers."""
 
-from lemma.lean.cheats import (
-    axiom_scan_ok,
-    lake_build_environment_failed,
-    scan_submission_for_cheats,
-)
-
-
-def test_scan_sorry() -> None:
-    r = scan_submission_for_cheats("theorem t : True := by sorry")
-    assert not r.ok
-
-
-def test_scan_axiom_decl() -> None:
-    r = scan_submission_for_cheats("axiom bad : False\ntheorem t : True := trivial")
-    assert not r.ok
+from lemma.lean.cheats import axiom_scan_ok, lake_build_environment_failed
 
 
 def test_lake_build_environment_failed_detects_git_dns() -> None:

@@ -14,6 +14,7 @@ import httpx
 from lemma import __version__
 from lemma.common.config import LemmaSettings
 from lemma.lean.problem_codec import problem_from_payload
+from lemma.lean.submission_policy import VALID_SUBMISSION_POLICIES
 from lemma.problems.base import Problem
 
 BOUNTY_SUBMISSION_SCHEMA_VERSION = 1
@@ -35,6 +36,9 @@ class Bounty:
     terms_url: str | None
     source: dict[str, Any]
     problem: Problem
+    kind: str
+    submission_policy: str
+    target_sha256: str
 
     @classmethod
     def from_payload(cls, row: dict[str, Any]) -> Bounty:
@@ -49,6 +53,23 @@ class Bounty:
         source = row.get("source") or {}
         if not isinstance(source, dict):
             raise BountyError(f"registry bounty {bounty_id!r} source must be an object")
+        problem = problem_from_payload(problem_payload)
+        kind = str(row.get("kind") or "formal_target").strip().lower()
+        policy = str(row.get("submission_policy") or problem.extra.get("submission_policy") or "restricted_helpers")
+        if policy not in VALID_SUBMISSION_POLICIES:
+            raise BountyError(f"registry bounty {bounty_id!r} has unknown submission_policy: {policy}")
+        target_hash = target_sha256(problem)
+        expected_target_hash = _normalize_sha256_pin(str(row.get("target_sha256") or ""))
+        if expected_target_hash and expected_target_hash != target_hash:
+            raise BountyError(
+                f"registry bounty {bounty_id!r} target_sha256 mismatch: got {target_hash}, "
+                f"expected {expected_target_hash}",
+            )
+        if _formal_conjectures_has_formal_proof(source) and kind != "proof_porting":
+            raise BountyError(
+                f"registry bounty {bounty_id!r} has Formal Conjectures formal_proof metadata; "
+                "use kind=proof_porting instead of a normal bounty",
+            )
         return cls(
             id=bounty_id,
             title=title,
@@ -57,7 +78,10 @@ class Bounty:
             deadline=str(row["deadline"]).strip() if row.get("deadline") else None,
             terms_url=str(row["terms_url"]).strip() if row.get("terms_url") else None,
             source=dict(source),
-            problem=problem_from_payload(problem_payload),
+            problem=problem,
+            kind=kind,
+            submission_policy=policy,
+            target_sha256=target_hash,
         )
 
 
@@ -84,6 +108,19 @@ def _normalize_sha256_pin(value: str | None) -> str | None:
     if raw.startswith("sha256:"):
         raw = raw.removeprefix("sha256:")
     return raw or None
+
+
+def target_sha256(problem: Problem) -> str:
+    return hashlib.sha256(problem.challenge_source().encode("utf-8")).hexdigest()
+
+
+def _formal_conjectures_has_formal_proof(source: dict[str, Any]) -> bool:
+    fc = source.get("formal_conjectures")
+    if not isinstance(fc, dict):
+        return False
+    if bool(fc.get("formal_proof") or fc.get("has_formal_proof")):
+        return True
+    return bool(str(fc.get("formal_proof_url") or "").strip())
 
 
 def _read_registry_bytes(source: str, timeout_s: float) -> bytes:
@@ -152,6 +189,7 @@ def verify_bounty_proof(settings: LemmaSettings, bounty: Bounty, proof_script: s
         verify_timeout_s=settings.lean_verify_timeout_s,
         problem=bounty.problem,
         proof_script=proof_script,
+        submission_policy=bounty.submission_policy,
     )
 
 

@@ -8,9 +8,13 @@ import httpx
 from loguru import logger
 
 from lemma.common.config import LemmaSettings
-from lemma.lean.cheats import cheat_scan_stderr_tail, scan_submission_for_cheats
 from lemma.lean.problem_codec import problem_to_payload
 from lemma.lean.sandbox import LeanSandbox, VerifyResult
+from lemma.lean.submission_policy import (
+    scan_submission_policy,
+    submission_policy_for_problem,
+    submission_policy_stderr_tail,
+)
 from lemma.problems.base import Problem
 
 
@@ -38,21 +42,24 @@ def run_lean_verify(
     verify_timeout_s: int,
     problem: Problem,
     proof_script: str,
+    submission_policy: str | None = None,
 ) -> VerifyResult:
     """Verify locally or via worker; the remote path pre-scans before POST."""
+    policy = submission_policy_for_problem(problem, submission_policy)
+    scan = scan_submission_policy(problem, proof_script, policy=policy)
+    if not scan.ok:
+        return VerifyResult(
+            passed=False,
+            reason="policy_violation",
+            stderr_tail=submission_policy_stderr_tail(scan),
+        )
+
     base = (settings.lean_verify_remote_url or "").strip()
     if base:
-        cheat = scan_submission_for_cheats(proof_script)
-        if not cheat.ok:
-            return VerifyResult(
-                passed=False,
-                reason="cheat_token",
-                stderr_tail=cheat_scan_stderr_tail(cheat),
-            )
-        return _verify_via_http(settings, verify_timeout_s, problem, proof_script, base.rstrip("/"))
+        return _verify_via_http(settings, verify_timeout_s, problem, proof_script, base.rstrip("/"), policy)
 
     sb = lean_sandbox_from_settings(settings, verify_timeout_s)
-    return sb.verify(problem, proof_script)
+    return sb.verify(problem, proof_script, submission_policy=policy)
 
 
 def _verify_via_http(
@@ -61,6 +68,7 @@ def _verify_via_http(
     problem: Problem,
     proof_script: str,
     base_url: str,
+    submission_policy: str,
 ) -> VerifyResult:
     margin = float(settings.lean_verify_remote_timeout_margin_s)
     read_s = float(verify_timeout_s) + margin
@@ -69,6 +77,7 @@ def _verify_via_http(
         "problem": problem_to_payload(problem),
         "proof_script": proof_script,
         "verify_timeout_s": int(verify_timeout_s),
+        "submission_policy": submission_policy,
     }
     headers: dict[str, str] = {"Content-Type": "application/json"}
     tok = (settings.lean_verify_remote_bearer or "").strip()

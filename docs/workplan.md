@@ -251,8 +251,8 @@ not let parallel checklists drift.
    named in [`problem-supply-policy.md`](problem-supply-policy.md).
 8. Promote solved contest-style curated rows only after source/license review
    and witness-proof verification.
-9. Keep campaign/bounty protocol machinery out of the live path until a locked
-   open-problem target requires it.
+9. Keep campaign/bounty protocol machinery separate from the cadence live path;
+   expand it only when a locked open-problem target requires it.
 10. Continue deleting or isolating optional research surfaces only when they
    touch live defaults or public operator UX.
 

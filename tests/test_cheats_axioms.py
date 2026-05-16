@@ -18,3 +18,13 @@ def test_axiom_scan_ok_empty_axioms_rfl() -> None:
     text = "'Submission.foo' does not depend on any axioms\n"
     ok, found = axiom_scan_ok(text)
     assert ok and found == set()
+
+
+def test_axiom_scan_ok_unions_multiple_prints() -> None:
+    text = """
+'Submission.a' does not depend on any axioms
+'Submission.b' depends on axioms: [propext]
+'Submission.c' depends on axioms: [Classical.choice, Quot.sound]
+"""
+    ok, found = axiom_scan_ok(text)
+    assert ok and found == {"propext", "Classical.choice", "Quot.sound"}

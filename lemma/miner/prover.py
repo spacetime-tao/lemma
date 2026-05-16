@@ -60,6 +60,8 @@ Lean contract:
   same name and statement as the challenge, and `end Submission`.
 - Prove the theorem as stated; do not change the statement or add assumptions.
 - This namespace is required because `Solution.lean` imports `Submission` and checks `Submission.<theorem_name>`.
+- Use only the imports from the challenge. Do not add helper declarations, attributes, notation, macros, custom
+  syntax, `set_option`, or top-level commands outside the exact target theorem.
 - Correctness comes first. Mathlib lemmas, `simp`, `rw`, `ring`, `linarith`, `exact`, `calc`, `cases`, and induction
   are all allowed when appropriate.
 - Do not use `sorry`, `admit`, `axiom`, or custom unsound declarations.

@@ -1,6 +1,6 @@
 # Inference models
 
-Lemma uses OpenAI-compatible HTTP (`/v1/chat/completions`). [Chutes](https://chutes.ai/) is the default documented host.
+Lemma uses OpenAI-compatible HTTP (`/v1/chat/completions`). [Chutes](https://chutes.ai/) is the default documented host, not a protocol requirement. Lemma rewards valid Lean proofs, not a specific provider.
 
 ## What “OpenAI-compatible” means
 

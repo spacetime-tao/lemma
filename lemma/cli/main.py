@@ -1061,6 +1061,8 @@ def bounty_show_cmd(bounty_id: str) -> None:
     click.echo(f"  theorem_id:   {bounty.problem.id}")
     click.echo(f"  theorem_name: {bounty.problem.theorem_name}")
     click.echo(f"  split:        {bounty.problem.split}")
+    click.echo(f"  target_sha256: {bounty.target_sha256}")
+    click.echo(f"  policy:       {bounty.submission_policy}")
     click.echo("")
     click.echo(stylize("Next", fg="cyan"))
     click.echo(f"  lemma bounty verify {bounty.id} --submission Submission.lean")

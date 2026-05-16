@@ -2,6 +2,7 @@
   "bounties": [
     {
       "id": "smoke.two_plus_two",
+      "kind": "formal_target",
       "problem": {
         "extra": {
           "informal_statement": "Prove that two plus two equals four."
@@ -22,6 +23,8 @@
         "url": "https://lemmasub.net/bounties/"
       },
       "status": "open",
+      "submission_policy": "restricted_helpers",
+      "target_sha256": "cfe3cc12caa3ef57ccb6114ca41241c0e6636c4a14d5b30db06745771a67f6f6",
       "terms_url": "https://lemmasub.net/bounties/",
       "title": "Smoke test: two plus two"
     }

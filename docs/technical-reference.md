@@ -194,7 +194,8 @@ Roughly: (challenges answered) × ($/challenge). Measure from logs.
 | --------------------- | ------- |
 | `compile_error` | `lake build` did not succeed or Lean could not run axiom check — **often** Mathlib fetch/build or sandbox limits, not a bad tactic |
 | `axiom_violation` | The proof relied on an unapproved extra assumption instead of proving the theorem under the published rules |
-| `cheat_token` | Banned shortcuts, such as unfinished-proof placeholders |
+| `policy_violation` | `Submission.lean` did not match Lemma's allowlist: exact imports, exact `Submission` namespace, exact target, no new trusted assumptions or bypass features |
+| `cheat_token` | Legacy name for banned shortcuts, such as unfinished-proof placeholders |
 | `timeout` / `oom` | Resource limits |
 | `docker_error` | Sandbox error |
 | `remote_error` | Remote Lean worker transport or response error |
@@ -202,7 +203,7 @@ Roughly: (challenges answered) × ($/challenge). Measure from logs.
 Validator epoch summaries and exported round summaries count `timeout`, `oom`,
 `docker_error`, and `remote_error` as verifier infrastructure failures. They do
 not score the miner, but they are kept separate from actual Lean
-compile/axiom/cheat proof failures for operator diagnosis and credibility
+compile/axiom/policy proof failures for operator diagnosis and credibility
 accounting.
 
 **`lemma proof preview` says FAIL but the proof is just `rfl` on arithmetic literals:** The LLM answer may still be **mathematically fine**. Logs like `no previous manifest`, `creating one from scratch`, `mathlib: running post-update hooks`, then `error: build failed` usually mean **Lake is building Mathlib** (slow), **post-update hooks** failed, **network blocked** (Docker `network_mode=none`), or **timeout** — not that `rfl` is wrong. Fix the **environment** (prebuilt `LEAN_SANDBOX_IMAGE`, `LEAN_SANDBOX_NETWORK=bridge`, higher `LEAN_VERIFY_TIMEOUT_S`) and retry.
