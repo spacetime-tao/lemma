@@ -78,6 +78,13 @@ def test_default_rolling_alpha_is_live_policy(monkeypatch) -> None:
     assert judge_profile_dict(s)["scoring_policy"]["lemma_scoring_rolling_alpha"] == 0.08
 
 
+def test_uid_variants_are_default_live_policy(monkeypatch) -> None:
+    monkeypatch.delenv("LEMMA_UID_VARIANT_PROBLEMS", raising=False)
+    s = LemmaSettings(_env_file=None)
+    assert s.lemma_uid_variant_problems is True
+    assert judge_profile_dict(s)["scoring_policy"]["lemma_uid_variant_problems"] is True
+
+
 def test_judge_profile_hash_changes_when_rolling_policy_changes() -> None:
     a = LemmaSettings(lemma_scoring_rolling_alpha=0.08)
     b = LemmaSettings(lemma_scoring_rolling_alpha=0.2)

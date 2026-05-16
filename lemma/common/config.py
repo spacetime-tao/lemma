@@ -122,8 +122,7 @@ class LemmaSettings(BaseSettings):
         default="quantize",
         validation_alias="LEMMA_PROBLEM_SEED_MODE",
         description=(
-            "quantize: fixed N-block windows (`LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`) — same theorem for everyone "
-            "between rotations. "
+            "quantize: fixed N-block windows (`LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`) for the representative theorem. "
             "subnet_epoch: seed from subnet Tempo stride via chain RPC (alternative cadence)."
         ),
     )
@@ -652,7 +651,7 @@ class LemmaSettings(BaseSettings):
         description="Rolling-score impact multiplier for extreme problems.",
     )
     lemma_uid_variant_problems: bool = Field(
-        default=False,
+        default=True,
         validation_alias="LEMMA_UID_VARIANT_PROBLEMS",
         description="Give each queried UID a deterministic same-split theorem variant.",
     )

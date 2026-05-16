@@ -115,7 +115,7 @@ Timeout values are subnet policy: the operator publishes a single canonical `.en
 
 **Miners** have an explicit **response** deadline: the synapse **`timeout`** / forward HTTP wait (derived from blocks until the next seed edge × `LEMMA_BLOCK_TIME_SEC_ESTIMATE`, then clamped). If your axon does not complete the HTTP response in time, that round does not count as a successful candidate answer from you.
 
-**Validators** do **not** get a matching global rule like “finish verifying and scoring **every** successful miner before block *N* or before the next theorem.” Lemma picks the theorem set when `run_epoch` **starts** and runs forward → verify → score for that round; advancing blocks do **not** swap the theorem mid-batch or void in-flight scoring. By default that theorem set is one shared theorem; with `LEMMA_UID_VARIANT_PROBLEMS=1`, it is one deterministic same-split theorem variant per queried UID. There is **no** separate “validator batch clock” in addition to the per-proof limits below. You still want fast hardware and tuning so each epoch completes in reasonable wall-clock time and stays competitive with other validators.
+**Validators** do **not** get a matching global rule like “finish verifying and scoring **every** successful miner before block *N* or before the next theorem.” Lemma picks the theorem set when `run_epoch` **starts** and runs forward → verify → score for that round; advancing blocks do **not** swap the theorem mid-batch or void in-flight scoring. Each queried UID receives one deterministic same-split theorem variant for the round. There is **no** separate “validator batch clock” in addition to the per-proof limits below. You still want fast hardware and tuning so each epoch completes in reasonable wall-clock time and stays competitive with other validators.
 
 **What happens if one proof hits `LEAN_VERIFY_TIMEOUT_S`?** That proof is **not** verified for the round (verify reason `timeout`), so it records no positive proof event. Validator-local timeout/OOM/Docker failures are kept separate from ordinary Lean proof failures and do not update that UID's rolling score. Other miners in the same round are unaffected.
 
@@ -156,9 +156,10 @@ Subnet policy and catalog design decide what appears in challenges; the operator
 
 ## Sync across validators
 
-One validator, one round: every queried miner gets the same synapse.
+One validator, one round: every queried miner gets a challenge synapse for that
+UID's deterministic same-split theorem variant.
 
-Across validators: default `LEMMA_PROBLEM_SEED_MODE=quantize` rotates the shared theorem every `LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS` (default **100** blocks; at ~12 s/block that is about **20 minutes** per theorem). Subnet operators may switch to `subnet_epoch` to follow on-chain Tempo instead. Same code, problem source, registry hashes, and consistent RPC matter.
+Across validators: default `LEMMA_PROBLEM_SEED_MODE=quantize` rotates the representative theorem window every `LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS` (default **100** blocks; at ~12 s/block that is about **20 minutes** per theorem). Subnet operators may switch to `subnet_epoch` to follow on-chain Tempo instead. Same code, problem source, registry hashes, and consistent RPC matter.
 
 Within one validator, a round finishes before the code waits for the **next subnet epoch boundary**.
 

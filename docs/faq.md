@@ -120,8 +120,8 @@ involve networks and tokens; the work and reward mechanics are different.
 ### Why Lean?
 
 Lean gives Lemma an objective checker. Validators do not grade style or
-persuasive writing. They run the same pinned verifier against the same theorem
-statement and submitted proof file.
+persuasive writing. They run the same pinned verifier against the exact theorem
+statement sent to that UID and the submitted proof file.
 
 ## Bittensor roles
 

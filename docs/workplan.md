@@ -8,7 +8,7 @@ not let parallel checklists drift.
 
 - Repository: `spacetime-tao/lemma`, local checkout `LOCAL_WORKSPACE/lemma`.
 - Current uncommitted working batch: difficulty-weighted rolling scoring plus
-  default-off UID-specific theorem variants. It has local ruff, mypy, full pytest,
+  UID-specific theorem variants. It has local ruff, mypy, full pytest,
   and non-Docker generated-template verification; the Docker Lean template gate
   could not complete locally because the Docker daemon was not running.
 - Latest runtime-impacting batch covered by this tracker: `28fb364` (`Expand
@@ -102,8 +102,8 @@ not let parallel checklists drift.
   `rolling_score_by_uid`, summary/dashboard rolling-score fields, and a
   `validator_weight` full-export field; removed live dependence on proof
   length/Pareto cost for default chain weights.
-- Local UID-variant scaffold: added `LEMMA_UID_VARIANT_PROBLEMS=0` default-off
-  mode where queried UIDs receive deterministic same-split theorem variants
+- Local UID-variant scaffold: added `LEMMA_UID_VARIANT_PROBLEMS=1` default
+  behavior where queried UIDs receive deterministic same-split theorem variants
   bound through theorem id, theorem statement, metronome id, and Lean
   verification.
 - Validator inbound proof-size boundary: validator epochs reject oversized

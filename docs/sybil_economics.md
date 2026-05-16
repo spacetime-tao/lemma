@@ -14,7 +14,7 @@ Canonical machine-readable notes: [`knowledge/sybil.realities.yaml`](../knowledg
 | **Difficulty-weighted rolling score** | `LEMMA_SCORING_ROLLING_ALPHA=0.08` | Pass/fail events update a per-UID rolling score; hard and extreme passes lift faster, while easy misses decay faster. |
 | **Identical-payload verify reuse** | None | Validators may reuse one Lean verification result for identical payloads inside an epoch. This saves verifier work; it does not drop a miner reward entry. |
 | **Same-coldkey partition** | `LEMMA_SCORING_COLDKEY_PARTITION=1` (default on) | After weights are computed, hotkeys sharing one coldkey are capped to one coldkey allocation and that allocation is split among those successful hotkeys. |
-| **UID-specific variants** | `LEMMA_UID_VARIANT_PROBLEMS=0` by default | Optional mode where each queried UID receives a deterministic same-split theorem variant, making extra accounts require extra proof work. |
+| **UID-specific variants** | `LEMMA_UID_VARIANT_PROBLEMS=1` by default | Each queried UID receives a deterministic same-split theorem variant, making extra accounts require extra proof work. |
 
 Neither mechanism limits how many **distinct coldkeys** an attacker can register. Creating another coldkey is cheap relative to sybil resistance expectations.
 
@@ -42,8 +42,8 @@ sybil deterrent    ≈ cost_of_N_slots > reward_from_running_N_parallel_miners
 1. **Do not** treat same-coldkey partitioning as sybil defense; it only prevents one coldkey from multiplying rewards across many hotkeys.
 2. **Do** assume attackers can obtain **many coldkeys** if slots are cheap or rewards are high.
 3. **Prefer** tasks where the useful work is the proof that verifies, not another subjective ranking signal.
-4. **Use** UID-specific variants when copy-across-account pressure matters more
-   than shared-theorem comparability.
+4. **Keep** UID-specific variants active so copy-across-account pressure turns
+   into extra proof work.
 
 ## Decision gate before Sybil or reward scoring changes
 

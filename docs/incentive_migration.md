@@ -16,7 +16,7 @@ expanded templates, and optional protocol hooks (env-gated).
 | Same-coldkey partition | `LEMMA_SCORING_COLDKEY_PARTITION=1` — after rolling weights are computed, hotkeys under the same coldkey share one coldkey allocation. |
 | Legacy reputation fields | `LEMMA_REPUTATION_STATE_PATH` still stores older `ema_by_uid` / `credibility_by_uid` fields for compatibility, but live chain weights use `rolling_score_by_uid`. |
 | Proof-only live score | A Lean-verified proof moves the rolling score up; an ordinary miss or Lean failure moves it down. Verifier-local infra failures do not update that UID. |
-| UID-specific variants | `LEMMA_UID_VARIANT_PROBLEMS=0` by default. When enabled, each queried UID receives a deterministic same-split theorem variant for the round. |
+| UID-specific variants | `LEMMA_UID_VARIANT_PROBLEMS=1` by default. Each queried UID receives a deterministic same-split theorem variant for the round. |
 | Multi-theorem epochs | `LEMMA_EPOCH_PROBLEM_COUNT` (default **1**) — sequential challenges per epoch. |
 | Hybrid problem supply | `LEMMA_PROBLEM_SOURCE=hybrid` (default) — deterministic 60 / 40 mix of generated templates and curated catalog rows; validators pin `LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED`. |
 | Judge hardening | Fenced miner blocks + strict single-object JSON rubric parse (anchored rubric spans + skip-invalid candidates when multiple `{...}` fragments appear; repeated valid rubric occurrences fail closed even when identical). |

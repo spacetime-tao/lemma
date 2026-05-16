@@ -40,10 +40,8 @@ easy miss is more informative than a hard miss. The move is smoothed over time,
 so one miss should not erase a strong recent history. Verifier-local
 infrastructure failures are excluded from the score update for that UID.
 
-By default, all queried UIDs share one theorem. `LEMMA_UID_VARIANT_PROBLEMS=1`
-is an opt-in anti-Sybil mode where each queried UID receives a deterministic
-same-split variant. This does not prove human identity; it makes extra accounts
-require extra proof work.
+Each queried UID receives a deterministic same-split theorem variant. This does
+not prove human identity; it makes extra accounts require extra proof work.
 
 ## Out Of Scope For Rewards
 
