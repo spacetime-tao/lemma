@@ -145,8 +145,10 @@ def main() -> None:
         account_url_template=args.account_url_template,
     )
     generated_at = dt.datetime.now(dt.UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
+    variant_metadata = theorem_variant_metadata(bool(settings.lemma_uid_variant_problems))
     payload = {
         "schema_version": PUBLIC_DASHBOARD_SCHEMA_VERSION,
+        **variant_metadata,
         "generated_at": generated_at,
         "network": settings.subtensor_network,
         "netuid": settings.netuid,
@@ -206,6 +208,13 @@ def build_theorem_triplet(
         "next": int(problem_seed) + step,
     }
     return [_public_theorem(label, seed, problem_source.sample(seed=seed)) for label, seed in seeds.items()]
+
+
+def theorem_variant_metadata(uid_variant_problems: bool) -> dict[str, bool | str]:
+    return {
+        "uid_variant_problems": bool(uid_variant_problems),
+        "theorem_display_mode": "uid_variants" if uid_variant_problems else "shared",
+    }
 
 
 def _public_theorem(label: str, seed: int, problem: Any) -> PublicTheorem:

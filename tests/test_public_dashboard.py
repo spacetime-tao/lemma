@@ -14,6 +14,7 @@ from tools.public_dashboard import (
     public_miner_rows,
     public_statement_for_problem,
     render_public_html,
+    theorem_variant_metadata,
 )
 
 
@@ -253,3 +254,14 @@ def test_explain_theorem_and_render_sortable_table() -> None:
 
 def test_public_dashboard_schema_version_tracks_current_contract() -> None:
     assert PUBLIC_DASHBOARD_SCHEMA_VERSION == 4
+
+
+def test_theorem_variant_metadata_tracks_display_mode() -> None:
+    assert theorem_variant_metadata(False) == {
+        "uid_variant_problems": False,
+        "theorem_display_mode": "shared",
+    }
+    assert theorem_variant_metadata(True) == {
+        "uid_variant_problems": True,
+        "theorem_display_mode": "uid_variants",
+    }
