@@ -1,78 +1,98 @@
-"""One validator poll: query miners, verify proofs, update miner weights."""
+"""One scoring round: broadcast, verify, update rolling scores, set_weights."""
 
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import shutil
 import time
-from dataclasses import dataclass
+from collections import defaultdict
+from collections.abc import Awaitable, Callable
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import bittensor as bt
 from loguru import logger
 
 from lemma import __version__
-from lemma.cadence import (
-    cadence_poll_id,
-    cadence_problem,
-    cadence_window,
-    difficulty_score_weight,
-    uid_cadence_problem,
+from lemma.common.block_deadline import compute_forward_deadline_and_wait
+from lemma.common.problem_seed import (
+    effective_chain_head_for_problem_seed,
+    mix_sub_problem_seed,
+    resolve_problem_seed,
 )
-from lemma.commitments import commitment_payload_matches, proof_sha256
-from lemma.common.config import LemmaSettings
 from lemma.common.subtensor import get_subtensor
 from lemma.common.synapse_limits import synapse_payload_error
+from lemma.judge.profile import judge_profile_sha256
 from lemma.lean.sandbox import VerifyResult
 from lemma.lean.verify_runner import run_lean_verify
-from lemma.ledger import (
-    LedgerSolver,
-    SolvedLedgerEntry,
-    append_solved_ledger_entry,
-)
-from lemma.lifecycle import TargetPhase, target_phase
 from lemma.problems.base import Problem, ProblemSource
-from lemma.problems.known_theorems import known_theorems_manifest_sha256
+from lemma.problems.generated import generated_registry_sha256
+from lemma.problems.hybrid import problem_supply_registry_sha256
 from lemma.protocol import LemmaChallenge, synapse_miner_response_integrity_ok
-from lemma.validator.rewards import (
-    apply_rolling_outcomes,
-    load_rolling_scores,
-    partition_same_coldkey_weights,
-    rolling_weights,
-    save_rolling_scores,
+from lemma.protocol_attest import (
+    attest_spot_should_full_verify,
+    miner_verify_attest_message,
+    verify_miner_verify_attest_signature,
 )
+from lemma.protocol_commit_reveal import (
+    normalize_commitment_hex,
+    verify_reveal_against_commitment,
+)
+from lemma.scoring.dedup import partition_same_coldkey_weights
+from lemma.scoring.reputation import apply_rolling_outcomes, load_reputation, rolling_weights, save_reputation
+from lemma.validator.training_export import append_epoch_jsonl, round_summary_record, training_record
+from lemma.validator.weights_policy import build_full_weights
+
+if TYPE_CHECKING:
+    from lemma.common.config import LemmaSettings
 
 
-def _validator_poll_challenge(problem: Problem, *, poll_id: str) -> LemmaChallenge:
+def _validator_broadcast_challenge(
+    problem: Problem,
+    *,
+    metronome_id: str,
+    deadline_block: int | None,
+    forward_wait_s: float,
+    commit_reveal_phase: str,
+) -> LemmaChallenge:
+    """Build the validator→miner synapse for one broadcast (commit/reveal/off)."""
     return LemmaChallenge(
         theorem_id=problem.id,
         theorem_statement=problem.challenge_source(),
         imports=list(problem.imports),
         lean_toolchain=problem.lean_toolchain,
         mathlib_rev=problem.mathlib_rev,
-        poll_id=poll_id,
+        deadline_unix=int(time.time()) + int(forward_wait_s),
+        deadline_block=deadline_block,
+        metronome_id=metronome_id,
+        timeout=float(forward_wait_s),
+        commit_reveal_phase=commit_reveal_phase,
     )
 
 
-@dataclass(frozen=True)
-class CommitmentEvidence:
-    proof_sha256: str
-    commitment_hash: str
-    commitment_block: int
-    commit_cutoff_block: int
+def _uid_variant_seed(base_seed: int, uid: int) -> int:
+    h = hashlib.sha256(f"{int(base_seed)}:{int(uid)}".encode()).digest()
+    return int.from_bytes(h[:8], "big")
 
 
-def _hotkey_ss58_for_uid(metagraph: object, uid: int) -> str | None:
-    hks = getattr(metagraph, "hotkeys", None)
-    if hks is None:
-        return None
-    try:
-        v = hks[uid]
-        return str(v.item()) if hasattr(v, "item") else str(v)
-    except Exception as e:
-        logger.debug("metagraph hotkey lookup failed uid={}: {}", uid, e)
-        return None
+def _uid_metronome_id(seed_k: int, uid: int, *, uid_variants: bool) -> str:
+    return f"{int(seed_k)}:{int(uid)}" if uid_variants else str(seed_k)
+
+
+def _difficulty_weight(settings: LemmaSettings, split: str) -> float:
+    return float(
+        {
+            "easy": settings.lemma_scoring_difficulty_easy,
+            "medium": settings.lemma_scoring_difficulty_medium,
+            "hard": settings.lemma_scoring_difficulty_hard,
+            "extreme": settings.lemma_scoring_difficulty_extreme,
+        }.get((split or "").strip().lower(), 1.0),
+    )
+
+
+def _coldkey_for_uid(metagraph: object, uid: int) -> str:
+    return _coldkey_for_uid_or_none(metagraph, uid) or f"uid:{uid}"
 
 
 def _coldkey_for_uid_or_none(metagraph: object, uid: int) -> str | None:
@@ -81,11 +101,64 @@ def _coldkey_for_uid_or_none(metagraph: object, uid: int) -> str | None:
         return None
     try:
         v = cks[uid]
-        s = str(v.item()) if hasattr(v, "item") else str(v)
-        return s.strip() or None
+        if hasattr(v, "item"):
+            v = v.item()
+        s = str(v).strip()
+        return s or None
     except Exception as e:
         logger.debug("metagraph coldkey lookup failed uid={}: {}", uid, e)
         return None
+
+
+def _hotkey_ss58_for_uid(metagraph: object, uid: int) -> str | None:
+    hks = getattr(metagraph, "hotkeys", None)
+    if hks is None:
+        return None
+    try:
+        v = hks[uid]
+        if hasattr(v, "item"):
+            return str(v.item())
+        return str(v)
+    except Exception as e:
+        logger.debug("metagraph hotkey lookup failed uid={}: {}", uid, e)
+        return None
+
+
+def _response_matches_problem_challenge(
+    resp: LemmaChallenge,
+    problem: Problem,
+    *,
+    metronome_id: str,
+    deadline_block: int | None,
+) -> bool:
+    if resp.theorem_id != problem.id:
+        return False
+    if resp.theorem_statement != problem.challenge_source():
+        return False
+    if list(resp.imports or []) != list(problem.imports):
+        return False
+    if resp.lean_toolchain != problem.lean_toolchain:
+        return False
+    if resp.mathlib_rev != problem.mathlib_rev:
+        return False
+    if str(resp.metronome_id or "") != str(metronome_id):
+        return False
+    if resp.deadline_block is None or deadline_block is None:
+        return False
+    return int(resp.deadline_block) == int(deadline_block)
+
+
+def _response_status_summary(responses: list[Any]) -> str:
+    counts: dict[str, int] = defaultdict(int)
+    for resp in responses:
+        axon = getattr(resp, "axon", None)
+        dendrite = getattr(resp, "dendrite", None)
+        code = getattr(dendrite, "status_code", None) or getattr(axon, "status_code", None)
+        msg = getattr(dendrite, "status_message", None) or getattr(axon, "status_message", None) or ""
+        msg = " ".join(str(msg).split())[:96]
+        key = f"{code} {msg}".strip() if code or msg else f"type={type(resp).__name__}"
+        counts[key] += 1
+    return "; ".join(f"{n}x {key}" for key, n in sorted(counts.items()))
 
 
 def _set_weights_outcome(result: object) -> tuple[bool, str]:
@@ -101,11 +174,40 @@ def _set_weights_outcome(result: object) -> tuple[bool, str]:
         return ok, message or ("" if ok else "success=False without message")
     if isinstance(result, bool):
         return result, "" if result else "False"
+
     raw_ok = getattr(result, "success", getattr(result, "ok", None))
     ok = bool(result) if raw_ok is None else bool(raw_ok)
     raw_message = getattr(result, "message", getattr(result, "msg", getattr(result, "error", None)))
     message = "" if raw_message is None else str(raw_message)
     return ok, message or ("" if ok else "success=False without message")
+
+
+def _update_verify_credibility(
+    credibility_by_uid: dict[int, float],
+    candidates: list[tuple[int, LemmaChallenge]],
+    verified: list[tuple[int, LemmaChallenge, VerifyResult]],
+    *,
+    alpha: float,
+) -> None:
+    ca = max(1e-9, min(1.0, float(alpha)))
+    attest_trusted_uids = {uid for uid, _resp, vr in verified if vr.reason == "attest_trusted"}
+    verified_by_validator_uids = {uid for uid, _resp, vr in verified if vr.reason != "attest_trusted"}
+    for uid, _resp in candidates:
+        if uid in attest_trusted_uids:
+            continue
+        outcome = 1.0 if uid in verified_by_validator_uids else 0.0
+        old_c = credibility_by_uid.get(uid, 1.0)
+        new_c = ca * outcome + (1.0 - ca) * old_c
+        credibility_by_uid[uid] = max(0.0, min(1.0, new_c))
+
+
+VerifyItem = tuple[int, LemmaChallenge, VerifyResult]
+
+_VERIFY_INFRA_REASONS = frozenset({"timeout", "oom", "docker_error", "remote_error"})
+
+
+def _verify_result_is_infra_failure(vr: VerifyResult) -> bool:
+    return not vr.passed and vr.reason in _VERIFY_INFRA_REASONS
 
 
 def _existing_disk_path(path: Path) -> Path:
@@ -141,140 +243,116 @@ def _disk_preflight_issue(settings: LemmaSettings) -> str | None:
     return None
 
 
-def _response_matches_poll(resp: LemmaChallenge, problem: Problem, *, poll_id: str) -> bool:
-    return (
-        resp.theorem_id == problem.id
-        and resp.theorem_statement == problem.challenge_source()
-        and list(resp.imports or []) == list(problem.imports)
-        and resp.lean_toolchain == problem.lean_toolchain
-        and resp.mathlib_rev == problem.mathlib_rev
-        and resp.poll_id == poll_id
-    )
-
-
-def _full_weights(n: int, weights_by_uid: dict[int, float]) -> tuple[list[float], bool]:
-    if not weights_by_uid:
-        return [0.0 for _ in range(n)], True
-    weights = [0.0 for _ in range(n)]
-    total = sum(max(0.0, float(v)) for v in weights_by_uid.values())
-    if total <= 0.0:
-        return weights, True
-    for uid, weight in weights_by_uid.items():
-        if 0 <= uid < n:
-            weights[uid] = max(0.0, float(weight)) / total
-    return weights, False
-
-
-def _get_all_commitments_at(subtensor: Any, netuid: int, block: int) -> dict[str, str]:
-    raw = subtensor.get_all_commitments(netuid, block=block)
-    if not isinstance(raw, dict):
-        return {}
-    return {str(hotkey): str(payload) for hotkey, payload in raw.items()}
-
-
-def _first_seen_commitment_block(
-    subtensor: Any,
-    netuid: int,
-    *,
-    hotkey: str,
-    payload: str,
-    start_block: int,
-    cutoff_block: int,
-) -> int | None:
-    for block in range(int(start_block), int(cutoff_block) + 1):
-        if _get_all_commitments_at(subtensor, netuid, block).get(hotkey) == payload:
-            return block
-    return None
-
-
-def _commitment_evidence(
-    settings: LemmaSettings,
-    subtensor: Any,
-    *,
-    netuid: int,
-    phase: TargetPhase,
-    problem: Problem,
-    manifest_sha256: str,
-    hotkey: str,
-    resp: LemmaChallenge,
-    commitments_at_cutoff: dict[str, str],
-    first_seen_cache: dict[tuple[str, str], int | None],
-) -> CommitmentEvidence | None:
-    proof = resp.proof_script or ""
-    nonce = resp.proof_nonce or ""
-    commitment_hash = resp.commitment_hash or ""
-    if not proof.strip() or not nonce or not commitment_hash:
-        return None
-    payload = commitments_at_cutoff.get(hotkey)
-    if not payload:
-        return None
-    proof_hash = proof_sha256(proof)
-    if not commitment_payload_matches(
-        payload,
-        netuid=settings.netuid,
-        miner_hotkey=hotkey,
-        manifest_sha256=manifest_sha256,
-        problem=problem,
-        proof_hash=proof_hash,
-        nonce=nonce,
-        commitment_hash=commitment_hash,
+def _lean_verify_equivalence_key(resp: LemmaChallenge) -> str:
+    """Hash fields that determine Lean verification for one already-bound challenge response."""
+    h = hashlib.sha256()
+    for part in (
+        resp.theorem_id or "",
+        resp.theorem_statement or "",
+        "\n".join(resp.imports or []),
+        resp.lean_toolchain or "",
+        resp.mathlib_rev or "",
+        resp.proof_script or "",
     ):
-        return None
-    cache_key = (hotkey, payload)
-    if cache_key not in first_seen_cache:
-        first_seen_cache[cache_key] = _first_seen_commitment_block(
-            subtensor,
-            netuid,
-            hotkey=hotkey,
-            payload=payload,
-            start_block=phase.target_start_block,
-            cutoff_block=phase.commit_cutoff_block,
-        )
-    first_seen = first_seen_cache[cache_key]
-    if first_seen is None:
-        return None
-    return CommitmentEvidence(
-        proof_sha256=proof_hash,
-        commitment_hash=commitment_hash,
-        commitment_block=first_seen,
-        commit_cutoff_block=phase.commit_cutoff_block,
-    )
+        h.update(part.encode("utf-8"))
+        h.update(b"\x1e")
+    return h.hexdigest()
 
 
-def _rank_verified(
-    verified: list[tuple[int, Problem, LemmaChallenge, VerifyResult, CommitmentEvidence]],
-) -> list[tuple[int, Problem, LemmaChallenge, VerifyResult, CommitmentEvidence]]:
-    return sorted(verified, key=lambda item: (item[4].commitment_block, item[0]))
-
-
-def _difficulty_weights_from_settings(settings: LemmaSettings) -> dict[str, float]:
-    return {
-        "easy": float(settings.lemma_scoring_difficulty_easy),
-        "medium": float(settings.lemma_scoring_difficulty_medium),
-        "hard": float(settings.lemma_scoring_difficulty_hard),
-        "extreme": float(settings.lemma_scoring_difficulty_extreme),
-    }
-
-
-async def _write_current_rolling_weights(
-    settings: LemmaSettings,
-    subtensor: Any,
-    wallet: Any,
-    metagraph: Any,
-    netuid: int,
-    n: int,
-    uids: list[int],
+async def _run_verify_batch(
+    candidates: list[tuple[int, LemmaChallenge]],
+    verify_one: Callable[[int, LemmaChallenge], Awaitable[VerifyItem | None]],
     *,
-    dry_run: bool,
-) -> dict[int, float]:
-    store = load_rolling_scores(settings.lemma_reputation_state_path)
-    weights_by_uid = rolling_weights({uid: store.rolling_score_by_uid.get(uid, 0.0) for uid in uids})
-    if settings.lemma_scoring_coldkey_partition and weights_by_uid:
-        weights_by_uid = partition_same_coldkey_weights(
-            weights_by_uid,
-            {uid: _coldkey_for_uid_or_none(metagraph, uid) for uid in weights_by_uid},
+    key_fn: Callable[[int, LemmaChallenge], str] | None = None,
+) -> list[VerifyItem]:
+    """Run verifier tasks while isolating unexpected per-miner failures."""
+    verify_inputs = candidates
+    groups: list[list[tuple[int, LemmaChallenge]]] | None = None
+    if key_fn is not None and len(candidates) > 1:
+        grouped: dict[str, list[tuple[int, LemmaChallenge]]] = {}
+        for uid, resp in candidates:
+            grouped.setdefault(key_fn(uid, resp), []).append((uid, resp))
+        if len(grouped) < len(candidates):
+            groups = list(grouped.values())
+            verify_inputs = [g[0] for g in groups]
+            logger.debug(
+                "lean verify reuse: candidates={} unique_payloads={} reused_results={}",
+                len(candidates),
+                len(verify_inputs),
+                len(candidates) - len(verify_inputs),
+            )
+
+    results = await asyncio.gather(
+        *(verify_one(uid, resp) for uid, resp in verify_inputs),
+        return_exceptions=True,
+    )
+    verified: list[VerifyItem] = []
+    for idx, ((uid, _resp), raw) in enumerate(zip(verify_inputs, results, strict=True)):
+        if isinstance(raw, BaseException):
+            if isinstance(raw, Exception):
+                logger.warning("uid={} verify task failed: {}", uid, raw)
+            continue
+        result: VerifyItem | None = raw
+        if result is not None:
+            if groups is None:
+                verified.append(result)
+                continue
+            _src_uid, _src_resp, vr = result
+            for group_uid, group_resp in groups[idx]:
+                verified.append((group_uid, group_resp, vr.model_copy()))
+    return verified
+
+
+async def _broadcast_challenges(
+    dendrite: Any,
+    metagraph: Any,
+    uids: list[int],
+    problems_by_uid: dict[int, Problem],
+    metronome_by_uid: dict[int, str],
+    *,
+    deadline_block: int | None,
+    forward_wait_s: float,
+    commit_reveal_phase: str,
+    uid_variants: bool,
+) -> dict[int, object]:
+    if not uids:
+        return {}
+    if not uid_variants:
+        first_uid = uids[0]
+        synapse = _validator_broadcast_challenge(
+            problems_by_uid[first_uid],
+            metronome_id=metronome_by_uid[first_uid],
+            deadline_block=deadline_block,
+            forward_wait_s=forward_wait_s,
+            commit_reveal_phase=commit_reveal_phase,
         )
-    return await _write_weights(settings, subtensor, wallet, netuid, n, weights_by_uid, dry_run=dry_run)
+        responses = await dendrite(
+            [metagraph.axons[uid] for uid in uids],
+            synapse,
+            timeout=forward_wait_s,
+            run_async=True,
+        )
+        return dict(zip(uids, responses, strict=True))
+
+    async def query_one(uid: int) -> tuple[int, object]:
+        synapse = _validator_broadcast_challenge(
+            problems_by_uid[uid],
+            metronome_id=metronome_by_uid[uid],
+            deadline_block=deadline_block,
+            forward_wait_s=forward_wait_s,
+            commit_reveal_phase=commit_reveal_phase,
+        )
+        response = await dendrite(
+            [metagraph.axons[uid]],
+            synapse,
+            timeout=forward_wait_s,
+            run_async=True,
+        )
+        if isinstance(response, list) and len(response) == 1:
+            response = response[0]
+        return uid, response
+
+    return dict(await asyncio.gather(*(query_one(uid) for uid in uids)))
 
 
 async def run_epoch(
@@ -282,7 +360,7 @@ async def run_epoch(
     problem_source: ProblemSource,
     dry_run: bool = False,
 ) -> dict[int, float]:
-    t0 = time.perf_counter()
+    t_epoch = time.perf_counter()
     disk_issue = _disk_preflight_issue(settings)
     if disk_issue:
         logger.error("validator infra skip before miner query: {}", disk_issue)
@@ -293,264 +371,500 @@ async def run_epoch(
     subtensor = get_subtensor(settings)
     netuid = settings.netuid
     cur_block = int(subtensor.get_current_block())
+    slack_b = int(settings.lemma_problem_seed_chain_head_slack_blocks or 0)
+    seed_head = effective_chain_head_for_problem_seed(cur_block, slack_b)
     metagraph = subtensor.metagraph(netuid)
     raw_n = metagraph.n
     n = int(raw_n.item()) if hasattr(raw_n, "item") else int(raw_n)
+
     my_uid = subtensor.get_uid_for_hotkey_on_subnet(wallet.hotkey.ss58_address, netuid)
     if settings.validator_abort_if_not_registered and my_uid is None:
-        logger.warning("Validator wallet has no UID on subnet {}; skipping poll", netuid)
+        logger.warning("Validator wallet has no UID on subnet {}; skipping epoch", netuid)
         return {}
-    uids = [uid for uid in range(n) if my_uid is None or uid != my_uid]
+
+    uids = [u for u in range(n) if my_uid is None or u != my_uid]
     if not uids:
         logger.warning("No peer UIDs to query")
         return {}
 
-    window = cadence_window(cur_block, settings.cadence_window_blocks)
-    try:
-        anchor_problem = cadence_problem(problem_source, window.seed)
-    except ValueError as exc:
-        logger.warning("cadence source unavailable seed={}: {}", window.seed, exc)
-        return await _write_current_rolling_weights(
-            settings,
-            subtensor,
-            wallet,
-            metagraph,
-            netuid,
-            n,
-            uids,
-            dry_run=dry_run,
-        )
-    phase = target_phase(settings, [], cur_block)
-    variants_enabled = bool(settings.lemma_uid_variant_problems)
-    problems_by_uid = {
-        uid: uid_cadence_problem(
-            problem_source,
-            anchor_problem,
-            seed=window.seed,
-            uid=uid,
-            variants_enabled=variants_enabled,
-        )
-        for uid in uids
-    }
-    poll_id_by_uid = {uid: cadence_poll_id(window.seed, uid, variants_enabled=variants_enabled) for uid in uids}
+    problem_seed, problem_seed_tag = resolve_problem_seed(
+        chain_head_block=seed_head,
+        netuid=netuid,
+        mode=settings.problem_seed_mode,
+        quantize_blocks=settings.problem_seed_quantize_blocks,
+        subtensor=subtensor,
+    )
 
-    if phase.name != "reveal":
-        logger.info(
-            "cadence_not_revealable seed={} target_id={} phase={} current_block={} reveal_block={}",
-            window.seed,
-            anchor_problem.id,
-            phase.name,
-            phase.current_block,
-            phase.reveal_block,
-        )
-        return await _write_current_rolling_weights(
-            settings,
-            subtensor,
-            wallet,
-            metagraph,
-            netuid,
-            n,
-            uids,
-            dry_run=dry_run,
-        )
+    rep_store = load_reputation(settings.lemma_reputation_state_path)
+    rep_dirty = False
+
+    k_problems = max(1, int(settings.lemma_epoch_problem_count))
+    training_rows: list[dict[str, Any]] = []
+    export_path = settings.training_export_jsonl
+    export_profile = settings.lemma_training_export_profile
+    export_context = (
+        {
+            "lemma_version": __version__,
+            "judge_profile_sha256": judge_profile_sha256(settings),
+            "generated_registry_sha256": generated_registry_sha256(),
+            "problem_supply_registry_sha256": problem_supply_registry_sha256(
+                generated_weight=settings.lemma_hybrid_generated_weight,
+                catalog_weight=settings.lemma_hybrid_catalog_weight,
+            ),
+        }
+        if export_path
+        else None
+    )
+
+    total_verified = 0
+    total_scored = 0
+    coldkey_partitioned = 0
+    deadline_rejects = 0
+    challenge_rejects = 0
+    payload_rejects = 0
+    attest_rejects = 0
+    commit_reveal_rejects = 0
+    verify_infra_errors = 0
+    verify_infra_error_uids: set[int] = set()
+    passed_uids_for_export: set[int] = set()
+    last_problem: Problem | None = None
+
+    export_lock = asyncio.Lock()
 
     async with bt.Dendrite(wallet=wallet) as dendrite:
-        if variants_enabled:
-            async def query_one(uid: int) -> tuple[int, object]:
-                response = await dendrite(
-                    [metagraph.axons[uid]],
-                    _validator_poll_challenge(problems_by_uid[uid], poll_id=poll_id_by_uid[uid]),
-                    timeout=float(settings.validator_poll_timeout_s),
-                    run_async=True,
-                )
-                if isinstance(response, list) and len(response) == 1:
-                    return uid, response[0]
-                return uid, response
-
-            responses_by_uid = dict(await asyncio.gather(*(query_one(uid) for uid in uids)))
-        else:
-            first_uid = uids[0]
-            responses = await dendrite(
-                [metagraph.axons[uid] for uid in uids],
-                _validator_poll_challenge(problems_by_uid[first_uid], poll_id=poll_id_by_uid[first_uid]),
-                timeout=float(settings.validator_poll_timeout_s),
-                run_async=True,
-            )
-            responses_by_uid = dict(zip(uids, responses, strict=True))
-
-    commitments_at_cutoff: dict[str, str] | None = None
-    first_seen_cache: dict[tuple[str, str], int | None] = {}
-    manifest_sha = known_theorems_manifest_sha256(settings.known_theorems_manifest_path)
-    candidates: list[tuple[int, Problem, LemmaChallenge, CommitmentEvidence]] = []
-    for uid in uids:
-        resp = responses_by_uid.get(uid)
-        problem = problems_by_uid[uid]
-        if not isinstance(resp, LemmaChallenge) or not resp.is_success:
-            continue
-        if not synapse_miner_response_integrity_ok(resp):
-            logger.warning("uid={} dropping response: body hash mismatch", uid)
-            continue
-        if not _response_matches_poll(resp, problem, poll_id=poll_id_by_uid[uid]):
-            logger.warning("uid={} dropping response: target fields do not match poll", uid)
-            continue
-        payload_err = synapse_payload_error(resp, settings)
-        if payload_err:
-            logger.warning("uid={} dropping response: {}", uid, payload_err)
-            continue
-        if (resp.proof_script or "").strip():
-            hotkey = _hotkey_ss58_for_uid(metagraph, uid)
-            if hotkey is None:
-                logger.warning("uid={} dropping response: missing hotkey", uid)
-                continue
-            if commitments_at_cutoff is None:
-                commitments_at_cutoff = _get_all_commitments_at(subtensor, netuid, phase.commit_cutoff_block)
-            evidence = _commitment_evidence(
-                settings,
-                subtensor,
-                netuid=netuid,
-                phase=phase,
-                problem=problem,
-                manifest_sha256=manifest_sha,
-                hotkey=hotkey,
-                resp=resp,
-                commitments_at_cutoff=commitments_at_cutoff,
-                first_seen_cache=first_seen_cache,
-            )
-            if evidence is None:
-                logger.warning("uid={} dropping response: missing or invalid pre-reveal commitment", uid)
-                continue
-            candidates.append((uid, problem, resp, evidence))
-    verify_sem = asyncio.Semaphore(max(1, int(settings.lemma_lean_verify_max_concurrent)))
-    infra_failure_uids: set[int] = set()
-
-    async def verify_one(
-        uid: int,
-        problem: Problem,
-        resp: LemmaChallenge,
-        evidence: CommitmentEvidence,
-    ) -> tuple[int, Problem, LemmaChallenge, VerifyResult, CommitmentEvidence] | None:
-        async with verify_sem:
-            try:
-                vr = await asyncio.to_thread(
-                    run_lean_verify,
-                    settings,
-                    verify_timeout_s=settings.lean_verify_timeout_s,
-                    problem=problem,
-                    proof_script=resp.proof_script or "",
-                )
-            except Exception as exc:  # noqa: BLE001
-                vr = VerifyResult(passed=False, reason="docker_error", stderr_tail=str(exc)[:8000])
-        if vr.reason in {"timeout", "oom", "docker_error", "remote_error"}:
-            infra_failure_uids.add(uid)
-        if not vr.passed:
-            logger.debug("uid={} verify failed: {}", uid, vr.reason)
-            return None
-        return uid, problem, resp, vr, evidence
-
-    raw_verified = await asyncio.gather(
-        *(verify_one(uid, problem, resp, evidence) for uid, problem, resp, evidence in candidates),
-    )
-    verified = _rank_verified([item for item in raw_verified if item is not None])
-    if verified:
-        VerifiedItem = tuple[int, Problem, LemmaChallenge, VerifyResult, CommitmentEvidence]
-        by_problem: dict[tuple[str, str], list[VerifiedItem]] = {}
-        for item in verified:
-            _uid, problem, _resp, _vr, _evidence = item
-            by_problem.setdefault((problem.id, problem.theorem_statement_sha256()), []).append(item)
-        for (_target_id, _statement_hash), items in by_problem.items():
-            problem = items[0][1]
-            solvers = tuple(
-                LedgerSolver(
-                    uid=uid,
-                    hotkey=_hotkey_ss58_for_uid(metagraph, uid),
-                    coldkey=_coldkey_for_uid_or_none(metagraph, uid),
-                    proof_sha256=evidence.proof_sha256,
-                    verify_reason=vr.reason,
-                    build_seconds=float(vr.build_seconds),
-                    proof_script=resp.proof_script or "",
-                    proof_nonce=resp.proof_nonce,
-                    commitment_hash=evidence.commitment_hash,
-                    commitment_block=evidence.commitment_block,
-                    commit_cutoff_block=evidence.commit_cutoff_block,
-                )
-                for uid, _problem, resp, vr, evidence in sorted(items, key=lambda item: item[0])
-            )
-            entry = SolvedLedgerEntry(
-                target_id=problem.id,
-                solvers=solvers,
-                accepted_block=cur_block,
-                accepted_unix=int(time.time()),
-                validator_hotkey=wallet.hotkey.ss58_address,
-                lemma_version=__version__,
-                theorem_statement_sha256=problem.theorem_statement_sha256(),
-            )
-            if not dry_run:
-                try:
-                    append_solved_ledger_entry(settings.solved_ledger_path, entry)
-                    logger.info(
-                        "target_solved seed={} target_id={} solver_uids={}",
-                        window.seed,
-                        entry.target_id,
-                        list(entry.solver_uids),
+        for sub_k in range(k_problems):
+            seed_k = problem_seed if k_problems == 1 else mix_sub_problem_seed(problem_seed, sub_k)
+            anchor_problem = problem_source.sample(seed=seed_k)
+            last_problem = anchor_problem
+            uid_variants = bool(settings.lemma_uid_variant_problems)
+            problems_by_uid = (
+                {
+                    uid: problem_source.sample(
+                        seed=_uid_variant_seed(seed_k, uid),
+                        split=anchor_problem.split,
                     )
-                except ValueError as exc:
-                    logger.warning("solved ledger append skipped: {}", exc)
+                    for uid in uids
+                }
+                if uid_variants
+                else {uid: anchor_problem for uid in uids}
+            )
+            metronome_by_uid = {
+                uid: _uid_metronome_id(seed_k, uid, uid_variants=uid_variants) for uid in uids
+            }
 
-    store = load_rolling_scores(settings.lemma_reputation_state_path)
-    passed_uids = {uid for uid, _problem, _resp, _vr, _evidence in verified}
-    outcomes = {uid: uid in passed_uids for uid in uids if uid not in infra_failure_uids}
-    apply_rolling_outcomes(
-        store.rolling_score_by_uid,
-        outcomes,
-        alpha=float(settings.lemma_scoring_rolling_alpha),
-        difficulty_weight=difficulty_score_weight(anchor_problem.split, _difficulty_weights_from_settings(settings)),
-    )
-    if not dry_run:
-        save_rolling_scores(settings.lemma_reputation_state_path, store)
-    scores = {uid: store.rolling_score_by_uid.get(uid, 0.0) for uid in uids}
-    weights_by_uid = rolling_weights(scores)
+            verify_timeout_s = settings.lean_verify_timeout_s
+            wait_scale = 1.0
+            if settings.timeout_scale_by_split:
+                wait_scale = float(
+                    {
+                        "easy": settings.timeout_split_easy_mult,
+                        "medium": settings.timeout_split_medium_mult,
+                        "hard": settings.timeout_split_hard_mult,
+                        "extreme": settings.timeout_split_extreme_mult,
+                    }.get((anchor_problem.split or "").strip().lower(), 1.0)
+                )
+                verify_timeout_s = max(1, int(round(float(settings.lean_verify_timeout_s) * wait_scale)))
+
+            deadline_block, forward_wait_s = compute_forward_deadline_and_wait(
+                settings=settings,
+                subtensor=subtensor,
+                cur_block=seed_head,
+                seed_tag=problem_seed_tag,
+                wait_scale=wait_scale,
+            )
+
+            commits_by_uid: dict[int, str] = {}
+            if settings.lemma_commit_reveal_enabled:
+                responses_commit_by_uid = await _broadcast_challenges(
+                    dendrite,
+                    metagraph,
+                    uids,
+                    problems_by_uid,
+                    metronome_by_uid,
+                    deadline_block=deadline_block,
+                    forward_wait_s=float(forward_wait_s),
+                    commit_reveal_phase="commit",
+                    uid_variants=uid_variants,
+                )
+                responses_commit = [responses_commit_by_uid.get(uid) for uid in uids]
+                for uid_c, resp_c in zip(uids, responses_commit, strict=True):
+                    if not isinstance(resp_c, LemmaChallenge) or not resp_c.is_success:
+                        continue
+                    hx = (resp_c.proof_commitment_hex or "").strip()
+                    norm_commit = normalize_commitment_hex(hx)
+                    if norm_commit is not None:
+                        commits_by_uid[uid_c] = norm_commit
+                responses_by_uid = await _broadcast_challenges(
+                    dendrite,
+                    metagraph,
+                    uids,
+                    problems_by_uid,
+                    metronome_by_uid,
+                    deadline_block=deadline_block,
+                    forward_wait_s=float(forward_wait_s),
+                    commit_reveal_phase="reveal",
+                    uid_variants=uid_variants,
+                )
+            else:
+                responses_by_uid = await _broadcast_challenges(
+                    dendrite,
+                    metagraph,
+                    uids,
+                    problems_by_uid,
+                    metronome_by_uid,
+                    deadline_block=deadline_block,
+                    forward_wait_s=float(forward_wait_s),
+                    commit_reveal_phase="off",
+                    uid_variants=uid_variants,
+                )
+            responses = [responses_by_uid.get(uid) for uid in uids]
+            # Dendrite returns a batch, not a trusted per-response receipt block. Enforce the response deadline
+            # conservatively at the block observed after the batch returns.
+            batch_block_after_query = int(subtensor.get_current_block())
+
+            candidates: list[tuple[int, LemmaChallenge]] = []
+            for uid, resp in zip(uids, responses, strict=True):
+                if not isinstance(resp, LemmaChallenge):
+                    continue
+                if not resp.is_success:
+                    continue
+                if not synapse_miner_response_integrity_ok(resp):
+                    logger.warning(
+                        "uid={} dropping response: missing/mismatched computed_body_hash or deadline_block "
+                        "(tampered payload or miner/validator version skew)",
+                        uid,
+                    )
+                    continue
+                if not _response_matches_problem_challenge(
+                    resp,
+                    problems_by_uid[uid],
+                    metronome_id=metronome_by_uid[uid],
+                    deadline_block=deadline_block,
+                ):
+                    logger.warning(
+                        "uid={} dropping response: challenge fields do not match current theorem/metronome",
+                        uid,
+                    )
+                    challenge_rejects += 1
+                    continue
+                db = resp.deadline_block
+                if db is not None and batch_block_after_query >= int(db):
+                    logger.warning(
+                        "uid={} dropping response: chain block {} >= deadline_block {} (late)",
+                        uid,
+                        batch_block_after_query,
+                        db,
+                    )
+                    deadline_rejects += 1
+                    continue
+                payload_err = synapse_payload_error(resp, settings)
+                if payload_err:
+                    logger.warning("uid={} dropping response: {}", uid, payload_err)
+                    payload_rejects += 1
+                    continue
+                if not resp.proof_script:
+                    continue
+                candidates.append((uid, resp))
+
+            if settings.lemma_commit_reveal_enabled:
+                filt_cr: list[tuple[int, LemmaChallenge]] = []
+                for uid_cr, resp_cr in candidates:
+                    exp = commits_by_uid.get(uid_cr)
+                    if not exp:
+                        commit_reveal_rejects += 1
+                        logger.warning(
+                            "uid={} dropping reveal: missing commit phase or invalid commit",
+                            uid_cr,
+                        )
+                        continue
+                    if not verify_reveal_against_commitment(
+                        expected_commitment_hex=exp,
+                        theorem_id=resp_cr.theorem_id or "",
+                        metronome_id=str(resp_cr.metronome_id or ""),
+                        nonce_hex=resp_cr.commit_reveal_nonce_hex or "",
+                        proof_script=resp_cr.proof_script or "",
+                    ):
+                        commit_reveal_rejects += 1
+                        logger.warning(
+                            "uid={} dropping reveal: commit preimage mismatch",
+                            uid_cr,
+                        )
+                        continue
+                    filt_cr.append((uid_cr, resp_cr))
+                candidates = filt_cr
+
+            if settings.lemma_miner_verify_attest_enabled:
+                filt_att: list[tuple[int, LemmaChallenge]] = []
+                for uid_a, resp_a in candidates:
+                    sig_a = (resp_a.miner_verify_attest_signature_hex or "").strip()
+                    if not sig_a:
+                        attest_rejects += 1
+                        logger.warning(
+                            "uid={} dropping response: miner_verify_attest_signature_hex missing",
+                            uid_a,
+                        )
+                        continue
+                    hk_a = _hotkey_ss58_for_uid(metagraph, uid_a)
+                    if not hk_a:
+                        attest_rejects += 1
+                        logger.warning("uid={} dropping response: no metagraph hotkey", uid_a)
+                        continue
+                    msg_a = miner_verify_attest_message(
+                        resp_a,
+                        validator_hotkey=wallet.hotkey.ss58_address,
+                    )
+                    if not verify_miner_verify_attest_signature(
+                        hotkey_ss58=hk_a,
+                        message=msg_a,
+                        signature_hex=sig_a,
+                    ):
+                        attest_rejects += 1
+                        logger.warning(
+                            "uid={} dropping response: miner_verify_attest signature invalid",
+                            uid_a,
+                        )
+                        continue
+                    filt_att.append((uid_a, resp_a))
+                candidates = filt_att
+
+            if not candidates and uids:
+                n_ch = sum(1 for r in responses if isinstance(r, LemmaChallenge))
+                n_ok = sum(1 for r in responses if isinstance(r, LemmaChallenge) and r.is_success)
+                n_proof = sum(
+                    1
+                    for r in responses
+                    if isinstance(r, LemmaChallenge) and r.is_success and (r.proof_script or "").strip()
+                )
+                logger.warning(
+                    "epoch sub_round={}/{} no miner candidates: queried_uids={} lemma_challenge_responses={} "
+                    "synapse_success={} success_with_proof={} status_summary={}",
+                    sub_k + 1,
+                    k_problems,
+                    len(uids),
+                    n_ch,
+                    n_ok,
+                    n_proof,
+                    _response_status_summary(list(responses)),
+                )
+
+            verify_sem = asyncio.Semaphore(max(1, settings.lemma_lean_verify_max_concurrent))
+            spot_frac = (
+                float(settings.lemma_miner_verify_attest_spot_verify_fraction)
+                if settings.lemma_miner_verify_attest_enabled
+                else 1.0
+            )
+            spot_salt = str(settings.lemma_miner_verify_attest_spot_verify_salt or "")
+
+            async def _verify_one(
+                uid: int,
+                resp: LemmaChallenge,
+                *,
+                _sem: asyncio.Semaphore = verify_sem,
+                _vto: int = verify_timeout_s,
+                _problems_by_uid: dict[int, Problem] = problems_by_uid,
+                _spot_frac: float = spot_frac,
+                _spot_salt: str = spot_salt,
+            ) -> tuple[int, LemmaChallenge, VerifyResult] | None:
+                prob = _problems_by_uid[uid]
+                if settings.lemma_miner_verify_attest_enabled:
+                    if not attest_spot_should_full_verify(
+                        uid=uid,
+                        theorem_id=prob.id,
+                        metronome_id=str(resp.metronome_id or ""),
+                        spot_verify_fraction=_spot_frac,
+                        spot_verify_salt=_spot_salt,
+                    ):
+                        return (
+                            uid,
+                            resp,
+                            VerifyResult(passed=True, reason="attest_trusted"),
+                        )
+                proof_src = resp.proof_script
+                if proof_src is None:
+                    return None
+                async with _sem:
+                    try:
+                        vr = await asyncio.to_thread(
+                            run_lean_verify,
+                            settings,
+                            verify_timeout_s=_vto,
+                            problem=prob,
+                            proof_script=proof_src,
+                        )
+                    except Exception as exc:  # noqa: BLE001
+                        err = str(exc)
+                        logger.warning("uid={} verify task raised before VerifyResult: {}", uid, err)
+                        vr = VerifyResult(passed=False, reason="docker_error", stderr_tail=err[:8000])
+                if _verify_result_is_infra_failure(vr):
+                    logger.warning("uid={} verify infra failure: {}", uid, vr.reason)
+                    return (uid, resp, vr)
+                if not vr.passed:
+                    logger.debug("uid={} verify failed: {}", uid, vr.reason)
+                    return None
+                return (uid, resp, vr)
+
+            verify_key_fn: Callable[[int, LemmaChallenge], str] | None = None
+            if not settings.lemma_miner_verify_attest_enabled:
+
+                def verify_key_fn(_uid: int, resp: LemmaChallenge) -> str:
+                    return _lean_verify_equivalence_key(resp)
+
+            verify_results = await _run_verify_batch(candidates, _verify_one, key_fn=verify_key_fn)
+            verified = [(uid, resp, vr) for uid, resp, vr in verify_results if vr.passed]
+            infra_failures = [
+                (uid, resp, vr)
+                for uid, resp, vr in verify_results
+                if _verify_result_is_infra_failure(vr)
+            ]
+            verify_infra_errors += len(infra_failures)
+            verify_infra_error_uids.update(uid for uid, _resp, _vr in infra_failures)
+            total_verified += len(verified)
+
+            passed_uids = {uid for uid, _resp, _vr in verified}
+            infra_uids = {uid for uid, _resp, _vr in infra_failures}
+            rolling_outcomes = {uid: uid in passed_uids for uid in uids if uid not in infra_uids}
+            apply_rolling_outcomes(
+                rep_store.rolling_score_by_uid,
+                rolling_outcomes,
+                alpha=float(settings.lemma_scoring_rolling_alpha),
+                difficulty_weight=_difficulty_weight(settings, anchor_problem.split),
+            )
+            rep_dirty = rep_dirty or bool(rolling_outcomes)
+            passed_uids_for_export.update(passed_uids)
+
+            vca = float(settings.lemma_reputation_verify_credibility_alpha)
+            if vca > 0.0 and candidates:
+                credibility_candidates = [(uid, resp) for uid, resp in candidates if uid not in infra_uids]
+                _update_verify_credibility(
+                    rep_store.credibility_by_uid,
+                    credibility_candidates,
+                    verified,
+                    alpha=vca,
+                )
+                rep_dirty = rep_dirty or bool(credibility_candidates)
+
+            for uid_i, resp_i, vr_i in verified:
+                if export_path:
+                    async with export_lock:
+                        training_rows.append(
+                            training_record(
+                                block=cur_block,
+                                theorem_id=problems_by_uid[uid_i].id,
+                                uid=uid_i,
+                                resp=resp_i,
+                                profile=export_profile,
+                                proof_metrics=vr_i.proof_metrics,
+                                coldkey=_coldkey_for_uid_or_none(metagraph, uid_i),
+                                export_context=export_context,
+                            ),
+                        )
+            total_scored += len(verified)
+
+    if rep_dirty and not dry_run:
+        try:
+            save_reputation(settings.lemma_reputation_state_path, rep_store)
+        except OSError as e:
+            logger.warning("could not save reputation state: {}", e)
+
+    eligible_scores = {uid: rep_store.rolling_score_by_uid.get(uid, 0.0) for uid in uids}
+    weights_by_uid = rolling_weights(eligible_scores)
     if settings.lemma_scoring_coldkey_partition and weights_by_uid:
-        weights_by_uid = partition_same_coldkey_weights(
+        weights_by_uid, coldkey_partitioned = partition_same_coldkey_weights(
             weights_by_uid,
-            {uid: _coldkey_for_uid_or_none(metagraph, uid) for uid in weights_by_uid},
+            lambda u: _coldkey_for_uid(metagraph, u),
         )
-    logger.info(
-        "lemma_poll_summary block={} seed={} split={} anchor_target_id={} uid_variants={} candidates={} "
-        "verified={} positive_scores={} seconds={:.2f}",
-        cur_block,
-        window.seed,
-        anchor_problem.split,
-        anchor_problem.id,
-        variants_enabled,
-        len(candidates),
-        len(verified),
-        len(weights_by_uid),
-        time.perf_counter() - t0,
+
+    logger.debug(
+        "epoch concurrency caps used: LEMMA_LEAN_VERIFY_MAX_CONCURRENT={} k_problems={}",
+        settings.lemma_lean_verify_max_concurrent,
+        k_problems,
     )
-    return await _write_weights(settings, subtensor, wallet, netuid, n, weights_by_uid, dry_run=dry_run)
 
+    if export_path and last_problem:
+        export_rows = [
+            *training_rows,
+            round_summary_record(
+                block=cur_block,
+                theorem_id=last_problem.id,
+                passed_uids=passed_uids_for_export,
+                verify_infra_error_uids=verify_infra_error_uids,
+                rolling_score_by_uid=rep_store.rolling_score_by_uid,
+                weight_by_uid=weights_by_uid,
+                export_context=export_context,
+            ),
+        ]
+        try:
+            append_epoch_jsonl(
+                export_path,
+                export_rows,
+                weights_by_uid,
+                include_weights=(export_profile == "full"),
+            )
+            logger.debug(
+                "training_export appended {} proof rows and 1 round summary to {}",
+                len(training_rows),
+                export_path,
+            )
+        except OSError as e:
+            logger.error("training_export append failed after scoring; continuing to set_weights: {}", e)
 
-async def _write_weights(
-    settings: LemmaSettings,
-    subtensor: Any,
-    wallet: Any,
-    netuid: int,
-    n: int,
-    weights_by_uid: dict[int, float],
-    *,
-    dry_run: bool,
-) -> dict[int, float]:
-    full_weights, skip_chain_write = _full_weights(n, weights_by_uid)
+    full_weights, skip_chain_write = build_full_weights(
+        n,
+        weights_by_uid,
+        empty_policy="skip",
+        exclude_uid=my_uid if isinstance(my_uid, int) else None,
+    )
+
+    elapsed = time.perf_counter() - t_epoch
+    split = last_problem.split if last_problem else "?"
+    thm = last_problem.id if last_problem else "?"
+    logger.info(
+        "lemma_epoch_summary chain_head_block={} problem_seed_chain_head={} problem_seed_slack_blocks={} "
+        "problem_seed={} problem_seed_tag={} split={} "
+        "theorem_id={} k_problems={} uid_variant_problems={} verified={} scored={} weight_entries={} "
+        "coldkey_partitioned={} deadline_rejects={} "
+        "challenge_rejects={} payload_rejects={} "
+        "attest_rejects={} commit_reveal_rejects={} verify_infra_errors={} "
+        "skip_set_weights={} seconds={:.2f}  "
+        "[verified=Lean proof OK; scored=verified proof rows; weight_entries=rolling-score weight rows]",
+        cur_block,
+        seed_head,
+        slack_b,
+        problem_seed,
+        problem_seed_tag,
+        split,
+        thm,
+        k_problems,
+        bool(settings.lemma_uid_variant_problems),
+        total_verified,
+        total_scored,
+        len(weights_by_uid),
+        coldkey_partitioned,
+        deadline_rejects,
+        challenge_rejects,
+        payload_rejects,
+        attest_rejects,
+        commit_reveal_rejects,
+        verify_infra_errors,
+        skip_chain_write,
+        elapsed,
+    )
+
     if dry_run:
-        logger.info("DRY RUN weights: {}", weights_by_uid)
-        return weights_by_uid
-    if skip_chain_write:
-        logger.warning("Skipping set_weights (no active weights)")
+        logger.info("DRY RUN weights (subset): {}", weights_by_uid)
         return weights_by_uid
 
+    if skip_chain_write:
+        logger.warning(
+            "Skipping set_weights (no positive rolling scores)",
+        )
+        return weights_by_uid
+
+    delay = settings.set_weights_retry_delay_s
     last_success = False
     last_message = ""
-    for attempt in range(int(settings.set_weights_max_retries)):
+    max_retries = settings.set_weights_max_retries
+    for attempt in range(max_retries):
         attempt_no = attempt + 1
         try:
             out = subtensor.set_weights(
@@ -562,15 +876,30 @@ async def _write_weights(
                 wait_for_finalization=False,
             )
             last_success, last_message = _set_weights_outcome(out)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as e:
             last_success = False
-            last_message = f"{type(exc).__name__}: {exc}"
+            last_message = f"{type(e).__name__}: {e}"
         if last_success:
             break
-        if attempt_no < int(settings.set_weights_max_retries):
-            logger.warning("set_weights attempt {} failed; retrying message={}", attempt_no, last_message)
-            await asyncio.sleep(float(settings.set_weights_retry_delay_s) * (2**attempt))
+        if attempt_no < max_retries:
+            logger.warning(
+                "set_weights attempt {}/{} failed; retrying message={}",
+                attempt_no,
+                max_retries,
+                last_message,
+            )
+            await asyncio.sleep(delay * (2**attempt))
         else:
-            logger.error("set_weights attempt {} failed; no retries left message={}", attempt_no, last_message)
-    logger.info("set_weights success={} message={}", last_success, last_message)
+            logger.error(
+                "set_weights attempt {}/{} failed; no retries left message={}",
+                attempt_no,
+                max_retries,
+                last_message,
+            )
+
+    logger.info(
+        "set_weights success={} message={}",
+        last_success,
+        last_message,
+    )
     return weights_by_uid

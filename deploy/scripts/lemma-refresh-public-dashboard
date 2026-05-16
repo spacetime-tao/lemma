@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+LEMMA_SRC="${LEMMA_SRC:-/opt/lemma}"
+EXPORTER_SRC="${EXPORTER_SRC:-$LEMMA_SRC}"
+SITE_SRC="${SITE_SRC:-/opt/lemmasub.net}"
+SUMMARY_JSONL="${SUMMARY_JSONL:-/var/lib/lemma/public-summary.jsonl}"
+JSON_OUT="${JSON_OUT:-$SITE_SRC/data/public-dashboard.json}"
+HTML_OUT="${HTML_OUT:-/tmp/lemma-public-dashboard.html}"
+PYTHON="${PYTHON:-$LEMMA_SRC/.venv/bin/python}"
+LOCK_FILE="${LOCK_FILE:-/tmp/lemma-public-dashboard.lock}"
+
+export NETUID="${NETUID:-467}"
+export SUBTENSOR_NETWORK="${SUBTENSOR_NETWORK:-test}"
+export SUBTENSOR_CHAIN_ENDPOINT="${SUBTENSOR_CHAIN_ENDPOINT:-wss://test.finney.opentensor.ai:443}"
+export PYTHONDONTWRITEBYTECODE="${PYTHONDONTWRITEBYTECODE:-1}"
+export PYTHONPATH="$LEMMA_SRC${PYTHONPATH:+:$PYTHONPATH}"
+export GIT_SSH_COMMAND="${GIT_SSH_COMMAND:-ssh -i /root/.ssh/lemmasub_net_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new}"
+
+exec 9>"$LOCK_FILE"
+if ! flock -n 9; then
+  echo "public dashboard refresh already running: $LOCK_FILE" >&2
+  exit 0
+fi
+
+if [[ ! -s "$SUMMARY_JSONL" ]]; then
+  echo "missing validator summary export: $SUMMARY_JSONL" >&2
+  exit 1
+fi
+
+cd "$SITE_SRC"
+git checkout main >/dev/null
+git pull --ff-only origin main
+
+tmp_json="$(mktemp)"
+cleanup() {
+  rm -f "$tmp_json"
+}
+trap cleanup EXIT
+
+"$PYTHON" "$EXPORTER_SRC/tools/public_dashboard.py" \
+  --summary-jsonl "$SUMMARY_JSONL" \
+  --json-out "$tmp_json" \
+  --html-out "$HTML_OUT"
+"$PYTHON" -m json.tool "$tmp_json" >/dev/null
+install -m 0644 "$tmp_json" "$JSON_OUT"
+
+if git diff --quiet -- data/public-dashboard.json; then
+  echo "public dashboard data unchanged"
+  exit 0
+fi
+
+git add data/public-dashboard.json
+git commit -m "Refresh public dashboard data"
+git push origin main

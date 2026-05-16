@@ -1,170 +1,98 @@
 # Lemma
 
-**Lemma is a Bittensor subnet for turning formal mathematics targets
-into machine-checked Lean proofs.**
+**Lemma is a [Bittensor](https://docs.learnbittensor.org/) subnet for using AI to prove mathematical theorems.**
 
-The live work surface has two lanes:
+Lemma posts theorem challenges. Miners use AI to write Lean proof files.
+Validators use Lean to check them. Valid proofs become eligible for miner
+rewards.
 
-1. Cadence tasks: validators publish one ordered theorem target at a time from
-   hybrid curated/generated supply.
-2. Miners locally verify a proof, keep it private, and publish an on-chain commitment.
-3. After the commit window closes, miners reveal `proof_script` plus the secret nonce.
-4. Validators verify the commitment, then verify the Lean file against the locked target.
-5. Passing solvers are written to the solved-target ledger.
-6. Public cadence data shows task state, UIDs, and full hotkeys, but not proof
-   bodies, proof hashes, nonces, or commitment hashes.
-7. Verified cadence work updates difficulty-weighted rolling scores; positive
-   rolling scores normalize into miner weights.
-8. Formal Conjectures bounty campaigns are manual operator-funded work: first
-   accepted proof wins the listed campaign reward, outside validator weights.
+Bitcoin rewards miners for securing the network. Bittensor rewards miners for
+producing useful intelligence. Lemma rewards miners for producing correct
+proofs.
 
-No prose score, proof-efficiency score, subjective judge, or hidden validator
-discretion is part of the reward path.
+A Lemma round is simple:
 
-## Current Scope
+1. The subnet publishes a theorem statement.
+2. Miners use AI to write candidate Lean proof scripts.
+3. Validators verify those scripts with the pinned Lean toolchain.
+4. Passing proofs become eligible for miner rewards under Lemma's subnet rules; failing proofs do not.
 
-The public package, command, and docs are `lemma`. The internal Python package is
-also `lemma`.
+Anything that can be formalized as a Lean statement can become work for Lemma:
+algebra, number theory, logic, combinatorics, geometry, computer science,
+cryptography, and more.
 
-The default cadence problem source is:
+Lemma is still proof-of-concept software. It currently runs on Bittensor testnet as **subnet 467** (`--network test`; run `uv run lemma configure chain` to set `NETUID=467`). Mainnet, also known as Finney, is separate. Only treat mainnet rewards or tokens as relevant when the deployment you are following is registered, active, and matched to the correct **network** and **netuid**.
 
-```bash
-LEMMA_PROBLEM_SOURCE=hybrid
-```
+For the full mechanism and reward model, start with the [litepaper](docs/litepaper.md).
 
-Hybrid cadence starts with the curated
-[`lemma/problems/known_theorems_manifest.json`](lemma/problems/known_theorems_manifest.json),
-then continues into deterministic generated cadence tasks. Formal Conjectures
-campaigns live in
-[`lemma/formal_conjectures_campaigns.json`](lemma/formal_conjectures_campaigns.json).
+## Start Here
 
-## Quick Start
+1. **Understand the mechanism:** [docs/litepaper.md](docs/litepaper.md)
+2. **Get plain-language answers:** [docs/faq.md](docs/faq.md)
+3. **Install and run Lemma:** [docs/getting-started.md](docs/getting-started.md)
+4. **Check implementation details:** [docs/technical-reference.md](docs/technical-reference.md)
 
-Start from the repo:
+## Quick start
+
+To try the CLI locally:
 
 ```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
 git clone https://github.com/spacetime-tao/lemma.git
 cd lemma
 uv sync --extra btcli
 uv run lemma --help
-uv run lemma mine
-uv run lemma status
 ```
 
-`lemma mine` runs a compact preflight before cadence work. It shows wallet,
-hotkey, subnet registration, chain/cadence state, prover status, and exact
-`btcli` commands when something is missing.
+Use one environment and one tool: `uv`. The Lemma `.venv` holds subnet dependencies and the `lemma` command (`setup`, `doctor`, `preview`, miner, validator). Wallets use `btcli` from [bittensor-cli](https://pypi.org/project/bittensor-cli/); install it here with `uv sync --extra btcli` (or `uv sync --extra dev --extra btcli` for development).
 
-Cadence mining is prover-first. Configure an OpenAI-compatible provider:
+**Validators:** start with `lemma validator start` (or Docker `ENTRYPOINT ["lemma"]` / `CMD ["validator", "start"]`).
 
-```bash
-cat >> .env <<'EOF'
-LEMMA_PROVER_BASE_URL=https://api.openai.com/v1
-LEMMA_PROVER_API_KEY=replace_me
-EOF
+### Operators
 
-source .env
-curl -sS "$LEMMA_PROVER_BASE_URL/models" \
-  -H "Authorization: Bearer $LEMMA_PROVER_API_KEY"
+The sample [`docker-compose.yml`](docker-compose.yml) runs Lemma services in containers. It also mounts **`/var/run/docker.sock`** so validators can spawn isolated proof-checking containers. That socket is high privilege. Lock down the host before using this setup in production; see [production.md](docs/production.md).
 
-cat >> .env <<'EOF'
-LEMMA_PROVER_MODEL=copy_one_model_id_here
-EOF
-```
+In the miner docs, **axon** is Bittensor’s term for the network address and port where your miner listens for validator traffic. Open that port intentionally in firewalls and cloud security groups.
 
-Replace the base URL with another OpenAI-compatible provider when needed, then
-copy one returned model `id` into `LEMMA_PROVER_MODEL`.
+## Short Docs Index
 
-Mine the active target:
+| Topic | File |
+| ----- | ---- |
+| Litepaper | [litepaper.md](docs/litepaper.md) |
+| FAQ (lay readers) | [faq.md](docs/faq.md) |
+| Install & operator checklist | [getting-started.md](docs/getting-started.md) |
+| Vision & roadmap | [vision.md](docs/vision.md) |
+| Components | [architecture.md](docs/architecture.md) |
+| Technical reference | [technical-reference.md](docs/technical-reference.md) |
+| Codebase audit (Cursor) | [cursor-audit.md](docs/cursor-audit.md) |
+| Codebase audit (Codex) | [codex-audit.md](docs/codex-audit.md) |
+| Miner | [miner.md](docs/miner.md) |
+| Validator | [validator.md](docs/validator.md) |
+| Models / APIs | [models.md](docs/models.md) |
+| Production / ops | [production.md](docs/production.md) |
+| VPS safety / key custody | [vps-safety.md](docs/vps-safety.md) |
+| DigitalOcean Droplet runbook | [droplet-operations.md](docs/droplet-operations.md) |
+| Service-user migration | [service-user-migration.md](docs/service-user-migration.md) |
+| Miner dashboard notes | [miner-dashboard.md](docs/miner-dashboard.md) |
+| Governance / pins | [governance.md](docs/governance.md) |
+| Toolchain / image pinning | [toolchain-image-policy.md](docs/toolchain-image-policy.md) |
+| Tests | [testing.md](docs/testing.md) |
+| Generated problems | [generated-problems.md](docs/generated-problems.md) |
+| System requirements | [system-requirements.md](docs/system-requirements.md) |
 
-```bash
-uv run lemma mine
-# or choose one registered miner hotkey explicitly
-uv run lemma mine --hotkey lemmaminer2
-```
+Deeper design records live in `docs/` for proof rewards, problem supply,
+Sybil/reward policy, proof metrics, commit-reveal, and attest behavior.
 
-`lemma mine` shows the active theorem, asks the prover for a complete
-`Submission.lean`, verifies it locally, publishes the private commitment, and
-starts the miner server. Use `--submission path/to/Submission.lean` for the
-advanced/manual override. `lemma status` shows the previous, current, and next
-theorem in the ordered target window. If a proof is already committed,
-`lemma mine` resumes serving.
+## References
 
-Run a validator:
-
-```bash
-uv run lemma setup --role validator
-uv run lemma validate
-# or run validation with a separate registered validator hotkey
-uv run lemma validate --hotkey lemmaminer2
-```
-
-Verify and package a bounty proof:
-
-```bash
-uv run lemma mine --bounty <campaign-id> --submission path/to/Submission.lean
-```
-
-Advanced/script commands remain callable but are hidden from the main help:
-
-```bash
-uv run lemma submit \
-  --problem known/smoke/nat_two_plus_two_eq_four \
-  --submission path/to/Submission.lean
-uv run lemma commit --problem known/smoke/nat_two_plus_two_eq_four
-uv run lemma miner start
-uv run lemma dashboard export --output data/cadence.json
-uv run lemma dashboard export-bounties --output data/bounties.json
-uv run lemma dashboard publish --output-dir /var/www/lemma-live
-uv run lemma bounty-accept --package path/to/bounty-package.json
-uv run lemma validator check
-uv run lemma validator start
-```
-
-Validators must pin both the validator profile hash and the known-theorem
-manifest hash before live use:
-
-```bash
-uv run lemma meta --raw
-```
-
-## Protocol Notes
-
-- Cadence windows are fixed at `LEMMA_CADENCE_WINDOW_BLOCKS=100` by default:
-  `seed = floor(chain_head / 100) * 100`.
-- Solved-ledger entries do not advance the next cadence task.
-- UID-specific same-split variants are enabled by default with
-  `LEMMA_UID_VARIANT_PROBLEMS=1`.
-- The default commit window is `LEMMA_COMMIT_WINDOW_BLOCKS=25` inside each
-  100-block cadence window; validators poll for proofs only after reveal opens.
-- Public cadence export includes target state, validator hotkey, solver UID, and
-  full solver hotkey. It omits proof text, proof hashes, nonces, and commitment
-  hashes.
-- Targets with known accepted Lean proofs are not launch-eligible.
-- Each target row carries a human proof reference, imports, attribution, and
-  reviewer duplicate/faithfulness notes.
-- Difficulty weights are `easy=1`, `medium=2`, `hard=4`, and `extreme=8`.
-- Verified cadence work updates per-UID rolling scores with
-  `1 - (1 - alpha) ** difficulty_weight`; positive rolling scores normalize
-  into weights.
-- Same-coldkey partitioning is default-on as work/reward pressure. It is not
-  Sybil-proof identity.
-- If no UID has a positive rolling score, validators skip `set_weights`.
-- Duplicate proofs for already-solved targets do not change the ledger.
-- The public cadence feed is a tiny JSON export from the cadence source and
-  solved ledger. The public bounty feed is a tiny JSON export from the campaign
-  registry and acceptance ledger.
-- Formal Conjectures tasks are manual operator-funded campaigns: first accepted
-  proof wins the campaign ledger, but campaign rows do not affect validator
-  `set_weights`. Bounty identity is hotkey-first; a subnet UID is optional.
-- Launch on a fresh or intentionally reset subnet state so old Lemma weights do
-  not carry into the proof protocol.
-
-See [`docs/protocol.md`](docs/protocol.md) for the compact mechanism reference.
+- [Bittensor](https://docs.learnbittensor.org/)
+- [lean-eval](https://github.com/leanprover/lean-eval)
+- [miniF2F](https://github.com/openai/miniF2F) / [miniF2F-lean4](https://github.com/yangky11/miniF2F-lean4)
+- [mathlib4](https://github.com/leanprover-community/mathlib4)
 
 ## License
 
-Apache-2.0.
+Apache-2.0
 
 ## Original Contributors
 

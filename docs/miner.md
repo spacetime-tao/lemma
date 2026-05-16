@@ -1,104 +1,69 @@
 # Miner
 
-The miner is a tiny proof-serving Axon daemon.
+## Reference miner boundary
 
-It does not score prose or optimize proof efficiency. The guided cadence path
-uses a prover API to draft `Submission.lean`, then local Lean verification is
-the gate.
+The bundled miner is a **reference Axon service** for the current Lemma subnet
+protocol. It keeps the repo runnable end to end, gives operators a standard
+prover path, and supports compatibility features such as local Lean verify,
+miner attest, and commit-reveal.
 
-Browser solve-portal mining has been removed. Miners work offline, use the CLI
-to commit from a registered hotkey, and serve the proof through the Axon miner
-after reveal opens.
+It is not the long-term answer to the audit's "validator-only development" or
+"container execution" ideals. Do not grow this package with competitive solver
+strategy, broad onboarding UX, model experimentation dashboards, or alternate
+transport stacks. Keep operator flows in the `lemma` command; major miner-artifact or
+container-execution designs should be planned as separate protocol work.
 
-## Guided Mining
+Walkthrough: [getting-started.md](getting-started.md) — **`uv sync --extra btcli`** if you need repo-local **`uv run btcli`** (Bittensor CLI), `uv run lemma setup`, then `uv run lemma …` from the repo root. Prefer prompts over hand-editing `.env` (`uv run lemma configure chain`, `configure prover`, `configure axon`).
 
-```bash
-uv run lemma mine
-```
+**Short checklist:** `uv run lemma setup` → coldkey funded → `uv run btcli subnet register` on the same network/netuid as `.env` → `uv run lemma miner dry-run` → **`uv run lemma preview`** (see prover + Lean on the live theorem) → fix axon IP/port if needed → `uv run lemma miner start`.
 
-`lemma mine` starts with a compact preflight: wallet, hotkey, subnet
-registration, chain/cadence state, prover status, and exact `btcli` commands
-when something is missing. It requires `LEMMA_PROVER_BASE_URL`,
-`LEMMA_PROVER_API_KEY`, and `LEMMA_PROVER_MODEL` unless `--submission` is used.
+### Prover LLM (`lemma configure prover`)
 
-Use `--wallet` and `--hotkey` when one machine has several registered miner
-hotkeys:
+Choose **which API** runs first (numbered menu), then follow prompts. **Chutes**, **Gemini** (preset tiers + custom id), **Anthropic**, **OpenAI**, or **custom** OpenAI-compatible URL — URLs are preset for all but **custom**. In-terminal blurbs show example **`PROVER_MODEL`** strings (catalog ids on Chutes, Gemini names, Claude ids, OpenAI model names; custom depends on the upstream host). Details and env vars: [models.md](models.md).
 
-```bash
-uv run lemma mine --hotkey lemmaminer2
-```
+Inference: Chutes is the usual default when prompted.
 
-`lemma mine` shows the active theorem, asks the prover for a complete
-`Submission.lean`, verifies it locally, publishes the commitment, and starts the
-miner server. If the proof is already committed, it resumes serving. If
-commitment failed, retry with `uv run lemma mine --retry-commit`.
-
-Use `--submission path/to/Submission.lean` for the advanced/manual override.
-
-For advanced scripts:
+## Run
 
 ```bash
-uv run lemma submit \
-  --problem known/smoke/nat_two_plus_two_eq_four \
-  --submission path/to/Submission.lean
-uv run lemma commit --problem known/smoke/nat_two_plus_two_eq_four
+uv run lemma miner dry-run
 uv run lemma miner start
 ```
 
-Validators do not answer the mine command directly. Keep the miner running until
-your UID appears on `https://lemmasub.net/dashboard/`. `lemma target ledger` is
-useful only when you have the validator/operator ledger locally. Validators poll
-on their own schedule after reveal opens, then run Lean verification; the
-default poll interval is about five minutes.
-`lemma status` and the public cadence page show the previous, current, and next
-theorem in the ordered target window.
+While the axon is up, each validator forward **starts the prover immediately** — there is no intentional delay for “new theorem” windows; you compete as soon as traffic hits your axon. By contrast, `lemma preview` is a manual one-off (same API billing pattern, but you pressed Enter).
 
-Proofs are stored under `LEMMA_MINER_SUBMISSIONS_PATH` or
-`~/.lemma/submissions.json`.
+Daily forward cap: `MINER_MAX_FORWARDS_PER_DAY` or `uv run lemma miner start --max-forwards-per-day N`.
 
-## Serve Proofs
+## Seeing replies, correctness, and Lean status
 
-```bash
-uv run lemma miner start
-```
+Validators decide whether your proof typechecks; the miner process does not receive scores back on the axon path.
 
-When a validator polls, the miner checks that the requested target id,
-statement, imports, Lean toolchain, Mathlib revision, target phase, and stored
-commitment match its stored submission. During commit phase it returns no proof.
-During reveal phase it returns `proof_script`, the nonce, and the commitment
-hash. If anything does not match, it returns no proof.
+- `lemma preview` runs the **prover once** on whatever theorem `lemma status` would sample right now, then prints `proof_script` and verifies it by default (uses your prover API and Docker unless configured otherwise). Use `--no-verify` to skip Lean.
 
-Once the public cadence page shows your UID for that target, the proof was accepted
-and the miner can be stopped unless you want it online for the next target.
+- When a validator forward starts, logs include **`my_uid`** and **`my_incentive`** from the **chain metagraph** (same kind of aggregate view as `uv run btcli subnet show --netuid 467 --network test`) — a snapshot of subnet incentive for your hotkey, not a grade on this theorem.
+- At **INFO** you get **`miner answered`** when the reply is ready; **`local_lean=`** is `PASS` / `FAIL` / … only if **`LEMMA_MINER_LOCAL_VERIFY=1`**. That flag is **optional**: validators always run Lean on your submission — enable local verify only if you want early PASS/FAIL on your machine (costs Docker CPU per forward while debugging). **`miner_forward_summary`** (default on) adds session rollups.
 
-## Bounty Proofs
+- Set `LEMMA_MINER_FORWARD_TIMELINE=1` for **three INFO lines per forward**: **`miner timeline 1 RECEIVE`** (theorem, `deadline_block` vs current head, HTTP/wall time budgets, short statement preview), **`miner timeline 2 SOLVED`** (prover wall time, sizes), **`miner timeline 3 OUTCOME`** (`local_lean` if `LEMMA_MINER_LOCAL_VERIFY=1`, else a hint). Then **`miner answered`** as today. Final validator weights are not returned on the axon — only optional **local Lean** mirrors validator proof-checking on your machine.
 
-Formal Conjectures bounties are not normal subnet-weight work and do not require
-a registered UID. They do require a hotkey signature so the operator can identify
-the solver.
+- Set `LEMMA_MINER_LOG_FORWARDS=1` to log each forward: `proof_script` excerpt at INFO; raw model output is logged at DEBUG (enable e.g. `LOG_LEVEL=DEBUG` to see it).
+- Set `LEMMA_MINER_LOCAL_VERIFY=1` to run the same sandbox `lake build` as validators after the prover returns (requires Docker and `LEAN_SANDBOX_IMAGE` / timeouts aligned with your subnet). Logs `miner local verify OK` or `FAIL` with reason.
+
+For frozen catalog problems, `LEMMA_MINER_LOCAL_VERIFY` needs the same `LEMMA_MINIF2F_CATALOG_PATH` as validators so `theorem_id` resolves.
+
+## Generated mode
+
+Templates span easy/medium/hard/extreme; how long validators wait on the wire follows **block height** (blocks to the next seed edge × `LEMMA_BLOCK_TIME_SEC_ESTIMATE`, clamped) — see [generated-problems.md](generated-problems.md).
+
+## Compose
 
 ```bash
-uv run lemma mine --bounty <campaign-id> --submission Submission.lean
+docker compose -f docker-compose.yml -f docker-compose.local.yml up miner
 ```
 
-That command verifies the pinned bounty theorem locally and writes a signed proof
-package under `LEMMA_BOUNTY_PACKAGE_DIR` or `~/.lemma/bounty-packages/`.
+## Output contract
 
-## Operational Notes
+`proof_script` must be complete `Submission.lean` for the challenge theorem name.
 
-- `AXON_PORT` controls the miner port.
-- `AXON_EXTERNAL_IP` should be set explicitly for production miners.
-- Miner droplets are optional now; they are proof-serving hosts, not automation
-  machines.
-- The validator result is not returned over Axon; chain weights are the visible
-  reward signal.
-- Positive rolling scores normalize into weights. If nobody has a positive
-  rolling score, validators skip `set_weights`.
-- Public cadence task data is exported from the cadence source and solved ledger:
+## Models
 
-```bash
-uv run lemma dashboard export --output data/cadence.json
-```
-
-The public export shows task state, UIDs, and full hotkeys. It does not publish
-proof text, proof hashes, nonces, or commitment hashes.
+Miners should use a prover model that writes valid Lean reliably (documented in [models.md](models.md) — e.g. `deepseek-ai/DeepSeek-V3.2-TEE` on Chutes or another strong reasoning model you run well).

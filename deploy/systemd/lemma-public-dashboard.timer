@@ -1,0 +1,12 @@
+[Unit]
+Description=Refresh Lemma public dashboard JSON every 3 minutes
+
+[Timer]
+OnBootSec=2min
+OnCalendar=*:0/3
+AccuracySec=30s
+Persistent=true
+Unit=lemma-public-dashboard.service
+
+[Install]
+WantedBy=timers.target

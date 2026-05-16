@@ -1,97 +1,65 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
-from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-from lemma.commitments import build_proof_commitment, proof_sha256
 from lemma.common.config import LemmaSettings
 from lemma.lean.sandbox import VerifyResult
 from lemma.problems.base import Problem, ProblemSource
-from lemma.problems.known_theorems import known_theorems_manifest_sha256
 from lemma.protocol import LemmaChallenge
 from lemma.validator import epoch
 
-PROBLEM = Problem(
-    id="known/test/one",
-    theorem_name="target_one",
-    type_expr="True",
-    split="known_theorems",
-    lean_toolchain="lt",
-    mathlib_rev="mr",
-    imports=("Mathlib",),
-)
-PREVIOUS_PROBLEM = Problem(
-    id="known/test/zero",
-    theorem_name="target_zero",
-    type_expr="True",
-    split="known_theorems",
-    lean_toolchain="lt",
-    mathlib_rev="mr",
-    imports=("Mathlib",),
-)
-
 
 class _OneProblemSource(ProblemSource):
+    problem = Problem(
+        id="gen/1",
+        theorem_name="t",
+        type_expr="True",
+        split="easy",
+        lean_toolchain="lt",
+        mathlib_rev="mr",
+        imports=("Mathlib",),
+    )
+
     def all_problems(self) -> list[Problem]:
-        return [PROBLEM]
+        return [self.problem]
 
     def sample(self, seed: int, split: str | None = None) -> Problem:
-        return PROBLEM
-
-    def get(self, problem_id: str) -> Problem:
-        if problem_id != PROBLEM.id:
-            raise KeyError(problem_id)
-        return PROBLEM
-
-
-class _TwoProblemSource(_OneProblemSource):
-    def all_problems(self) -> list[Problem]:
-        return [PREVIOUS_PROBLEM, PROBLEM]
-
-
-class _SolvedProblemSource(_OneProblemSource):
-    def sample(self, seed: int, split: str | None = None) -> Problem:
-        raise ValueError("all solved")
+        return self.problem
 
 
 class _Subtensor:
-    def __init__(
-        self,
-        n: int = 2,
-        *,
-        current_block: int = 50,
-        commitments_by_block: dict[int, dict[str, str]] | None = None,
-        set_weight_results: list[object] | None = None,
-    ) -> None:
-        self.n = n
-        self.current_block = current_block
-        self.commitments_by_block = commitments_by_block or {}
+    def __init__(self) -> None:
         self.set_weights_calls: list[dict[str, Any]] = []
-        self.set_weight_results = list(set_weight_results or [SimpleNamespace(success=True, message="ok")])
 
     def get_current_block(self) -> int:
-        return self.current_block
+        return 50
 
     def metagraph(self, netuid: int) -> SimpleNamespace:
         return SimpleNamespace(
-            n=self.n,
-            axons=[SimpleNamespace(uid=uid) for uid in range(self.n)],
-            hotkeys=[f"miner-hotkey-{uid}" for uid in range(self.n)],
-            coldkeys=[f"miner-coldkey-{uid}" for uid in range(self.n)],
+            n=1,
+            axons=[object()],
+            hotkeys=["miner-hotkey"],
+            coldkeys=["miner-coldkey"],
         )
 
     def get_uid_for_hotkey_on_subnet(self, hotkey: str, netuid: int) -> None:
         return None
 
-    def get_all_commitments(self, netuid: int, *, block: int) -> dict[str, str]:
-        return self.commitments_by_block.get(block, {})
+    def set_weights(self, **kwargs: Any) -> SimpleNamespace:
+        self.set_weights_calls.append(kwargs)
+        return SimpleNamespace(success=True, message="ok")
+
+
+class _SequencedSubtensor(_Subtensor):
+    def __init__(self, results: list[object]) -> None:
+        super().__init__()
+        self.results = results
 
     def set_weights(self, **kwargs: Any) -> object:
         self.set_weights_calls.append(kwargs)
-        result = self.set_weight_results.pop(0)
+        result = self.results.pop(0)
         if isinstance(result, Exception):
             raise result
         return result
@@ -102,66 +70,45 @@ class _Wallet:
         self.hotkey = SimpleNamespace(ss58_address="validator-hotkey")
 
 
-def _settings(tmp_path: Path, **updates: object) -> LemmaSettings:
+class _TwoMinerSubtensor(_Subtensor):
+    def metagraph(self, netuid: int) -> SimpleNamespace:
+        return SimpleNamespace(
+            n=2,
+            axons=[SimpleNamespace(uid=0), SimpleNamespace(uid=1)],
+            hotkeys=["miner-hotkey-0", "miner-hotkey-1"],
+            coldkeys=["miner-coldkey-0", "miner-coldkey-1"],
+        )
+
+
+class _ThreeMinerSubtensor(_Subtensor):
+    def metagraph(self, netuid: int) -> SimpleNamespace:
+        return SimpleNamespace(
+            n=3,
+            axons=[SimpleNamespace(uid=0), SimpleNamespace(uid=1), SimpleNamespace(uid=2)],
+            hotkeys=["miner-hotkey-0", "miner-hotkey-1", "validator-hotkey"],
+            coldkeys=["miner-coldkey-0", "miner-coldkey-1", "validator-coldkey"],
+        )
+
+    def get_uid_for_hotkey_on_subnet(self, hotkey: str, netuid: int) -> int | None:
+        return 2 if hotkey == "validator-hotkey" else None
+
+
+def _settings(tmp_path, **updates: object) -> LemmaSettings:
     base = {
         "_env_file": None,
-        "solved_ledger_path": tmp_path / "solved-ledger.jsonl",
+        "lemma_reputation_state_path": tmp_path / "reputation.json",
         "validator_min_free_bytes": 0,
-        "validator_abort_if_not_registered": False,
-        "target_genesis_block": 48,
-        "commit_window_blocks": 2,
-        "cadence_window_blocks": 48,
-        "owner_burn_uid": 1,
-        "lemma_uid_variant_problems": False,
-        "lemma_reputation_state_path": tmp_path / "rolling-scores.json",
     }
     base.update(updates)
     return LemmaSettings(**base)
-
-
-def _response(synapse: LemmaChallenge, *, proof: str | None = None, **updates: object) -> LemmaChallenge:
-    data = {
-        "theorem_id": synapse.theorem_id,
-        "theorem_statement": synapse.theorem_statement,
-        "imports": list(synapse.imports or []),
-        "lean_toolchain": synapse.lean_toolchain,
-        "mathlib_rev": synapse.mathlib_rev,
-        "poll_id": synapse.poll_id,
-        "proof_script": proof,
-    }
-    data.update(updates)
-    resp = LemmaChallenge(**data)
-    resp.dendrite.status_code = 200
-    resp.dendrite.status_message = "Success"
-    return resp
-
-
-def _commitment(
-    settings: LemmaSettings,
-    *,
-    uid: int,
-    proof: str,
-    nonce: str | None = None,
-    problem: Problem = PROBLEM,
-) -> tuple[str, str, str]:
-    nonce = nonce or f"nonce-{uid}"
-    commitment = build_proof_commitment(
-        netuid=settings.netuid,
-        miner_hotkey=f"miner-hotkey-{uid}",
-        manifest_sha256=known_theorems_manifest_sha256(settings.known_theorems_manifest_path),
-        problem=problem,
-        proof_hash=proof_sha256(proof),
-        nonce=nonce,
-    )
-    return nonce, commitment.commitment_hash, commitment.payload_text
 
 
 def _install_epoch_fakes(
     monkeypatch,
     *,
     subtensor: _Subtensor,
-    response_fn: Callable[[list[object], LemmaChallenge], list[object]],
-    verify_fn: Callable[[str], VerifyResult] | None = None,
+    verify_result: VerifyResult,
+    proof_script: str = "namespace Submission\n",
 ) -> None:
     class Dendrite:
         def __init__(self, *, wallet: object) -> None:
@@ -180,78 +127,29 @@ def _install_epoch_fakes(
             *,
             timeout: float,
             run_async: bool,
-        ) -> list[object]:
-            return response_fn(axons, synapse)
+        ) -> list[LemmaChallenge]:
+            resp = LemmaChallenge(
+                theorem_id=synapse.theorem_id,
+                theorem_statement=synapse.theorem_statement,
+                imports=list(synapse.imports or []),
+                lean_toolchain=synapse.lean_toolchain,
+                mathlib_rev=synapse.mathlib_rev,
+                deadline_unix=synapse.deadline_unix,
+                deadline_block=synapse.deadline_block,
+                metronome_id=synapse.metronome_id,
+                proof_script=proof_script,
+            )
+            resp.dendrite.status_code = 200
+            resp.dendrite.status_message = "Success"
+            return [resp]
 
     def run_lean_verify(*args: object, **kwargs: object) -> VerifyResult:
-        proof = str(kwargs["proof_script"])
-        if verify_fn is None:
-            return VerifyResult(passed=True, reason="ok")
-        return verify_fn(proof)
+        return verify_result
 
     monkeypatch.setattr(epoch, "get_subtensor", lambda settings: subtensor)
     monkeypatch.setattr(epoch.bt, "Wallet", _Wallet)
     monkeypatch.setattr(epoch.bt, "Dendrite", Dendrite)
     monkeypatch.setattr(epoch, "run_lean_verify", run_lean_verify)
-
-
-def _ledger_row(target_id: str, solver_uid: int) -> str:
-    problem = PREVIOUS_PROBLEM if target_id == PREVIOUS_PROBLEM.id else PROBLEM
-    return (
-        json.dumps(
-            {
-                "target_id": target_id,
-                "winner_uid": solver_uid,
-                "winner_hotkey": f"miner-hotkey-{solver_uid}",
-                "winner_coldkey": f"miner-coldkey-{solver_uid}",
-                "proof_sha256": "a" * 64,
-                "accepted_block": 1,
-                "accepted_unix": 2,
-                "validator_hotkey": "validator-hotkey",
-                "lemma_version": "0.1.0",
-                "verify_reason": "ok",
-                "build_seconds": 0.0,
-                "theorem_statement_sha256": problem.theorem_statement_sha256(),
-            },
-            sort_keys=True,
-        )
-        + "\n"
-    )
-
-
-def _tied_ledger_row(target_id: str, solver_uids: list[int]) -> str:
-    problem = PREVIOUS_PROBLEM if target_id == PREVIOUS_PROBLEM.id else PROBLEM
-    return (
-        json.dumps(
-            {
-                "target_id": target_id,
-                "solvers": [
-                    {
-                        "uid": uid,
-                        "hotkey": f"miner-hotkey-{uid}",
-                        "coldkey": f"miner-coldkey-{uid}",
-                        "proof_sha256": str(uid) * 64,
-                        "verify_reason": "ok",
-                        "build_seconds": 0.0,
-                    }
-                    for uid in solver_uids
-                ],
-                "accepted_block": 1,
-                "accepted_unix": 2,
-                "validator_hotkey": "validator-hotkey",
-                "lemma_version": "0.1.0",
-                "theorem_statement_sha256": problem.theorem_statement_sha256(),
-            },
-            sort_keys=True,
-        )
-        + "\n"
-    )
-
-
-def _assert_weights(actual: dict[int, float], expected: dict[int, float]) -> None:
-    assert set(actual) == set(expected)
-    for uid, weight in expected.items():
-        assert abs(actual[uid] - weight) < 1e-9
 
 
 def test_set_weights_outcome_handles_bittensor_shapes() -> None:
@@ -266,356 +164,81 @@ def test_set_weights_outcome_handles_bittensor_shapes() -> None:
     assert message == "success=False without message"
 
 
-async def test_proof_no_proof_with_no_positive_scores_skips_weights(monkeypatch, tmp_path: Path) -> None:
+async def test_training_export_oserror_does_not_block_set_weights(monkeypatch, tmp_path) -> None:
     subtensor = _Subtensor()
     _install_epoch_fakes(
         monkeypatch,
         subtensor=subtensor,
-        response_fn=lambda axons, synapse: [_response(synapse, proof=None) for _axon in axons],
+        verify_result=VerifyResult(passed=True, reason="ok"),
     )
 
-    weights = await epoch.run_epoch(_settings(tmp_path), _TwoProblemSource(), dry_run=False)
+    def fail_append(*args: object, **kwargs: object) -> None:
+        raise OSError("disk full")
 
-    assert weights == {}
-    assert subtensor.set_weights_calls == []
-    assert not (tmp_path / "solved-ledger.jsonl").exists()
+    monkeypatch.setattr(epoch, "append_epoch_jsonl", fail_append)
+
+    weights = await epoch.run_epoch(
+        _settings(tmp_path, training_export_jsonl=tmp_path / "export.jsonl"),
+        _OneProblemSource(),
+        dry_run=False,
+    )
+
+    assert weights == {0: 1.0}
+    assert len(subtensor.set_weights_calls) == 1
 
 
-async def test_owner_burn_uid_no_longer_controls_weight_write(monkeypatch, tmp_path: Path) -> None:
-    subtensor = _Subtensor(n=2)
+async def test_set_weights_tuple_failure_retries_until_success(monkeypatch, tmp_path) -> None:
+    subtensor = _SequencedSubtensor([(False, "rate limited"), (True, "ok")])
     _install_epoch_fakes(
         monkeypatch,
         subtensor=subtensor,
-        response_fn=lambda axons, synapse: [_response(synapse, proof=None) for _axon in axons],
+        verify_result=VerifyResult(passed=True, reason="ok"),
     )
 
-    weights = await epoch.run_epoch(_settings(tmp_path, owner_burn_uid=9), _TwoProblemSource(), dry_run=False)
+    async def no_sleep(delay: float) -> None:
+        return None
 
-    assert weights == {}
-    assert subtensor.set_weights_calls == []
+    monkeypatch.setattr(epoch.asyncio, "sleep", no_sleep)
+
+    weights = await epoch.run_epoch(
+        _settings(tmp_path, set_weights_max_retries=2),
+        _OneProblemSource(),
+        dry_run=False,
+    )
+
+    assert weights == {0: 1.0}
+    assert len(subtensor.set_weights_calls) == 2
 
 
-async def test_proof_single_valid_solver_gets_observed_difficulty_weight(monkeypatch, tmp_path: Path) -> None:
-    settings = _settings(tmp_path)
-    proof = "namespace Submission\n-- uid 0\n"
-    nonce, commitment_hash, payload = _commitment(settings, uid=0, proof=proof)
-    subtensor = _Subtensor(n=2, commitments_by_block={48: {"miner-hotkey-0": payload}, 49: {"miner-hotkey-0": payload}})
+async def test_set_weights_exception_retries_until_success(monkeypatch, tmp_path) -> None:
+    subtensor = _SequencedSubtensor([RuntimeError("rpc down"), SimpleNamespace(success=True, message="ok")])
     _install_epoch_fakes(
         monkeypatch,
         subtensor=subtensor,
-        response_fn=lambda axons, synapse: [
-            _response(synapse, proof=proof, proof_nonce=nonce, commitment_hash=commitment_hash),
-            _response(synapse, proof=None),
-        ],
+        verify_result=VerifyResult(passed=True, reason="ok"),
     )
 
-    weights = await epoch.run_epoch(settings, _TwoProblemSource(), dry_run=False)
-    ledger = [json.loads(line) for line in (tmp_path / "solved-ledger.jsonl").read_text().splitlines()]
+    async def no_sleep(delay: float) -> None:
+        return None
 
-    _assert_weights(weights, {0: 1.0})
-    assert ledger[0]["target_id"] == PROBLEM.id
-    assert [solver["uid"] for solver in ledger[0]["solvers"]] == [0]
-    assert ledger[0]["solvers"][0]["proof_script"] == "namespace Submission\n-- uid 0\n"
-    assert ledger[0]["solvers"][0]["proof_nonce"] == nonce
-    assert ledger[0]["solvers"][0]["commitment_hash"] == commitment_hash
-    assert ledger[0]["solvers"][0]["commitment_block"] == 48
-    assert subtensor.set_weights_calls[0]["weights"] == [1.0, 0.0]
+    monkeypatch.setattr(epoch.asyncio, "sleep", no_sleep)
 
-
-async def test_proof_same_block_valid_solvers_split_rewards(monkeypatch, tmp_path: Path) -> None:
-    settings = _settings(tmp_path, owner_burn_uid=3)
-    proof0 = "namespace Submission\n-- uid 0\n"
-    proof1 = "namespace Submission\n-- uid 1\n"
-    nonce0, hash0, payload0 = _commitment(settings, uid=0, proof=proof0)
-    nonce1, hash1, payload1 = _commitment(settings, uid=1, proof=proof1)
-    commitments = {"miner-hotkey-0": payload0, "miner-hotkey-1": payload1}
-    subtensor = _Subtensor(n=4, commitments_by_block={48: commitments, 49: commitments})
-    _install_epoch_fakes(
-        monkeypatch,
-        subtensor=subtensor,
-        response_fn=lambda axons, synapse: [
-            _response(synapse, proof=proof0, proof_nonce=nonce0, commitment_hash=hash0),
-            _response(synapse, proof=proof1, proof_nonce=nonce1, commitment_hash=hash1),
-            _response(synapse, proof=None),
-            _response(synapse, proof=None),
-        ],
+    weights = await epoch.run_epoch(
+        _settings(tmp_path, set_weights_max_retries=2),
+        _OneProblemSource(),
+        dry_run=False,
     )
 
-    weights = await epoch.run_epoch(settings, _TwoProblemSource(), dry_run=False)
-    ledger = [json.loads(line) for line in (tmp_path / "solved-ledger.jsonl").read_text().splitlines()]
-
-    _assert_weights(weights, {0: 0.5, 1: 0.5})
-    assert ledger[0]["target_id"] == PROBLEM.id
-    assert [solver["uid"] for solver in ledger[0]["solvers"]] == [0, 1]
-    assert subtensor.set_weights_calls[0]["weights"] == [0.5, 0.5, 0.0, 0.0]
+    assert weights == {0: 1.0}
+    assert len(subtensor.set_weights_calls) == 2
 
 
-async def test_proof_later_commitment_gets_lower_rank_reward(monkeypatch, tmp_path: Path) -> None:
-    settings = _settings(tmp_path, owner_burn_uid=3)
-    proof0 = "namespace Submission\n-- early proof\n"
-    proof1 = "namespace Submission\n-- late different proof\n"
-    nonce0, hash0, payload0 = _commitment(settings, uid=0, proof=proof0)
-    nonce1, hash1, payload1 = _commitment(settings, uid=1, proof=proof1)
-    subtensor = _Subtensor(
-        n=4,
-        commitments_by_block={
-            48: {"miner-hotkey-0": payload0},
-            49: {"miner-hotkey-0": payload0, "miner-hotkey-1": payload1},
-        },
+async def test_disk_preflight_skips_before_dendrite_or_subtensor(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(
+        epoch.shutil,
+        "disk_usage",
+        lambda path: SimpleNamespace(free=1),
     )
-    _install_epoch_fakes(
-        monkeypatch,
-        subtensor=subtensor,
-        response_fn=lambda axons, synapse: [
-            _response(synapse, proof=proof0, proof_nonce=nonce0, commitment_hash=hash0),
-            _response(synapse, proof=proof1, proof_nonce=nonce1, commitment_hash=hash1),
-            _response(synapse, proof=None),
-            _response(synapse, proof=None),
-        ],
-    )
-
-    weights = await epoch.run_epoch(settings, _TwoProblemSource(), dry_run=False)
-    ledger = [json.loads(line) for line in (tmp_path / "solved-ledger.jsonl").read_text().splitlines()]
-
-    _assert_weights(weights, {0: 0.5, 1: 0.5})
-    assert [solver["uid"] for solver in ledger[0]["solvers"]] == [0, 1]
-
-
-async def test_proof_duplicate_hash_credits_earliest_commitment(monkeypatch, tmp_path: Path) -> None:
-    settings = _settings(tmp_path, owner_burn_uid=3)
-    proof = "namespace Submission\n-- same proof\n"
-    nonce0, hash0, payload0 = _commitment(settings, uid=0, proof=proof, nonce="nonce-0")
-    nonce1, hash1, payload1 = _commitment(settings, uid=1, proof=proof, nonce="nonce-1")
-    subtensor = _Subtensor(
-        n=4,
-        commitments_by_block={
-            48: {"miner-hotkey-1": payload1},
-            49: {"miner-hotkey-0": payload0, "miner-hotkey-1": payload1},
-        },
-    )
-    _install_epoch_fakes(
-        monkeypatch,
-        subtensor=subtensor,
-        response_fn=lambda axons, synapse: [
-            _response(synapse, proof=proof, proof_nonce=nonce0, commitment_hash=hash0),
-            _response(synapse, proof=proof, proof_nonce=nonce1, commitment_hash=hash1),
-            _response(synapse, proof=None),
-            _response(synapse, proof=None),
-        ],
-    )
-
-    weights = await epoch.run_epoch(settings, _TwoProblemSource(), dry_run=False)
-    ledger = [json.loads(line) for line in (tmp_path / "solved-ledger.jsonl").read_text().splitlines()]
-
-    _assert_weights(weights, {0: 0.5, 1: 0.5})
-    assert [solver["uid"] for solver in ledger[0]["solvers"]] == [0, 1]
-
-
-async def test_proof_duplicate_hash_same_commitment_block_splits(monkeypatch, tmp_path: Path) -> None:
-    settings = _settings(tmp_path, owner_burn_uid=3)
-    proof = "namespace Submission\n-- same block same proof\n"
-    nonce0, hash0, payload0 = _commitment(settings, uid=0, proof=proof, nonce="nonce-0")
-    nonce1, hash1, payload1 = _commitment(settings, uid=1, proof=proof, nonce="nonce-1")
-    commitments = {"miner-hotkey-0": payload0, "miner-hotkey-1": payload1}
-    subtensor = _Subtensor(n=4, commitments_by_block={48: commitments, 49: commitments})
-    _install_epoch_fakes(
-        monkeypatch,
-        subtensor=subtensor,
-        response_fn=lambda axons, synapse: [
-            _response(synapse, proof=proof, proof_nonce=nonce0, commitment_hash=hash0),
-            _response(synapse, proof=proof, proof_nonce=nonce1, commitment_hash=hash1),
-            _response(synapse, proof=None),
-            _response(synapse, proof=None),
-        ],
-    )
-
-    weights = await epoch.run_epoch(settings, _TwoProblemSource(), dry_run=False)
-    ledger = [json.loads(line) for line in (tmp_path / "solved-ledger.jsonl").read_text().splitlines()]
-
-    _assert_weights(weights, {0: 0.5, 1: 0.5})
-    assert [solver["uid"] for solver in ledger[0]["solvers"]] == [0, 1]
-
-
-async def test_proof_rejects_missing_or_late_commitment(monkeypatch, tmp_path: Path) -> None:
-    settings = _settings(tmp_path)
-    proof = "namespace Submission\n-- late\n"
-    nonce, commitment_hash, payload = _commitment(settings, uid=0, proof=proof)
-    subtensor = _Subtensor(n=2, commitments_by_block={50: {"miner-hotkey-0": payload}})
-    verify_calls: list[str] = []
-    _install_epoch_fakes(
-        monkeypatch,
-        subtensor=subtensor,
-        response_fn=lambda axons, synapse: [
-            _response(synapse, proof=proof, proof_nonce=nonce, commitment_hash=commitment_hash),
-            _response(synapse, proof=None),
-        ],
-        verify_fn=lambda proof: verify_calls.append(proof) or VerifyResult(passed=True, reason="ok"),
-    )
-
-    weights = await epoch.run_epoch(settings, _TwoProblemSource(), dry_run=False)
-
-    assert weights == {}
-    assert verify_calls == []
-    assert not (tmp_path / "solved-ledger.jsonl").exists()
-
-
-async def test_proof_rejects_copied_commitment_under_different_hotkey(monkeypatch, tmp_path: Path) -> None:
-    settings = _settings(tmp_path)
-    proof = "namespace Submission\n-- copied\n"
-    nonce, commitment_hash, payload = _commitment(settings, uid=0, proof=proof)
-    subtensor = _Subtensor(
-        n=2,
-        commitments_by_block={48: {"miner-hotkey-1": payload}, 49: {"miner-hotkey-1": payload}},
-    )
-    verify_calls: list[str] = []
-    _install_epoch_fakes(
-        monkeypatch,
-        subtensor=subtensor,
-        response_fn=lambda axons, synapse: [
-            _response(synapse, proof=None),
-            _response(synapse, proof=proof, proof_nonce=nonce, commitment_hash=commitment_hash),
-        ],
-        verify_fn=lambda proof: verify_calls.append(proof) or VerifyResult(passed=True, reason="ok"),
-    )
-
-    weights = await epoch.run_epoch(settings, _TwoProblemSource(), dry_run=False)
-
-    assert weights == {}
-    assert verify_calls == []
-    assert not (tmp_path / "solved-ledger.jsonl").exists()
-
-
-async def test_proof_invalid_lean_cannot_win(monkeypatch, tmp_path: Path) -> None:
-    settings = _settings(tmp_path)
-    proof = "bad proof"
-    nonce0, hash0, payload0 = _commitment(settings, uid=0, proof=proof)
-    nonce1, hash1, payload1 = _commitment(settings, uid=1, proof=proof)
-    commitments = {"miner-hotkey-0": payload0, "miner-hotkey-1": payload1}
-    subtensor = _Subtensor(commitments_by_block={48: commitments, 49: commitments})
-    _install_epoch_fakes(
-        monkeypatch,
-        subtensor=subtensor,
-        response_fn=lambda axons, synapse: [
-            _response(synapse, proof=proof, proof_nonce=nonce0, commitment_hash=hash0),
-            _response(synapse, proof=proof, proof_nonce=nonce1, commitment_hash=hash1),
-        ],
-        verify_fn=lambda proof: VerifyResult(passed=False, reason="compile_error", stderr_tail=proof),
-    )
-
-    weights = await epoch.run_epoch(settings, _TwoProblemSource(), dry_run=False)
-
-    assert weights == {}
-    assert subtensor.set_weights_calls == []
-    assert not (tmp_path / "solved-ledger.jsonl").exists()
-
-
-async def test_proof_mismatched_response_is_ignored_before_verify(monkeypatch, tmp_path: Path) -> None:
-    verify_calls: list[str] = []
-    subtensor = _Subtensor()
-    _install_epoch_fakes(
-        monkeypatch,
-        subtensor=subtensor,
-        response_fn=lambda axons, synapse: [
-            _response(synapse, proof="proof", theorem_statement="different") for _axon in axons
-        ],
-        verify_fn=lambda proof: verify_calls.append(proof) or VerifyResult(passed=True, reason="ok"),
-    )
-
-    weights = await epoch.run_epoch(_settings(tmp_path), _OneProblemSource(), dry_run=False)
-
-    assert weights == {}
-    assert verify_calls == []
-    assert subtensor.set_weights_calls == []
-
-
-async def test_proof_existing_solver_set_does_not_keep_weights_while_next_target_unsolved(
-    monkeypatch,
-    tmp_path: Path,
-) -> None:
-    ledger_path = tmp_path / "solved-ledger.jsonl"
-    ledger_path.write_text(_ledger_row("known/test/zero", 1), encoding="utf-8")
-    subtensor = _Subtensor(n=2)
-    _install_epoch_fakes(
-        monkeypatch,
-        subtensor=subtensor,
-        response_fn=lambda axons, synapse: [_response(synapse, proof=None) for _axon in axons],
-    )
-
-    weights = await epoch.run_epoch(_settings(tmp_path), _TwoProblemSource(), dry_run=False)
-
-    assert weights == {}
-    assert subtensor.set_weights_calls == []
-
-
-async def test_proof_existing_tied_solvers_do_not_keep_split_weights(monkeypatch, tmp_path: Path) -> None:
-    ledger_path = tmp_path / "solved-ledger.jsonl"
-    ledger_path.write_text(_tied_ledger_row("known/test/zero", [0, 1]), encoding="utf-8")
-    subtensor = _Subtensor(n=2)
-    _install_epoch_fakes(
-        monkeypatch,
-        subtensor=subtensor,
-        response_fn=lambda axons, synapse: [_response(synapse, proof=None) for _axon in axons],
-    )
-
-    weights = await epoch.run_epoch(_settings(tmp_path), _TwoProblemSource(), dry_run=False)
-
-    assert weights == {}
-    assert subtensor.set_weights_calls == []
-
-
-async def test_proof_duplicate_target_does_not_change_solver_set(monkeypatch, tmp_path: Path) -> None:
-    ledger_path = tmp_path / "solved-ledger.jsonl"
-    original = _ledger_row(PROBLEM.id, 1)
-    ledger_path.write_text(original, encoding="utf-8")
-    subtensor = _Subtensor(n=2)
-    _install_epoch_fakes(
-        monkeypatch,
-        subtensor=subtensor,
-        response_fn=lambda axons, synapse: [
-            _response(synapse, proof=f"namespace Submission\n-- duplicate uid {axon.uid}\n") for axon in axons
-        ],
-    )
-
-    weights = await epoch.run_epoch(_settings(tmp_path), _OneProblemSource(), dry_run=False)
-
-    assert weights == {}
-    assert ledger_path.read_text(encoding="utf-8") == original
-    assert subtensor.set_weights_calls == []
-
-
-async def test_proof_stale_ledger_hash_does_not_keep_weights(monkeypatch, tmp_path: Path) -> None:
-    ledger_path = tmp_path / "solved-ledger.jsonl"
-    row = json.loads(_ledger_row(PREVIOUS_PROBLEM.id, 1))
-    row["theorem_statement_sha256"] = "bad"
-    ledger_path.write_text(json.dumps(row) + "\n", encoding="utf-8")
-    subtensor = _Subtensor(n=2)
-    _install_epoch_fakes(
-        monkeypatch,
-        subtensor=subtensor,
-        response_fn=lambda axons, synapse: [_response(synapse, proof=None) for _axon in axons],
-    )
-
-    weights = await epoch.run_epoch(_settings(tmp_path), _TwoProblemSource(), dry_run=False)
-
-    assert weights == {}
-    assert subtensor.set_weights_calls == []
-
-
-async def test_unavailable_cadence_source_skips_without_positive_scores(monkeypatch, tmp_path: Path) -> None:
-    ledger_path = tmp_path / "solved-ledger.jsonl"
-    ledger_path.write_text(_ledger_row(PROBLEM.id, 0), encoding="utf-8")
-    subtensor = _Subtensor(n=2)
-    monkeypatch.setattr(epoch, "get_subtensor", lambda settings: subtensor)
-    monkeypatch.setattr(epoch.bt, "Wallet", _Wallet)
-
-    weights = await epoch.run_epoch(_settings(tmp_path), _SolvedProblemSource(), dry_run=False)
-
-    assert weights == {}
-    assert subtensor.set_weights_calls == []
-
-
-async def test_disk_preflight_skips_before_chain_query(monkeypatch, tmp_path: Path) -> None:
-    monkeypatch.setattr(epoch.shutil, "disk_usage", lambda path: SimpleNamespace(free=1))
     monkeypatch.setattr(epoch, "get_subtensor", lambda settings: (_ for _ in ()).throw(AssertionError("queried chain")))
 
     weights = await epoch.run_epoch(
@@ -625,3 +248,281 @@ async def test_disk_preflight_skips_before_chain_query(monkeypatch, tmp_path: Pa
     )
 
     assert weights == {}
+
+
+async def test_verify_infra_failure_is_exported_and_not_counted_for_credibility(monkeypatch, tmp_path) -> None:
+    subtensor = _Subtensor()
+    _install_epoch_fakes(
+        monkeypatch,
+        subtensor=subtensor,
+        verify_result=VerifyResult(passed=False, reason="docker_error", stderr_tail="docker unavailable"),
+    )
+    export_path = tmp_path / "export.jsonl"
+
+    weights = await epoch.run_epoch(
+        _settings(
+            tmp_path,
+            training_export_jsonl=export_path,
+            lemma_reputation_verify_credibility_alpha=1.0,
+        ),
+        _OneProblemSource(),
+        dry_run=False,
+    )
+
+    rows = [json.loads(line) for line in export_path.read_text(encoding="utf-8").splitlines()]
+    assert weights == {}
+    assert rows[-1]["record_type"] == "round_summary"
+    assert rows[-1]["verify_infra_error_uids"] == [0]
+    assert subtensor.set_weights_calls == []
+
+
+async def test_no_positive_rolling_scores_skips_set_weights(monkeypatch, tmp_path) -> None:
+    subtensor = _Subtensor()
+    _install_epoch_fakes(
+        monkeypatch,
+        subtensor=subtensor,
+        verify_result=VerifyResult(passed=False, reason="compile_error"),
+    )
+
+    weights = await epoch.run_epoch(
+        _settings(tmp_path, empty_epoch_weights_policy="uniform"),
+        _OneProblemSource(),
+        dry_run=False,
+    )
+
+    assert weights == {}
+    assert subtensor.set_weights_calls == []
+
+
+async def test_epoch_updates_rolling_score_for_all_queried_uids(monkeypatch, tmp_path) -> None:
+    subtensor = _TwoMinerSubtensor()
+
+    class Dendrite:
+        def __init__(self, *, wallet: object) -> None:
+            self.wallet = wallet
+
+        async def __aenter__(self) -> Dendrite:
+            return self
+
+        async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
+            return None
+
+        async def __call__(
+            self,
+            axons: list[object],
+            synapse: LemmaChallenge,
+            *,
+            timeout: float,
+            run_async: bool,
+        ) -> list[LemmaChallenge]:
+            out = []
+            for axon in axons:
+                uid = int(axon.uid)
+                proof = "namespace Submission\n" if uid == 0 else ""
+                resp = LemmaChallenge(
+                    theorem_id=synapse.theorem_id,
+                    theorem_statement=synapse.theorem_statement,
+                    imports=list(synapse.imports or []),
+                    lean_toolchain=synapse.lean_toolchain,
+                    mathlib_rev=synapse.mathlib_rev,
+                    deadline_unix=synapse.deadline_unix,
+                    deadline_block=synapse.deadline_block,
+                    metronome_id=synapse.metronome_id,
+                    proof_script=proof,
+                )
+                resp.dendrite.status_code = 200
+                resp.dendrite.status_message = "Success"
+                out.append(resp)
+            return out
+
+    monkeypatch.setattr(epoch, "get_subtensor", lambda settings: subtensor)
+    monkeypatch.setattr(epoch.bt, "Wallet", _Wallet)
+    monkeypatch.setattr(epoch.bt, "Dendrite", Dendrite)
+    monkeypatch.setattr(epoch, "run_lean_verify", lambda *args, **kwargs: VerifyResult(passed=True, reason="ok"))
+
+    weights = await epoch.run_epoch(
+        _settings(tmp_path, lemma_scoring_rolling_alpha=0.5),
+        _OneProblemSource(),
+        dry_run=False,
+    )
+    state = json.loads((tmp_path / "reputation.json").read_text(encoding="utf-8"))
+
+    assert weights == {0: 1.0}
+    assert state["rolling_score_by_uid"] == {"0": 0.5, "1": 0.0}
+
+
+async def test_epoch_weights_ignore_stale_and_validator_rolling_scores(monkeypatch, tmp_path) -> None:
+    reputation_path = tmp_path / "reputation.json"
+    reputation_path.write_text(
+        json.dumps(
+            {
+                "version": 3,
+                "rolling_score_by_uid": {"0": 0.5, "1": 0.5, "2": 1.0, "99": 1.0},
+                "ema_by_uid": {},
+                "credibility_by_uid": {},
+            },
+        ),
+        encoding="utf-8",
+    )
+    subtensor = _ThreeMinerSubtensor()
+
+    class Dendrite:
+        def __init__(self, *, wallet: object) -> None:
+            self.wallet = wallet
+
+        async def __aenter__(self) -> Dendrite:
+            return self
+
+        async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
+            return None
+
+        async def __call__(
+            self,
+            axons: list[object],
+            synapse: LemmaChallenge,
+            *,
+            timeout: float,
+            run_async: bool,
+        ) -> list[object]:
+            return [object() for _axon in axons]
+
+    monkeypatch.setattr(epoch, "get_subtensor", lambda settings: subtensor)
+    monkeypatch.setattr(epoch.bt, "Wallet", _Wallet)
+    monkeypatch.setattr(epoch.bt, "Dendrite", Dendrite)
+
+    weights = await epoch.run_epoch(
+        _settings(
+            tmp_path,
+            lemma_reputation_state_path=reputation_path,
+            lemma_scoring_rolling_alpha=0.0,
+        ),
+        _OneProblemSource(),
+        dry_run=False,
+    )
+
+    assert weights == {0: 0.5, 1: 0.5}
+    assert subtensor.set_weights_calls[0]["weights"] == [0.5, 0.5, 0.0]
+
+
+def test_uid_variant_problem_sampling_uses_same_split() -> None:
+    class Source(_OneProblemSource):
+        def sample(self, seed: int, split: str | None = None) -> Problem:
+            return Problem(
+                id=f"gen/{seed}",
+                theorem_name=f"t_{seed}",
+                type_expr=f"{seed} = {seed}",
+                split=split or "hard",
+                lean_toolchain="lt",
+                mathlib_rev="mr",
+                imports=("Mathlib",),
+            )
+
+    source = Source()
+    anchor = source.sample(seed=100)
+    problems = {
+        uid: source.sample(seed=epoch._uid_variant_seed(100, uid), split=anchor.split) for uid in (1, 2)
+    }
+
+    assert problems[1].split == problems[2].split == "hard"
+    assert problems[1].challenge_source() != problems[2].challenge_source()
+
+
+async def test_uid_variant_epoch_binds_distinct_challenges_per_uid(monkeypatch, tmp_path) -> None:
+    subtensor = _TwoMinerSubtensor()
+    seen: list[tuple[int, LemmaChallenge]] = []
+
+    class Source(_OneProblemSource):
+        def sample(self, seed: int, split: str | None = None) -> Problem:
+            split_key = split or "hard"
+            return Problem(
+                id=f"gen/{seed}",
+                theorem_name=f"t_{seed}",
+                type_expr=f"{seed} = {seed}",
+                split=split_key,
+                lean_toolchain="lt",
+                mathlib_rev="mr",
+                imports=("Mathlib",),
+            )
+
+    class Dendrite:
+        def __init__(self, *, wallet: object) -> None:
+            self.wallet = wallet
+
+        async def __aenter__(self) -> Dendrite:
+            return self
+
+        async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
+            return None
+
+        async def __call__(
+            self,
+            axons: list[object],
+            synapse: LemmaChallenge,
+            *,
+            timeout: float,
+            run_async: bool,
+        ) -> list[LemmaChallenge]:
+            uid = int(axons[0].uid)
+            seen.append((uid, synapse))
+            resp = LemmaChallenge(
+                theorem_id=synapse.theorem_id,
+                theorem_statement=synapse.theorem_statement,
+                imports=list(synapse.imports or []),
+                lean_toolchain=synapse.lean_toolchain,
+                mathlib_rev=synapse.mathlib_rev,
+                deadline_unix=synapse.deadline_unix,
+                deadline_block=synapse.deadline_block,
+                metronome_id=synapse.metronome_id,
+                proof_script="namespace Submission\n",
+            )
+            resp.dendrite.status_code = 200
+            resp.dendrite.status_message = "Success"
+            return [resp]
+
+    monkeypatch.setattr(epoch, "get_subtensor", lambda settings: subtensor)
+    monkeypatch.setattr(epoch.bt, "Wallet", _Wallet)
+    monkeypatch.setattr(epoch.bt, "Dendrite", Dendrite)
+    monkeypatch.setattr(epoch, "run_lean_verify", lambda *args, **kwargs: VerifyResult(passed=True, reason="ok"))
+
+    weights = await epoch.run_epoch(
+        _settings(
+            tmp_path,
+            lemma_uid_variant_problems=True,
+            lemma_scoring_rolling_alpha=1.0,
+        ),
+        Source(),
+        dry_run=False,
+    )
+
+    by_uid = {uid: synapse for uid, synapse in seen}
+    assert weights == {0: 0.5, 1: 0.5}
+    assert set(by_uid) == {0, 1}
+    assert by_uid[0].theorem_id != by_uid[1].theorem_id
+    assert by_uid[0].theorem_statement != by_uid[1].theorem_statement
+    assert by_uid[0].metronome_id.endswith(":0")
+    assert by_uid[1].metronome_id.endswith(":1")
+
+
+async def test_all_fail_epoch_persists_verify_credibility_downgrade(monkeypatch, tmp_path) -> None:
+    subtensor = _Subtensor()
+    _install_epoch_fakes(
+        monkeypatch,
+        subtensor=subtensor,
+        verify_result=VerifyResult(passed=False, reason="compile_error", stderr_tail="bad proof"),
+    )
+    reputation_path = tmp_path / "reputation.json"
+
+    weights = await epoch.run_epoch(
+        _settings(
+            tmp_path,
+            lemma_reputation_state_path=reputation_path,
+            lemma_reputation_verify_credibility_alpha=1.0,
+        ),
+        _OneProblemSource(),
+        dry_run=False,
+    )
+
+    state = json.loads(reputation_path.read_text(encoding="utf-8"))
+    assert weights == {}
+    assert state["credibility_by_uid"] == {"0": 0.0}
+    assert subtensor.set_weights_calls == []

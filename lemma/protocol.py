@@ -1,4 +1,4 @@
-"""Bittensor synapse for proof polling."""
+"""Bittensor synapse: validator challenge and miner response."""
 
 from __future__ import annotations
 
@@ -9,38 +9,107 @@ from pydantic import Field
 
 
 class LemmaChallenge(bt.Synapse):
-    """Validator polls for a proof of one locked target; miner may return ``proof_script``."""
+    """
+    Validator broadcasts a formal theorem; miner returns a Lean proof.
+
+    ``required_hash_fields`` drive :func:`bittensor.core.synapse.Synapse.body_hash`. That hash becomes
+    ``computed_body_hash`` in HTTP headers on both the validator→miner request and the miner→validator response.
+    Including the miner-filled proof binds the response to the hash so a middle party cannot silently
+    swap bytes after the miner signs (coordinated miner + validator release required when this list changes).
+    """
 
     required_hash_fields: ClassVar[tuple[str, ...]] = (
         "theorem_id",
-        "poll_id",
+        "metronome_id",
         "theorem_statement",
         "lean_toolchain",
         "mathlib_rev",
+        "deadline_block",
         "proof_script",
-        "proof_nonce",
-        "commitment_hash",
     )
 
-    theorem_id: str = Field(..., description="Stable known-theorem target id.")
-    theorem_statement: str = Field(..., description="Full trusted Challenge.lean source.")
-    imports: list[str] = Field(default_factory=lambda: ["Mathlib"], description="Lean imports for the target.")
-    lean_toolchain: str = Field(..., description="Pinned Lean release descriptor.")
-    mathlib_rev: str = Field(..., description="Pinned Mathlib revision.")
-    poll_id: str = Field(..., description="Validator-chosen id for this polling batch.")
+    # --- Validator-filled (challenge) ---
+    theorem_id: str = Field(
+        ...,
+        description="Stable problem identifier (e.g. miniF2F slug).",
+    )
+    theorem_statement: str = Field(
+        ...,
+        description="Full Lean 4 source the miner must close (often `theorem ... := by sorry`).",
+    )
+    imports: list[str] = Field(
+        default_factory=lambda: ["Mathlib"],
+        description="Suggested imports for the submission module.",
+    )
+    lean_toolchain: str = Field(
+        ...,
+        description="Pinned Lean release descriptor (e.g. leanprover/lean4:v4.15.0).",
+    )
+    mathlib_rev: str = Field(
+        ...,
+        description="mathlib4 git revision pinned for this round.",
+    )
+    deadline_unix: int = Field(
+        ...,
+        description="Unix time after which validators may ignore late responses.",
+    )
+    deadline_block: int | None = Field(
+        default=None,
+        description=(
+            "First chain height where this challenge is treated as late — same cadence as the next problem-seed "
+            "edge (Tempo epoch or quantize boundary)."
+        ),
+    )
+    metronome_id: str = Field(
+        ...,
+        description="Unique id for this broadcast round (e.g. block hash snippet).",
+    )
 
+    # --- Miner-filled (response) ---
     proof_script: str | None = Field(
         default=None,
-        description="Full Lean source for Submission.lean when the miner has a matching stored proof.",
+        description="Full Lean 4 source for Submission.lean (namespace Submission, theorem name fixed).",
     )
-    proof_nonce: str | None = Field(default=None, description="Secret nonce revealed with the accepted proof.")
-    commitment_hash: str | None = Field(default=None, description="On-chain pre-reveal commitment hash.")
+    model_card: str | None = Field(
+        default=None,
+        description="Optional miner metadata: model id, revision, temperature.",
+    )
+    miner_verify_attest_signature_hex: str | None = Field(
+        default=None,
+        description=(
+            "Optional miner-hotkey Sr25519 signature (hex, 128 chars) over "
+            "``protocol_attest.miner_verify_attest_message`` when ``LEMMA_MINER_VERIFY_ATTEST_ENABLED=1``. "
+            "The signed preimage includes the validator hotkey. Not part of ``body_hash``."
+        ),
+    )
+    commit_reveal_phase: str = Field(
+        default="off",
+        description=(
+            'Commit–reveal round: "off" (single phase), "commit" (hash only), '
+            'or "reveal" (full proof + nonce).'
+        ),
+    )
+    proof_commitment_hex: str | None = Field(
+        default=None,
+        description="SHA256 preimage commitment hex (64 chars), phase commit only; not in body_hash.",
+    )
+    commit_reveal_nonce_hex: str | None = Field(
+        default=None,
+        description="32-byte nonce as 64 hex chars; phase reveal only; not in body_hash.",
+    )
 
     def deserialize(self) -> LemmaChallenge:
+        """No-op: strings are already JSON-safe."""
         return self
 
 
 def synapse_miner_response_integrity_ok(s: LemmaChallenge) -> bool:
-    """Reject explicit transport-hash mismatches when Bittensor exposes a hash."""
+    """Return True when response transport metadata does not contradict the recomputed body hash.
+
+    Dendrite exposes ``computed_body_hash`` on validator->miner requests but may omit it on miner->validator
+    responses. Reject mismatches when the transport provides a hash, and always require ``deadline_block``.
+    """
     expected = (s.computed_body_hash or "").strip()
+    if s.deadline_block is None:
+        return False
     return not expected or s.body_hash == expected

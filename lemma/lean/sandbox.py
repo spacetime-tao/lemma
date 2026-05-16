@@ -23,6 +23,12 @@ from lemma.lean.cheats import (
     lean_driver_failed,
     scan_submission_for_cheats,
 )
+from lemma.lean.proof_metrics import (
+    LeanProofMetrics,
+    collect_host_proof_metrics,
+    docker_proof_metrics_shell_fragment,
+    parse_proof_metrics_line,
+)
 from lemma.lean.workspace import materialize_workspace, workspace_verify_cache_key
 from lemma.problems.base import Problem
 
@@ -59,10 +65,10 @@ def _merge_lean_process_env(base: dict[str, str]) -> dict[str, str]:
 
 
 def _lake_build_argv() -> list[str]:
-    """Build the bridge target so the submitted theorem must match the locked statement."""
+    """Verify needs ``Submission`` (+ Mathlib deps). Full ``lake build`` is optional (CI / debugging)."""
     if _env_truthy("LEMMA_LEAN_VERIFY_FULL_BUILD"):
         return ["lake", "build"]
-    return ["lake", "build", "Solution"]
+    return ["lake", "build", "Submission"]
 
 
 def _docker_network_allows_remote_cache(network_mode: str) -> bool:
@@ -78,6 +84,12 @@ def lake_exe_cache_get_needed(work: Path) -> bool:
     if _env_truthy("LEMMA_LEAN_ALWAYS_CACHE_GET"):
         return True
     return not (work / ".lake" / "packages" / "mathlib").is_dir()
+
+
+def docker_worker_container_path(work: Path, host_root: Path, mount_point: Path) -> str:
+    """Map a host workspace path to the path inside a worker container (same bind-mount root)."""
+    rel = work.resolve().relative_to(Path(host_root).resolve())
+    return str((mount_point / rel).as_posix())
 
 
 def _docker_container_logs_text(container: Any) -> str:
@@ -113,6 +125,7 @@ VerifyReason = Literal[
     "oom",
     "docker_error",
     "remote_error",
+    "attest_trusted",
 ]
 
 
@@ -122,6 +135,7 @@ class VerifyResult(BaseModel):
     stderr_tail: str = ""
     stdout_tail: str = ""
     build_seconds: float = 0.0
+    proof_metrics: LeanProofMetrics | None = None
 
 
 class LeanSandbox:
@@ -136,9 +150,11 @@ class LeanSandbox:
         network_mode: str = "none",
         use_docker: bool = True,
         workspace_cache_dir: Path | None = None,
+        docker_worker: str | None = None,
         workspace_cache_include_submission_hash: bool = False,
         workspace_cache_max_dirs: int = 8,
         workspace_cache_max_bytes: int = 16 * 1024 * 1024 * 1024,
+        proof_metrics_enabled: bool = False,
     ) -> None:
         self.image = image
         self.cpu = cpu
@@ -151,6 +167,11 @@ class LeanSandbox:
         self.workspace_cache_include_submission_hash = bool(workspace_cache_include_submission_hash)
         self.workspace_cache_max_dirs = max(0, int(workspace_cache_max_dirs))
         self.workspace_cache_max_bytes = max(0, int(workspace_cache_max_bytes))
+        self.proof_metrics_enabled = bool(proof_metrics_enabled)
+        # Prefer explicit constructor / LemmaSettings (`.env`); ``os.environ`` alone is not populated from
+        # pydantic's dotenv load unless the process exported the variable.
+        _dw = docker_worker if docker_worker is not None else os.environ.get("LEMMA_LEAN_DOCKER_WORKER")
+        self.docker_worker = (_dw or "").strip()
 
     def verify(self, problem: Problem, submission_src: str) -> VerifyResult:
         cheat = scan_submission_for_cheats(submission_src)
@@ -169,6 +190,7 @@ class LeanSandbox:
                     problem,
                     submission_src,
                     preserve_lake=False,
+                    include_proof_metrics_probe=self.proof_metrics_enabled,
                 )
                 return self._verify_docker(work) if self.use_docker else self._verify_host(work)
             finally:
@@ -192,6 +214,7 @@ class LeanSandbox:
                     problem,
                     submission_src,
                     preserve_lake=True,
+                    include_proof_metrics_probe=self.proof_metrics_enabled,
                 )
                 return self._verify_docker(slot) if self.use_docker else self._verify_host(slot)
 
@@ -202,6 +225,7 @@ class LeanSandbox:
                     problem,
                     submission_src,
                     preserve_lake=False,
+                    include_proof_metrics_probe=self.proof_metrics_enabled,
                 )
                 vr = self._verify_docker(work) if self.use_docker else self._verify_host(work)
                 if self._workspace_cache_publishable(work, vr):
@@ -380,12 +404,33 @@ class LeanSandbox:
                 stdout_tail=out[-4000:],
                 build_seconds=elapsed,
             )
+        proof_metrics = None
+        if self.proof_metrics_enabled:
+            proof_metrics = collect_host_proof_metrics(
+                work,
+                timeout_s=min(float(self.timeout_s), 120.0),
+                env=env,
+            )
         return VerifyResult(
             passed=True,
             reason="ok",
             stdout_tail=out[-2000:],
             build_seconds=elapsed,
+            proof_metrics=proof_metrics,
         )
+
+    def _docker_worker_host_root(self) -> Path | None:
+        """Host directory that is bind-mounted at ``LEMMA_LEAN_DOCKER_WORKER_MOUNT`` in the worker container."""
+        raw = os.environ.get("LEMMA_LEAN_DOCKER_WORKER_HOST_ROOT", "").strip()
+        if raw:
+            return Path(raw).expanduser().resolve()
+        if self.workspace_cache_dir is not None:
+            return self.workspace_cache_dir.resolve()
+        return None
+
+    def _docker_worker_mount_point(self) -> Path:
+        mp = os.environ.get("LEMMA_LEAN_DOCKER_WORKER_MOUNT", "/lemma-workspace").strip()
+        return Path(mp if mp else "/lemma-workspace")
 
     def _docker_verify_script_source(self, work: Path) -> str:
         """Script run inside the sandbox (cwd = workspace): stub ``.lake``, build, axiom check."""
@@ -403,6 +448,8 @@ class LeanSandbox:
                 logger.debug("docker verify: skipping lake exe cache get (warm packages/mathlib)")
         lines.append(shlex.join(_lake_build_argv()))
         lines.append("lake env lean AxiomCheck.lean")
+        if self.proof_metrics_enabled:
+            lines.append(docker_proof_metrics_shell_fragment())
         return "\n".join(lines) + "\n"
 
     def _write_docker_verify_script(self, work: Path) -> str:
@@ -417,7 +464,7 @@ class LeanSandbox:
         work: Path,
         log_tail: int,
     ) -> VerifyResult:
-        """Shared exit-code / log interpretation for Docker verify logs."""
+        """Shared exit-code / log interpretation for one-shot containers and ``docker exec`` workers."""
         if exit_status != 0:
             if exit_status == 137:
                 return VerifyResult(
@@ -479,12 +526,53 @@ class LeanSandbox:
                 stdout_tail=text[-4000:] + extra,
                 build_seconds=elapsed,
             )
+        proof_metrics = parse_proof_metrics_line(text) if self.proof_metrics_enabled else None
         return VerifyResult(
             passed=True,
             reason="ok",
             stdout_tail=text[-2000:],
             build_seconds=elapsed,
+            proof_metrics=proof_metrics,
         )
+
+    def _verify_docker_cli_exec(
+        self,
+        worker: str,
+        container_workdir: str,
+        script_name: str,
+        work: Path,
+        log_tail: int,
+    ) -> VerifyResult:
+        """Run the same inner script via ``docker exec`` into a long-lived worker (avoids per-job ``docker run``)."""
+        t0 = time.monotonic()
+        try:
+            r = subprocess.run(
+                ["docker", "exec", "--workdir", container_workdir, worker, "bash", script_name],
+                capture_output=True,
+                text=True,
+                timeout=float(self.timeout_s),
+            )
+        except subprocess.TimeoutExpired:
+            elapsed = time.monotonic() - t0
+            return VerifyResult(
+                passed=False,
+                reason="timeout",
+                stderr_tail="docker exec timed out",
+                build_seconds=elapsed,
+            )
+        elapsed = time.monotonic() - t0
+        if _env_truthy("LEMMA_LEAN_VERIFY_TIMING"):
+            logger.info(
+                "lean verify timing docker_exec wall_s={:.3f} worker={} LEAN_NUM_THREADS={}",
+                elapsed,
+                worker,
+                _lean_num_threads_value(),
+            )
+        text = ((r.stderr or "") + "\n" + (r.stdout or ""))[-64_000:]
+        rc = r.returncode
+        if rc is None:
+            rc = -1
+        return self._verify_docker_parse_logs(text, int(rc), elapsed, work, log_tail)
 
     def _verify_docker(self, work: Path) -> VerifyResult:
         try:
@@ -497,6 +585,31 @@ class LeanSandbox:
 
         script_name = self._write_docker_verify_script(work)
         log_tail = 16_000
+
+        # Optional: long-lived worker + `docker exec` — avoids container create/start/remove overhead
+        # (often hundreds of ms per verify on Linux, >1s on Docker Desktop). Requires the host root of the
+        # workspace cache to match the worker bind-mount (see docs/validator.md).
+        worker = self.docker_worker
+        if worker and shutil.which("docker"):
+            root = self._docker_worker_host_root()
+            if root is None:
+                logger.warning(
+                    "LEMMA_LEAN_DOCKER_WORKER is set but no host cache root is configured — set "
+                    "LEMMA_LEAN_DOCKER_WORKER_HOST_ROOT or LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR; "
+                    "using one-shot container",
+                )
+            else:
+                try:
+                    cdir = docker_worker_container_path(work, root, self._docker_worker_mount_point())
+                except ValueError:
+                    logger.debug(
+                        "docker worker skipped — {} is not under {}; using one-shot container",
+                        work,
+                        root,
+                    )
+                else:
+                    logger.debug("lean docker verify via exec worker={} container_workdir={}", worker, cdir)
+                    return self._verify_docker_cli_exec(worker, cdir, script_name, work, log_tail)
 
         client = docker.from_env()
         nano_cpus = int(self.cpu * 1e9)

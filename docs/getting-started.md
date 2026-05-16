@@ -1,127 +1,120 @@
-# Getting Started
+# Getting started
 
-## Install
+End-to-end: **uv** + repo → **keys** → **`uv run lemma setup`** → **miner or validator**. Sections below are copy-paste commands (swap wallet names and paths if yours differ).
+
+- Run `uv run lemma` for command help (same as `uv run lemma --help`).
+- Inference defaults: [Chutes](https://chutes.ai) OpenAI-compatible `https://llm.chutes.ai/v1` (see `.env.example`). Other OpenAI-compatible stacks use the same env vars.
+- After setup: `uv run lemma status`, then `uv run lemma problems` (or `uv run lemma problems show --current`). Deep reference: [technical-reference.md](technical-reference.md).
+- **On-chain try:** Lemma runs on **Bittensor testnet** (`--network test`), **netuid 467**—miners can earn **testnet alpha** per subnet rules. **Finney** is **mainnet**; **mainnet alpha** applies only if Lemma (or your target deployment) is registered there with emissions—never confuse network or netuid. The repo is still largely proof-of-concept; direction is in [vision](vision.md).
+
+## Paths at a glance
+
+**Miner (most common first path):** `uv sync --extra btcli` → keys (`uv run btcli`) → `uv run lemma setup` → fund wallet → `uv run btcli subnet register --netuid 467 --network test …` → `uv run lemma miner dry-run` → **`uv run lemma preview`** (optional: live theorem → prover → Lean preview) → open `AXON_PORT` → `uv run lemma miner start`. Details: [miner.md](miner.md).
+
+**Validator:** same env/keys/setup as above, then **`bash scripts/prebuild_lean_image.sh`** (first build is large) → **`uv run lemma preview`** (recommended preview) → `uv run lemma validator check` → `uv run lemma validator start`. Prefer explicit `uv run lemma validator start` / `uv run lemma validator dry-run` over ad-hoc Python entrypoints. Details: [validator.md](validator.md).
+
+## Install uv
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+## Clone and sync
 
 ```bash
 git clone https://github.com/spacetime-tao/lemma.git
 cd lemma
 uv sync --extra btcli
+# For development/testing instead: uv sync --extra dev --extra btcli
+```
+
+Use one Python environment and one installer: `uv`. The core `lemma` repo owns
+the subnet dependencies and the `lemma` command. Setup, doctor, status, preview,
+miner, and validator commands all read the same `.env`.
+
+Default `uv sync` installs from **PyPI** and keeps only the **`bittensor`** SDK needed by Lemma itself. Add `--extra btcli` when you want repo-local wallet/register commands: it pulls in the official **[bittensor-cli](https://pypi.org/project/bittensor-cli/)** package through **`bittensor[cli]`**. **`btcli`** is only the **command name** those packages put on your `PATH`—there is no legitimate PyPI package you should install called `btcli`; typosquat packages have existed, so always use **`bittensor`**, **`bittensor-cli`**, or **`bittensor[cli]`** from PyPI.
+
+## Run Local Commands
+
+```bash
 uv run lemma --help
+uv run btcli --help
 ```
 
-## Mine
+Run these from the core `lemma` repo root. `uv run btcli` requires
+`uv sync --extra btcli`; `uv run lemma` works after the normal sync.
+
+## Keys (Bittensor CLI: `btcli`)
+
+Names you will enter in `lemma setup`. Keys live under `~/.bittensor/wallets/`. Commands below use the **`btcli`** executable from **`bittensor-cli`** (see above).
 
 ```bash
-uv run lemma mine
-uv run lemma status
+uv run btcli wallet new_coldkey --wallet.name my_wallet --n_words 12
+uv run btcli wallet new_hotkey --wallet.name my_wallet --wallet.hotkey miner
+uv run btcli wallet balance --wallet.name my_wallet
 ```
 
-`lemma mine` shows the active theorem, checks wallet/hotkey/subnet state, prints
-the exact `btcli` commands when something is missing, and asks before writing
-suggested `.env` values. Then it asks a configured prover API for a complete
-`Submission.lean`.
+Registration and stake: [Bittensor CLI](https://docs.learnbittensor.org/).
 
-The cadence seed is `floor(chain_head / 100) * 100` by default. The public board
-shows the anchor theorem, while each registered UID receives a deterministic
-same-split variant.
+## Configure (`uv run lemma setup`)
 
-Cadence mining is prover-first. Configure an OpenAI-compatible provider:
+**Chain:** the wizard only sets **Bittensor testnet** and writes **`NETUID=467`** (no separate netuid question). Then: wallet names, prover API keys, axon port, and (for validators) Lean image. **Finney (mainnet) is TBD** for `uv run lemma configure chain` — hand-edit `.env` if Lemma later registers on mainnet; see comments in `.env.example`. Seeds from `.env.example` if `.env` is missing.
 
 ```bash
-cat >> .env <<'EOF'
-LEMMA_PROVER_BASE_URL=https://api.openai.com/v1
-LEMMA_PROVER_API_KEY=replace_me
-EOF
-
-source .env
-curl -sS "$LEMMA_PROVER_BASE_URL/models" \
-  -H "Authorization: Bearer $LEMMA_PROVER_API_KEY"
-
-cat >> .env <<'EOF'
-LEMMA_PROVER_MODEL=copy_one_model_id_here
-EOF
+uv run lemma setup
 ```
 
-Use the chosen provider's returned model `id` exactly as shown by `/models`.
+Incremental: `uv run lemma configure chain`, `configure prover`, `configure axon`, `configure lean-image`.
 
-## Submit A Proof
+## Register on-chain
 
-The friendly path shows the active theorem, calls the prover, verifies the
-returned `Submission.lean`, publishes the commitment, and starts the miner:
+Use the same network/netuid with `uv run btcli` as in `.env`: **Lemma (Subnet 467)** on **testnet** (`SUBTENSOR_NETWORK=test`), not Finney (mainnet).
 
 ```bash
-uv run lemma mine
+uv run btcli subnet show --netuid 467 --network test
+uv run btcli subnet register --netuid 467 --network test --wallet.name my_wallet --wallet.hotkey miner
 ```
 
-Pick a specific registered miner hotkey with:
+## Miner
 
 ```bash
-uv run lemma mine --hotkey lemmaminer2
-```
-
-If the chain commitment failed after local verification, retry it without
-resubmitting the proof:
-
-```bash
-uv run lemma mine --retry-commit
-```
-
-Advanced scripts can still call the hidden building blocks:
-
-```bash
-uv run lemma submit \
-  --problem known/smoke/nat_two_plus_two_eq_four \
-  --submission path/to/Submission.lean
-uv run lemma commit --problem known/smoke/nat_two_plus_two_eq_four
+uv run lemma miner dry-run
 uv run lemma miner start
 ```
 
-Manual proof work is still supported as an advanced override:
+Open inbound `AXON_PORT`. Set `AXON_EXTERNAL_IP` explicitly for production miners, or opt into HTTPS public-IP discovery with `AXON_DISCOVER_EXTERNAL_IP=true`.
 
-```bash
-uv run lemma mine --submission path/to/Submission.lean
-```
+## Validator
 
-The miner serves a stored proof only when the validator polls the exact matching
-target during reveal phase. During commit phase it serves no proof text. Miner
-droplets are optional proof-serving hosts; proof search itself can happen
-offline on a laptop or workstation.
-
-Keep the miner running until your UID appears on
-`https://lemmasub.net/dashboard/`. `lemma target ledger` is useful only when you
-have the validator/operator ledger locally. Validators poll on their own
-schedule, then run Lean verification; the default poll interval is about five
-minutes after reveal opens.
-
-## Verify A Bounty
-
-Formal Conjectures bounties are manual winner-take-all campaigns and do not
-require a subnet UID:
-
-```bash
-uv run lemma mine --bounty <campaign-id> --submission Submission.lean
-```
-
-## Run A Validator
+Build sandbox image (first build is large):
 
 ```bash
 bash scripts/prebuild_lean_image.sh
-uv run lemma setup --role validator
-uv run lemma validate
+uv run lemma validator dry-run
+uv run lemma validator start
 ```
 
-If the validator should use a different registered hotkey than the miner, pass
-it directly:
+Use **`uv run lemma validator start`** only from the repo root.
 
-```bash
-uv run lemma setup --role validator --hotkey lemmaminer2
-uv run lemma validate --hotkey lemmaminer2
-```
+Parity: `uv run lemma meta` — [governance.md](governance.md).
 
-The validator service should stay live for subnet operation: it polls miners,
-verifies proofs with Lean, appends the solved ledger, and sets miner weights.
-The public cadence export shows task state and full solver hotkeys. Proof text,
-proof hashes, nonces, and commitments stay out of the public site feed.
+## Problem source
 
-More detail: [protocol.md](protocol.md), [miner.md](miner.md),
-[validator.md](validator.md), and `.env.example`.
+- `LEMMA_PROBLEM_SOURCE=hybrid` (default): block height seeds a deterministic mix of generated templates and curated catalog rows.
+- `generated`: generated templates only, useful for rollback/focused testing.
+- `frozen`: catalog JSON — requires **`LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`** (public eval set); see [catalog-sources.md](catalog-sources.md).
+
+More tuning: `.env.example` and `uv run lemma configure` where possible.
+
+## Checklist
+
+| Step | Command / action |
+| ---- | ---------------- |
+| Deps | `uv sync --extra btcli` (`--extra dev` too if developing) |
+| Keys | `uv run btcli` coldkey + hotkey |
+| Env | `uv run lemma setup` |
+| Chain | Fund + `uv run btcli subnet register` |
+| Miner | `uv run lemma miner start` |
+| Validator | `prebuild_lean_image.sh`, `uv run lemma validator start` |
+
+[miner.md](miner.md), [validator.md](validator.md), [models.md](models.md), [testing.md](testing.md).

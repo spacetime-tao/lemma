@@ -1,42 +1,56 @@
-"""Problem source factory for known-theorem targets."""
+"""Problem source factory — frozen catalog gating."""
 
-import pytest
 from lemma.common.config import LemmaSettings
 from lemma.problems.factory import get_problem_source, resolve_problem
-from lemma.problems.hybrid import HybridCadenceSource
-from lemma.problems.known_theorems import KnownTheoremsSource
-from pydantic import ValidationError
+from lemma.problems.hybrid import CuratedCatalogSource, HybridProblemSource
+from lemma.problems.minif2f import MiniF2FSource
 
 
-def test_hybrid_cadence_default() -> None:
-    src = get_problem_source(LemmaSettings(_env_file=None))
-
-    assert isinstance(src, HybridCadenceSource)
-    assert len(src.all_problems()) == 100
-    assert src.all_problems()[0].id.startswith("gen/easy/")
-
-
-def test_known_theorems_source_is_still_available() -> None:
-    src = get_problem_source(LemmaSettings(_env_file=None, problem_source="known_theorems"))
-
-    assert isinstance(src, KnownTheoremsSource)
+def test_frozen_requires_dev_flag() -> None:
+    s = LemmaSettings(problem_source="frozen")
+    try:
+        get_problem_source(s)
+        raise AssertionError("expected ValueError")
+    except ValueError as e:
+        assert "LEMMA_DEV_ALLOW_FROZEN" in str(e)
 
 
-def test_config_rejects_removed_source_names() -> None:
-    for source in ("generated", "frozen"):
-        with pytest.raises(ValidationError):
-            LemmaSettings(_env_file=None, problem_source=source)
+def test_frozen_allowed_with_dev_flag() -> None:
+    s = LemmaSettings(problem_source="frozen", lemma_dev_allow_frozen_problem_source=True)
+    src = get_problem_source(s)
+    assert src is not None
 
 
-def test_resolve_known_theorem_id() -> None:
-    p = resolve_problem(LemmaSettings(_env_file=None), "known/smoke/nat_two_plus_two_eq_four")
+def test_hybrid_default() -> None:
+    s = LemmaSettings()
+    src = get_problem_source(s)
+    assert isinstance(src, HybridProblemSource)
 
-    assert p.id == "known/smoke/nat_two_plus_two_eq_four"
-    assert p.extra["source_lane"] == "known_theorems"
+
+def test_resolve_generated_id_does_not_need_frozen_dev_flag() -> None:
+    s = LemmaSettings(lemma_dev_allow_frozen_problem_source=False)
+    p = resolve_problem(s, "gen/42")
+    assert p.id == "gen/42"
 
 
-def test_resolve_generated_cadence_id() -> None:
-    p = resolve_problem(LemmaSettings(_env_file=None), "gen/easy/0")
+def test_resolve_curated_id_does_not_need_frozen_dev_flag() -> None:
+    curated_id = CuratedCatalogSource().all_problems()[0].id
+    s = LemmaSettings(lemma_dev_allow_frozen_problem_source=False)
+    p = resolve_problem(s, curated_id)
+    assert p.id == curated_id
 
-    assert p.id == "gen/easy/0"
-    assert p.extra["source_lane"] == "generated"
+
+def test_resolve_frozen_id_requires_dev_flag() -> None:
+    s = LemmaSettings(lemma_dev_allow_frozen_problem_source=False)
+    try:
+        resolve_problem(s, "mini/demo")
+        raise AssertionError("expected ValueError")
+    except ValueError as e:
+        assert "LEMMA_DEV_ALLOW_FROZEN" in str(e)
+
+
+def test_resolve_frozen_id_allowed_with_dev_flag() -> None:
+    frozen_id = MiniF2FSource().all_problems()[0].id
+    s = LemmaSettings(lemma_dev_allow_frozen_problem_source=True)
+    p = resolve_problem(s, frozen_id)
+    assert p.id == frozen_id

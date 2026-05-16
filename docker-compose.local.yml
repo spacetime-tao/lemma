@@ -1,0 +1,10 @@
+# Local override: build images from source instead of pulling.
+services:
+  validator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+  miner:
+    build:
+      context: .
+      dockerfile: Dockerfile

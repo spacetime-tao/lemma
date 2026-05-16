@@ -12,10 +12,10 @@ from lemma.problems.base import Problem
 
 def _minimal_problem() -> Problem:
     return Problem(
-        id="known/test/workspace",
+        id="gen/test_k",
         theorem_name="t_test",
         type_expr="True",
-        split="known_theorems",
+        split="easy",
         lean_toolchain="leanprover/lean4:v4.30.0-rc2",
         mathlib_rev="5450b53e5ddc",
         imports=("Mathlib",),
@@ -52,3 +52,4 @@ def test_materialize_preserve_lake_keeps_dot_lake(tmp_path: Path) -> None:
     materialize_workspace(dest, p, "namespace Submission\n", preserve_lake=True)
     assert (dest / ".lake" / "warm_marker").read_text() == "ok"
     assert (dest / "Submission.lean").read_text().startswith("namespace Submission")
+

@@ -13,10 +13,10 @@ from lemma.problems.base import Problem
 
 def _minimal_problem() -> Problem:
     return Problem(
-        id="known/test/cache",
+        id="gen/test_k",
         theorem_name="t_test",
         type_expr="True",
-        split="known_theorems",
+        split="easy",
         lean_toolchain="leanprover/lean4:v4.30.0-rc2",
         mathlib_rev="5450b53e5ddc",
         imports=("Mathlib",),
@@ -148,6 +148,29 @@ end Submission
     assert seen[0] != slot.resolve()
     assert seen[1] == slot.resolve()
     assert (slot / ".lake" / "marker").read_text(encoding="utf-8") == "primed"
+
+
+def test_proof_metrics_probe_materialized_in_warm_slot(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    p = _minimal_problem()
+    sub = """import Mathlib
+namespace Submission
+theorem t_test : True := by trivial
+end Submission
+"""
+    cache = tmp_path / "ws_cache"
+    key = workspace_verify_cache_key(p, sub, include_submission_fingerprint=False)
+    slot = cache / key
+    slot.mkdir(parents=True)
+    (slot / ".lake").mkdir()
+
+    def fake_host(self: LeanSandbox, work: Path) -> VerifyResult:  # noqa: ARG001
+        assert (work / "ProofMetrics.lean").exists()
+        return VerifyResult(passed=True, reason="ok")
+
+    monkeypatch.setattr(LeanSandbox, "_verify_host", fake_host)
+    sb = LeanSandbox(use_docker=False, timeout_s=30, workspace_cache_dir=cache, proof_metrics_enabled=True)
+    vr = sb.verify(p, sub)
+    assert vr.passed
 
 
 def test_workspace_cache_prunes_old_warm_slots(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

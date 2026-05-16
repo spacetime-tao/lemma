@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY lemma ./lemma
+COPY tools ./tools
 RUN pip install --no-cache-dir .
 ENV PYTHONUNBUFFERED=1
 ENTRYPOINT ["lemma"]
