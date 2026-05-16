@@ -14,6 +14,10 @@ from lemma.formal_campaigns import proof_sha256
 from lemma.lean.sandbox import VerifyResult
 
 
+def _skip_mine_preflight(monkeypatch) -> None:
+    monkeypatch.setattr("lemma.cli.main._mine_preflight", lambda settings: settings)
+
+
 def test_public_script_is_lemma_only() -> None:
     data = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
     scripts = data["project"]["scripts"]
@@ -26,10 +30,11 @@ def test_home_screen_lists_proof_commands() -> None:
     result = CliRunner().invoke(main)
 
     assert result.exit_code == 0
-    assert "setup" in result.output
     assert "mine" in result.output
     assert "status" in result.output
     assert "validate" in result.output
+    assert "Helper" in result.output
+    assert "setup" in result.output
     assert "\n  target" not in result.output
     assert "\n  submit" not in result.output
     assert "\n  verify" not in result.output
@@ -308,6 +313,7 @@ def test_submit_rejects_paste_with_submission(tmp_path: Path) -> None:
 
 def test_mine_accepts_pasted_proof_commits_and_starts(monkeypatch, tmp_path: Path) -> None:
     store = tmp_path / "submissions.json"
+    _skip_mine_preflight(monkeypatch)
     monkeypatch.setenv("LEMMA_LEDGER_PATH", str(tmp_path / "solved-ledger.jsonl"))
     monkeypatch.setenv("LEMMA_MINER_SUBMISSIONS_PATH", str(store))
     proof = (
@@ -335,10 +341,59 @@ def test_mine_accepts_pasted_proof_commits_and_starts(monkeypatch, tmp_path: Pat
     assert store.exists()
 
 
+def test_mine_preflight_prints_btcli_commands_and_optional_provider(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("LEMMA_LEDGER_PATH", str(tmp_path / "solved-ledger.jsonl"))
+    monkeypatch.setenv("LEMMA_MINER_SUBMISSIONS_PATH", str(tmp_path / "submissions.json"))
+    monkeypatch.setenv("BT_WALLET_COLD", "cold")
+    monkeypatch.setenv("BT_WALLET_HOT", "hot")
+    monkeypatch.setenv("NETUID", "467")
+    monkeypatch.setenv("SUBTENSOR_NETWORK", "test")
+    monkeypatch.delenv("LEMMA_PROVER_BASE_URL", raising=False)
+    monkeypatch.delenv("LEMMA_PROVER_API_KEY", raising=False)
+    monkeypatch.delenv("LEMMA_PROVER_MODEL", raising=False)
+    monkeypatch.setattr("lemma.cli.main.shutil.which", lambda name: None)
+    monkeypatch.setattr("lemma.cli.main._current_block_or_none", lambda settings: (None, None))
+    monkeypatch.setattr("lemma.cli.main._wallet_hotkey_address", lambda settings, role="miner": None)
+    monkeypatch.setattr("lemma.cli.main._registration_text", lambda settings, hotkey: "not registered")
+
+    result = CliRunner().invoke(main, ["mine"], input="n\n")
+
+    assert result.exit_code == 0
+    assert "Preflight" in result.output
+    assert "uv sync --extra btcli" in result.output
+    assert "btcli wallet create --wallet.name cold --wallet.hotkey hot" in result.output
+    assert "btcli subnets register --netuid 467" in result.output
+    assert "prover" in result.output
+    assert "optional; not needed for a prepared Lean proof" in result.output
+    assert "Suggested .env values" not in result.output
+
+
+def test_mine_preflight_writes_missing_genesis(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("LEMMA_LEDGER_PATH", str(tmp_path / "solved-ledger.jsonl"))
+    monkeypatch.setenv("LEMMA_MINER_SUBMISSIONS_PATH", str(tmp_path / "submissions.json"))
+    monkeypatch.delenv("LEMMA_TARGET_GENESIS_BLOCK", raising=False)
+    monkeypatch.delenv("LEMMA_KNOWN_THEOREMS_MANIFEST_SHA256_EXPECTED", raising=False)
+    monkeypatch.setattr("lemma.cli.main.shutil.which", lambda name: "/bin/tool")
+    monkeypatch.setattr("lemma.cli.main._current_block_or_none", lambda settings: (123, None))
+    monkeypatch.setattr("lemma.cli.main._wallet_hotkey_address", lambda settings, role="miner": "hotkey-address")
+    monkeypatch.setattr("lemma.cli.main._registration_text", lambda settings, hotkey: "registered uid=1")
+
+    result = CliRunner().invoke(main, ["mine"], input="y\nn\n")
+
+    assert result.exit_code == 0
+    assert "LEMMA_TARGET_GENESIS_BLOCK=123" in result.output
+    assert "Updated .env" in result.output
+    assert "No proof submitted" in result.output
+    assert "LEMMA_TARGET_GENESIS_BLOCK=123" in (tmp_path / ".env").read_text(encoding="utf-8")
+
+
 def test_mine_chain_commit_failure_keeps_retryable_store(monkeypatch, tmp_path: Path) -> None:
     submission = tmp_path / "Submission.lean"
     submission.write_text("import Mathlib\n", encoding="utf-8")
     store = tmp_path / "submissions.json"
+    _skip_mine_preflight(monkeypatch)
     monkeypatch.setenv("LEMMA_MINER_SUBMISSIONS_PATH", str(store))
 
     def fake_run_lean_verify(*args, **kwargs):
@@ -585,6 +640,7 @@ def test_mine_retry_commit_starts_miner(monkeypatch, tmp_path: Path) -> None:
 
     store = tmp_path / "submissions.json"
     started: list[bool] = []
+    _skip_mine_preflight(monkeypatch)
     monkeypatch.setenv("LEMMA_MINER_SUBMISSIONS_PATH", str(store))
     settings = LemmaSettings(_env_file=None, miner_submissions_path=store)
     problem = resolve_problem(settings, "known/smoke/nat_two_plus_two_eq_four")
@@ -604,6 +660,7 @@ def test_mine_retry_commit_rejects_legacy_stored_proof(monkeypatch, tmp_path: Pa
     from lemma.submissions import save_pending_submission
 
     store = tmp_path / "submissions.json"
+    _skip_mine_preflight(monkeypatch)
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("LEMMA_MINER_SUBMISSIONS_PATH", str(store))
     settings = LemmaSettings(_env_file=None, miner_submissions_path=store)
@@ -623,6 +680,7 @@ def test_mine_replace_overwrites_stale_proof(monkeypatch, tmp_path: Path) -> Non
 
     store = tmp_path / "submissions.json"
     started: list[bool] = []
+    _skip_mine_preflight(monkeypatch)
     monkeypatch.setenv("LEMMA_MINER_SUBMISSIONS_PATH", str(store))
     monkeypatch.setenv("LEMMA_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
     settings = LemmaSettings(_env_file=None, miner_submissions_path=store)
@@ -651,6 +709,7 @@ def test_mine_refreshes_genesis_and_retries_commit_when_window_closes(monkeypatc
     ledger = tmp_path / "ledger.jsonl"
     calls: list[int | None] = []
     started: list[int | None] = []
+    _skip_mine_preflight(monkeypatch)
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("LEMMA_MINER_SUBMISSIONS_PATH", str(store))
     monkeypatch.setenv("LEMMA_LEDGER_PATH", str(ledger))
@@ -705,7 +764,7 @@ def test_status_prefers_setup_when_genesis_missing(monkeypatch, tmp_path: Path) 
     assert "LEMMA_TARGET_GENESIS_BLOCK is required" in result.output
     assert "proof" in result.output
     assert "uncommitted" in result.output
-    assert "Next: lemma setup --role miner" in result.output
+    assert "Next: lemma mine" in result.output
 
 
 def test_status_calls_stale_proof_replaceable(monkeypatch, tmp_path: Path) -> None:
@@ -1056,6 +1115,7 @@ def test_mine_hotkey_option_uses_miner_wallet(monkeypatch, tmp_path: Path) -> No
 
     store = tmp_path / "submissions.json"
     started: list[str] = []
+    _skip_mine_preflight(monkeypatch)
     monkeypatch.setenv("LEMMA_MINER_SUBMISSIONS_PATH", str(store))
     settings = LemmaSettings(_env_file=None, miner_submissions_path=store)
     problem = resolve_problem(settings, "known/smoke/nat_two_plus_two_eq_four")

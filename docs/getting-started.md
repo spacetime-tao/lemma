@@ -9,21 +9,25 @@ uv sync --extra btcli
 uv run lemma --help
 ```
 
-## Setup
+## Mine
 
 ```bash
-uv run lemma setup
+uv run lemma mine
 uv run lemma status
 ```
+
+`lemma mine` shows the active theorem, checks wallet/hotkey/subnet state, prints
+the exact `btcli` commands when something is missing, and asks before writing
+suggested `.env` values. Then it asks whether you are ready to submit a full
+`Submission.lean`.
 
 The active target is the first known-theorem manifest row that is not present in
 the solved ledger, followed by deterministic generated cadence tasks. A fresh
 validator needs `LEMMA_TARGET_GENESIS_BLOCK` so every miner sees the same first
-commit window.
+commit window; `lemma mine` can write that value when it can read the chain.
 
-Optional proof search tools use OpenAI-compatible provider settings. The public
-setup guide lists provider links and base URLs:
-<https://lemmasub.net/setup/>.
+Optional proof search tools use OpenAI-compatible provider settings. They are
+not required for manually prepared Lean proofs.
 
 ```bash
 cat >> .env <<'EOF'
@@ -42,7 +46,7 @@ EOF
 
 Use the chosen provider's returned model `id` exactly as shown by `/models`.
 
-## Mine
+## Submit A Proof
 
 The friendly path shows the active theorem, asks whether you are ready, verifies
 the pasted `Submission.lean`, publishes the commitment, and starts the miner:

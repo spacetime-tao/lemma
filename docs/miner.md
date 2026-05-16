@@ -12,20 +12,20 @@ after reveal opens.
 
 ## Guided Mining
 
-Optional prover assistance uses OpenAI-compatible provider settings. For
-copy/paste setup with provider links and model listing, use
-<https://lemmasub.net/setup/>.
-
 ```bash
-uv run lemma setup --role miner
 uv run lemma mine
 ```
+
+`lemma mine` starts with a compact preflight: wallet, hotkey, subnet
+registration, chain/genesis state, optional prover status, and exact `btcli`
+commands when something is missing. Optional prover assistance uses
+OpenAI-compatible provider settings, but a manually prepared Lean proof does not
+need prover config.
 
 Use `--wallet` and `--hotkey` when one machine has several registered miner
 hotkeys:
 
 ```bash
-uv run lemma setup --role miner --hotkey lemmaminer2
 uv run lemma mine --hotkey lemmaminer2
 ```
 

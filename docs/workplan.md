@@ -10,9 +10,9 @@ help, tests, and the public site.
 - Active cadence supply: curated
   [`known_theorems_manifest.json`](../lemma/problems/known_theorems_manifest.json)
   plus deterministic generated cadence builders.
-- Provider setup is OpenAI-compatible and provider-neutral:
+- Optional prover assistance is OpenAI-compatible and provider-neutral:
   `LEMMA_PROVER_BASE_URL`, `LEMMA_PROVER_API_KEY`, and
-  `LEMMA_PROVER_MODEL`.
+  `LEMMA_PROVER_MODEL`; it is not required for manually prepared Lean proofs.
 - Reward-critical miner artifact: a pre-reveal commitment, then `proof_script`
   plus nonce during reveal.
 - Ledger: operator-published JSONL solved-target ledger.
@@ -42,8 +42,8 @@ help, tests, and the public site.
 - Validator proof mode for `known_theorems`.
 - Current-epoch cadence reward math with owner/burn remainder.
 - Manual miner submission storage and proof-serving Axon flow.
-- `lemma mine` is the guided theorem-to-proof path: it verifies by default,
-  publishes the compact commitment, and starts the miner.
+- `lemma mine` is the guided theorem-to-proof path: it runs miner preflight,
+  verifies by default, publishes the compact commitment, and starts the miner.
 - `lemma submit` remains as a hidden advanced command for scripts that only need
   to verify and store a proof.
 - `lemma commit --problem <target-id>` retries a stored proof commitment.
@@ -109,4 +109,5 @@ help, tests, and the public site.
   `node --check scripts/check-task-pages.js`,
   `node scripts/check-task-pages.js`.
 - Browser QA passed for `/`, `/cadence/`, `/bounties/`, `/setup/`, and `/faq/`
-  at desktop and mobile widths with no horizontal overflow.
+  at desktop and mobile widths with no horizontal overflow; `/setup/` redirects
+  home.

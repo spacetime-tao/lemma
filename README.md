@@ -47,13 +47,16 @@ git clone https://github.com/spacetime-tao/lemma.git
 cd lemma
 uv sync --extra btcli
 uv run lemma --help
-uv run lemma setup
+uv run lemma mine
 uv run lemma status
 ```
 
-Optional local prover tools use OpenAI-compatible provider settings. The public
-setup guide keeps provider-specific links current:
-<https://lemmasub.net/setup/>.
+`lemma mine` runs a compact preflight before proof entry. It shows wallet,
+hotkey, subnet registration, chain/genesis state, and exact `btcli` commands
+when something is missing.
+
+Optional local prover tools use OpenAI-compatible provider settings. They are
+not required for a manually prepared Lean proof.
 
 ```bash
 cat >> .env <<'EOF'

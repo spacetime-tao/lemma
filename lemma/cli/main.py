@@ -148,7 +148,7 @@ def _env_updates_for_setup(settings: LemmaSettings, role: str, current_block: in
     elif current_block is not None and _first_target_window_expired(settings, current_block):
         updates["LEMMA_TARGET_GENESIS_BLOCK"] = str(current_block)
         effective = settings.model_copy(update={"target_genesis_block": current_block})
-    if not (settings.known_theorems_manifest_expected_sha256 or "").strip():
+    if role == "validator" and not (settings.known_theorems_manifest_expected_sha256 or "").strip():
         updates["LEMMA_KNOWN_THEOREMS_MANIFEST_SHA256_EXPECTED"] = known_theorems_manifest_sha256(
             settings.known_theorems_manifest_path,
         )
@@ -288,7 +288,7 @@ def _refresh_genesis_and_retry_commit(
     click.echo(stylize("Commit window closed while this proof was being prepared.", fg="yellow", bold=True))
     if not click.confirm("Refresh the first target window and retry the commitment now?", default=True):
         raise CommitWindowClosedError(
-            "Proof is verified and stored, but it is not committed yet. Run `lemma setup --role miner` to recover.",
+            "Proof is verified and stored, but it is not committed yet. Run `lemma mine` to recover.",
             current_block=current_block,
             entry=entry,
         )
@@ -333,6 +333,56 @@ def _print_btcli_commands(settings: LemmaSettings, role: str) -> None:
     )
 
 
+def _print_suggested_env(updates: dict[str, str]) -> None:
+    click.echo("")
+    click.echo(stylize("Suggested .env values", fg="cyan", bold=True))
+    for key, value in updates.items():
+        display_value = _display_env_value(key, value)
+        click.echo(stylize(key, fg="bright_blue", bold=True) + "=" + stylize(display_value, fg="green"))
+
+
+def _mine_preflight(settings: LemmaSettings) -> LemmaSettings:
+    click.echo(stylize("Preflight", fg="cyan", bold=True))
+    click.echo(_kv("wallet", f"{settings.wallet_cold}/{settings.wallet_hot}", fg="green"))
+
+    current_block, chain_error = _current_block_or_none(settings)
+    if current_block is None:
+        click.echo(_kv("chain", "unavailable", fg="yellow"))
+        if chain_error:
+            click.echo(stylize("       " + chain_error[:160], dim=True))
+    else:
+        click.echo(_kv("block", current_block, fg="cyan"))
+
+    hotkey = _wallet_hotkey_address(settings, "miner")
+    click.echo(_kv("hotkey", hotkey or "unavailable", fg="green" if hotkey else "yellow"))
+    registration = _registration_text(settings, hotkey)
+    click.echo(_kv("subnet", registration, fg="green" if registration.startswith("registered") else "yellow"))
+
+    needs_btcli = shutil.which("btcli") is None or hotkey is None or not registration.startswith("registered")
+    if needs_btcli:
+        _print_btcli_commands(settings, "miner")
+    if shutil.which("docker") is None:
+        click.echo(stylize("docker missing", fg="yellow", bold=True))
+    if not any((settings.prover_base_url, settings.prover_api_key, settings.prover_model)):
+        click.echo(_kv("prover", "optional; not needed for a prepared Lean proof", fg="cyan"))
+    if settings.target_genesis_block is None:
+        click.echo(stylize("genesis  missing LEMMA_TARGET_GENESIS_BLOCK", fg="yellow", bold=True))
+    else:
+        click.echo(_kv("genesis", settings.target_genesis_block, fg="cyan"))
+
+    updates = _env_updates_for_setup(settings, "miner", current_block)
+    if not updates:
+        return settings
+
+    _print_suggested_env(updates)
+    if click.confirm("Write these setup values to .env now?", default=True):
+        _write_env_updates(Path(".env"), updates)
+        click.echo(stylize("Updated .env", fg="green", bold=True))
+        return _settings_with_env_updates(settings, updates)
+    click.echo(stylize("Continuing without .env changes.", fg="yellow"))
+    return settings
+
+
 @click.group(name="lemma", invoke_without_command=True, context_settings={"max_content_width": 100})
 @click.pass_context
 @click.version_option(version=__version__)
@@ -343,15 +393,17 @@ def main(ctx: click.Context) -> None:
     click.echo(stylize("Lemma ", fg="cyan", bold=True) + stylize(__version__, dim=True))
     click.echo("Work offline. Commit online. Lean decides whether a proof verifies.\n")
     click.echo(stylize("Commands", fg="cyan", bold=True))
-    click.echo("  " + _cmd("setup") + stylize("     Check config, wallets, registration, pins, and .env", dim=True))
     click.echo("  " + _cmd("mine") + stylize("      Verify a proof, commit it, and start the miner", dim=True))
     click.echo("  " + _cmd("status") + stylize("    Show target, phase, proof, wallet, and next step", dim=True))
     click.echo("  " + _cmd("validate") + stylize("  Check setup, then start the validator", dim=True))
     click.echo("")
+    click.echo(stylize("Helper", fg="cyan", bold=True))
+    click.echo("  " + _cmd("setup") + stylize("     Preflight config, wallets, registration, pins, and .env", dim=True))
+    click.echo("")
     click.echo(stylize("Advanced/script commands stay callable but are hidden from the normal surface.", fg="yellow"))
 
 
-@main.command("setup", help="Check and write guided setup values.")
+@main.command("setup", help="Preflight config, wallets, registration, pins, and .env.")
 @click.option("--role", type=click.Choice(["miner", "validator"]), help="Setup role.")
 @click.option("--wallet", "wallet_cold", help="Coldkey/wallet name to use for this role.")
 @click.option("--hotkey", "wallet_hot", help="Hotkey name to use for this role.")
@@ -407,11 +459,7 @@ def setup_cmd(role: str | None, wallet_cold: str | None, wallet_hot: str | None)
             return
         click.echo(stylize("No .env changes suggested.", fg="green", bold=True))
         return
-    click.echo("")
-    click.echo(stylize("Suggested .env values", fg="cyan", bold=True))
-    for key, value in updates.items():
-        display_value = _display_env_value(key, value)
-        click.echo(stylize(key, fg="bright_blue", bold=True) + "=" + stylize(display_value, fg="green"))
+    _print_suggested_env(updates)
     wrote_env = False
     if click.confirm("Write these values to .env?", default=False):
         _write_env_updates(Path(".env"), updates)
@@ -464,6 +512,7 @@ def mine_cmd(
     if editor and submission_path is not None:
         raise click.ClickException("Use either --editor or --submission, not both.")
     settings = _settings_with_wallet_options(LemmaSettings(), role="miner", wallet=wallet_cold, hotkey=wallet_hot)
+    settings = _mine_preflight(settings)
     problem = _active_problem_or_click(settings)
 
     click.echo(stylize("Lemma mine", fg="cyan", bold=True))
@@ -839,7 +888,7 @@ def status_cmd() -> None:
             phase_error = str(exc)
             click.echo(_kv("phase", phase_error, fg="yellow"))
             if "LEMMA_TARGET_GENESIS_BLOCK" in phase_error:
-                next_step_override = "lemma setup --role miner"
+                next_step_override = "lemma mine"
 
     if problem is not None:
         pending = pending_submission_for_problem(settings.miner_submissions_path, problem)
@@ -856,7 +905,7 @@ def status_cmd() -> None:
             next_step = "lemma mine"
         elif pending.commitment_status == "commit_window_closed" and phase_name == "reveal":
             proof_text = "missed commit window"
-            next_step = "lemma setup --role miner"
+            next_step = "lemma mine"
         elif pending.commitment_status == "commit_window_closed":
             proof_text = "verified, needs commit"
             next_step = "lemma mine --retry-commit"
@@ -1113,7 +1162,7 @@ def _publish_pending_commitment(settings: LemmaSettings, problem, entry):
             raise CommitWindowClosedError(
                 "Commit window is closed for this target. The proof is verified and stored, "
                 "but it cannot be committed to this window.\n"
-                "Next: run `lemma setup --role miner`, accept the refreshed genesis block, "
+                "Next: run `lemma mine`, accept the refreshed genesis block, "
                 "then run `lemma mine --retry-commit`.",
                 current_block=current_block,
                 entry=updated,
