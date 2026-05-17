@@ -1,6 +1,6 @@
 # Production Verification
 
-Production Lemma needs only three moving pieces: the bounty registry, the escrow contract, and Lean verification.
+Production Lemma needs only three moving pieces: the target registry, Lean verification, and reward custody.
 
 ## Verifier
 
@@ -34,8 +34,8 @@ Set `LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR` for warm Docker or worker verificati
 
 The cache is disposable. Do not store secrets or operator notes there.
 
-## Escrow
+## Reward Custody
 
-Publish only funded escrow-backed bounties as live rewards. The registry row and contract state should agree on chain id, contract address, and escrow bounty id.
+Publish a target as a live reward only after the registry row and custody contract state agree on chain id, contract address, and custody reward id.
 
 The CLI builds unsigned transaction data. Operators should inspect, sign, and submit transactions with their normal wallet tooling.

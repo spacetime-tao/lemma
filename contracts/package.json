@@ -2,7 +2,7 @@
   "name": "lemma-bounty-escrow",
   "private": true,
   "version": "0.1.0",
-  "description": "Bittensor EVM escrow contracts for Lemma theorem bounties",
+  "description": "Bittensor EVM custody contracts for Lemma proof rewards",
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",

@@ -1,4 +1,4 @@
-"""Bounty/escrow CLI registry and transaction-package behavior."""
+"""Proof target CLI registry and transaction-package behavior."""
 
 import hashlib
 import json
@@ -30,11 +30,11 @@ def _registry(path: Path) -> str:
             "bounties": [
                 {
                     "id": "fc.test",
-                    "title": "Test bounty",
+                    "title": "Test target",
                     "status": "active",
-                    "reward": "1 TAO escrowed",
+                    "reward": "1 TAO reward",
                     "deadline": "2026-06-01T00:00:00Z",
-                    "terms_url": "https://lemmasub.net/#escrow",
+                    "terms_url": "https://lemmasub.net/#targets",
                     "source": {"name": "Formal Conjectures", "url": "https://example.com"},
                     "policy_version": "bounty-policy-v1",
                     "toolchain_id": "leanprover/lean4:v4.15.0",
@@ -115,21 +115,21 @@ def test_mine_list_and_show_use_registry(monkeypatch, tmp_path) -> None:
     check = CliRunner().invoke(main, ["validate", "--check"])
 
     assert default.exit_code == 0
-    assert "Escrow-backed" in default.output
+    assert "Live targets" in default.output
     assert "fc.test" in default.output
     assert digest in default.output
     assert shown.exit_code == 0
-    assert "Test bounty" in shown.output
+    assert "Test target" in shown.output
     assert "target_sha256" in shown.output
     assert "policy" in shown.output
     assert "lemma mine fc.test --submission Submission.lean" in shown.output
     assert status.exit_code == 0
-    assert "Lemma escrow status" in status.output
+    assert "Lemma proof status" in status.output
     assert check.exit_code == 0
     assert "READY" in check.output
 
 
-def test_bounty_registry_hash_pin_mismatch_fails(monkeypatch, tmp_path) -> None:
+def test_target_registry_hash_pin_mismatch_fails(monkeypatch, tmp_path) -> None:
     registry_path = tmp_path / "registry.json"
     _registry(registry_path)
     monkeypatch.chdir(tmp_path)
@@ -142,13 +142,13 @@ def test_bounty_registry_hash_pin_mismatch_fails(monkeypatch, tmp_path) -> None:
     assert "sha256 mismatch" in result.output
 
 
-def test_bounty_registry_rejects_target_hash_mismatch() -> None:
+def test_target_registry_rejects_target_hash_mismatch() -> None:
     payload = {
         "schema_version": 1,
         "bounties": [
             {
                 "id": "fc.test",
-                "title": "Test bounty",
+                "title": "Test target",
                 "status": "open",
                 "reward": "100 TEST",
                 "source": {"name": "Formal Conjectures"},
@@ -162,13 +162,13 @@ def test_bounty_registry_rejects_target_hash_mismatch() -> None:
         load_registry(json.dumps(payload).encode())
 
 
-def test_bounty_registry_rejects_formal_proof_normal_bounty() -> None:
+def test_target_registry_rejects_formal_proof_normal_target() -> None:
     payload = {
         "schema_version": 1,
         "bounties": [
             {
                 "id": "fc.test",
-                "title": "Test bounty",
+                "title": "Test target",
                 "status": "open",
                 "reward": "100 TEST",
                 "source": {
@@ -184,7 +184,7 @@ def test_bounty_registry_rejects_formal_proof_normal_bounty() -> None:
         load_registry(json.dumps(payload).encode())
 
 
-def test_bounty_registry_allows_formal_proof_porting_bounty() -> None:
+def test_target_registry_allows_formal_proof_porting_target() -> None:
     problem = problem_from_payload(PROBLEM)
     payload = {
         "schema_version": 1,
@@ -192,7 +192,7 @@ def test_bounty_registry_allows_formal_proof_porting_bounty() -> None:
             {
                 "id": "fc.test",
                 "kind": "proof_porting",
-                "title": "Test bounty",
+                "title": "Test target",
                 "status": "open",
                 "reward": "100 TEST",
                 "source": {
@@ -231,7 +231,7 @@ def test_mine_submission_calls_lean_verify(monkeypatch, tmp_path) -> None:
     assert "Add --commit or --reveal" in result.output
 
 
-def test_public_mine_builds_escrow_commit_package(monkeypatch, tmp_path) -> None:
+def test_public_mine_builds_custody_commit_package(monkeypatch, tmp_path) -> None:
     raw = json.dumps(
         {
             "schema_version": 2,
@@ -239,9 +239,9 @@ def test_public_mine_builds_escrow_commit_package(monkeypatch, tmp_path) -> None
             "bounties": [
                 {
                     "id": "fc.test",
-                    "title": "Test bounty",
+                    "title": "Test target",
                     "status": "active",
-                    "reward": "1 TAO escrowed",
+                    "reward": "1 TAO reward",
                     "source": {"name": "Formal Conjectures"},
                     "policy_version": "bounty-policy-v1",
                     "toolchain_id": "leanprover/lean4:v4.15.0",
@@ -302,7 +302,7 @@ def test_public_mine_builds_escrow_commit_package(monkeypatch, tmp_path) -> None
     assert payload["identity_binding_signature_hex"] == "01" * 64
 
 
-def test_setup_writes_bounty_only_env(monkeypatch, tmp_path) -> None:
+def test_setup_writes_target_registry_env(monkeypatch, tmp_path) -> None:
     monkeypatch.chdir(tmp_path)
     env_path = tmp_path / ".env"
 

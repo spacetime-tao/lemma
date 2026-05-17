@@ -1,4 +1,4 @@
-"""Bittensor EVM escrow helpers for Lemma bounty claims."""
+"""Bittensor EVM custody helpers for Lemma proof reward claims."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ _ADDRESS_RE = re.compile(r"^0x[0-9a-fA-F]{40}$")
 
 
 class EscrowError(RuntimeError):
-    """Raised when escrow data cannot be built or read."""
+    """Raised when custody data cannot be built or read."""
 
 
 @dataclass(frozen=True)
@@ -231,7 +231,7 @@ def build_commitment(
 
 
 class BountyEscrowClient:
-    """Small JSON-RPC helper for unsigned Bittensor EVM escrow interactions."""
+    """Small JSON-RPC helper for unsigned Bittensor EVM custody interactions."""
 
     def __init__(self, *, rpc_url: str, contract_address: str, timeout_s: float = 30.0) -> None:
         self.rpc_url = rpc_url.rstrip("/")
@@ -246,16 +246,16 @@ class BountyEscrowClient:
             response = httpx.post(self.rpc_url, json=payload, timeout=self.timeout_s)
             response.raise_for_status()
         except httpx.HTTPError as e:
-            raise EscrowError(f"escrow RPC failed: {e}") from e
+            raise EscrowError(f"custody RPC failed: {e}") from e
         data = response.json()
         if "error" in data:
-            raise EscrowError(f"escrow RPC error: {data['error']}")
+            raise EscrowError(f"custody RPC error: {data['error']}")
         return data.get("result")
 
     def eth_call(self, data: str) -> str:
         result = self._rpc("eth_call", [{"to": self.contract_address, "data": data}, "latest"])
         if not isinstance(result, str):
-            raise EscrowError("escrow RPC returned non-hex eth_call result")
+            raise EscrowError("custody RPC returned non-hex eth_call result")
         return result
 
     def bounty_count(self) -> int:

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 /// @title LemmaBountyEscrow
-/// @notice Trustless Bittensor EVM custody for theorem bounties.
+/// @notice Bittensor EVM custody for Lean-verified proof rewards.
 contract LemmaBountyEscrow {
     enum BountyStatus {
         None,

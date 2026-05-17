@@ -1,4 +1,4 @@
-"""Client-side bounty registry loading and Lean verification."""
+"""Client-side proof target registry loading and Lean verification."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from lemma.problems.base import Problem
 
 
 class BountyError(RuntimeError):
-    """Raised when bounty registry, verification, or submission fails."""
+    """Raised when target registry, verification, or submission fails."""
 
 
 @dataclass(frozen=True)
@@ -45,34 +45,34 @@ class Bounty:
             bounty_id = str(row["id"]).strip()
             title = str(row.get("title") or bounty_id).strip()
         except KeyError as e:
-            raise BountyError(f"registry bounty missing required field: {e.args[0]}") from e
+            raise BountyError(f"registry target missing required field: {e.args[0]}") from e
         if not bounty_id:
-            raise BountyError("registry bounty has empty id")
+            raise BountyError("registry target has empty id")
         source = row.get("source") or {}
         if not isinstance(source, dict):
-            raise BountyError(f"registry bounty {bounty_id!r} source must be an object")
+            raise BountyError(f"registry target {bounty_id!r} source must be an object")
         problem = problem_from_payload(problem_payload)
         kind = str(row.get("kind") or "formal_target").strip().lower()
         policy = str(row.get("submission_policy") or problem.extra.get("submission_policy") or "restricted_helpers")
         if policy not in VALID_SUBMISSION_POLICIES:
-            raise BountyError(f"registry bounty {bounty_id!r} has unknown submission_policy: {policy}")
+            raise BountyError(f"registry target {bounty_id!r} has unknown submission_policy: {policy}")
         target_hash = target_sha256(problem)
         expected_target_hash = _normalize_sha256_pin(str(row.get("target_sha256") or ""))
         if expected_target_hash and expected_target_hash != target_hash:
             raise BountyError(
-                f"registry bounty {bounty_id!r} target_sha256 mismatch: got {target_hash}, "
+                f"registry target {bounty_id!r} target_sha256 mismatch: got {target_hash}, "
                 f"expected {expected_target_hash}",
             )
         if _formal_conjectures_has_formal_proof(source) and kind != "proof_porting":
             raise BountyError(
-                f"registry bounty {bounty_id!r} has Formal Conjectures formal_proof metadata; "
-                "use kind=proof_porting instead of a normal bounty",
+                f"registry target {bounty_id!r} has Formal Conjectures formal_proof metadata; "
+                "use kind=proof_porting instead of a normal target",
             )
         policy_version = str(row.get("policy_version") or "bounty-policy-v1").strip()
         toolchain_id = str(row.get("toolchain_id") or problem.lean_toolchain).strip()
         escrow = row.get("escrow") or {}
         if not isinstance(escrow, dict):
-            raise BountyError(f"registry bounty {bounty_id!r} escrow must be an object")
+            raise BountyError(f"registry target {bounty_id!r} custody metadata must be an object")
         return cls(
             id=bounty_id,
             title=title,
@@ -151,7 +151,7 @@ class BountyRegistry:
         for bounty in self.bounties:
             if bounty.id == wanted:
                 return bounty
-        raise BountyError(f"unknown bounty id: {bounty_id}")
+        raise BountyError(f"unknown target id: {bounty_id}")
 
 
 def _canonical_json(data: dict[str, Any]) -> str:
@@ -187,7 +187,7 @@ def _read_registry_bytes(source: str, timeout_s: float) -> bytes:
             response = httpx.get(src, timeout=timeout_s, follow_redirects=True)
             response.raise_for_status()
         except httpx.HTTPError as e:
-            raise BountyError(f"could not fetch bounty registry: {e}") from e
+            raise BountyError(f"could not fetch target registry: {e}") from e
         return response.content
     if src.startswith("file://"):
         parsed = urlparse(src)
@@ -197,23 +197,23 @@ def _read_registry_bytes(source: str, timeout_s: float) -> bytes:
     try:
         return path.read_bytes()
     except OSError as e:
-        raise BountyError(f"could not read bounty registry {path}: {e}") from e
+        raise BountyError(f"could not read target registry {path}: {e}") from e
 
 
 def load_registry(raw: bytes, expected_sha256: str | None = None) -> BountyRegistry:
     digest = hashlib.sha256(raw).hexdigest()
     expected = _normalize_sha256_pin(expected_sha256)
     if expected and digest != expected:
-        raise BountyError(f"bounty registry sha256 mismatch: got {digest}, expected {expected}")
+        raise BountyError(f"target registry sha256 mismatch: got {digest}, expected {expected}")
     try:
         payload = json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as e:
-        raise BountyError(f"bounty registry is not valid UTF-8 JSON: {e}") from e
+        raise BountyError(f"target registry is not valid UTF-8 JSON: {e}") from e
     if int(payload.get("schema_version", 0)) not in {1, 2}:
-        raise BountyError("bounty registry schema_version must be 1 or 2")
+        raise BountyError("target registry schema_version must be 1 or 2")
     rows = payload.get("bounties")
     if not isinstance(rows, list):
-        raise BountyError("bounty registry must contain a bounties list")
+        raise BountyError("target registry must contain a bounties list")
     schema_version = int(payload.get("schema_version", 0))
     return BountyRegistry(
         schema_version=schema_version,

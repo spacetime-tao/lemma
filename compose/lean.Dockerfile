@@ -1,4 +1,4 @@
-# Lean 4 + Mathlib + stub workspace (bake .lake for offline bounty verification).
+# Lean 4 + Mathlib + stub workspace (bake .lake for offline proof verification).
 # Build from repo root: docker build -f compose/lean.Dockerfile -t lemma/lean-sandbox:latest .
 FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive

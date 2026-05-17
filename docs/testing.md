@@ -15,7 +15,7 @@ docker build -f compose/lean.Dockerfile -t lemma-lean-sandbox:ci .
 LEAN_SANDBOX_IMAGE=lemma-lean-sandbox:ci RUN_DOCKER_LEAN=1 uv run pytest tests/test_docker_golden.py -v
 ```
 
-Run escrow contract checks:
+Run reward custody contract checks:
 
 ```bash
 cd contracts

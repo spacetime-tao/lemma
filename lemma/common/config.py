@@ -1,4 +1,4 @@
-"""Environment-driven settings for the bounty/escrow core."""
+"""Environment-driven settings for proof targets and reward custody."""
 
 from __future__ import annotations
 

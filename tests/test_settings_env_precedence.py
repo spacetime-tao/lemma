@@ -1,4 +1,4 @@
-"""LemmaSettings keeps the bounty/escrow env surface small."""
+"""LemmaSettings keeps the target/custody env surface small."""
 
 from __future__ import annotations
 

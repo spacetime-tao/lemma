@@ -1,1 +1,1 @@
-"""Bounty registry, verification, and escrow helpers."""
+"""Proof target registry, verification, and reward custody helpers."""

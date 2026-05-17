@@ -113,7 +113,7 @@ def test_proof_artifact_sha256_hashes_file_bytes(tmp_path: Path) -> None:
     assert proof_artifact_sha256(proof) == hashlib.sha256(b"import Mathlib\n").hexdigest()
 
 
-def test_registry_escrow_backed_requires_funding_confirmation() -> None:
+def test_registry_live_reward_requires_funding_confirmation() -> None:
     problem = {
         "id": "fc.test",
         "theorem_name": "test_theorem",
@@ -126,7 +126,7 @@ def test_registry_escrow_backed_requires_funding_confirmation() -> None:
     }
     base_row = {
         "id": "fc.test",
-        "title": "Test bounty",
+        "title": "Test target",
         "source": {"name": "Formal Conjectures"},
         "problem": problem,
         "escrow": {"chain_id": 945, "contract_address": CONTRACT, "bounty_id": 1},

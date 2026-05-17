@@ -1,4 +1,4 @@
-# Runtime image for the Lemma bounty CLI.
+# Runtime image for the Lemma proof formalization CLI.
 #
 # Lean verification uses the Python Docker SDK against a mounted host Docker
 # socket. Do not install the full Docker engine here; it is large and the daemon
