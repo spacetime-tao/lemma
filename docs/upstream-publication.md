@@ -1,14 +1,14 @@
 # Upstream Publication
 
-Lemma should close the loop with the public corpus it uses.
+Lemma should close the loop with Google DeepMind's public Formal Conjectures corpus.
 
-A solved target should not disappear into reward accounting. After a proof passes the pinned verifier and receives the required subnet attestation, Lemma can publish a canonical proof artifact and prepare an upstream contribution candidate for the source repository when appropriate.
+A solved theorem should not disappear into reward accounting. After a proof passes Lean and receives the required subnet attestation, Lemma can publish a canonical proof artifact and prepare an upstream contribution candidate for the source repository when appropriate.
 
 For Formal Conjectures targets, the normal upstream candidate is a small pull request that marks the statement as solved and links to the Lemma proof artifact.
 
 ## Why This Exists
 
-The public output of Lemma is not only a payout. It is a growing record of mechanically checked proof work.
+The public output of Lemma is not only a bounty claim. It is a growing record of mechanically checked proof work.
 
 Upstream publication makes solved targets:
 
@@ -42,7 +42,7 @@ A solved target can move through these publication states:
 
 | State | Meaning |
 | --- | --- |
-| `verified` | Lean accepted the submitted proof under the published target and policy. |
+| `verified` | Lean accepted the submitted proof for the exact theorem. |
 | `attested` | Validator attestation threshold or subnet rule has been met. |
 | `settled` | Reward custody path has completed or the proof is reward-eligible under the active rules. |
 | `artifact_published` | Canonical proof artifact is publicly available. |

@@ -1,24 +1,38 @@
 # Lemma
 
-Lemma is a Bittensor subnet for turning open Lean conjectures into verified public proof artifacts.
+Lemma is a Bittensor subnet for solving open mathematical conjectures from Google DeepMind's public [`formal-conjectures`](https://github.com/google-deepmind/formal-conjectures) repository.
 
-It publishes formal proof targets, miners submit Lean proof files, validators check them under a pinned Lean and mathlib environment, and verified proofs become eligible for rewards under the subnet rules. After a target is verified and attested, Lemma can publish a canonical proof artifact and prepare an upstream contribution candidate so the result can be reviewed, cited, and linked from the public corpus that supplied the target.
+The subnet turns selected Lean statements into proof bounties. Miners compete to produce `Submission.lean` files. Validators run Lean in a pinned environment. When a proof verifies and is attested, the solver becomes eligible for the bounty, Lemma publishes a canonical proof artifact, and an upstream pull request can be prepared for `google-deepmind/formal-conjectures`.
 
-Reward custody is implementation plumbing. The product story is proof production: exact target, Lean proof, validator attestation, reward eligibility, public proof artifact, upstream PR candidate.
+Lemma is independent and is not endorsed by Google DeepMind. It uses the public Formal Conjectures repository as target material.
+
+## Plain English
+
+Google DeepMind maintains a public repository of mathematical conjectures written in Lean.
+
+Lemma picks one of those open conjectures and puts a bounty on it.
+
+Miners try to prove it.
+
+Validators check the submitted proof with Lean.
+
+If the proof checks, the solver can claim the bounty under Lemma's rules.
+
+Then Lemma publishes the proof and prepares a pull request back to the Formal Conjectures repository so the result can become part of the public record.
 
 ## Why Lemma Exists
 
 Mathematics is one of the few AI work domains where correctness can be checked mechanically. A proof is not rewarded because it sounds plausible. It is eligible only when it verifies against the exact published formal statement and policy.
 
-Lemma is being centered on public research-level formal statements from [Formal Conjectures](https://github.com/google-deepmind/formal-conjectures), an open Lean 4 and mathlib repository of formalized conjectures and related statements. Lemma is independent and is not endorsed by Google DeepMind or the Formal Conjectures authors; it uses public statements as target material.
+Lemma is being centered on public research-level formal statements from Google DeepMind's [Formal Conjectures](https://github.com/google-deepmind/formal-conjectures), an open Lean 4 and mathlib repository of formalized conjectures and related statements.
 
 ## How The Subnet Works
 
 ```text
-Formal Conjectures statement
+Google DeepMind Formal Conjectures statement
         |
         v
-Lemma target registry
+Active Lemma bounty
         |
         v
 Miner Submission.lean
@@ -33,7 +47,7 @@ Validator attestation
 Reward eligibility
         |
         v
-Canonical proof artifact
+Public proof artifact
         |
         v
 Upstream PR candidate
@@ -42,6 +56,10 @@ Upstream PR candidate
 Validators check the proof artifact. They do not score informal reasoning, private notes, or prose explanations.
 
 The upstream PR is a publication path, not a payout oracle. Lemma settlement depends on the published target, verifier, and subnet rules. Formal Conjectures maintainers retain normal review authority over their repository.
+
+## Relationship To Google DeepMind
+
+Lemma is not affiliated with or endorsed by Google DeepMind. The subnet uses Google DeepMind's public `formal-conjectures` repository as an open source target corpus. Upstream maintainers retain normal review authority over any pull requests Lemma prepares.
 
 ## Quick Start
 
