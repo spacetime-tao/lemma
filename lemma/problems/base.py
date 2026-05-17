@@ -57,7 +57,7 @@ theorem {SOLUTION_BRIDGE_THEOREM} : {self.type_expr} := by
 """
 
     def submission_stub(self) -> str:
-        """Initial Submission.lean skeleton (miner replaces proof)."""
+        """Initial Submission.lean skeleton for the bounty claimant."""
         st = self.extra.get("submission_stub")
         if isinstance(st, str) and st.strip():
             return st.strip() + "\n"

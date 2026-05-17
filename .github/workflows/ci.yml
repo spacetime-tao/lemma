@@ -16,7 +16,7 @@ jobs:
       - name: Sync
         run: uv sync --extra dev
       - name: Ruff
-        run: uv run ruff check lemma tests tools
+        run: uv run ruff check lemma tests
       - name: Mypy
         run: uv run mypy lemma
       # setuptools PYSEC-2025-49: bittensor==10.3.0 requires setuptools>=70,<71 — upgrade when upstream relaxes.
@@ -58,5 +58,3 @@ jobs:
         run: docker build -f compose/lean.Dockerfile -t lemma-lean-sandbox:ci .
       - name: Docker golden Lean verify
         run: LEAN_SANDBOX_IMAGE=lemma-lean-sandbox:ci RUN_DOCKER_LEAN=1 uv run pytest tests/test_docker_golden.py -v --tb=short
-      - name: Generated templates lake build (mainnet gate)
-        run: LEAN_SANDBOX_IMAGE=lemma-lean-sandbox:ci RUN_DOCKER_LEAN_TEMPLATES=1 uv run python scripts/ci_verify_generated_templates.py

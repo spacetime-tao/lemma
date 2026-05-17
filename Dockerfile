@@ -1,4 +1,4 @@
-# Runtime image for lemma miner/validator.
+# Runtime image for the Lemma bounty CLI.
 #
 # Lean verification uses the Python Docker SDK against a mounted host Docker
 # socket. Do not install the full Docker engine here; it is large and the daemon
@@ -9,8 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY lemma ./lemma
-COPY tools ./tools
 RUN pip install --no-cache-dir .
 ENV PYTHONUNBUFFERED=1
 ENTRYPOINT ["lemma"]
-CMD ["validator", "start"]
+CMD ["status"]

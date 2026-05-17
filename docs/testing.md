@@ -1,67 +1,32 @@
 # Testing
 
-Clone the repo and install the development environment:
+Run the Python checks:
 
 ```bash
-git clone https://github.com/spacetime-tao/lemma.git
-cd lemma
-uv sync --extra dev
-```
-
-## Default suite
-
-```bash
-uv sync --extra dev
-uv run pytest tests/ -q
-uv run ruff check lemma tests tools
+uv run ruff check lemma tests
 uv run mypy lemma
-uv run python scripts/ci_verify_generated_templates.py
-uv run bandit -q -r lemma -ll
+uv run pytest tests -q
 ```
 
-No API keys are needed for proof-only verification tests; Docker Lean tests are skipped unless enabled.
-
-For audit or release hardening passes, also run full Bandit and pip-audit:
+Run Docker Lean verification after building the sandbox image:
 
 ```bash
-uv run bandit -q -r lemma
-uv run pip-audit \
-  --ignore-vuln PYSEC-2025-49 \
-  --ignore-vuln PYSEC-2022-42969
+docker build -f compose/lean.Dockerfile -t lemma-lean-sandbox:ci .
+LEAN_SANDBOX_IMAGE=lemma-lean-sandbox:ci RUN_DOCKER_LEAN=1 uv run pytest tests/test_docker_golden.py -v
 ```
 
-Full Bandit may report low-severity findings for intentional subprocess calls
-inside the Lean/Docker verifier or deterministic non-crypto RNG in problem
-sampling. Fix those only when the change removes code or ambiguity; CI gates
-medium/high findings with `-ll`.
-
-## Opt-in Lean tests
-
-| File | Enable |
-| ---- | ------ |
-| [`test_sandbox_host.py`](../tests/test_sandbox_host.py) | `LEMMA_RUN_HOST_LEAN=1` and `lake` on `PATH` |
-| [`test_docker_golden.py`](../tests/test_docker_golden.py) | `RUN_DOCKER_LEAN=1`, Docker, `LEAN_SANDBOX_IMAGE` |
-
-`LEMMA_SKIP_LAKE_CACHE=1` skips `lake exe cache get` when offline.
-
-### Docker golden
+Run escrow contract checks:
 
 ```bash
-docker build -f compose/lean.Dockerfile -t lemma/lean-sandbox:latest .
-RUN_DOCKER_LEAN=1 uv run pytest tests/test_docker_golden.py -v
+cd contracts
+npm test
+npm run compile
 ```
 
-CI uses tag `lemma-lean-sandbox:ci`; locally `latest` is fine.
-Production should use a subnet-published immutable tag or digest, not the mutable local `latest` tag ([toolchain-image-policy.md](toolchain-image-policy.md)).
+Useful focused tests:
 
-## Generated template gate (CI `docker-lean-sandbox` job)
-
-[`scripts/ci_verify_generated_templates.py`](../scripts/ci_verify_generated_templates.py) always runs the cheap metadata/witness gate: every generated builder must be reachable, have coherent registry metadata, bridge the expected theorem name, and carry a complete public witness proof. With `RUN_DOCKER_LEAN_TEMPLATES=1`, it runs `lake build` on every generated template shape twice: once with `sorry` stubs and once with witness proofs plus axiom checks. By default it merges all theorems into **one** Lake workspace (single Mathlib build). Set `CI_TEMPLATE_BISECT_ON_FAIL=1` only when debugging a failing multiplex locally or on a large runner; the bisection path runs repeated Lake builds and is intentionally off by default in CI. Set `CI_TEMPLATE_MULTIPLEX=0` to fall back to per-template workspaces (slow; mainly for debugging).
-
-## LLM keys
-
-Only prover-preview commands such as **`lemma proof preview`** need inference keys.
-
-`lemma proof preview` runs **prover + Lean** on the current subnet theorem
-(chain RPC required). Live scoring accepts only proofs that pass Lean
-verification for that theorem.
+```bash
+uv run pytest tests/test_bounty_cli.py tests/test_bounty_escrow.py -q
+uv run pytest tests/test_sandbox_host.py tests/test_verify_runner_remote.py -q
+uv run pytest tests/test_submission_policy.py tests/test_problem_codec.py -q
+```

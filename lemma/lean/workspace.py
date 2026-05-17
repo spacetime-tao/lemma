@@ -6,7 +6,6 @@ import hashlib
 import shutil
 from pathlib import Path
 
-from lemma.lean.proof_metrics import write_proof_metrics_probe
 from lemma.lean.submission_policy import submission_axiom_check_names, submission_policy_for_problem
 from lemma.problems.base import Problem
 
@@ -52,7 +51,6 @@ def materialize_workspace(
     submission_lean: str,
     *,
     preserve_lake: bool = False,
-    include_proof_metrics_probe: bool = False,
     submission_policy: str | None = None,
 ) -> None:
     """
@@ -63,7 +61,6 @@ def materialize_workspace(
     overwritten in place so Lake can incrementally rebuild ``Submission`` only.
     """
     policy = submission_policy_for_problem(problem, submission_policy)
-    thm = problem.theorem_name
     if preserve_lake and dest.exists() and (dest / ".lake").is_dir():
         (dest / "Challenge.lean").write_text(problem.challenge_source(), encoding="utf-8")
         (dest / "Solution.lean").write_text(problem.solution_source(), encoding="utf-8")
@@ -72,8 +69,6 @@ def materialize_workspace(
         lake = _lakefile_toml(problem)
         (dest / "lakefile.toml").write_text(lake, encoding="utf-8")
         (dest / "AxiomCheck.lean").write_text(_axiom_check_source(problem, submission_lean, policy), encoding="utf-8")
-        if include_proof_metrics_probe:
-            write_proof_metrics_probe(dest, thm)
         return
 
     if dest.exists():
@@ -88,12 +83,10 @@ def materialize_workspace(
 
     (dest / "lakefile.toml").write_text(_lakefile_toml(problem), encoding="utf-8")
 
-    # Check axioms on the miner's theorem in ``Submission`` (not ``Solution``): the
+    # Check axioms on the submitted theorem in ``Submission`` (not ``Solution``): the
     # Solution module only bridges Challenge ↔ Submission and may not expose names
     # the way ``lake env lean`` expects for every workspace layout.
     (dest / "AxiomCheck.lean").write_text(_axiom_check_source(problem, submission_lean, policy), encoding="utf-8")
-    if include_proof_metrics_probe:
-        write_proof_metrics_probe(dest, thm)
 
 
 def _lakefile_toml(problem: Problem) -> str:

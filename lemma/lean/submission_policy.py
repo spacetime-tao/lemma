@@ -1,4 +1,4 @@
-"""Allowlist policy for miner-owned ``Submission.lean`` source."""
+"""Allowlist policy for claimant-owned ``Submission.lean`` source."""
 
 from __future__ import annotations
 

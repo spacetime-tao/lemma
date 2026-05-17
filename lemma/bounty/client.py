@@ -1,4 +1,4 @@
-"""Client-side bounty registry, verification, packaging, and submission."""
+"""Client-side bounty registry loading and Lean verification."""
 
 from __future__ import annotations
 
@@ -11,15 +11,10 @@ from urllib.parse import unquote, urlparse
 
 import httpx
 
-from lemma import __version__
 from lemma.common.config import LemmaSettings
 from lemma.lean.problem_codec import problem_from_payload
 from lemma.lean.submission_policy import VALID_SUBMISSION_POLICIES
 from lemma.problems.base import Problem
-
-BOUNTY_SUBMISSION_SCHEMA_VERSION = 1
-BOUNTY_SUBMISSION_MAGIC = b"LemmaBountySubmissionV1"
-BOUNTY_SUBMISSIONS_PATH = "/v1/bounty-submissions"
 
 
 class BountyError(RuntimeError):
@@ -232,10 +227,6 @@ def fetch_registry(settings: LemmaSettings) -> BountyRegistry:
     return load_registry(raw, settings.bounty_registry_sha256_expected)
 
 
-def proof_sha256(proof_script: str) -> str:
-    return hashlib.sha256(proof_script.encode("utf-8")).hexdigest()
-
-
 def verify_bounty_proof(settings: LemmaSettings, bounty: Bounty, proof_script: str, *, host_lean: bool = False):
     if host_lean and not settings.allow_host_lean:
         raise BountyError(
@@ -252,66 +243,3 @@ def verify_bounty_proof(settings: LemmaSettings, bounty: Bounty, proof_script: s
         proof_script=proof_script,
         submission_policy=bounty.submission_policy,
     )
-
-
-def bounty_submission_message(payload: dict[str, Any]) -> bytes:
-    signed = {
-        "schema_version": int(payload["schema_version"]),
-        "bounty_id": str(payload["bounty_id"]),
-        "registry_sha256": str(payload["registry_sha256"]),
-        "proof_sha256": str(payload["proof_sha256"]),
-        "submitter_hotkey_ss58": str(payload["submitter_hotkey_ss58"]),
-        "payout_ss58": str(payload["payout_ss58"]),
-        "lemma_version": str(payload["lemma_version"]),
-    }
-    return BOUNTY_SUBMISSION_MAGIC + b"\n" + _canonical_json(signed).encode("utf-8")
-
-
-def build_submission_package(
-    settings: LemmaSettings,
-    *,
-    registry: BountyRegistry,
-    bounty: Bounty,
-    proof_script: str,
-    wallet_cold: str | None,
-    wallet_hot: str | None,
-    payout_ss58: str,
-) -> dict[str, Any]:
-    import bittensor as bt
-
-    wallet = bt.Wallet(name=wallet_cold or settings.wallet_cold, hotkey=wallet_hot or settings.wallet_hot)
-    submitter = wallet.hotkey.ss58_address
-    payload: dict[str, Any] = {
-        "schema_version": BOUNTY_SUBMISSION_SCHEMA_VERSION,
-        "bounty_id": bounty.id,
-        "registry_sha256": registry.sha256,
-        "proof_script": proof_script,
-        "proof_sha256": proof_sha256(proof_script),
-        "submitter_hotkey_ss58": submitter,
-        "payout_ss58": payout_ss58.strip(),
-        "lemma_version": __version__,
-    }
-    if not payload["payout_ss58"]:
-        raise BountyError("--payout is required")
-    signature = wallet.hotkey.sign(bounty_submission_message(payload))
-    payload["signature_hex"] = signature.hex()
-    return payload
-
-
-def submit_submission_package(settings: LemmaSettings, package: dict[str, Any]) -> dict[str, Any]:
-    url = settings.bounty_api_url.rstrip("/") + BOUNTY_SUBMISSIONS_PATH
-    try:
-        with httpx.Client(timeout=float(settings.bounty_http_timeout_s), follow_redirects=False) as client:
-            response = client.post(url, json=package)
-    except httpx.HTTPError as e:
-        raise BountyError(f"could not submit bounty proof: {e}") from e
-
-    text = response.text[:1000]
-    try:
-        data = response.json()
-    except ValueError:
-        data = {"status_code": response.status_code, "body": text}
-
-    if response.status_code in (200, 201, 202, 409):
-        return data if isinstance(data, dict) else {"response": data}
-    raise BountyError(f"bounty API rejected submission ({response.status_code}): {text}")

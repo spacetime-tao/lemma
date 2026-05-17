@@ -1,4 +1,4 @@
-# Lean 4 + Mathlib + stub workspace (bake .lake for offline `lake build` in validator sandboxes).
+# Lean 4 + Mathlib + stub workspace (bake .lake for offline bounty verification).
 # Build from repo root: docker build -f compose/lean.Dockerfile -t lemma/lean-sandbox:latest .
 FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
@@ -13,5 +13,5 @@ COPY lemma/lean/template/ /opt/lemma-stub/
 RUN cd /opt/lemma-stub && lake exe cache get && lake build Challenge Solution Submission
 
 WORKDIR /work
-# Default: interactive shell; validator overrides command.
+# Default: interactive shell; verifier commands override this.
 CMD ["bash", "-lc", "echo 'lemma lean-sandbox image ready'; bash"]

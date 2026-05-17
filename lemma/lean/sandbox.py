@@ -17,12 +17,6 @@ from loguru import logger
 from pydantic import BaseModel
 
 from lemma.lean.cheats import axiom_scan_ok, lake_build_environment_failed, lean_driver_failed
-from lemma.lean.proof_metrics import (
-    LeanProofMetrics,
-    collect_host_proof_metrics,
-    docker_proof_metrics_shell_fragment,
-    parse_proof_metrics_line,
-)
 from lemma.lean.submission_policy import (
     scan_submission_policy,
     submission_policy_for_problem,
@@ -125,7 +119,6 @@ VerifyReason = Literal[
     "oom",
     "docker_error",
     "remote_error",
-    "attest_trusted",
 ]
 
 
@@ -135,7 +128,6 @@ class VerifyResult(BaseModel):
     stderr_tail: str = ""
     stdout_tail: str = ""
     build_seconds: float = 0.0
-    proof_metrics: LeanProofMetrics | None = None
 
 
 class LeanSandbox:
@@ -154,7 +146,6 @@ class LeanSandbox:
         workspace_cache_include_submission_hash: bool = False,
         workspace_cache_max_dirs: int = 8,
         workspace_cache_max_bytes: int = 16 * 1024 * 1024 * 1024,
-        proof_metrics_enabled: bool = False,
     ) -> None:
         self.image = image
         self.cpu = cpu
@@ -167,7 +158,6 @@ class LeanSandbox:
         self.workspace_cache_include_submission_hash = bool(workspace_cache_include_submission_hash)
         self.workspace_cache_max_dirs = max(0, int(workspace_cache_max_dirs))
         self.workspace_cache_max_bytes = max(0, int(workspace_cache_max_bytes))
-        self.proof_metrics_enabled = bool(proof_metrics_enabled)
         # Prefer explicit constructor / LemmaSettings (`.env`); ``os.environ`` alone is not populated from
         # pydantic's dotenv load unless the process exported the variable.
         _dw = docker_worker if docker_worker is not None else os.environ.get("LEMMA_LEAN_DOCKER_WORKER")
@@ -197,7 +187,6 @@ class LeanSandbox:
                     problem,
                     submission_src,
                     preserve_lake=False,
-                    include_proof_metrics_probe=self.proof_metrics_enabled,
                     submission_policy=policy,
                 )
                 return self._verify_docker(work) if self.use_docker else self._verify_host(work)
@@ -222,7 +211,6 @@ class LeanSandbox:
                     problem,
                     submission_src,
                     preserve_lake=True,
-                    include_proof_metrics_probe=self.proof_metrics_enabled,
                     submission_policy=policy,
                 )
                 return self._verify_docker(slot) if self.use_docker else self._verify_host(slot)
@@ -234,7 +222,6 @@ class LeanSandbox:
                     problem,
                     submission_src,
                     preserve_lake=False,
-                    include_proof_metrics_probe=self.proof_metrics_enabled,
                     submission_policy=policy,
                 )
                 vr = self._verify_docker(work) if self.use_docker else self._verify_host(work)
@@ -246,7 +233,7 @@ class LeanSandbox:
                 shutil.rmtree(work, ignore_errors=True)
 
     def _workspace_cache_publishable(self, work: Path, result: VerifyResult) -> bool:
-        """Keep dependency warmup even when the miner proof itself failed."""
+        """Keep dependency warmup even when the submitted proof itself failed."""
         if self.workspace_cache_dir is None or not (work / ".lake" / "packages" / "mathlib").is_dir():
             return False
         return result.reason not in {"timeout", "oom", "docker_error", "remote_error"}
@@ -414,19 +401,11 @@ class LeanSandbox:
                 stdout_tail=out[-4000:],
                 build_seconds=elapsed,
             )
-        proof_metrics = None
-        if self.proof_metrics_enabled:
-            proof_metrics = collect_host_proof_metrics(
-                work,
-                timeout_s=min(float(self.timeout_s), 120.0),
-                env=env,
-            )
         return VerifyResult(
             passed=True,
             reason="ok",
             stdout_tail=out[-2000:],
             build_seconds=elapsed,
-            proof_metrics=proof_metrics,
         )
 
     def _docker_worker_host_root(self) -> Path | None:
@@ -458,8 +437,6 @@ class LeanSandbox:
                 logger.debug("docker verify: skipping lake exe cache get (warm packages/mathlib)")
         lines.append(shlex.join(_lake_build_argv()))
         lines.append("lake env lean AxiomCheck.lean")
-        if self.proof_metrics_enabled:
-            lines.append(docker_proof_metrics_shell_fragment())
         return "\n".join(lines) + "\n"
 
     def _write_docker_verify_script(self, work: Path) -> str:
@@ -536,13 +513,11 @@ class LeanSandbox:
                 stdout_tail=text[-4000:] + extra,
                 build_seconds=elapsed,
             )
-        proof_metrics = parse_proof_metrics_line(text) if self.proof_metrics_enabled else None
         return VerifyResult(
             passed=True,
             reason="ok",
             stdout_tail=text[-2000:],
             build_seconds=elapsed,
-            proof_metrics=proof_metrics,
         )
 
     def _verify_docker_cli_exec(
@@ -598,7 +573,7 @@ class LeanSandbox:
 
         # Optional: long-lived worker + `docker exec` — avoids container create/start/remove overhead
         # (often hundreds of ms per verify on Linux, >1s on Docker Desktop). Requires the host root of the
-        # workspace cache to match the worker bind-mount (see docs/validator.md).
+        # workspace cache to match the worker bind-mount (see docs/production.md).
         worker = self.docker_worker
         if worker and shutil.which("docker"):
             root = self._docker_worker_host_root()

@@ -1,4 +1,4 @@
-"""Bounty CLI registry, package, and submission behavior."""
+"""Bounty/escrow CLI registry and transaction-package behavior."""
 
 import hashlib
 import json
@@ -25,16 +25,26 @@ PROBLEM = {
 def _registry(path: Path) -> str:
     raw = json.dumps(
         {
-            "schema_version": 1,
+            "schema_version": 2,
+            "reward_custody": "evm_escrow",
             "bounties": [
                 {
                     "id": "fc.test",
                     "title": "Test bounty",
-                    "status": "open",
-                    "reward": "100 TEST",
+                    "status": "active",
+                    "reward": "1 TAO escrowed",
                     "deadline": "2026-06-01T00:00:00Z",
-                    "terms_url": "https://lemmasub.net/bounties/fc.test",
+                    "terms_url": "https://lemmasub.net/#escrow",
                     "source": {"name": "Formal Conjectures", "url": "https://example.com"},
+                    "policy_version": "bounty-policy-v1",
+                    "toolchain_id": "leanprover/lean4:v4.15.0",
+                    "escrow": {
+                        "chain_id": 945,
+                        "contract_address": "0x" + "aa" * 20,
+                        "bounty_id": 7,
+                        "funded": True,
+                        "funding_confirmed_block": 12345,
+                    },
                     "problem": PROBLEM,
                 }
             ],
@@ -87,29 +97,36 @@ class _FakeWallet:
         self.hotkey = _FakeHotkey()
 
 
-def test_bounty_list_and_show_use_registry(monkeypatch, tmp_path) -> None:
+def test_help_exposes_only_public_commands() -> None:
+    result = CliRunner().invoke(main, ["--help"])
+
+    assert result.exit_code == 0
+    assert set(main.commands) == {"setup", "mine", "status", "validate"}
+    for command in ("setup", "mine", "status", "validate"):
+        assert command in result.output
+
+
+def test_mine_list_and_show_use_registry(monkeypatch, tmp_path) -> None:
     digest = _set_registry_env(monkeypatch, tmp_path)
 
-    default = CliRunner().invoke(main, ["bounty"])
-    listed = CliRunner().invoke(main, ["bounty", "list"])
-    shown = CliRunner().invoke(main, ["bounty", "show", "fc.test"])
-    shown_without_id = CliRunner().invoke(main, ["bounty", "show"])
-    shown_with_flag = CliRunner().invoke(main, ["bounty", "--show"])
+    default = CliRunner().invoke(main, ["mine"])
+    shown = CliRunner().invoke(main, ["mine", "fc.test"])
+    status = CliRunner().invoke(main, ["status"])
+    check = CliRunner().invoke(main, ["validate", "--check"])
 
     assert default.exit_code == 0
-    assert "lemma bounty show fc.test" in default.output
-    assert listed.exit_code == 0
-    assert "fc.test" in listed.output
-    assert digest in listed.output
+    assert "Escrow-backed" in default.output
+    assert "fc.test" in default.output
+    assert digest in default.output
     assert shown.exit_code == 0
     assert "Test bounty" in shown.output
-    assert "lemma mine fc.test" in shown.output
     assert "target_sha256" in shown.output
-    assert "policy:       restricted_helpers" in shown.output
-    assert shown_without_id.exit_code == 0
-    assert "Test bounty" in shown_without_id.output
-    assert shown_with_flag.exit_code == 0
-    assert "Test bounty" in shown_with_flag.output
+    assert "policy" in shown.output
+    assert "lemma mine fc.test --submission Submission.lean" in shown.output
+    assert status.exit_code == 0
+    assert "Lemma escrow status" in status.output
+    assert check.exit_code == 0
+    assert "READY" in check.output
 
 
 def test_bounty_registry_hash_pin_mismatch_fails(monkeypatch, tmp_path) -> None:
@@ -119,7 +136,7 @@ def test_bounty_registry_hash_pin_mismatch_fails(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("LEMMA_BOUNTY_REGISTRY_URL", str(registry_path))
     monkeypatch.setenv("LEMMA_BOUNTY_REGISTRY_SHA256_EXPECTED", "0" * 64)
 
-    result = CliRunner().invoke(main, ["bounty", "list"])
+    result = CliRunner().invoke(main, ["mine"])
 
     assert result.exit_code != 0
     assert "sha256 mismatch" in result.output
@@ -194,7 +211,7 @@ def test_bounty_registry_allows_formal_proof_porting_bounty() -> None:
     assert registry.get("fc.test").submission_policy == "restricted_helpers"
 
 
-def test_bounty_verify_calls_lean_verify(monkeypatch, tmp_path) -> None:
+def test_mine_submission_calls_lean_verify(monkeypatch, tmp_path) -> None:
     _set_registry_env(monkeypatch, tmp_path)
     proof_path = tmp_path / "Submission.lean"
     _proof(proof_path)
@@ -206,94 +223,12 @@ def test_bounty_verify_calls_lean_verify(monkeypatch, tmp_path) -> None:
 
     monkeypatch.setattr("lemma.bounty.client.verify_bounty_proof", fake_verify)
 
-    result = CliRunner().invoke(main, ["bounty", "verify", "fc.test", "--submission", str(proof_path)])
+    result = CliRunner().invoke(main, ["mine", "fc.test", "--submission", str(proof_path)])
 
     assert result.exit_code == 0
     assert calls == [("fc.test", proof_path.read_text(), False)]
     assert '"passed": true' in result.output
-
-
-def test_bounty_package_verifies_signs_and_prints_json(monkeypatch, tmp_path) -> None:
-    digest = _set_registry_env(monkeypatch, tmp_path)
-    monkeypatch.setenv("LEMMA_BOUNTY_REWARD_CUSTODY", "local_dry_run")
-    proof_path = tmp_path / "Submission.lean"
-    _proof(proof_path)
-    monkeypatch.setattr("lemma.bounty.client.verify_bounty_proof", lambda *args, **kwargs: _VerifyResult())
-    monkeypatch.setattr("bittensor.Wallet", _FakeWallet)
-
-    result = CliRunner().invoke(
-        main,
-        [
-            "bounty",
-            "package",
-            "fc.test",
-            "--submission",
-            str(proof_path),
-            "--wallet-cold",
-            "cold",
-            "--wallet-hot",
-            "hot",
-            "--payout",
-            "payout-ss58",
-        ],
-    )
-
-    assert result.exit_code == 0
-    payload = json.loads(result.output)
-    assert payload["bounty_id"] == "fc.test"
-    assert payload["registry_sha256"] == digest
-    assert payload["submitter_hotkey_ss58"] == "submitter-hotkey"
-    assert payload["payout_ss58"] == "payout-ss58"
-    assert payload["signature_hex"] == "01" * 64
-
-
-def test_bounty_submit_posts_signed_package(monkeypatch, tmp_path) -> None:
-    _set_registry_env(monkeypatch, tmp_path)
-    monkeypatch.setenv("LEMMA_BOUNTY_REWARD_CUSTODY", "local_dry_run")
-    proof_path = tmp_path / "Submission.lean"
-    _proof(proof_path)
-    submitted: list[dict] = []
-    monkeypatch.setattr("lemma.bounty.client.verify_bounty_proof", lambda *args, **kwargs: _VerifyResult())
-    monkeypatch.setattr("bittensor.Wallet", _FakeWallet)
-
-    def fake_submit(settings, package: dict) -> dict:
-        submitted.append(package)
-        return {"status": "accepted", "submission_id": "sub_123"}
-
-    monkeypatch.setattr("lemma.bounty.client.submit_submission_package", fake_submit)
-
-    result = CliRunner().invoke(
-        main,
-        ["bounty", "submit", "fc.test", "--submission", str(proof_path), "--payout", "payout-ss58"],
-    )
-
-    assert result.exit_code == 0
-    assert submitted and submitted[0]["bounty_id"] == "fc.test"
-    assert json.loads(result.output) == {"status": "accepted", "submission_id": "sub_123"}
-
-
-def test_bounty_submit_surfaces_api_rejection(monkeypatch, tmp_path) -> None:
-    _set_registry_env(monkeypatch, tmp_path)
-    monkeypatch.setenv("LEMMA_BOUNTY_REWARD_CUSTODY", "local_dry_run")
-    proof_path = tmp_path / "Submission.lean"
-    _proof(proof_path)
-    monkeypatch.setattr("lemma.bounty.client.verify_bounty_proof", lambda *args, **kwargs: _VerifyResult())
-    monkeypatch.setattr("bittensor.Wallet", _FakeWallet)
-
-    from lemma.bounty.client import BountyError
-
-    def fake_submit(settings, package: dict) -> dict:
-        raise BountyError("bounty API rejected submission (422): failed verification")
-
-    monkeypatch.setattr("lemma.bounty.client.submit_submission_package", fake_submit)
-
-    result = CliRunner().invoke(
-        main,
-        ["bounty", "submit", "fc.test", "--submission", str(proof_path), "--payout", "payout-ss58"],
-    )
-
-    assert result.exit_code != 0
-    assert "failed verification" in result.output
+    assert "Add --commit or --reveal" in result.output
 
 
 def test_public_mine_builds_escrow_commit_package(monkeypatch, tmp_path) -> None:
@@ -365,3 +300,39 @@ def test_public_mine_builds_escrow_commit_package(monkeypatch, tmp_path) -> None
     assert payload["transaction"]["data"].startswith("0xede854e6")
     assert payload["submitter_hotkey_pubkey"] == "0x" + "77" * 32
     assert payload["identity_binding_signature_hex"] == "01" * 64
+
+
+def test_setup_writes_bounty_only_env(monkeypatch, tmp_path) -> None:
+    monkeypatch.chdir(tmp_path)
+    env_path = tmp_path / ".env"
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "setup",
+            "--env-file",
+            str(env_path),
+            "--registry-url",
+            "registry.json",
+            "--registry-sha256",
+            "a" * 64,
+            "--escrow-contract",
+            "0x" + "aa" * 20,
+            "--evm-rpc-url",
+            "https://rpc.example",
+            "--evm-chain-id",
+            "945",
+            "--wallet-cold",
+            "cold",
+            "--wallet-hot",
+            "hot",
+        ],
+    )
+
+    assert result.exit_code == 0
+    text = env_path.read_text()
+    assert 'LEMMA_BOUNTY_REWARD_CUSTODY="evm_escrow"' in text
+    assert 'LEMMA_BOUNTY_REGISTRY_URL="registry.json"' in text
+    assert 'LEMMA_BOUNTY_REGISTRY_SHA256_EXPECTED="' + ("a" * 64) + '"' in text
+    assert 'BT_WALLET_COLD="cold"' in text
+    assert 'BT_WALLET_HOT="hot"' in text

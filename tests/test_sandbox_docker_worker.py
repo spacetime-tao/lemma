@@ -13,14 +13,13 @@ def test_docker_worker_kwarg_not_os_env() -> None:
 
 def test_docker_verify_script_source_is_line_oriented(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.delenv("LEMMA_LEAN_VERIFY_FULL_BUILD", raising=False)
-    sb = LeanSandbox(use_docker=True, network_mode="none", proof_metrics_enabled=True)
+    sb = LeanSandbox(use_docker=True, network_mode="none")
 
     script = sb._docker_verify_script_source(tmp_path)
 
     assert "lake exe cache get" not in script
     assert "\nlake build Submission\n" in script
     assert "\nlake env lean AxiomCheck.lean\n" in script
-    assert "LEMMA_PROOF_METRICS" in script
 
 
 def test_docker_worker_exec_uses_workdir_argv(tmp_path: Path, monkeypatch) -> None:

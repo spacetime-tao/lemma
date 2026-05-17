@@ -1,7 +1,7 @@
 [project]
 name = "lemma"
 version = "0.1.0"
-description = "Lemma: Bittensor subnet for incentivized Lean 4 theorem proving"
+description = "Lemma: escrow-backed Lean proof bounties"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
@@ -14,21 +14,13 @@ dependencies = [
     "click>=8.1,<9",
     "httpx>=0.27,<1",
     "docker>=7.1,<8",
-    "openai>=1.40,<2",
     "rich>=14,<15",
-    "tenacity>=9.0,<10",
     "eth-hash[pycryptodome]>=0.7,<1",
 ]
 
 [project.optional-dependencies]
-anthropic = [
-    "anthropic>=0.34,<1",
-]
 btcli = [
     "bittensor[cli]==10.3.0",
-]
-catalog = [
-    "datasets>=2.14,<4",
 ]
 dev = [
     "pytest>=9.0.3,<10",
@@ -39,7 +31,6 @@ dev = [
     "pip-audit>=2.7,<3",
     "bandit[toml]>=1.7,<2",
 ]
-wandb = ["wandb>=0.17,<1"]
 
 [project.scripts]
 lemma = "lemma.cli.main:main"
@@ -49,7 +40,7 @@ requires = ["hatchling>=1.24"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["lemma", "tools"]
+packages = ["lemma"]
 
 # Tighten transitive versions where compatible so `pip-audit` stays cleaner in CI.
 # `setuptools`/`wheel` are capped by `bittensor==10.3.0` (<71); those CVEs are ignored in CI until upstream relaxes.
@@ -63,7 +54,7 @@ constraint-dependencies = [
 [tool.ruff]
 target-version = "py311"
 line-length = 120
-src = ["lemma", "tests", "tools"]
+src = ["lemma", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]

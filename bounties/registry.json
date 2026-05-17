@@ -21,12 +21,12 @@
       "reward": "Escrow required",
       "source": {
         "name": "Lemma bounty",
-        "url": "https://lemmasub.net/bounties/"
+        "url": "https://lemmasub.net/#escrow"
       },
       "status": "candidate",
       "submission_policy": "restricted_helpers",
       "target_sha256": "cfe3cc12caa3ef57ccb6114ca41241c0e6636c4a14d5b30db06745771a67f6f6",
-      "terms_url": "https://lemmasub.net/bounties/",
+      "terms_url": "https://lemmasub.net/#escrow",
       "toolchain_id": "leanprover/lean4:v4.30.0-rc2",
       "title": "Draft starter target: two plus two"
     }

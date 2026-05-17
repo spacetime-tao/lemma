@@ -8,7 +8,6 @@ Ethereum mainnet.
 cd contracts
 npm install
 npm test
-BITTENSOR_EVM_DEPLOYER_PRIVATE_KEY=0x... npm run deploy:testnet
 npm run export-abi
 ```
 

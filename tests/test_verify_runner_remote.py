@@ -54,7 +54,7 @@ def test_remote_verify_http_success(monkeypatch: pytest.MonkeyPatch, tiny_proble
 
     s = LemmaSettings().model_copy(
         update={
-            "lean_verify_remote_url": "http://127.0.0.1:8787",
+            "lean_verify_remote_url": "http://localhost:8787",
             "lean_verify_timeout_s": 120,
         },
     )
@@ -90,7 +90,7 @@ def test_remote_verify_policy_scan_happens_before_http(
 
     monkeypatch.setattr("lemma.lean.verify_runner.httpx.Client", _client)
 
-    s = LemmaSettings().model_copy(update={"lean_verify_remote_url": "http://127.0.0.1:8787"})
+    s = LemmaSettings().model_copy(update={"lean_verify_remote_url": "http://localhost:8787"})
     vr = run_lean_verify(s, verify_timeout_s=60, problem=tiny_problem, proof_script="theorem p : True := by sorry")
     assert vr.passed is False
     assert vr.reason == "policy_violation"
@@ -135,25 +135,3 @@ def test_local_verify_policy_scan_happens_before_sandbox(
     vr = run_lean_verify(s, verify_timeout_s=300, problem=tiny_problem, proof_script="theorem p : True := by sorry")
     assert vr.passed is False
     assert vr.reason == "policy_violation"
-
-
-def test_local_verify_passes_proof_metrics_flag(tiny_problem: Problem, monkeypatch: pytest.MonkeyPatch) -> None:
-    def fake_verify(self: object, problem: Problem, submission_src: str, **kwargs: object):  # noqa: ARG001
-        from lemma.lean.sandbox import LeanSandbox, VerifyResult
-
-        assert isinstance(self, LeanSandbox)
-        assert self.proof_metrics_enabled is True
-        return VerifyResult(passed=True, reason="ok", build_seconds=0.1)
-
-    monkeypatch.setattr("lemma.lean.verify_runner.LeanSandbox.verify", fake_verify)
-
-    s = LemmaSettings().model_copy(
-        update={
-            "lean_verify_remote_url": None,
-            "lean_use_docker": False,
-            "lemma_lean_proof_metrics_enabled": True,
-        },
-    )
-    proof = "import Mathlib\n\nnamespace Submission\n\ntheorem p : True := by\n  trivial\n\nend Submission\n"
-    vr = run_lean_verify(s, verify_timeout_s=300, problem=tiny_problem, proof_script=proof)
-    assert vr.passed is True

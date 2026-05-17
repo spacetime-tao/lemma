@@ -5,7 +5,6 @@ from __future__ import annotations
 import pytest
 from lemma.lean.submission_policy import scan_submission_policy, submission_axiom_check_names
 from lemma.problems.base import Problem
-from lemma.problems.generated import _problem_for_builder_index, generated_witness_submission_source
 
 
 def _problem(split: str = "easy") -> Problem:
@@ -54,15 +53,6 @@ def _bounty_source() -> str:
 def _assert_rejected(src: str, *, policy: str = "strict_envelope") -> None:
     scan = scan_submission_policy(_problem("bounty" if policy == "restricted_helpers" else "easy"), src, policy=policy)
     assert not scan.ok
-
-
-def test_strict_envelope_accepts_generated_witness() -> None:
-    problem = _problem_for_builder_index(seed=1, builder_index=0)
-    source = generated_witness_submission_source(problem)
-
-    scan = scan_submission_policy(problem, source, policy="strict_envelope")
-
-    assert scan.ok, scan.reason
 
 
 def test_strict_envelope_accepts_exact_submission() -> None:

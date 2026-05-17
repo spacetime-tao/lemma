@@ -1,9 +1,9 @@
-# Chi Subnet - Docker Build and Push
+# Lemma runtime image build and push
 #
 # This workflow builds and pushes the Docker image to GHCR
 # whenever code is pushed to the main branch.
 #
-# Validators using Watchtower will automatically pull the new image.
+# Operators can pin the published image for verifier or CLI deployments.
 
 name: Build and Push Docker Image
 
@@ -92,4 +92,4 @@ jobs:
           echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Validators running with Watchtower will automatically update within 5 minutes." >> $GITHUB_STEP_SUMMARY
+          echo "Pin this image explicitly for verifier or CLI deployments." >> $GITHUB_STEP_SUMMARY
