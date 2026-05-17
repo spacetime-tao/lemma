@@ -17,16 +17,16 @@
         "theorem_name": "two_plus_two_eq_four",
         "type_expr": "(2 : Nat) + 2 = 4"
       },
-      "reward": "No payout",
+      "reward": "Not live",
       "source": {
         "name": "Lemma bounty",
         "url": "https://lemmasub.net/bounties/"
       },
-      "status": "open",
+      "status": "draft",
       "submission_policy": "restricted_helpers",
       "target_sha256": "cfe3cc12caa3ef57ccb6114ca41241c0e6636c4a14d5b30db06745771a67f6f6",
       "terms_url": "https://lemmasub.net/bounties/",
-      "title": "Easy bounty: two plus two"
+      "title": "Draft starter target: two plus two"
     }
   ],
   "schema_version": 1

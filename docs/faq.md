@@ -232,19 +232,21 @@ the normal subnet loop is automated.
 
 ## What are bounties?
 
-Bounties are harder proof targets that do not fit the normal timed theorem
-rounds.
+Bounties are planned manual proof rewards for harder targets that do not fit the
+normal timed theorem rounds.
 
-Timed rounds keep the subnet moving with regular challenges. Bounties are for
-selected Lean statements that may need more time, stronger search, or more
-advanced proving systems.
+They are not live yet. Timed rounds keep the subnet moving with regular
+challenges. Future bounties are for selected Lean statements that may need more
+time, stronger search, public review, or more advanced proving systems.
 
 Lemma uses Google DeepMind's public [Formal Conjectures](https://google-deepmind.github.io/formal-conjectures/)
 database as the source of bounty targets. These are formal mathematical
 statements that can be attempted in Lean.
 
-The point of bounties is to give miners a path toward harder, more meaningful
-proofs while keeping the regular subnet loop simple and steady.
+The point of bounties is to give solvers a path toward harder, more meaningful
+proofs while keeping the regular subnet loop simple and steady. A future claim
+will need structured proof provenance, GitHub identity, TAO address, and, for
+high-value bounties, a wallet signature.
 
 Note: Lemma is not affiliated with or partnered with Google DeepMind.
 
@@ -265,10 +267,10 @@ Said simply: cadence is about speed and time constraints. It is the fast,
 regular loop where validators need to publish a theorem, collect answers, check
 proofs, and move rewards without turning each round into a custom proof project.
 
-Bounties are more flexible. A bounty proof may use helper definitions and helper
-lemmas because harder proofs often need smaller pieces along the way. Those
-helpers are still checked. They cannot change the target, add new assumptions,
-add unsafe shortcuts, or bypass Lean's checker.
+Future bounties can be more flexible. A bounty proof may use helper definitions
+and helper lemmas because harder proofs often need smaller pieces along the way.
+Those helpers are still checked. They cannot change the target, add new
+assumptions, add unsafe shortcuts, or bypass Lean's checker.
 
 The same policy travels with local and remote verification, so a proof should
 not pass locally under one set of rules and fail remotely under another.

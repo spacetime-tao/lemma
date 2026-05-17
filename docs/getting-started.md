@@ -111,15 +111,14 @@ profile settings. Full validator notes: [validator.md](validator.md).
 
 ## Bounties
 
-Bounties are submit-when-ready proof targets and do not require miner
-registration.
+Bounties are planned manual reviewed rewards for harder Lean proof work. They
+are not live yet, and there is no current payout or claim intake.
 
 ```bash
-uv run lemma bounty list
+uv run lemma bounty list --all
 uv run lemma bounty show starter.two_plus_two
 uv run lemma bounty verify starter.two_plus_two --submission Submission.lean
 uv run lemma bounty package starter.two_plus_two --submission Submission.lean --payout <SS58>
-uv run lemma bounty submit starter.two_plus_two --submission Submission.lean --payout <SS58>
 ```
 
 Details: [bounties.md](bounties.md).

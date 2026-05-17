@@ -51,7 +51,7 @@ Use one environment and one tool: `uv`. The Lemma `.venv` holds subnet dependenc
 
 **Validators:** build the Lean image, then `uv run lemma validator start`.
 
-**Bounties:** `uv run lemma bounty list`, verify locally, then `uv run lemma bounty submit ...`.
+**Bounties:** planned manual reviewed rewards; not live yet. See [bounties.md](docs/bounties.md).
 
 ### Operators
 
