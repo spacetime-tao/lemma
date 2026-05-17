@@ -303,12 +303,12 @@ the exact head are checked directly.
 ## VPS Status
 
 VPS sampling and follow-up deploys moved the original hosts through `0ff1068`.
-The 2026-05-17 miner replacement moved the six-miner layout to a new Droplet.
+The 2026-05-17 miner replacement moved the six-miner layout to a new host.
 
-| Host | IP | Deployed commit | Running Lemma services |
-| --- | --- | --- | --- |
-| `lemma-lean-worker-1` | `<validator-host>` | `d32119e` checkout; validator active | `lemma-validator.service`, `lemma-public-dashboard.timer` |
-| `lemma-miner` | `<miner-host>` | `a89c41a` | `lemma-miner.service`, `lemma-miner3.service`, `lemma-miner4.service`, `lemma-miner5.service`, `lemma-miner6.service`, `lemma-miner7.service` |
+| Host role | Deployed state | Running Lemma services |
+| --- | --- | --- |
+| validator / Lean worker | `d32119e` checkout; validator active | `lemma-validator.service`, `lemma-public-dashboard.timer` |
+| miner | `a89c41a` | `lemma-miner.service`, `lemma-miner3.service`, `lemma-miner4.service`, `lemma-miner5.service`, `lemma-miner6.service`, `lemma-miner7.service` |
 
 Additional evidence: Lean worker health on `127.0.0.1:8787` returned
 `{"status": "ok"}`, and `lemma-public-dashboard.service` kept pushing schema 3

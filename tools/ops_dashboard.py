@@ -11,8 +11,6 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-DEFAULT_VALIDATOR_HOST = "<validator-ssh-host>"
-DEFAULT_MINER_HOST = "<miner-ssh-host>"
 DEFAULT_MINER_PORTS = (8091, 8092, 8093, 8094, 8095, 8096)
 
 SERVICE_RE = re.compile(r"^\s*(lemma\S+\.service)\s+\S+\s+(\S+)\s+(\S+)\s+(.+)$")
@@ -82,8 +80,8 @@ def main() -> None:
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--validator-host", default=DEFAULT_VALIDATOR_HOST)
-    parser.add_argument("--miner-host", default=DEFAULT_MINER_HOST)
+    parser.add_argument("--validator-host", required=True)
+    parser.add_argument("--miner-host", required=True)
     parser.add_argument("--miner-ports", default=",".join(str(p) for p in DEFAULT_MINER_PORTS))
     parser.add_argument("--lines", type=int, default=240, help="Recent log lines to inspect per host.")
     parser.add_argument("--timeout", type=int, default=12, help="SSH command timeout in seconds.")

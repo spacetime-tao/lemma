@@ -12,22 +12,17 @@ whether weights are being set.
 The first version is intentionally small and read-only:
 
 ```bash
-uv run python -m tools.ops_dashboard --out ops-dashboard.html
+uv run python -m tools.ops_dashboard \
+  --validator-host <validator-ssh-host> \
+  --miner-host <miner-ssh-host> \
+  --out ops-dashboard.html
 ```
 
 It SSHes into the configured Droplets, samples service status, safe `.env`
 fields, recent logs, miner ports, Docker status, and the local Lean worker health
 endpoint. It writes a static HTML file you can open locally.
 
-Default hosts:
-
-```text
-validator / Lean worker: <validator-ssh-host>
-miner host:             <miner-ssh-host>
-miner ports:            8091,8092,8093,8094,8095,8096
-```
-
-Override them when needed:
+Pass the hosts explicitly and override ports when needed:
 
 ```bash
 uv run python -m tools.ops_dashboard \

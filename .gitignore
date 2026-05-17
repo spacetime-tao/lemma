@@ -12,6 +12,7 @@ wheels/
 .env
 .env.local
 .env.*.local
+AGENT_STATE.md
 *.log
 .DS_Store
 Thumbs.db

@@ -1,8 +1,7 @@
 # Audit remediation handoff
 
 Use this file if chat context compacts or a future agent needs the current
-state quickly. Start here, then read [`local handoff note`](../local handoff note) and
-[`docs/workplan.md`](workplan.md).
+state quickly. Start here, then read [`docs/workplan.md`](workplan.md).
 
 ## Current state
 
@@ -92,10 +91,10 @@ state quickly. Start here, then read [`local handoff note`](../local handoff not
 Sampling on 2026-05-13 used `tools.ops_dashboard` plus direct SSH reads only; no
 services were restarted or changed.
 
-- Validator / Lean worker `<validator-ssh-host>`: deployed `d42addb`,
+- Validator / Lean worker host: deployed `d42addb`,
   `lemma-validator` and `lemma-lean-worker-http` active, root/cache filesystem
   `33%` used, Lean worker health `{"status": "ok"}`.
-- Miner host `<miner-ssh-host>`: deployed `d42addb`, six miner services
+- Miner host: deployed `d42addb`, six miner services
   active, six axon ports open, root filesystem `23%` used.
 - Fresh sampled validator round at `2026-05-13 06:44 UTC`:
   `theorem_id=gen/7110900`, `verified=5`, `scored=5`, no reject counters,
@@ -108,10 +107,10 @@ On 2026-05-13, after explicit live-ops go-ahead, both known Droplets were
 fast-forwarded from `d42addb` to `8067b70`. The validator was paused during the
 deploy; miners and Lean worker were restarted; validator was started last.
 
-- Validator / Lean worker `<validator-ssh-host>`: deployed `8067b70`,
+- Validator / Lean worker host: deployed `8067b70`,
   `lemma-validator` and `lemma-lean-worker-http` active, root/cache filesystem
   `38%` used, Lean worker health `{"status": "ok"}`.
-- Miner host `<miner-ssh-host>`: deployed `8067b70`, six miner services
+- Miner host: deployed `8067b70`, six miner services
   active, six axon ports open, root filesystem `23%` used.
 - First post-deploy validator round at `2026-05-13 07:30 UTC`:
   `theorem_id=curated/foundations/list_append_nil_induction`, `verified=3`,
@@ -123,14 +122,14 @@ deploy; miners and Lean worker were restarted; validator was started last.
 Sampling on 2026-05-13 at about 10:18 UTC was read-only; no services were
 restarted or changed.
 
-- Validator / Lean worker `<validator-ssh-host>`: deployed `8067b70`,
+- Validator / Lean worker host: deployed `8067b70`,
   `lemma-validator` and `lemma-lean-worker-http` active, root/cache filesystem
   `28%` used, Lean worker health on `127.0.0.1:8787` returned
   `{"status":"ok"}`.
 - Public dashboard publisher on the validator host: timer enabled/running, path
   inactive, service completed successfully and pushed refresh commits through
   `9c31c1e` during the audit window.
-- Miner host `<miner-ssh-host>`: deployed `8067b70`, six miner services
+- Miner host: deployed `8067b70`, six miner services
   active, root filesystem `23%` used.
 - Latest sampled validator round at `2026-05-13 10:04 UTC` verified/scored `4`
   proofs with `verify_infra_errors=0` and `set_weights success=True`. Earlier
@@ -144,11 +143,11 @@ On 2026-05-13, both known Droplets were fast-forwarded from `8067b70` to
 `0ff1068`. The validator was stopped first; the miner host, Lean worker, miner
 services, and validator were then restarted in order.
 
-- Validator / Lean worker `<validator-ssh-host>`: deployed `0ff1068`;
+- Validator / Lean worker host: deployed `0ff1068`;
   `lemma-validator`, `lemma-lean-worker-http`, and
   `lemma-public-dashboard.timer` active; Lean worker health on
   `127.0.0.1:8787` returned `{"status": "ok"}`.
-- Miner host `<miner-ssh-host>`: deployed `0ff1068`; six miner services
+- Miner host: deployed `0ff1068`; six miner services
   active.
 - The first validator restart failed closed because the old
   `LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED` pin did not match the profile after
