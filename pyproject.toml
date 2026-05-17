@@ -17,6 +17,7 @@ dependencies = [
     "openai>=1.40,<2",
     "rich>=14,<15",
     "tenacity>=9.0,<10",
+    "eth-hash[pycryptodome]>=0.7,<1",
 ]
 
 [project.optional-dependencies]

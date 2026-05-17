@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+from eth_hash.auto import keccak
 
 BITTENSOR_EVM_TESTNET_RPC_URL = "https://test.chain.opentensor.ai"
 BITTENSOR_EVM_MAINNET_RPC_URL = "https://lite.chain.opentensor.ai"
@@ -56,13 +57,7 @@ class EscrowCommitment:
 
 
 def _keccak256(data: bytes) -> bytes:
-    try:
-        from Crypto.Hash import keccak
-    except Exception as e:  # noqa: BLE001
-        raise EscrowError("keccak support is unavailable; install the bundled crypto dependencies") from e
-    h = keccak.new(digest_bits=256)
-    h.update(data)
-    return h.digest()
+    return keccak(data)
 
 
 def _selector(signature: str) -> bytes:
