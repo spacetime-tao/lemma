@@ -1,10 +1,10 @@
 # Lemma
 
-Lemma is a Bittensor subnet for Lean-verified proof discovery.
+Lemma is a Bittensor subnet for turning open Lean conjectures into verified public proof artifacts.
 
-It publishes formal proof targets, miners submit Lean proof files, validators check them under a pinned Lean and mathlib environment, and verified proofs become eligible for rewards under the subnet rules.
+It publishes formal proof targets, miners submit Lean proof files, validators check them under a pinned Lean and mathlib environment, and verified proofs become eligible for rewards under the subnet rules. After a target is verified and attested, Lemma can publish a canonical proof artifact and prepare an upstream contribution candidate so the result can be reviewed, cited, and linked from the public corpus that supplied the target.
 
-Reward custody is implementation plumbing. The product story is proof correctness: Lean accepts the proof, or it does not.
+Reward custody is implementation plumbing. The product story is proof production: exact target, Lean proof, validator attestation, reward eligibility, public proof artifact, upstream PR candidate.
 
 ## Why Lemma Exists
 
@@ -27,10 +27,21 @@ Miner Submission.lean
 Pinned Lean verification
         |
         v
-Subnet reward eligibility
+Validator attestation
+        |
+        v
+Reward eligibility
+        |
+        v
+Canonical proof artifact
+        |
+        v
+Upstream PR candidate
 ```
 
 Validators check the proof artifact. They do not score informal reasoning, private notes, or prose explanations.
+
+The upstream PR is a publication path, not a payout oracle. Lemma settlement depends on the published target, verifier, and subnet rules. Formal Conjectures maintainers retain normal review authority over their repository.
 
 ## Quick Start
 
@@ -114,6 +125,9 @@ The verifier core lives in:
 - [What is Lemma?](docs/what-is-lemma.md)
 - [Formal Conjectures as target supply](docs/formal-conjectures.md)
 - [Target registry](docs/target-registry.md)
+- [Upstream publication](docs/upstream-publication.md)
+- [Proof artifacts](docs/proof-artifacts.md)
+- [Submission and publication terms](docs/submission-terms.md)
 - [Miner guide](docs/miner.md)
 - [Validator guide](docs/validator.md)
 - [Rewards](docs/rewards.md)

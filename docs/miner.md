@@ -53,6 +53,8 @@ uv run lemma mine <target-id> --submission Submission.lean
 
 If Lean accepts the proof under the target policy, the CLI reports that the proof verifies locally.
 
+Accepted proofs for live targets may become public proof artifacts after verification and attestation. Do not include private credentials, private notes, wallet data, local paths, or machine-specific context in `Submission.lean`.
+
 ## 6. Build Reward Packages When Applicable
 
 Only live reward-backed targets can build custody packages.
@@ -80,6 +82,12 @@ uv run lemma mine <target-id> \
 ```
 
 The CLI builds unsigned transaction data. Inspect it and submit it through normal wallet tooling.
+
+## Publication Expectations
+
+When a target's terms allow publication, a verified and attested proof can be published as a canonical artifact and linked from an upstream PR candidate. Solver attribution should use a public protocol identity or chosen public handle; it should not require private personal information.
+
+See [submission-terms.md](submission-terms.md).
 
 ## Common Failure Modes
 

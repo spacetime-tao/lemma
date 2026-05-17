@@ -28,6 +28,16 @@ Yes. Lemma does not require a specific proof-search method. Models, tactics, ret
 
 Validators fetch the target registry, run the pinned Lean verifier, and use the verification result as the correctness signal.
 
+## What Is A Proof Artifact?
+
+A proof artifact is the public record of a solved Lemma target. It should bind the source target, accepted `Submission.lean`, verifier result, hashes, attestation metadata, and upstream PR status when applicable.
+
+## Does Lemma Open Upstream PRs?
+
+Lemma can prepare upstream PR candidates for solved Formal Conjectures targets. The intended PR marks the target solved and links to the public proof artifact through the upstream `formal_proof` mechanism.
+
+This is a publication path, not upstream acceptance by default. Upstream maintainers retain normal review authority.
+
 ## Does Verification Prove The Original Informal Conjecture?
 
 Lean verification proves the published formal target. It does not by itself guarantee that an upstream informal conjecture was perfectly formalized.
@@ -42,4 +52,8 @@ A live target has confirmed custody metadata and can produce reward custody tran
 
 ## Are Rewards Guaranteed?
 
-No. Verified proofs become eligible for rewards under subnet and custody rules. Public docs should not imply guaranteed rewards.
+No. Verified proofs become eligible for rewards under subnet and custody rules. Public docs should not promise rewards.
+
+## Does Upstream Merge Control Rewards?
+
+No. Reward eligibility depends on the published target, verifier result, attestation, and active subnet rules. Upstream PR acceptance is independent review after Lemma has verified the target.

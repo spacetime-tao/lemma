@@ -8,6 +8,8 @@ For the full registry contract, see [target-registry.md](target-registry.md).
 
 For reward flow, see [rewards.md](rewards.md).
 
+For solved-target publication, see [upstream-publication.md](upstream-publication.md) and [proof-artifacts.md](proof-artifacts.md).
+
 ## Candidate Targets
 
 Rows without confirmed custody are candidate targets. They may be used for local practice, verification checks, and target review, but they are not live reward offers.
@@ -43,3 +45,5 @@ Live rewards keep proof verification and payout custody separate:
 - no legacy subnet scoring lane.
 
 Lean verification is binary. A proof passes or fails.
+
+Upstream PR acceptance is not part of payout settlement.

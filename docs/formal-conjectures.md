@@ -13,6 +13,7 @@ The intended relationship is narrow:
 3. Lemma pins the exact upstream commit, file, declaration, and toolchain.
 4. Miners search for proofs against the pinned target.
 5. Validators check submitted proofs with Lemma's verifier path.
+6. Attested solutions can become public proof artifacts and upstream PR candidates.
 
 ## Why This Source Matters
 
@@ -64,3 +65,9 @@ Lean verification checks the published formal target. It does not guarantee that
 ## Contribution Loop
 
 When a Lemma proof is useful upstream, preserve exact target IDs, source commits, proof artifact hashes, and links to the Lean file so humans can review whether it should become part of a public formalization repository.
+
+For Formal Conjectures, the normal contribution candidate is a small PR that changes `@[category research open]` to `@[category research solved]` and adds `formal_proof using lean4 at "<artifact-url>"`.
+
+That PR is a publication path, not a payout oracle. Upstream maintainers retain normal review authority, and Lemma reward settlement must not depend on upstream acceptance.
+
+See [upstream-publication.md](upstream-publication.md) and [proof-artifacts.md](proof-artifacts.md).

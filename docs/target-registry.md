@@ -71,6 +71,14 @@ For Formal Conjectures targets, include:
 
 If formal proof metadata is present, set `kind` to `proof_porting`.
 
+## Artifact And Upstream Metadata
+
+Registry rows should contain enough public source metadata to support proof artifact publication later. For Formal Conjectures targets, preserve the upstream repository, commit, file, declaration, category, and existing `formal_proof` metadata.
+
+Do not add fake artifact URLs or fake upstream PR URLs to a target row. Artifact and PR metadata should be published only after a proof verifies, attestation is complete, and a real artifact or PR package exists.
+
+Use `terms_url` to point miners at submission and publication terms when a live target may publish accepted proofs.
+
 ## Status Values
 
 Use the values currently supported by code and operators:

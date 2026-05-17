@@ -1,6 +1,6 @@
 # Production Verification
 
-Production Lemma has three moving pieces: the target registry, Lean verification, and reward custody.
+Production Lemma has four moving pieces: the target registry, Lean verification, reward custody, and optional proof publication.
 
 ## 1. Target Registry
 
@@ -46,7 +46,15 @@ Publish a target as a live reward only after the registry row and custody contra
 
 The CLI builds unsigned transaction data. Operators should inspect, sign, and submit transactions with normal wallet tooling.
 
-## 6. Security Checklist
+## 6. Proof Publication
+
+After a proof verifies and receives the required attestation, operators can publish a canonical proof artifact and prepare an upstream PR package for human review.
+
+The publication path should be manual or review-gated until artifact hosting and PR automation are proven. Do not claim PR automation is live, an artifact URL is stable, or a PR has been opened unless that is true.
+
+Reward settlement remains independent from upstream acceptance.
+
+## 7. Security Checklist
 
 Do not publish local environment files, credentials, deployment notes, machine paths, hostnames, network addresses, logs, caches, or local handoff state.
 

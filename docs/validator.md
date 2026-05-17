@@ -19,6 +19,8 @@ Validators should check:
 - local or worker verification result,
 - custody metadata for live reward claims.
 
+For publication-ready proofs, validators or operators should also preserve enough verifier output to support a later proof artifact: target hash, submission hash, policy, toolchain, pass/fail result, and attestation summary.
+
 ## What Validators Should Not Score
 
 Validators should not score informal reasoning, private notes, stylistic proof preferences, or claims about intent. Those may be useful for humans, but they are outside the live reward correctness path.
@@ -56,3 +58,7 @@ The cache is disposable. Do not store secrets or operator notes there.
 ## Target Issues
 
 If a target has bad source metadata, a mismatched hash, an unsupported policy, or a missing toolchain pin, treat it as a target issue. Do not paper over it in validator scoring.
+
+## Publication Boundary
+
+Validator attestation can make a proof eligible for publication, but upstream PR acceptance is outside validator scoring. Score the exact Lean target; leave upstream review to upstream maintainers.

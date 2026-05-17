@@ -1,6 +1,6 @@
 # What Is Lemma?
 
-Lemma is a Bittensor subnet for Lean-verified proof discovery.
+Lemma is a Bittensor subnet for Lean-verified proof discovery and public proof publication.
 
 It publishes exact Lean theorem statements. Miners compete to produce proof files. Validators check those proof files with Lean. Passing proofs become eligible for rewards under the subnet rules.
 
@@ -31,12 +31,12 @@ Validators fetch the target registry, run the pinned verifier, and treat Lean ac
 
 Target curators select suitable public statements, pin source metadata, and keep candidate targets separate from live reward-backed targets.
 
-The wider community can inspect target provenance and proof artifacts.
+The wider community can inspect target provenance and proof artifacts. When a solved target came from Formal Conjectures and has enough source metadata, Lemma can prepare an upstream PR candidate that links the artifact for normal upstream review.
 
 ## What Changed From Older Designs?
 
-Lemma no longer needs recurring prompt rounds as its public product story. The durable loop is target publication, proof search, Lean verification, and reward eligibility.
+Lemma no longer needs recurring prompt rounds as its public product story. The durable loop is target publication, proof search, Lean verification, validator attestation, reward eligibility, public proof artifact, and upstream PR candidate.
 
 ## What Makes Lemma Useful?
 
-Lemma rewards mechanically checked mathematical artifacts rather than plausible text. That makes it a useful proving ground for AI theorem proving, formalization tooling, and reproducible mathematical work.
+Lemma rewards mechanically checked mathematical artifacts rather than plausible text. That makes it a useful proving ground for AI theorem proving, formalization tooling, upstream contribution candidates, and reproducible mathematical work.
