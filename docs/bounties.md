@@ -66,7 +66,7 @@ Registry schema v1:
     {
       "id": "starter.two_plus_two",
       "kind": "formal_target",
-      "title": "Two plus two",
+      "title": "Easy bounty: two plus two",
       "status": "open",
       "reward": "No payout",
       "terms_url": "https://lemmasub.net/bounties/",
@@ -80,7 +80,7 @@ Registry schema v1:
         "id": "starter.two_plus_two",
         "theorem_name": "two_plus_two_eq_four",
         "type_expr": "(2 : Nat) + 2 = 4",
-        "split": "starter",
+        "split": "easy",
         "lean_toolchain": "leanprover/lean4:v4.30.0-rc2",
         "mathlib_rev": "5450b53e5ddc",
         "imports": ["Mathlib"],

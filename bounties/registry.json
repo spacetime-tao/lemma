@@ -13,7 +13,7 @@
         ],
         "lean_toolchain": "leanprover/lean4:v4.30.0-rc2",
         "mathlib_rev": "5450b53e5ddc",
-        "split": "starter",
+        "split": "easy",
         "theorem_name": "two_plus_two_eq_four",
         "type_expr": "(2 : Nat) + 2 = 4"
       },
@@ -26,7 +26,7 @@
       "submission_policy": "restricted_helpers",
       "target_sha256": "cfe3cc12caa3ef57ccb6114ca41241c0e6636c4a14d5b30db06745771a67f6f6",
       "terms_url": "https://lemmasub.net/bounties/",
-      "title": "Two plus two"
+      "title": "Easy bounty: two plus two"
     }
   ],
   "schema_version": 1
