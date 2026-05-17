@@ -60,7 +60,7 @@ def rich_help_text(command: click.Command, ctx: click.Context) -> str | None:
         console.print("")
         console.print(Panel(options, title="Options", title_align="left", border_style="cyan"))
 
-    if isinstance(command, click.MultiCommand):
+    if isinstance(command, click.Group):
         command_rows: list[tuple[str, str]] = []
         for name in command.list_commands(ctx):
             subcommand = command.get_command(ctx, name)
