@@ -164,7 +164,9 @@ def _bounty_escrow_values(settings: LemmaSettings, bounty) -> tuple[int, str, in
     contract = bounty.escrow_contract_address or (settings.bounty_escrow_contract_address or "").strip()
     escrow_bounty_id = bounty.escrow_bounty_id
     if not contract or escrow_bounty_id is None:
-        raise click.ClickException("This target has no confirmed reward custody. Live rewards require custody metadata.")
+        raise click.ClickException(
+            "This target has no confirmed reward custody. Live rewards require custody metadata.",
+        )
     return int(chain_id), contract, int(escrow_bounty_id)
 
 
