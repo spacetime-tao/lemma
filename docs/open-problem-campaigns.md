@@ -175,7 +175,7 @@ Campaigns should be separate from the generated cadence lane.
 
 The `campaign` and `bounty` lanes should not rely on validator-held secrets.
 They should use public statements, public deadlines, reproducible verification,
-and clear reward policy.
+and funded escrow when any live reward is offered.
 
 ## Candidate Source Pools
 

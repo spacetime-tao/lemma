@@ -3,15 +3,17 @@
 A Lemma miner receives theorem challenges, asks a prover model for a Lean
 `Submission.lean`, and returns the proof for validators to check.
 
-This page is the complete miner path: install, keys, `.env`, registration,
-readiness checks, and the live axon.
+The public bounty path is `uv run lemma mine`: browse funded bounties, verify a
+proof locally, build the on-chain commit, reveal, and track payout state. The
+axon service commands below remain for cadence operators.
 
 ## Miner command map
 
 | Goal | Command |
 | --- | --- |
 | Configure env, wallet, prover, and axon port | `uv run lemma setup --role miner` |
-| See current chain/theorem state | `uv run lemma status` |
+| See bounty market state | `uv run lemma status` |
+| Browse or claim funded bounties | `uv run lemma mine` |
 | Check miner readiness | `uv run lemma miner check` |
 | Print config without binding a port | `uv run lemma miner dry-run` |
 | Start the axon | `uv run lemma miner start` |

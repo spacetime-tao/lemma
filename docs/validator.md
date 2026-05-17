@@ -1,7 +1,9 @@
 # Validator
 
-A Lemma validator sends theorem challenges to miners, verifies submitted Lean
-proofs, and publishes weights for eligible work.
+A Lemma validator verifies Lean proofs. In the bounty path, validators never
+hold reward funds; they attest to revealed escrow claims after local
+verification. In the cadence path, validators send theorem challenges to miners
+and publish weights for eligible work.
 
 This page is the complete validator path: install, keys, `.env`, registration,
 stake, Lean verification, dry run, and live validation.
@@ -11,6 +13,7 @@ stake, Lean verification, dry run, and live validation.
 | Goal | Command |
 | --- | --- |
 | Configure validator env | `uv run lemma setup --role validator` |
+| Check bounty escrow config | `uv run lemma validate --check` |
 | Check chain, wallet, profile, and Lean readiness | `uv run lemma validator check` |
 | Print validator config | `uv run lemma validator config` |
 | Rehearse full epochs without `set_weights` | `uv run lemma validator dry-run` |
@@ -101,6 +104,20 @@ Important verifier docs:
 - [production.md](production.md)
 
 ## Live validation
+
+For escrow-backed bounties:
+
+```bash
+uv run lemma validate --check
+uv run lemma validate --once
+```
+
+The validator path is custody-free. It fetches revealed artifacts, verifies the
+artifact hash and Lean proof under the pinned policy, then submits an on-chain
+attestation. The current CLI checks escrow configuration; the remaining live
+watcher work is the reveal-artifact transport recorded in [workplan.md](workplan.md).
+The contract releases payout only after the threshold and challenge-window rules
+are met.
 
 ```bash
 uv run lemma validator start

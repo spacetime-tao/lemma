@@ -1,7 +1,7 @@
 # Getting started
 
-This guide gets one checkout ready for Lemma commands, Bittensor keys, miner
-operation, validator operation, and bounties.
+This guide gets one checkout ready for Lemma commands, Bittensor keys, bounty
+claiming, and validator-side checking.
 
 Lemma currently runs on Bittensor testnet as subnet 467. Use `--network test`
 and `--netuid 467` unless a different deployment is explicitly published.
@@ -11,16 +11,12 @@ and `--netuid 467` unless a different deployment is explicitly published.
 | Goal | Command |
 | --- | --- |
 | First-time setup | `uv run lemma setup` |
-| Current chain/theorem view | `uv run lemma status` |
-| Miner preflight | `uv run lemma miner check` |
-| Start miner | `uv run lemma miner start` |
-| Validator preflight | `uv run lemma validator check` |
-| Validator rehearsal | `uv run lemma validator dry-run` |
-| Start validator | `uv run lemma validator start` |
-| Prover smoke test | `uv run lemma proof preview` |
-| Bounty list/show/verify | `uv run lemma bounty ...` |
+| Browse or claim bounties | `uv run lemma mine` |
+| Bounty market status | `uv run lemma status` |
+| Validator escrow preflight | `uv run lemma validate --check` |
 
-Run `uv run lemma --help` for the full CLI surface.
+Run `uv run lemma --help` for the public CLI surface. Lower-level cadence
+operator commands remain available but are not the normal bounty path.
 
 ## Install and sync
 
@@ -85,40 +81,38 @@ weights.
 
 ```bash
 uv run lemma status
-uv run lemma miner check
-uv run lemma miner start
+uv run lemma mine
 ```
 
-Open inbound `AXON_PORT` so validators can reach the miner. Set
-`AXON_EXTERNAL_IP` on production hosts, or opt into public-IP discovery with
-`AXON_DISCOVER_EXTERNAL_IP=true`.
+`lemma mine` lists escrow-backed live bounties first. Draft targets are useful
+for local proof work, but they are not reward offers until a funded escrow row
+exists on-chain.
 
 Full miner notes: [miner.md](miner.md).
 
 ## Validator path
 
-Build the Lean sandbox image first:
+Build the Lean sandbox image first, then check escrow configuration:
 
 ```bash
 bash scripts/prebuild_lean_image.sh
-uv run lemma validator check
-uv run lemma validator dry-run
-uv run lemma validator start
+uv run lemma validate --check
 ```
 
-Use `dry-run` before live validation when changing host, wallet, verifier, or
-profile settings. Full validator notes: [validator.md](validator.md).
+Validators never handle bounty custody keys. They fetch revealed artifacts, run
+Lean, and submit escrow attestations under the configured policy. Full validator
+notes: [validator.md](validator.md).
 
 ## Bounties
 
-Bounties are planned manual reviewed rewards for harder Lean proof work. They
-are not live yet, and there is no current payout or claim intake.
+Bounties are live only when funded in `LemmaBountyEscrow` on Bittensor EVM.
+There is no live manual payout path.
 
 ```bash
-uv run lemma bounty list --all
-uv run lemma bounty show starter.two_plus_two
-uv run lemma bounty verify starter.two_plus_two --submission Submission.lean
-uv run lemma bounty package starter.two_plus_two --submission Submission.lean --payout <SS58>
+uv run lemma mine
+uv run lemma mine <bounty-id> --submission Submission.lean
+uv run lemma mine <bounty-id> --submission Submission.lean --commit --claimant-evm 0x... --payout-evm 0x...
+uv run lemma mine <bounty-id> --submission Submission.lean --reveal --claimant-evm 0x... --payout-evm 0x... --salt 0x...
 ```
 
 Details: [bounties.md](bounties.md).

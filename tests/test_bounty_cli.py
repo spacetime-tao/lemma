@@ -73,9 +73,10 @@ class _VerifyResult:
 
 class _FakeHotkey:
     ss58_address = "submitter-hotkey"
+    public_key = b"\x77" * 32
 
     def sign(self, message: bytes) -> bytes:
-        assert b"LemmaBountySubmissionV1" in message
+        assert b"LemmaBounty" in message
         return b"\x01" * 64
 
 
@@ -102,7 +103,7 @@ def test_bounty_list_and_show_use_registry(monkeypatch, tmp_path) -> None:
     assert digest in listed.output
     assert shown.exit_code == 0
     assert "Test bounty" in shown.output
-    assert "lemma bounty verify fc.test" in shown.output
+    assert "lemma mine fc.test" in shown.output
     assert "target_sha256" in shown.output
     assert "policy:       restricted_helpers" in shown.output
     assert shown_without_id.exit_code == 0
@@ -214,6 +215,7 @@ def test_bounty_verify_calls_lean_verify(monkeypatch, tmp_path) -> None:
 
 def test_bounty_package_verifies_signs_and_prints_json(monkeypatch, tmp_path) -> None:
     digest = _set_registry_env(monkeypatch, tmp_path)
+    monkeypatch.setenv("LEMMA_BOUNTY_REWARD_CUSTODY", "local_dry_run")
     proof_path = tmp_path / "Submission.lean"
     _proof(proof_path)
     monkeypatch.setattr("lemma.bounty.client.verify_bounty_proof", lambda *args, **kwargs: _VerifyResult())
@@ -247,6 +249,7 @@ def test_bounty_package_verifies_signs_and_prints_json(monkeypatch, tmp_path) ->
 
 def test_bounty_submit_posts_signed_package(monkeypatch, tmp_path) -> None:
     _set_registry_env(monkeypatch, tmp_path)
+    monkeypatch.setenv("LEMMA_BOUNTY_REWARD_CUSTODY", "local_dry_run")
     proof_path = tmp_path / "Submission.lean"
     _proof(proof_path)
     submitted: list[dict] = []
@@ -271,6 +274,7 @@ def test_bounty_submit_posts_signed_package(monkeypatch, tmp_path) -> None:
 
 def test_bounty_submit_surfaces_api_rejection(monkeypatch, tmp_path) -> None:
     _set_registry_env(monkeypatch, tmp_path)
+    monkeypatch.setenv("LEMMA_BOUNTY_REWARD_CUSTODY", "local_dry_run")
     proof_path = tmp_path / "Submission.lean"
     _proof(proof_path)
     monkeypatch.setattr("lemma.bounty.client.verify_bounty_proof", lambda *args, **kwargs: _VerifyResult())
@@ -290,3 +294,74 @@ def test_bounty_submit_surfaces_api_rejection(monkeypatch, tmp_path) -> None:
 
     assert result.exit_code != 0
     assert "failed verification" in result.output
+
+
+def test_public_mine_builds_escrow_commit_package(monkeypatch, tmp_path) -> None:
+    raw = json.dumps(
+        {
+            "schema_version": 2,
+            "reward_custody": "evm_escrow",
+            "bounties": [
+                {
+                    "id": "fc.test",
+                    "title": "Test bounty",
+                    "status": "active",
+                    "reward": "1 TAO escrowed",
+                    "source": {"name": "Formal Conjectures"},
+                    "policy_version": "bounty-policy-v1",
+                    "toolchain_id": "leanprover/lean4:v4.15.0",
+                    "escrow": {
+                        "chain_id": 945,
+                        "contract_address": "0x" + "aa" * 20,
+                        "bounty_id": 7,
+                        "funded": True,
+                        "funding_confirmed_block": 12345,
+                    },
+                    "problem": PROBLEM,
+                }
+            ],
+        },
+        sort_keys=True,
+    ).encode()
+    registry_path = tmp_path / "registry.json"
+    registry_path.write_bytes(raw)
+    proof_path = tmp_path / "Submission.lean"
+    output_path = tmp_path / "claim.json"
+    _proof(proof_path)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("LEMMA_BOUNTY_REGISTRY_URL", str(registry_path))
+    monkeypatch.setenv("LEMMA_BOUNTY_REGISTRY_SHA256_EXPECTED", hashlib.sha256(raw).hexdigest())
+    monkeypatch.setattr("lemma.bounty.client.verify_bounty_proof", lambda *args, **kwargs: _VerifyResult())
+    monkeypatch.setattr("bittensor.Wallet", _FakeWallet)
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "mine",
+            "fc.test",
+            "--submission",
+            str(proof_path),
+            "--commit",
+            "--claimant-evm",
+            "0x" + "88" * 20,
+            "--payout-evm",
+            "0x" + "99" * 20,
+            "--salt",
+            "0x" + "33" * 32,
+            "--wallet-cold",
+            "cold",
+            "--wallet-hot",
+            "hot",
+            "--output",
+            str(output_path),
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(output_path.read_text())
+    assert payload["type"] == "lemma_bounty_commitment_v1"
+    assert payload["escrow_bounty_id"] == 7
+    assert payload["transaction"]["to"] == "0x" + "aa" * 20
+    assert payload["transaction"]["data"].startswith("0xede854e6")
+    assert payload["submitter_hotkey_pubkey"] == "0x" + "77" * 32
+    assert payload["identity_binding_signature_hex"] == "01" * 64

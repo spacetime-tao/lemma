@@ -1,80 +1,57 @@
 # Bounties
 
-Lemma bounties are not live yet.
+Lemma bounties use trustless custody.
 
-Bounties are planned manual reviewed rewards for harder Lean proof work. They
-are separate from timed cadence rounds: no timer, no automatic validator
-scoring, and no current payout or claim intake.
+A bounty is live only when its reward is funded in `LemmaBountyEscrow` on
+Bittensor EVM. Draft registry rows are useful for local verification and UI
+work, but they are not reward offers.
 
-## Intended Flow
+## Flow
 
-1. Lemma publishes a bounty record before the proof is public.
-2. The solver works through a public GitHub process: Formal Conjectures PR,
-   issue, maintainer-recognized proof link, or external proof repository.
-3. The solver includes a structured Lemma bounty claim.
-4. Lemma verifies the pinned target, proof artifact, environment, and claimant.
-5. A reviewer makes the payout decision manually.
+1. Lemma publishes a pinned theorem record.
+2. A sponsor funds the matching escrow bounty on Bittensor EVM.
+3. A solver produces a Lean proof by any method.
+4. The solver commits on-chain to the hidden artifact hash and payout address.
+5. The solver reveals the proof artifact within the reveal window.
+6. Validators fetch the artifact, check its hash, run Lean, and attest on-chain.
+7. After the challenge window, the escrow contract pays the first valid
+   committed proof that met the attestation threshold.
 
-For high-value bounties, final payout should require a review or challenge
-period plus upstream acceptance or a recognized `formal_proof` link.
+There is no owner-controlled payout path for live bounties. If escrow custody is
+not available, the bounty is not live.
 
-## Bounty Record
+## Registry Record
 
-Every live bounty should record:
+Every live bounty must record:
 
-- `bounty_id`
-- theorem name
-- source URL
-- Formal Conjectures commit or tag
-- Lean version
-- Mathlib version
+- `id`
+- theorem source, repository, commit, file, and declaration name
+- Lean version, Mathlib revision, toolchain id, and policy version
 - target statement hash
-- reward amount
-- creation timestamp
-- whether Formal Conjectures `formal_proof` existed at creation time
+- escrow contract address, chain id, and escrow bounty id
+- funding confirmation derived from chain state, such as `funded: true` or a
+  positive `funding_confirmed_block`
+- commit, reveal, and challenge windows
+- validator attestation threshold
 
-Normal proof bounties must exclude targets that already had `formal_proof` at
-creation time. Those targets can only be explicit proof-porting or
-simplification work.
+Normal proof bounties must exclude targets that already had a Formal
+Conjectures `formal_proof` at bounty creation. Those targets can only be
+explicit proof-porting or simplification work.
 
-## Claim Record
+## Claim Identity
 
-A TAO address comment in Lean code is not enough. It may be included as extra
-metadata, but the source of truth should be a structured claim in a GitHub PR,
-issue, proof repository, or Lemma bounty registry record.
+Bittensor SS58 hotkeys and EVM H160 accounts are different key systems. A claim
+therefore binds both identities:
 
-```text
-Lemma bounty claim
-Bounty ID: lemma-bounty-0007
-Theorem: AgohGiuga.isWeakGiuga_iff_prime_dvd
-Claimant GitHub: @username
-Claimant TAO address: 5...
-Formal Conjectures commit/PR: ...
-Proof commit: ...
-Wallet signature: optional for small bounties, required for high-value bounties
-```
+- the EVM claimant that submits the escrow transaction;
+- the EVM payout address that receives the contract payout;
+- the miner hotkey public key;
+- a hotkey signature over bounty id, registry hash, artifact hash, commitment
+  hash, claimant address, and payout address.
 
-The preferred high-value claim binds the GitHub identity, proof commit, bounty
-ID, theorem name, and TAO address in a wallet-signed message.
-
-## Statuses
-
-Future claim statuses:
-
-- `open`
-- `submitted`
-- `lemma_verified`
-- `upstream_review`
-- `accepted_formal_proof`
-- `paid`
-- `rejected`
-- `disputed`
+Validators must check that binding before attesting.
 
 ## Verification Policy
-
-Lemma bounties are allowlisted. The registry owns the imports, theorem name,
-theorem statement, Lean toolchain, Mathlib revision, target hash, and submission
-policy.
 
 The default bounty policy is `restricted_helpers`:
 
@@ -86,23 +63,22 @@ The default bounty policy is `restricted_helpers`:
   hooks, custom syntax/macros/elaborators, notation, attributes, extra imports,
   and target edits are rejected.
 
-The final theorem and helper theorem/lemma declarations are also checked for
-axiom dependencies. Only the approved Lean/Mathlib baseline is accepted.
+The final theorem and helper theorem/lemma declarations are checked for axiom
+dependencies. Only the approved Lean/Mathlib baseline is accepted.
 
-## Current Repo State
-
-The checked-in bounty registry may contain draft targets for local verification
-and client development. Draft targets are not payout offers.
-
-Useful local commands while the lane is still draft-only:
+## Commands
 
 ```bash
-uv run lemma bounty list --all
-uv run lemma bounty show <bounty-id>
-uv run lemma bounty verify <bounty-id> --submission Submission.lean
-uv run lemma bounty package <bounty-id> --submission Submission.lean --payout <SS58>
+uv run lemma status
+uv run lemma mine
+uv run lemma mine <bounty-id> --submission Submission.lean
+uv run lemma mine <bounty-id> --submission Submission.lean --commit \
+  --claimant-evm 0x... --payout-evm 0x...
+uv run lemma mine <bounty-id> --submission Submission.lean --reveal \
+  --claimant-evm 0x... --payout-evm 0x... --salt 0x...
+uv run lemma validate --check
 ```
 
-`lemma bounty submit` is an experimental client path for a future bounty API. Do
-not treat it as live claim intake unless a specific bounty page says claims are
-open and names the review process.
+Advanced compatibility commands such as `lemma bounty ...`, `lemma miner ...`,
+and `lemma validator ...` remain available but are no longer the public bounty
+path.

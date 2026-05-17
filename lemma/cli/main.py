@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import secrets
 import sys
 from pathlib import Path
 
@@ -19,7 +20,7 @@ from lemma.common.config import LemmaSettings
 from lemma.common.logging import setup_logging
 from lemma.problems.factory import resolve_problem
 
-_PUBLIC_COMMAND_ORDER = ("setup", "config", "status", "theorem", "proof", "miner", "validator", "bounty")
+_PUBLIC_COMMAND_ORDER = ("setup", "mine", "status", "validate")
 
 
 class LemmaCommand(click.Command):
@@ -247,7 +248,7 @@ def setup_cmd(role: str | None, env_path: Path | None) -> None:
     run_setup(_env_path(env_path), role or "miner")
 
 
-@main.group("config", invoke_without_command=True, help="Configure `.env` and inspect local readiness.")
+@main.group("config", hidden=True, invoke_without_command=True, help="Configure `.env` and inspect local readiness.")
 @click.pass_context
 def config_group(ctx: click.Context) -> None:
     if ctx.invoked_subcommand is None:
@@ -422,81 +423,56 @@ def meta_cmd(raw: bool) -> None:
 
 @main.command("status")
 def status_cmd() -> None:
-    """Show chain head, theorem seed, and the current theorem preview."""
-    from lemma.cli.problem_views import echo_problem_card
-    from lemma.common.block_deadline import forward_wait_at_chain_head
-    from lemma.common.problem_seed import (
-        blocks_until_challenge_may_change,
-        effective_chain_head_for_problem_seed,
-        format_next_theorem_countdown,
-    )
-    from lemma.common.subtensor import get_subtensor
-    from lemma.problems.factory import get_problem_source
+    """Show escrow-backed bounty market status."""
+    from lemma.bounty.client import BountyError, fetch_registry
 
     settings = LemmaSettings()
-    src = get_problem_source(settings)
-    try:
-        subtensor = get_subtensor(settings)
-        block = int(subtensor.get_current_block())
-    except Exception as e:  # noqa: BLE001
-        click.echo(f"Could not read chain head ({e}). Check SUBTENSOR_* and RPC connectivity.", err=True)
-        click.echo("Problem seeds follow LEMMA_PROBLEM_SEED_MODE (see docs/technical-reference.md).", err=True)
-        raise SystemExit(2) from e
-
-    problem_seed, seed_tag, deadline_b, forward_wait_s = forward_wait_at_chain_head(
-        settings=settings,
-        subtensor=subtensor,
-        chain_head_block=block,
-    )
-    slack_b = int(settings.lemma_problem_seed_chain_head_slack_blocks or 0)
-    seed_head = effective_chain_head_for_problem_seed(block, slack_b)
-    p = src.sample(seed=problem_seed)
-
-    click.echo(stylize("Lemma status", fg="cyan", bold=True))
-    click.echo(stylize("Same problem draw as validators for your NETUID and seed mode.\n", dim=True), nl=False)
-    click.echo(stylize("Config", fg="cyan"))
-    click.echo(stylize("  NETUID                 ", dim=True) + str(settings.netuid))
-    click.echo(stylize("  problem_source         ", dim=True) + str(settings.problem_source))
-    click.echo(stylize("  LEMMA_PROBLEM_SEED_MODE", dim=True) + str(settings.problem_seed_mode))
-    if (settings.problem_seed_mode or "").strip().lower() == "quantize":
-        click.echo(
-            stylize("  LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS ", dim=True)
-            + str(settings.problem_seed_quantize_blocks),
-        )
-    click.echo(stylize("Chain & seed", fg="cyan"))
-    click.echo(stylize("  chain_head       ", dim=True) + str(block))
-    if slack_b > 0:
-        click.echo(stylize("  problem_seed_chain_head ", dim=True) + str(seed_head))
-        click.echo(stylize("  slack_blocks     ", dim=True) + str(slack_b))
-    click.echo(stylize("  problem_seed     ", dim=True) + str(problem_seed))
-    click.echo(stylize("  seed_tag         ", dim=True) + str(seed_tag))
-    blocks_left, _ = blocks_until_challenge_may_change(
-        chain_head_block=seed_head,
-        netuid=settings.netuid,
-        mode=settings.problem_seed_mode,
-        quantize_blocks=settings.problem_seed_quantize_blocks,
-        seed_tag=seed_tag,
-        subtensor=subtensor,
-    )
-    countdown = format_next_theorem_countdown(
-        chain_head_block=seed_head,
-        blocks_until_theorem_changes=blocks_left,
-        seconds_per_block=float(settings.block_time_sec_estimate),
-    )
-    click.echo(stylize("  " + countdown, fg="yellow", bold=True))
+    click.echo(stylize("Lemma bounty market", fg="cyan", bold=True))
+    click.echo(stylize("Live rewards require trustless Bittensor EVM escrow.\n", dim=True), nl=False)
+    click.echo(stylize("Custody", fg="cyan"))
+    click.echo(stylize("  reward_custody ", dim=True) + settings.bounty_reward_custody)
+    click.echo(stylize("  evm_chain_id   ", dim=True) + str(settings.bounty_evm_chain_id))
+    click.echo(stylize("  evm_rpc_url    ", dim=True) + settings.bounty_evm_rpc_url)
+    escrow_contract = (settings.bounty_escrow_contract_address or "").strip()
     click.echo(
-        stylize(
-            f"  Axon reply budget  ~{forward_wait_s:.0f}s HTTP. Finish before block {deadline_b}.",
-            dim=True,
-        ),
+        stylize("  escrow_contract", dim=True)
+        + (f" {escrow_contract}" if escrow_contract else " not configured"),
     )
+    if settings.bounty_reward_custody != "evm_escrow":
+        click.echo(stylize("  local_dry_run is not live reward custody", fg="yellow", bold=True))
+
     click.echo("")
-    echo_problem_card(p, heading="Theorem snapshot", show_lean_goal=True)
+    try:
+        registry = fetch_registry(settings)
+    except (BountyError, OSError) as e:
+        click.echo(stylize(f"Registry unavailable: {e}", fg="yellow"))
+        click.echo(stylize("Next: set LEMMA_BOUNTY_REGISTRY_URL or try again when network is reachable.", dim=True))
+        return
+
+    escrow_rows = [b for b in registry.bounties if b.escrow_backed]
+    candidates = [b for b in registry.bounties if not b.escrow_backed]
+    click.echo(stylize("Registry", fg="cyan"))
+    click.echo(stylize("  schema_version ", dim=True) + str(registry.schema_version))
+    click.echo(stylize("  registry_sha256 ", dim=True) + registry.sha256)
+    click.echo(stylize("  escrow_backed  ", dim=True) + str(len(escrow_rows)))
+    click.echo(stylize("  candidates     ", dim=True) + str(len(candidates)))
+    if escrow_rows:
+        click.echo("")
+        click.echo(stylize("Escrow-backed bounties", fg="cyan"))
+        for bounty in escrow_rows:
+            click.echo(
+                f"  {stylize(bounty.id, fg='green', bold=True)} "
+                f"contract={bounty.escrow_contract_address} escrow_id={bounty.escrow_bounty_id}",
+            )
+        return
+
     click.echo("")
-    click.echo(stylize("Next commands", fg="cyan"))
-    click.echo(f"  {stylize('lemma theorem current', fg='green')}  " + stylize("print Challenge.lean", dim=True))
-    click.echo(f"  {stylize('lemma miner check', fg='green')}      " + stylize("check miner readiness", dim=True))
-    click.echo(f"  {stylize('lemma validator check', fg='green')}  " + stylize("check validator readiness", dim=True))
+    click.echo(stylize("No registry row is configured as escrow-backed yet.", fg="yellow", bold=True))
+    if candidates:
+        click.echo(
+            stylize("Candidate targets are draft work until a funded escrow bounty is confirmed on-chain.", dim=True),
+        )
+        click.echo(stylize("Try: ", dim=True) + stylize(f"lemma mine {candidates[0].id}", fg="green"))
 
 
 def _theorem_show(problem_id: str | None, current: bool, block: int | None) -> None:
@@ -546,7 +522,7 @@ def _theorem_show(problem_id: str | None, current: bool, block: int | None) -> N
     click.echo(p.challenge_source())
 
 
-@main.group("theorem", invoke_without_command=True, help="Inspect current and catalog theorem targets.")
+@main.group("theorem", hidden=True, invoke_without_command=True, help="Inspect current and catalog theorem targets.")
 @click.pass_context
 def theorem_group(ctx: click.Context) -> None:
     if ctx.invoked_subcommand is None:
@@ -646,7 +622,12 @@ def _run_proof_verify(problem_id: str, submission_path: Path, host_lean: bool) -
     raise SystemExit(0 if vr.passed else 1)
 
 
-@main.group("proof", invoke_without_command=True, help="Preview prover output and verify Submission.lean files.")
+@main.group(
+    "proof",
+    hidden=True,
+    invoke_without_command=True,
+    help="Preview prover output and verify Submission.lean files.",
+)
 @click.pass_context
 def proof_group(ctx: click.Context) -> None:
     if ctx.invoked_subcommand is None:
@@ -815,7 +796,7 @@ def _run_miner_command(
     _miner_run_axon(settings, max_forwards_per_day)
 
 
-@main.group("miner", invoke_without_command=True, help="Run and inspect the miner axon.")
+@main.group("miner", hidden=True, invoke_without_command=True, help="Run and inspect the miner axon.")
 @click.pass_context
 def miner_group(ctx: click.Context) -> None:
     if ctx.invoked_subcommand is None:
@@ -877,30 +858,229 @@ def miner_observability_cmd() -> None:
     print_miner_observability()
 
 
-@main.command("mine", hidden=True)
-@click.option("--check", is_flag=True, help="Run setup checks only; do not start the miner.")
-@_miner_identity_options
-@click.option(
-    "--max-forwards-per-day",
-    type=int,
-    default=None,
-    help="Cap prover forwards per UTC day. Overrides MINER_MAX_FORWARDS_PER_DAY.",
-)
-def mine_cmd(
-    check: bool,
-    coldkey: str | None,
-    hotkey: str | None,
-    port: int | None,
-    max_forwards_per_day: int | None,
-) -> None:
-    """Compatibility alias for `lemma miner start`."""
-    _run_miner_command(
-        check=check,
-        coldkey=coldkey,
-        hotkey=hotkey,
-        port=port,
-        max_forwards_per_day=max_forwards_per_day,
+def _hotkey_public_key_hex(settings: LemmaSettings, wallet_cold: str | None, wallet_hot: str | None) -> str:
+    import bittensor as bt
+
+    wallet = bt.Wallet(name=wallet_cold or settings.wallet_cold, hotkey=wallet_hot or settings.wallet_hot)
+    pub = getattr(wallet.hotkey, "public_key", None)
+    if callable(pub):
+        pub = pub()
+    if isinstance(pub, bytes):
+        return "0x" + pub.hex()
+    raw = str(pub or "").strip()
+    if raw.startswith("0x") and len(raw) == 66:
+        return raw
+    raise click.ClickException("Could not read the hotkey public key for escrow identity binding.")
+
+
+def _sign_bounty_identity(
+    settings: LemmaSettings,
+    *,
+    wallet_cold: str | None,
+    wallet_hot: str | None,
+    message: bytes,
+) -> str:
+    import bittensor as bt
+
+    wallet = bt.Wallet(name=wallet_cold or settings.wallet_cold, hotkey=wallet_hot or settings.wallet_hot)
+    return wallet.hotkey.sign(message).hex()
+
+
+def _bounty_escrow_values(settings: LemmaSettings, bounty) -> tuple[int, str, int]:
+    chain_id = bounty.escrow_chain_id or int(settings.bounty_evm_chain_id)
+    contract = bounty.escrow_contract_address or (settings.bounty_escrow_contract_address or "").strip()
+    escrow_bounty_id = bounty.escrow_bounty_id
+    if not contract or escrow_bounty_id is None:
+        raise click.ClickException(
+            "This bounty is not escrow-backed. Live rewards require a funded LemmaBountyEscrow row.",
+        )
+    return int(chain_id), contract, int(escrow_bounty_id)
+
+
+def _print_mine_intro(registry) -> None:
+    escrow_rows = [b for b in registry.bounties if b.escrow_backed]
+    candidate_rows = [b for b in registry.bounties if not b.escrow_backed]
+    click.echo(stylize("Lemma mine", fg="cyan", bold=True))
+    click.echo(
+        stylize("Search any way you want. The reward path is the final Lean proof and escrow claim.\n", dim=True),
     )
+    if escrow_rows:
+        click.echo(stylize("Escrow-backed bounties", fg="cyan"))
+        for bounty in escrow_rows:
+            click.echo(f"  {stylize(bounty.id, fg='green', bold=True)}  {bounty.title}")
+        click.echo(stylize("\nCheck one: ", dim=True) + stylize(f"lemma mine {escrow_rows[0].id}", fg="green"))
+        return
+    click.echo(stylize("No escrow-backed live bounties are in the registry yet.", fg="yellow", bold=True))
+    if candidate_rows:
+        click.echo(stylize("Draft candidates", fg="cyan"))
+        for bounty in candidate_rows:
+            click.echo(f"  {bounty.id}  {bounty.title}")
+        click.echo(stylize("\nDraft targets are not live reward offers until escrow funding is on-chain.", dim=True))
+
+
+@main.command("mine")
+@click.argument("bounty_id", required=False)
+@click.option("--submission", "submission_path", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option("--commit", "make_commit", is_flag=True, help="Build an escrow commit transaction package.")
+@click.option("--reveal", "make_reveal", is_flag=True, help="Build an escrow reveal transaction package.")
+@click.option(
+    "--artifact-uri",
+    default="",
+    help="Public URI for the proof artifact; included in reveal package metadata.",
+)
+@click.option("--claimant-evm", default="", help="EVM address that will send the escrow transaction.")
+@click.option("--payout-evm", default="", help="EVM address that receives the escrow payout.")
+@click.option("--salt", default="", help="32-byte hex salt. Default: random for --commit.")
+@click.option("--wallet-cold", default=None, help="Cold wallet name for hotkey identity binding.")
+@click.option("--wallet-hot", default=None, help="Hotkey name for identity binding.")
+@click.option("--host-lean", "host_lean", is_flag=True, default=False)
+@click.option("--output", "output_path", type=click.Path(dir_okay=False, path_type=Path), default=None)
+def mine_cmd(
+    bounty_id: str | None,
+    submission_path: Path | None,
+    make_commit: bool,
+    make_reveal: bool,
+    artifact_uri: str,
+    claimant_evm: str,
+    payout_evm: str,
+    salt: str,
+    wallet_cold: str | None,
+    wallet_hot: str | None,
+    host_lean: bool,
+    output_path: Path | None,
+) -> None:
+    """Guided path for escrow-backed theorem bounty claims."""
+    from lemma.bounty.client import BountyError, fetch_registry, verify_bounty_proof
+    from lemma.bounty.escrow import (
+        BountyEscrowClient,
+        EscrowError,
+        bounty_identity_binding_message,
+        build_commitment,
+        bytes32_from_text,
+        encode_commit_proof_call,
+        encode_reveal_proof_call,
+        proof_artifact_sha256,
+    )
+
+    if make_commit and make_reveal:
+        raise click.UsageError("Use --commit or --reveal, not both.")
+    settings = LemmaSettings()
+    try:
+        registry = fetch_registry(settings)
+    except (BountyError, OSError) as e:
+        raise click.ClickException(str(e)) from e
+    if not bounty_id:
+        _print_mine_intro(registry)
+        return
+    try:
+        bounty = registry.get(bounty_id)
+    except BountyError as e:
+        raise click.ClickException(str(e)) from e
+
+    chain_id, contract, escrow_bounty_id = _bounty_escrow_values(settings, bounty)
+    click.echo(stylize(bounty.title, fg="cyan", bold=True))
+    click.echo(stylize("  bounty_id       ", dim=True) + bounty.id)
+    click.echo(stylize("  escrow_contract ", dim=True) + contract)
+    click.echo(stylize("  escrow_bounty_id", dim=True) + str(escrow_bounty_id))
+    click.echo(stylize("  target_sha256   ", dim=True) + bounty.target_sha256)
+
+    if submission_path is None:
+        click.echo("")
+        click.echo(stylize("Next", fg="cyan"))
+        click.echo("  " + stylize(f"lemma mine {bounty.id} --submission Submission.lean", fg="green"))
+        return
+
+    proof_script = _read_submission(submission_path)
+    try:
+        result = verify_bounty_proof(settings, bounty, proof_script, host_lean=host_lean)
+    except BountyError as e:
+        raise click.ClickException(str(e)) from e
+    click.echo(result.model_dump_json(indent=2))
+    if not result.passed:
+        raise SystemExit(1)
+    if not (make_commit or make_reveal):
+        click.echo(
+            stylize("Proof verifies locally. Add --commit or --reveal to build escrow transaction data.", fg="green"),
+        )
+        return
+
+    if not claimant_evm or not payout_evm:
+        raise click.UsageError("--claimant-evm and --payout-evm are required for escrow commit/reveal packages.")
+    artifact_hash = "0x" + proof_artifact_sha256(submission_path)
+    salt_hex = salt.strip() or "0x" + secrets.token_hex(32)
+    try:
+        hotkey_pubkey = _hotkey_public_key_hex(settings, wallet_cold, wallet_hot)
+        commitment = build_commitment(
+            bounty_id=bounty.id,
+            chain_id=chain_id,
+            contract_address=contract,
+            escrow_bounty_id=escrow_bounty_id,
+            theorem_id=bytes32_from_text(bounty.problem.id),
+            claimant_evm_address=claimant_evm,
+            payout_evm_address=payout_evm,
+            artifact_sha256=artifact_hash,
+            salt=salt_hex,
+            toolchain_id=bytes32_from_text(bounty.toolchain_id),
+            policy_version=bytes32_from_text(bounty.policy_version),
+            registry_sha256="0x" + registry.sha256,
+            submitter_hotkey_pubkey=hotkey_pubkey,
+        )
+        binding_msg = bounty_identity_binding_message(
+            bounty_id=bounty.id,
+            registry_sha256="0x" + registry.sha256,
+            claimant_evm_address=claimant_evm,
+            payout_evm_address=payout_evm,
+            artifact_sha256=artifact_hash,
+            commitment_hash_hex=commitment.commitment_hash,
+        )
+        signature_hex = _sign_bounty_identity(
+            settings,
+            wallet_cold=wallet_cold,
+            wallet_hot=wallet_hot,
+            message=binding_msg,
+        )
+    except EscrowError as e:
+        raise click.ClickException(str(e)) from e
+
+    package = commitment.as_dict()
+    package["identity_binding_signature_hex"] = signature_hex
+    package["artifact_uri"] = artifact_uri.strip()
+    if make_commit:
+        package["transaction"] = {
+            "to": contract,
+            "data": encode_commit_proof_call(escrow_bounty_id, commitment.commitment_hash),
+            "value": "0x0",
+        }
+    else:
+        package["transaction"] = {
+            "to": contract,
+            "data": encode_reveal_proof_call(
+                escrow_bounty_id=escrow_bounty_id,
+                commitment_hash_hex=commitment.commitment_hash,
+                artifact_sha256=artifact_hash,
+                salt=salt_hex,
+                payout_evm_address=payout_evm,
+                submitter_hotkey_pubkey=hotkey_pubkey,
+            ),
+            "value": "0x0",
+        }
+    if settings.bounty_escrow_contract_address:
+        package["rpc_url"] = settings.bounty_evm_rpc_url
+        package["client_transaction"] = BountyEscrowClient(
+            rpc_url=settings.bounty_evm_rpc_url,
+            contract_address=contract,
+            timeout_s=settings.bounty_http_timeout_s,
+        ).commit_transaction(
+            escrow_bounty_id=escrow_bounty_id,
+            commitment_hash_hex=commitment.commitment_hash,
+        ) if make_commit else package["transaction"]
+
+    text = json.dumps(package, indent=2, sort_keys=True)
+    if output_path:
+        output_path.write_text(text + "\n", encoding="utf-8")
+        click.echo(stylize(f"Wrote {output_path}", fg="green", bold=True))
+    else:
+        click.echo(text)
 
 
 def _validator_run_blocking(*, dry_run: bool) -> None:
@@ -920,7 +1100,12 @@ def _run_validator_command(*, check: bool, dry_run: bool) -> None:
     _validator_run_blocking(dry_run=dry_run)
 
 
-@main.group("validator", invoke_without_command=True, help="Run validator rounds and validator-side tools.")
+@main.group(
+    "validator",
+    hidden=True,
+    invoke_without_command=True,
+    help="Run validator rounds and validator-side tools.",
+)
 @click.pass_context
 def validator_group(ctx: click.Context) -> None:
     if ctx.invoked_subcommand is None:
@@ -985,12 +1170,52 @@ def validator_lean_worker_cmd(host: str, port: int) -> None:
     _run_lean_worker(host, port)
 
 
-@main.command("validate", hidden=True)
-@click.option("--check", is_flag=True, help="Run validator pre-flight only; do not start validation.")
-@click.option("--dry-run", is_flag=True, help="Run validator rounds without set_weights.")
-def validate_cmd(check: bool, dry_run: bool) -> None:
-    """Compatibility alias for `lemma validator start`."""
-    _run_validator_command(check=check, dry_run=dry_run)
+@main.command("validate")
+@click.option("--check", is_flag=True, help="Check bounty validator escrow configuration.")
+@click.option("--once", is_flag=True, help="Run one bounty reveal scan when the watcher is configured.")
+@click.option("--cadence", is_flag=True, hidden=True, help="Compatibility: run the old cadence validator.")
+@click.option("--dry-run", is_flag=True, hidden=True, help="Compatibility with --cadence.")
+def validate_cmd(check: bool, once: bool, cadence: bool, dry_run: bool) -> None:
+    """Verify revealed bounty proofs and attest through escrow."""
+    if cadence:
+        _run_validator_command(check=check, dry_run=dry_run)
+        return
+
+    from lemma.bounty.client import BountyError, fetch_registry
+
+    settings = LemmaSettings()
+    click.echo(stylize("Lemma validate", fg="cyan", bold=True))
+    click.echo(stylize("Validators verify Lean off-chain, then attest to the escrow contract.\n", dim=True), nl=False)
+    if settings.bounty_reward_custody != "evm_escrow":
+        raise click.ClickException("Live validation requires LEMMA_BOUNTY_REWARD_CUSTODY=evm_escrow.")
+    if not (settings.bounty_escrow_contract_address or "").strip():
+        raise click.ClickException("Set LEMMA_BOUNTY_ESCROW_CONTRACT_ADDRESS before validating live bounties.")
+    try:
+        registry = fetch_registry(settings)
+    except (BountyError, OSError) as e:
+        raise click.ClickException(str(e)) from e
+    escrow_rows = [b for b in registry.bounties if b.escrow_backed]
+    click.echo(stylize("Registry", fg="cyan"))
+    click.echo(stylize("  registry_sha256 ", dim=True) + registry.sha256)
+    click.echo(stylize("  escrow_rows     ", dim=True) + str(len(escrow_rows)))
+    if check:
+        click.echo(
+            stylize(
+                "READY: escrow config is present. The reveal watcher will use the same Lean verifier path.",
+                fg="green",
+            ),
+        )
+        return
+    if once:
+        click.echo(stylize("No revealed-claim transport is configured in this local slice.", fg="yellow"))
+        click.echo(
+            stylize(
+                "Next implementation step: poll contract Reveal events and call `attestProof` after Lean PASS.",
+                dim=True,
+            ),
+        )
+        return
+    click.echo(stylize("Use --check for preflight or --once for a single watcher pass.", dim=True))
 
 
 @main.command("lean-worker", hidden=True)
@@ -1031,7 +1256,7 @@ def _bounty_rows(registry, *, show_all: bool):
 def _print_bounty_list(*, show_all: bool, registry=None) -> None:
     registry = registry or _load_bounty_registry()
     rows = _bounty_rows(registry, show_all=show_all)
-    click.echo(stylize("Lemma bounties", fg="cyan", bold=True))
+    click.echo(stylize("Legacy dry-run bounties", fg="cyan", bold=True))
     click.echo(stylize(f"registry_sha256={registry.sha256}", dim=True))
     if not rows:
         click.echo(stylize("No open bounties.", fg="yellow"))
@@ -1082,11 +1307,7 @@ def _print_bounty_detail(registry, bounty) -> None:
     click.echo(stylize("  policy:       ", dim=True) + bounty.submission_policy)
     click.echo("")
     click.echo(stylize("Next", fg="cyan", bold=True))
-    click.echo("  " + stylize(f"lemma bounty verify {bounty.id} --submission Submission.lean", fg="green"))
-    click.echo(
-        "  "
-        + stylize(f"lemma bounty submit {bounty.id} --submission Submission.lean --payout <SS58>", fg="green")
-    )
+    click.echo("  " + stylize(f"lemma mine {bounty.id} --submission Submission.lean", fg="green"))
 
 
 def _show_bounty_or_hint(bounty_id: str | None) -> None:
@@ -1126,7 +1347,12 @@ def _verify_bounty_or_exit(bounty, submission_path: Path, host_lean: bool):
     raise SystemExit(0 if result.passed else 1)
 
 
-@main.group("bounty", invoke_without_command=True, help="Browse, verify, package, and submit bounty proofs.")
+@main.group(
+    "bounty",
+    hidden=True,
+    invoke_without_command=True,
+    help="Browse, verify, package, and submit bounty proofs.",
+)
 @click.option("--show", "show_hint", is_flag=True, help="Show the only open bounty, or list bounty IDs.")
 @click.pass_context
 def bounty_group(ctx: click.Context, show_hint: bool) -> None:
@@ -1179,6 +1405,10 @@ def _bounty_package(
     from lemma.bounty.client import BountyError, build_submission_package, verify_bounty_proof
 
     settings = LemmaSettings()
+    if settings.bounty_reward_custody != "local_dry_run":
+        raise click.ClickException(
+            "Legacy bounty packages are dry-run only. Use `lemma mine` for escrow-backed claims.",
+        )
     registry, bounty = _bounty_or_die(bounty_id)
     proof_script = _read_submission(submission_path)
     try:

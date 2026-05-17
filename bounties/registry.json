@@ -3,6 +3,7 @@
     {
       "id": "starter.two_plus_two",
       "kind": "formal_target",
+      "policy_version": "bounty-policy-v1",
       "problem": {
         "extra": {
           "informal_statement": "Prove that two plus two equals four."
@@ -17,17 +18,19 @@
         "theorem_name": "two_plus_two_eq_four",
         "type_expr": "(2 : Nat) + 2 = 4"
       },
-      "reward": "Not live",
+      "reward": "Escrow required",
       "source": {
         "name": "Lemma bounty",
         "url": "https://lemmasub.net/bounties/"
       },
-      "status": "draft",
+      "status": "candidate",
       "submission_policy": "restricted_helpers",
       "target_sha256": "cfe3cc12caa3ef57ccb6114ca41241c0e6636c4a14d5b30db06745771a67f6f6",
       "terms_url": "https://lemmasub.net/bounties/",
+      "toolchain_id": "leanprover/lean4:v4.30.0-rc2",
       "title": "Draft starter target: two plus two"
     }
   ],
-  "schema_version": 1
+  "reward_custody": "evm_escrow",
+  "schema_version": 2
 }

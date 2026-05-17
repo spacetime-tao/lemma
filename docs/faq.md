@@ -232,21 +232,23 @@ the normal subnet loop is automated.
 
 ## What are bounties?
 
-Bounties are planned manual proof rewards for harder targets that do not fit the
+Bounties are escrow-backed proof rewards for harder targets that do not fit the
 normal timed theorem rounds.
 
-They are not live yet. Timed rounds keep the subnet moving with regular
-challenges. Future bounties are for selected Lean statements that may need more
-time, stronger search, public review, or more advanced proving systems.
+They are live only when funded in `LemmaBountyEscrow` on Bittensor EVM. Timed
+rounds keep the subnet moving with regular challenges. Bounties are for selected
+Lean statements that may need more time, stronger search, public review, or more
+advanced proving systems.
 
 Lemma uses Google DeepMind's public [Formal Conjectures](https://google-deepmind.github.io/formal-conjectures/)
 database as the source of bounty targets. These are formal mathematical
 statements that can be attempted in Lean.
 
 The point of bounties is to give solvers a path toward harder, more meaningful
-proofs while keeping the regular subnet loop simple and steady. A future claim
-will need structured proof provenance, GitHub identity, TAO address, and, for
-high-value bounties, a wallet signature.
+proofs while keeping the regular subnet loop simple and steady. A live claim
+needs on-chain commit/reveal data, structured proof provenance, and a signed
+binding between the miner hotkey and the EVM payout address. If escrow custody
+is missing, the target is a draft or candidate, not an active reward.
 
 Note: Lemma is not affiliated with or partnered with Google DeepMind.
 

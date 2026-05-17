@@ -39,6 +39,9 @@ class Bounty:
     kind: str
     submission_policy: str
     target_sha256: str
+    policy_version: str
+    toolchain_id: str
+    escrow: dict[str, Any]
 
     @classmethod
     def from_payload(cls, row: dict[str, Any]) -> Bounty:
@@ -70,6 +73,11 @@ class Bounty:
                 f"registry bounty {bounty_id!r} has Formal Conjectures formal_proof metadata; "
                 "use kind=proof_porting instead of a normal bounty",
             )
+        policy_version = str(row.get("policy_version") or "bounty-policy-v1").strip()
+        toolchain_id = str(row.get("toolchain_id") or problem.lean_toolchain).strip()
+        escrow = row.get("escrow") or {}
+        if not isinstance(escrow, dict):
+            raise BountyError(f"registry bounty {bounty_id!r} escrow must be an object")
         return cls(
             id=bounty_id,
             title=title,
@@ -82,6 +90,58 @@ class Bounty:
             kind=kind,
             submission_policy=policy,
             target_sha256=target_hash,
+            policy_version=policy_version,
+            toolchain_id=toolchain_id,
+            escrow=dict(escrow),
+        )
+
+    @property
+    def escrow_bounty_id(self) -> int | None:
+        value = self.escrow.get("bounty_id")
+        if value in (None, ""):
+            return None
+        try:
+            parsed = int(str(value))
+        except (TypeError, ValueError):
+            return None
+        return parsed if parsed > 0 else None
+
+    @property
+    def escrow_contract_address(self) -> str:
+        return str(self.escrow.get("contract_address") or "").strip()
+
+    @property
+    def escrow_chain_id(self) -> int | None:
+        value = self.escrow.get("chain_id")
+        if value in (None, ""):
+            return None
+        try:
+            return int(str(value))
+        except (TypeError, ValueError):
+            return None
+
+    @property
+    def escrow_funding_confirmed_block(self) -> int | None:
+        value = self.escrow.get("funding_confirmed_block")
+        if value in (None, ""):
+            return None
+        try:
+            parsed = int(str(value))
+        except (TypeError, ValueError):
+            return None
+        return parsed if parsed > 0 else None
+
+    @property
+    def escrow_funded(self) -> bool:
+        return self.escrow.get("funded") is True or self.escrow_funding_confirmed_block is not None
+
+    @property
+    def escrow_backed(self) -> bool:
+        return bool(
+            self.escrow_contract_address
+            and self.escrow_bounty_id is not None
+            and self.escrow_chain_id
+            and self.escrow_funded
         )
 
 
@@ -154,13 +214,14 @@ def load_registry(raw: bytes, expected_sha256: str | None = None) -> BountyRegis
         payload = json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as e:
         raise BountyError(f"bounty registry is not valid UTF-8 JSON: {e}") from e
-    if int(payload.get("schema_version", 0)) != 1:
-        raise BountyError("bounty registry schema_version must be 1")
+    if int(payload.get("schema_version", 0)) not in {1, 2}:
+        raise BountyError("bounty registry schema_version must be 1 or 2")
     rows = payload.get("bounties")
     if not isinstance(rows, list):
         raise BountyError("bounty registry must contain a bounties list")
+    schema_version = int(payload.get("schema_version", 0))
     return BountyRegistry(
-        schema_version=1,
+        schema_version=schema_version,
         bounties=tuple(Bounty.from_payload(row) for row in rows),
         sha256=digest,
     )

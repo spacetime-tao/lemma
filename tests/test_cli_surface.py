@@ -1,12 +1,29 @@
 """Core CLI command surface."""
 
+import hashlib
+import json
+
 import lemma.cli.main as cli_main
 import pytest
 from click.testing import CliRunner
 from lemma.cli.main import main
 
-PUBLIC_COMMANDS = ("setup", "config", "status", "theorem", "proof", "miner", "validator", "bounty")
-HIDDEN_ALIASES = ("mine", "validate", "configure", "doctor", "preview", "problems", "verify", "meta", "lean-worker")
+PUBLIC_COMMANDS = ("setup", "mine", "status", "validate")
+HIDDEN_ALIASES = (
+    "config",
+    "theorem",
+    "proof",
+    "miner",
+    "validator",
+    "bounty",
+    "configure",
+    "doctor",
+    "preview",
+    "problems",
+    "verify",
+    "meta",
+    "lean-worker",
+)
 
 
 def _commands_from_help(output: str) -> list[str]:
@@ -38,13 +55,9 @@ def test_help_lists_grouped_commands() -> None:
     ("command", "expected"),
     [
         (("setup", "--help"), "--role"),
-        (("config", "--help"), "subnet-pins"),
-        (("status", "--help"), "Show chain head"),
-        (("theorem", "--help"), "current"),
-        (("proof", "--help"), "preview"),
-        (("miner", "--help"), "observability"),
-        (("validator", "--help"), "lean-worker"),
-        (("bounty", "--help"), "submit"),
+        (("mine", "--help"), "--claimant-evm"),
+        (("status", "--help"), "escrow-backed"),
+        (("validate", "--help"), "--once"),
     ],
 )
 def test_visible_group_help(command: tuple[str, ...], expected: str) -> None:
@@ -58,14 +71,18 @@ def test_visible_group_help(command: tuple[str, ...], expected: str) -> None:
     ("command", "expected"),
     [
         (("configure", "--help"), "subnet-pins"),
+        (("config", "--help"), "subnet-pins"),
         (("doctor", "--help"), "Check local environment"),
         (("lean-worker", "--help"), "Compatibility alias"),
         (("meta", "--help"), "Compatibility alias"),
-        (("mine", "--help"), "--hotkey"),
+        (("miner", "--help"), "observability"),
         (("preview", "--help"), "--no-verify"),
+        (("proof", "--help"), "preview"),
         (("problems", "--help"), "show"),
-        (("validate", "--help"), "--dry-run"),
+        (("theorem", "--help"), "current"),
+        (("validator", "--help"), "lean-worker"),
         (("verify", "--help"), "--submission"),
+        (("bounty", "--help"), "submit"),
     ],
 )
 def test_hidden_aliases_still_work(command: tuple[str, ...], expected: str) -> None:
@@ -137,21 +154,42 @@ def test_miner_start_runs_preflight_then_starts_with_overrides(monkeypatch) -> N
     ]
 
 
-def test_hidden_mine_alias_dispatches_to_miner_flow(monkeypatch) -> None:
-    events: list[tuple[str, object]] = []
+def test_public_mine_without_bounty_lists_registry(monkeypatch, tmp_path) -> None:
+    raw = json.dumps(
+        {
+            "schema_version": 2,
+            "bounties": [
+                {
+                    "id": "fc.test",
+                    "title": "Test bounty",
+                    "status": "candidate",
+                    "source": {"name": "Formal Conjectures"},
+                    "problem": {
+                        "id": "fc.test",
+                        "theorem_name": "test_theorem",
+                        "type_expr": "True",
+                        "split": "bounty",
+                        "lean_toolchain": "leanprover/lean4:v4.15.0",
+                        "mathlib_rev": "abc123",
+                        "imports": ["Mathlib"],
+                        "extra": {"informal_statement": "Prove True."},
+                    },
+                }
+            ],
+        },
+        sort_keys=True,
+    ).encode()
+    registry_path = tmp_path / "registry.json"
+    registry_path.write_bytes(raw)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("LEMMA_BOUNTY_REGISTRY_URL", str(registry_path))
+    monkeypatch.setenv("LEMMA_BOUNTY_REGISTRY_SHA256_EXPECTED", hashlib.sha256(raw).hexdigest())
 
-    monkeypatch.setattr(cli_main, "_maybe_run_setup_for_missing_env", lambda role: events.append(("setup", role)))
-    monkeypatch.setattr(
-        cli_main,
-        "_run_miner_preflight",
-        lambda settings, start_after: events.append(("preflight", start_after)) or 0,
-    )
-    monkeypatch.setattr(cli_main, "_miner_run_axon", lambda settings, cap: events.append(("start", cap)))
-
-    result = CliRunner().invoke(main, ["mine", "--check"])
+    result = CliRunner().invoke(main, ["mine"])
 
     assert result.exit_code == 0
-    assert events == [("setup", "miner"), ("preflight", False)]
+    assert "Lemma mine" in result.output
+    assert "Draft candidates" in result.output
 
 
 def test_validator_check_runs_preflight_without_starting(monkeypatch) -> None:
@@ -188,7 +226,7 @@ def test_validator_dry_run_starts_after_preflight(monkeypatch) -> None:
     assert events == [("setup", "validator"), ("preflight", (True, True)), ("start", True)]
 
 
-def test_hidden_validate_alias_dispatches_to_validator_flow(monkeypatch) -> None:
+def test_validate_cadence_flag_dispatches_to_validator_flow(monkeypatch) -> None:
     events: list[tuple[str, object]] = []
 
     monkeypatch.setattr(cli_main, "_maybe_run_setup_for_missing_env", lambda role: events.append(("setup", role)))
@@ -199,7 +237,7 @@ def test_hidden_validate_alias_dispatches_to_validator_flow(monkeypatch) -> None
     )
     monkeypatch.setattr(cli_main, "_validator_run_blocking", lambda dry_run: events.append(("start", dry_run)))
 
-    result = CliRunner().invoke(main, ["validate", "--dry-run"])
+    result = CliRunner().invoke(main, ["validate", "--cadence", "--dry-run"])
 
     assert result.exit_code == 0
     assert events == [("setup", "validator"), ("preflight", (True, True)), ("start", True)]

@@ -7,10 +7,10 @@ not let parallel checklists drift.
 ## Current Baseline
 
 - Repository: `spacetime-tao/lemma`, local checkout `LOCAL_WORKSPACE/lemma`.
-- Current uncommitted working batch: difficulty-weighted rolling scoring plus
-  UID-specific theorem variants. It has local ruff, mypy, full pytest,
-  and non-Docker generated-template verification; the Docker Lean template gate
-  could not complete locally because the Docker daemon was not running.
+- Current uncommitted working batch: trustless bounty-first cutover. It adds
+  Bittensor EVM escrow contracts, Python escrow commitment bindings, a
+  bounty-first public CLI surface, and docs/site copy that treats unfunded
+  targets as drafts rather than live rewards.
 - Latest runtime-impacting batch covered by this tracker: `28fb364` (`Expand
   generated supply and trust docs`) after the 2026-05-14 generated-builder
   expansion and validator-only deploy.
@@ -24,8 +24,9 @@ not let parallel checklists drift.
 - Current testnet Droplet head: validator / Lean worker host checkout is
   `28fb364`; the validator service was restarted. The miner host remains
   `0ff1068`.
-- Live reward direction: proof passes Lean and becomes reward-eligible, or
-  proof fails Lean and cannot receive miner rewards.
+- Live bounty reward direction: a proof can receive a live bounty payout only
+  through funded Bittensor EVM escrow. No manual payout or public-ledger promise
+  is live reward custody.
 - Operator UX belongs in the core `lemma` command; consensus policy stays in
   protocol, problem selection, Lean verification, validator scoring, and tests.
 - Current audit docs:
@@ -51,8 +52,9 @@ not let parallel checklists drift.
   builders with explicit 10% / 35% / 50% / 5% easy / medium / hard / extreme
   split weights, template-owned topics, and a metadata/witness gate covering
   registry reachability/coherence.
-- Normal operator workflows are consolidated under `lemma`: setup, doctor,
-  status, problem views, preview, miner, and validator entrypoints.
+- Normal public workflows are consolidated under `lemma setup`, `lemma mine`,
+  `lemma status`, and `lemma validate`; lower-level cadence/operator commands
+  remain hidden compatibility surfaces.
 - Validator hot-path side effects are bounded: export writes are non-fatal after
   scoring, disk preflight happens before miner queries, and verifier-local
   failures are accounted separately from proof failures.
@@ -164,37 +166,53 @@ not let parallel checklists drift.
 - Legacy live-adjacent aliases: `reasoning_only`,
   `LEMMA_JUDGE_PROFILE_ATTEST_*`, `JUDGE_PROFILE_SHA256_EXPECTED`, and
   `/lemma/judge_profile_sha256` are retired.
+- Bounty escrow cutover slice: added `contracts/LemmaBountyEscrow.sol`,
+  Bittensor EVM testnet/mainnet Hardhat config, escrow calldata/commitment
+  helpers, `LEMMA_BOUNTY_REWARD_CUSTODY=evm_escrow`, and public mine/status/
+  validate flows. The old `lemma bounty ...` API package path is hidden and
+  dry-run only.
 
 ## Current Blockers And Gaps
 
-1. **Separate Lean cache from the root filesystem in production.**
+1. **Escrow testnet demo.**
+   Deploy `LemmaBountyEscrow` on Bittensor EVM testnet, fund one bounty, commit
+   and reveal a valid proof, submit validator attestations, and record the
+   payout release evidence before any public live bounty launch.
+
+2. **Reveal artifact transport.**
+   Decide the smallest public artifact transport for revealed proofs. The chain
+   carries hashes and ordering; validators still need a reproducible way to
+   fetch the revealed Lean artifact without publishing salts or private verifier
+   data early.
+
+3. **Separate Lean cache from the root filesystem in production.**
    The code now has preflight and byte pruning, but production validator/worker
    hosts should still mount `LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR` on its own
    volume or partition.
 
-2. **Watch continued `28fb364` validator rounds.**
+4. **Watch continued `28fb364` validator rounds.**
    The first observed `28fb364` round verified/scored 3 proofs and set weights
    successfully. Continued monitoring should record reveal/emission movement
    and any repeated RPC false returns.
 
-3. **Live alerting.**
+5. **Live alerting.**
    Add operator alerts for root/cache disk >80%, failed Lemma systemd units,
    repeated `epoch failed`, missing `lemma_epoch_summary` for N minutes, and
    repeated empty-score / skipped-weight epochs.
 
-4. **Full Bandit low-severity cleanup.**
+6. **Full Bandit low-severity cleanup.**
    CI's medium/high Bandit gate passes. Full Bandit still reports 20 low
    findings: intentional Lean/Docker subprocess calls and deterministic
    non-crypto RNG/jitter. Fix only when the change removes ambiguity or code.
 
-5. **Problem supply expansion roadmap.**
+7. **Problem supply expansion roadmap.**
    Open-problem campaign design now lives in
    [`open-problem-campaigns.md`](open-problem-campaigns.md). Normal cadence
    expansion should start with generated builders for missing topics, then
    promote reviewed solved contest rows, and only later add campaign/bounty
    protocol support for locked open-problem targets.
 
-6. **Source/license hygiene.**
+8. **Source/license hygiene.**
    The live generated and curated problem supply is repo-authored and
    witness-backed. Before any external miniF2F, Compfiles, PutnamBench,
    FormalMATH, mathlib, or Formal Conjectures material enters live `hybrid` or
@@ -203,13 +221,13 @@ not let parallel checklists drift.
    `LICENSE` file, since the repo currently declares Apache-2.0 in `README.md`
    and `pyproject.toml`.
 
-7. **Live subnet/VPS evidence still matters.**
+9. **Live subnet/VPS evidence still matters.**
    Local and GitHub CI proof PASS are necessary but not enough. The subnet still
    needs measured miner response time, prover latency, validator Lean
    verification time over repeated rounds, timeout/fail reasons, set-weights
    behavior across RPC failures, and emission changes after reveal.
 
-8. **Trust-minimized release evidence.**
+10. **Trust-minimized release evidence.**
    The live path should be described as trust-minimized, not absolutely
    trustless. Next release work should publish Git tag/commit, immutable sandbox
    image ref or digest, Lean toolchain, Mathlib revision,
@@ -217,43 +235,46 @@ not let parallel checklists drift.
    `generated_registry_sha256`, Docker witness-gate evidence, cutover window,
    and rollback pins.
 
-9. **Public verification logs.**
+11. **Public verification logs.**
    Design the smallest public evidence format that lets a third party rerun a
    round: theorem id, theorem statement, proof or proof digest,
    registry/profile hashes, sandbox image ref, verification result, and relevant
    timing/failure reason. Do not add protocol machinery until the format is
    clear.
 
-10. **Open-problem faithfulness review.**
+12. **Open-problem faithfulness review.**
     Formal Conjectures-style work remains a candidate-source lane until the
     reviewed statement, source citation, reviewer sign-off, statement hash, and
     caveats are recorded in the campaign registry.
 
-11. **External audit.**
+13. **External audit.**
    Before high-value mainnet operation, get independent review of validator
    infrastructure, Docker/remote worker exposure, Bittensor operations, and key
    custody.
 
 ## Next Work Order
 
-1. Watch continued `28fb364` validator rounds and record reveal/emission
+1. Run the Bittensor EVM testnet escrow demo end to end and capture tx hashes.
+2. Add the minimal reveal artifact transport needed for validators to fetch,
+   verify, and attest revealed bounty proofs.
+3. Watch continued `28fb364` validator rounds and record reveal/emission
    movement, especially across any RPC retry event.
-2. Add a compact live health command/report covering commit, services, disk,
+4. Add a compact live health command/report covering commit, services, disk,
    cache slots, dashboard timer, latest epoch summary, and latest
    `set_weights`.
-3. Add production alerts using the same live health signals.
-4. Add release-evidence output or docs that bundle commit, image digest,
+5. Add production alerts using the same live health signals.
+6. Add release-evidence output or docs that bundle commit, image digest,
    validator profile hash, problem-supply hash, generated-registry hash, and
    cutover/rollback pins.
-5. Plan public verification logs for rerunning completed rounds.
-6. Plan a separate Lean cache volume or partition for validator/worker hosts.
-7. Add the next generated-builder expansion batch for remaining missing topics
+7. Plan public verification logs for rerunning completed rounds.
+8. Plan a separate Lean cache volume or partition for validator/worker hosts.
+9. Add the next generated-builder expansion batch for remaining missing topics
    named in [`problem-supply-policy.md`](problem-supply-policy.md).
-8. Promote solved contest-style curated rows only after source/license review
+10. Promote solved contest-style curated rows only after source/license review
    and witness-proof verification.
-9. Keep campaign/bounty protocol machinery separate from the cadence live path;
-   expand it only when a locked open-problem target requires it.
-10. Continue deleting or isolating optional research surfaces only when they
+11. Keep bounty escrow machinery separate from cadence scoring defaults unless
+   a locked target explicitly enters the escrow registry.
+12. Continue deleting or isolating optional research surfaces only when they
    touch live defaults or public operator UX.
 
 ## Testing Matrix
@@ -322,7 +343,7 @@ Next VPS testing should measure behavior, not add mechanism code:
 
 ## Non-Goals
 
-- Do not redesign the live reward mechanism in this pass.
+- Do not describe unescrowed bounty promises as live rewards.
 - Do not add proof-efficiency or prose/judge scoring to the live path.
 - Do not deploy, restart, or mutate droplet services without an explicit live
   ops request.

@@ -1,2 +1,1 @@
-"""Bounty registry and submission client helpers."""
-
+"""Bounty registry, verification, and escrow helpers."""

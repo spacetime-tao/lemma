@@ -2,9 +2,9 @@
 
 **Lemma is a [Bittensor](https://docs.learnbittensor.org/) subnet for using AI to prove mathematical theorems.**
 
-Lemma posts theorem challenges. Miners use AI to write Lean proof files.
-Validators use Lean to check them. Valid proofs become eligible for miner
-rewards.
+Lemma posts theorem challenges and bounty targets. Miners use AI to write Lean
+proof files. Validators use Lean to check them. Bounty rewards are live only
+when they are funded in trustless Bittensor EVM escrow.
 
 Bitcoin rewards miners for securing the network. Bittensor rewards miners for
 producing useful intelligence. Lemma rewards miners for producing correct
@@ -15,7 +15,7 @@ A Lemma round is simple:
 1. The subnet publishes a theorem statement.
 2. Miners use AI to write candidate Lean proof scripts.
 3. Validators verify those scripts with the pinned Lean toolchain.
-4. Passing proofs become eligible for miner rewards under Lemma's subnet rules; failing proofs do not.
+4. Passing proofs become eligible under Lemma's rules; failing proofs do not.
 
 Anything that can be formalized as a Lean statement can become work for Lemma:
 algebra, number theory, logic, combinatorics, geometry, computer science,
@@ -47,11 +47,11 @@ uv run lemma --help
 
 Use one environment and one tool: `uv`. The Lemma `.venv` holds subnet dependencies and the grouped `lemma` command. Wallets use `btcli` from [bittensor-cli](https://pypi.org/project/bittensor-cli/); install it here with `uv sync --extra btcli` (or `uv sync --extra dev --extra btcli` for development).
 
-**Miners:** `uv run lemma setup`, register your hotkey, then `uv run lemma miner start`.
+**Miners:** `uv run lemma mine` lists escrow-backed bounty targets and draft candidates. `uv run lemma setup` remains the helper/preflight command.
 
-**Validators:** build the Lean image, then `uv run lemma validator start`.
+**Validators:** `uv run lemma validate --check` checks bounty escrow configuration. Cadence validator service commands remain available for operators.
 
-**Bounties:** planned manual reviewed rewards; not live yet. See [bounties.md](docs/bounties.md).
+**Bounties:** live rewards require funded Bittensor EVM escrow. No manual payout path is live reward custody. See [bounties.md](docs/bounties.md).
 
 ### Operators
 

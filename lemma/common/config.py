@@ -145,7 +145,7 @@ class LemmaSettings(BaseSettings):
     bounty_registry_url: str = Field(
         default="https://raw.githubusercontent.com/spacetime-tao/lemma/main/bounties/registry.json",
         validation_alias="LEMMA_BOUNTY_REGISTRY_URL",
-        description="Remote JSON registry for off-cadence bounty targets.",
+        description="Remote JSON registry for escrow-backed bounty targets.",
     )
     bounty_registry_sha256_expected: str | None = Field(
         default=None,
@@ -155,13 +155,33 @@ class LemmaSettings(BaseSettings):
     bounty_api_url: str = Field(
         default="https://api.lemmasub.net",
         validation_alias="LEMMA_BOUNTY_API_URL",
-        description="Base URL for the Lemma bounty submission API.",
+        description="Deprecated draft-only API URL. Live bounty claims use Bittensor EVM escrow.",
     )
     bounty_http_timeout_s: float = Field(
         default=30.0,
         gt=0.0,
         validation_alias="LEMMA_BOUNTY_HTTP_TIMEOUT_S",
         description="HTTP timeout for bounty registry fetches and submission posts.",
+    )
+    bounty_reward_custody: Literal["evm_escrow", "local_dry_run"] = Field(
+        default="evm_escrow",
+        validation_alias="LEMMA_BOUNTY_REWARD_CUSTODY",
+        description="Live bounties require trustless Bittensor EVM escrow. local_dry_run is tests/dev only.",
+    )
+    bounty_evm_rpc_url: str = Field(
+        default="https://test.chain.opentensor.ai",
+        validation_alias="LEMMA_BOUNTY_EVM_RPC_URL",
+        description="Bittensor EVM JSON-RPC URL for escrow reads and transaction data.",
+    )
+    bounty_evm_chain_id: int = Field(
+        default=945,
+        validation_alias="LEMMA_BOUNTY_EVM_CHAIN_ID",
+        description="Bittensor EVM chain id: 945 testnet, 964 mainnet.",
+    )
+    bounty_escrow_contract_address: str = Field(
+        default="",
+        validation_alias="LEMMA_BOUNTY_ESCROW_CONTRACT_ADDRESS",
+        description="Deployed LemmaBountyEscrow contract address. Empty means no live bounty custody configured.",
     )
     generated_registry_expected_sha256: str | None = Field(
         default=None,
