@@ -29,8 +29,9 @@ For the full mechanism and reward model, start with the [litepaper](docs/litepap
 
 1. **Understand the mechanism:** [docs/litepaper.md](docs/litepaper.md)
 2. **Get plain-language answers:** [docs/faq.md](docs/faq.md)
-3. **Install and run Lemma:** [docs/getting-started.md](docs/getting-started.md)
-4. **Check implementation details:** [docs/technical-reference.md](docs/technical-reference.md)
+3. **Run a miner:** [docs/miner.md](docs/miner.md)
+4. **Run a validator:** [docs/validator.md](docs/validator.md)
+5. **Check implementation details:** [docs/technical-reference.md](docs/technical-reference.md)
 
 ## Quick start
 
@@ -64,7 +65,6 @@ In the miner docs, **axon** is Bittensor’s term for the network address and po
 | ----- | ---- |
 | Litepaper | [litepaper.md](docs/litepaper.md) |
 | FAQ (lay readers) | [faq.md](docs/faq.md) |
-| Install & operator checklist | [getting-started.md](docs/getting-started.md) |
 | Vision & roadmap | [vision.md](docs/vision.md) |
 | Components | [architecture.md](docs/architecture.md) |
 | Technical reference | [technical-reference.md](docs/technical-reference.md) |

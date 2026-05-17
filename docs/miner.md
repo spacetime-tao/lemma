@@ -3,14 +3,14 @@
 A Lemma miner receives theorem challenges, asks a prover model for a Lean
 `Submission.lean`, and returns the proof for validators to check.
 
-Start with [getting-started.md](getting-started.md) if the repo, keys, and
-`.env` are not configured yet.
+This page is the complete miner path: install, keys, `.env`, registration,
+readiness checks, and the live axon.
 
 ## Miner command map
 
 | Goal | Command |
 | --- | --- |
-| Configure env, wallet, prover, and axon port | `uv run lemma setup` |
+| Configure env, wallet, prover, and axon port | `uv run lemma setup --role miner` |
 | See current chain/theorem state | `uv run lemma status` |
 | Check miner readiness | `uv run lemma miner check` |
 | Print config without binding a port | `uv run lemma miner dry-run` |
@@ -18,17 +18,77 @@ Start with [getting-started.md](getting-started.md) if the repo, keys, and
 | Explain logs and score visibility | `uv run lemma miner observability` |
 | Try one theorem locally | `uv run lemma proof preview` |
 
-## Setup checklist
+## Install
 
-1. `uv sync --extra btcli`
-2. Create a coldkey and miner hotkey with `uv run btcli`.
-3. Run `uv run lemma setup`.
-4. Register the miner hotkey on the same network/netuid as `.env`.
-5. Open `AXON_PORT`.
-6. Run `uv run lemma miner check`.
-7. Run `uv run lemma miner start`.
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+git clone https://github.com/spacetime-tao/lemma.git
+cd lemma
+uv sync --extra btcli
+uv run lemma --help
+```
 
-For the current public test deployment, use Bittensor testnet subnet 467.
+Use one installer and one environment: `uv`. The `btcli` command comes from the
+Bittensor packages installed by the `btcli` extra.
+
+## Keys
+
+Create a coldkey and a miner hotkey:
+
+```bash
+uv run btcli wallet new_coldkey --wallet.name my_wallet --n_words 12
+uv run btcli wallet new_hotkey --wallet.name my_wallet --wallet.hotkey miner
+uv run btcli wallet list
+```
+
+Keep the coldkey local or offline. A server only needs the miner hotkey.
+
+## Configure
+
+```bash
+uv run lemma setup --role miner
+```
+
+The setup flow writes `.env`. For a miner, the important values are:
+
+```text
+SUBTENSOR_NETWORK=test
+NETUID=467
+BT_WALLET_COLD=my_wallet
+BT_WALLET_HOT=miner
+AXON_EXTERNAL_IP=<public-ip-or-hostname>
+AXON_PORT=8091
+PROVER_PROVIDER=openai
+PROVER_OPENAI_BASE_URL=<openai-compatible-base-url>
+PROVER_OPENAI_API_KEY=<provider-key>
+PROVER_MODEL=<model-name>
+```
+
+For the current public test deployment, use Bittensor testnet subnet 467 unless
+a different deployment is explicitly published.
+
+## Register
+
+Use the same network and netuid from `.env`:
+
+```bash
+uv run btcli subnet show --netuid 467 --network test
+uv run btcli subnet register --netuid 467 --network test --wallet.name my_wallet --wallet.hotkey miner
+```
+
+Open inbound `AXON_PORT` so validators can reach the miner. On a VPS, set
+`AXON_EXTERNAL_IP` to the public IPv4 or DNS name.
+
+## Check
+
+```bash
+uv run lemma status
+uv run lemma miner check
+uv run lemma miner dry-run
+```
+
+`lemma miner check` should report the wallet, chain RPC, and registered subnet
+UID as ready before you leave the miner running.
 
 ## Prover model
 

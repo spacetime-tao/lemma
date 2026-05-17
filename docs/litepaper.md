@@ -302,7 +302,8 @@ first step is keeping the basic rule clear, reproducible, and hard to fake.
 
 ## Start Here
 
-To run Lemma, go to [getting-started.md](getting-started.md).
+To run Lemma, use the complete [miner](miner.md) or [validator](validator.md)
+guide for the role you want.
 
 For deeper behavior details, use [technical-reference.md](technical-reference.md).
 

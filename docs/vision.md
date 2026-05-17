@@ -142,5 +142,4 @@ sustainable on a decentralized network.
 | [Proof verification incentives](proof-verification-incentives.md) | Proof-only reward design. |
 | [Problem supply policy](problem-supply-policy.md) | Public generated supply boundary and builder promotion checklist. |
 | [Open problem campaigns](open-problem-campaigns.md) | Future work for faithful open-problem formalization and harder proof rewards. |
-| [Getting started](getting-started.md) | Install and first commands. |
-| [Miner](miner.md) / [Validator](validator.md) | Operator detail. |
+| [Miner](miner.md) / [Validator](validator.md) | Install, keys, config, registration, and runtime commands. |

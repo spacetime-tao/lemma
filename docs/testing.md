@@ -1,6 +1,12 @@
 # Testing
 
-Clone repo and `uv sync --extra dev` ([getting-started.md](getting-started.md)).
+Clone the repo and install the development environment:
+
+```bash
+git clone https://github.com/spacetime-tao/lemma.git
+cd lemma
+uv sync --extra dev
+```
 
 ## Default suite
 

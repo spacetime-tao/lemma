@@ -116,10 +116,10 @@ registration.
 
 ```bash
 uv run lemma bounty list
-uv run lemma bounty show smoke.two_plus_two
-uv run lemma bounty verify smoke.two_plus_two --submission Submission.lean
-uv run lemma bounty package smoke.two_plus_two --submission Submission.lean --payout <SS58>
-uv run lemma bounty submit smoke.two_plus_two --submission Submission.lean --payout <SS58>
+uv run lemma bounty show starter.two_plus_two
+uv run lemma bounty verify starter.two_plus_two --submission Submission.lean
+uv run lemma bounty package starter.two_plus_two --submission Submission.lean --payout <SS58>
+uv run lemma bounty submit starter.two_plus_two --submission Submission.lean --payout <SS58>
 ```
 
 Details: [bounties.md](bounties.md).

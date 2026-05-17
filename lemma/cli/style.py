@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import os
 import sys
 from typing import Any
@@ -11,13 +12,73 @@ import click
 
 def colors_enabled() -> bool:
     # https://no-color.org/ — if NO_COLOR is set (any value), disable ANSI.
-    return sys.stdout.isatty() and "NO_COLOR" not in os.environ
+    if "NO_COLOR" in os.environ:
+        return False
+    return sys.stdout.isatty() or "FORCE_COLOR" in os.environ
 
 
 def stylize(text: str, **kwargs: Any) -> str:
     if not colors_enabled():
         return text
     return click.style(text, **kwargs)
+
+
+def rich_help_text(command: click.Command, ctx: click.Context) -> str | None:
+    if not colors_enabled():
+        return None
+    try:
+        from rich.console import Console
+        from rich.panel import Panel
+        from rich.table import Table
+        from rich.text import Text
+    except Exception:  # noqa: BLE001
+        return None
+
+    width = ctx.terminal_width or 100
+    out = io.StringIO()
+    console = Console(
+        file=out,
+        force_terminal=True,
+        color_system="standard",
+        width=max(78, min(width, 120)),
+        legacy_windows=False,
+    )
+    usage = command.get_usage(ctx).removeprefix("Usage: ").strip()
+    console.print("")
+    console.print(Text("Usage: ", style="bold cyan") + Text(usage, style="bold white"))
+    if command.help:
+        console.print("")
+        console.print(Text(command.help.strip(), style="white"))
+
+    option_rows = [record for param in command.get_params(ctx) if (record := param.get_help_record(ctx))]
+    if option_rows:
+        options = Table(box=None, show_header=False, expand=True, padding=(0, 1))
+        options.add_column("Option", style="green", no_wrap=True)
+        options.add_column("Help", style="white")
+        for opts, help_text in option_rows:
+            options.add_row(opts, help_text or "")
+        console.print("")
+        console.print(Panel(options, title="Options", title_align="left", border_style="cyan"))
+
+    if isinstance(command, click.MultiCommand):
+        command_rows: list[tuple[str, str]] = []
+        for name in command.list_commands(ctx):
+            subcommand = command.get_command(ctx, name)
+            if subcommand is None or subcommand.hidden:
+                continue
+            help_lines = (subcommand.help or "").strip().splitlines()
+            help_text = subcommand.short_help or (help_lines[0] if help_lines else "")
+            command_rows.append((name, help_text))
+        if command_rows:
+            commands = Table(box=None, show_header=False, expand=True, padding=(0, 1))
+            commands.add_column("Command", style="bold cyan", no_wrap=True)
+            commands.add_column("Help", style="white")
+            for name, help_text in command_rows:
+                commands.add_row(name, help_text)
+            console.print("")
+            console.print(Panel(commands, title="Commands", title_align="left", border_style="cyan"))
+
+    return out.getvalue()
 
 
 def flush_stdio() -> None:

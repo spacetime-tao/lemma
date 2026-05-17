@@ -14,7 +14,7 @@ from pathlib import Path
 import click
 
 from lemma import __version__
-from lemma.cli.style import colors_enabled, stylize
+from lemma.cli.style import colors_enabled, rich_help_text, stylize
 from lemma.common.config import LemmaSettings
 from lemma.common.logging import setup_logging
 from lemma.problems.factory import resolve_problem
@@ -22,7 +22,26 @@ from lemma.problems.factory import resolve_problem
 _PUBLIC_COMMAND_ORDER = ("setup", "config", "status", "theorem", "proof", "miner", "validator", "bounty")
 
 
+class LemmaCommand(click.Command):
+    def format_help(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
+        rich_help = rich_help_text(self, ctx)
+        if rich_help is None:
+            super().format_help(ctx, formatter)
+            return
+        formatter.write(rich_help)
+
+
 class LemmaGroup(click.Group):
+    command_class = LemmaCommand
+    group_class = type
+
+    def format_help(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
+        rich_help = rich_help_text(self, ctx)
+        if rich_help is None:
+            super().format_help(ctx, formatter)
+            return
+        formatter.write(rich_help)
+
     def list_commands(self, ctx: click.Context) -> list[str]:
         public = [
             name
@@ -1001,6 +1020,97 @@ def _bounty_or_die(bounty_id: str):
         raise click.ClickException(str(e)) from e
 
 
+def _bounty_status_color(status: str) -> str:
+    return "green" if status == "open" else "yellow" if status in {"draft", "pending"} else "red"
+
+
+def _bounty_rows(registry, *, show_all: bool):
+    return [b for b in registry.bounties if show_all or b.status == "open"]
+
+
+def _print_bounty_list(*, show_all: bool, registry=None) -> None:
+    registry = registry or _load_bounty_registry()
+    rows = _bounty_rows(registry, show_all=show_all)
+    click.echo(stylize("Lemma bounties", fg="cyan", bold=True))
+    click.echo(stylize(f"registry_sha256={registry.sha256}", dim=True))
+    if not rows:
+        click.echo(stylize("No open bounties.", fg="yellow"))
+        if not show_all:
+            click.echo(stylize("Try `lemma bounty list --all` to include closed and draft bounties.", dim=True))
+        return
+    for bounty in rows:
+        reward = f"  {stylize('reward=', dim=True)}{bounty.reward}" if bounty.reward else ""
+        deadline = f"  {stylize('deadline=', dim=True)}{bounty.deadline}" if bounty.deadline else ""
+        click.echo(
+            f"{stylize(bounty.id, fg='green', bold=True)}\t"
+            f"{stylize(bounty.status, fg=_bounty_status_color(bounty.status))}\t"
+            f"{bounty.title}{reward}{deadline}",
+        )
+    click.echo("")
+    click.echo(
+        stylize("Show details: ", dim=True)
+        + stylize(f"lemma bounty show {rows[0].id}", fg="green")
+        + stylize("  (or replace the id)", dim=True),
+    )
+
+
+def _print_bounty_detail(registry, bounty) -> None:
+    source_name = bounty.source.get("name") or bounty.source.get("project") or "unknown"
+    source_url = bounty.source.get("url")
+    click.echo(stylize(bounty.title, fg="cyan", bold=True))
+    click.echo(
+        stylize("id=", dim=True)
+        + stylize(bounty.id, fg="green", bold=True)
+        + stylize("  status=", dim=True)
+        + stylize(bounty.status, fg=_bounty_status_color(bounty.status))
+        + stylize("  registry_sha256=", dim=True)
+        + registry.sha256,
+    )
+    if bounty.reward:
+        click.echo(stylize("reward: ", fg="yellow", bold=True) + bounty.reward)
+    if bounty.deadline:
+        click.echo(stylize("deadline: ", fg="yellow", bold=True) + bounty.deadline)
+    if bounty.terms_url:
+        click.echo(stylize("terms: ", dim=True) + bounty.terms_url)
+    click.echo(stylize("source: ", dim=True) + source_name + (f" ({source_url})" if source_url else ""))
+    click.echo("")
+    click.echo(stylize("Lean target", fg="cyan", bold=True))
+    click.echo(stylize("  theorem_id:   ", dim=True) + bounty.problem.id)
+    click.echo(stylize("  theorem_name: ", dim=True) + stylize(bounty.problem.theorem_name, fg="green"))
+    click.echo(stylize("  split:        ", dim=True) + stylize(bounty.problem.split, fg="yellow", bold=True))
+    click.echo(stylize("  target_sha256: ", dim=True) + bounty.target_sha256)
+    click.echo(stylize("  policy:       ", dim=True) + bounty.submission_policy)
+    click.echo("")
+    click.echo(stylize("Next", fg="cyan", bold=True))
+    click.echo("  " + stylize(f"lemma bounty verify {bounty.id} --submission Submission.lean", fg="green"))
+    click.echo(
+        "  "
+        + stylize(f"lemma bounty submit {bounty.id} --submission Submission.lean --payout <SS58>", fg="green")
+    )
+
+
+def _show_bounty_or_hint(bounty_id: str | None) -> None:
+    from lemma.bounty.client import BountyError
+
+    registry = _load_bounty_registry()
+    if bounty_id:
+        try:
+            bounty = registry.get(bounty_id)
+        except BountyError as e:
+            click.echo(stylize(str(e), fg="red", bold=True), err=True)
+            click.echo("")
+            _print_bounty_list(show_all=True, registry=registry)
+            raise SystemExit(2) from e
+        _print_bounty_detail(registry, bounty)
+        return
+
+    rows = _bounty_rows(registry, show_all=False)
+    if len(rows) == 1:
+        _print_bounty_detail(registry, rows[0])
+        return
+    _print_bounty_list(show_all=False, registry=registry)
+
+
 def _read_submission(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
@@ -1017,56 +1127,28 @@ def _verify_bounty_or_exit(bounty, submission_path: Path, host_lean: bool):
 
 
 @main.group("bounty", invoke_without_command=True, help="Browse, verify, package, and submit bounty proofs.")
+@click.option("--show", "show_hint", is_flag=True, help="Show the only open bounty, or list bounty IDs.")
 @click.pass_context
-def bounty_group(ctx: click.Context) -> None:
+def bounty_group(ctx: click.Context, show_hint: bool) -> None:
     if ctx.invoked_subcommand is None:
-        click.echo(ctx.get_help(), color=colors_enabled())
+        if show_hint:
+            _show_bounty_or_hint(None)
+            return
+        _print_bounty_list(show_all=False)
 
 
 @bounty_group.command("list")
 @click.option("--all", "show_all", is_flag=True, help="Show closed and draft bounties too.")
 def bounty_list_cmd(show_all: bool) -> None:
     """List bounties from the remote registry."""
-    registry = _load_bounty_registry()
-    rows = [b for b in registry.bounties if show_all or b.status == "open"]
-    click.echo(stylize("Lemma bounties", fg="cyan", bold=True))
-    click.echo(stylize(f"registry_sha256={registry.sha256}", dim=True))
-    if not rows:
-        click.echo("No open bounties.")
-        return
-    for bounty in rows:
-        reward = f"  reward={bounty.reward}" if bounty.reward else ""
-        deadline = f"  deadline={bounty.deadline}" if bounty.deadline else ""
-        click.echo(f"{bounty.id}\t{bounty.status}\t{bounty.title}{reward}{deadline}")
+    _print_bounty_list(show_all=show_all)
 
 
 @bounty_group.command("show")
-@click.argument("bounty_id")
-def bounty_show_cmd(bounty_id: str) -> None:
+@click.argument("bounty_id", required=False)
+def bounty_show_cmd(bounty_id: str | None) -> None:
     """Show one bounty target and terms."""
-    registry, bounty = _bounty_or_die(bounty_id)
-    source_name = bounty.source.get("name") or bounty.source.get("project") or "unknown"
-    source_url = bounty.source.get("url")
-    click.echo(stylize(bounty.title, fg="cyan", bold=True))
-    click.echo(stylize(f"id={bounty.id}  status={bounty.status}  registry_sha256={registry.sha256}", dim=True))
-    if bounty.reward:
-        click.echo(f"reward: {bounty.reward}")
-    if bounty.deadline:
-        click.echo(f"deadline: {bounty.deadline}")
-    if bounty.terms_url:
-        click.echo(f"terms: {bounty.terms_url}")
-    click.echo(f"source: {source_name}" + (f" ({source_url})" if source_url else ""))
-    click.echo("")
-    click.echo(stylize("Lean target", fg="cyan"))
-    click.echo(f"  theorem_id:   {bounty.problem.id}")
-    click.echo(f"  theorem_name: {bounty.problem.theorem_name}")
-    click.echo(f"  split:        {bounty.problem.split}")
-    click.echo(f"  target_sha256: {bounty.target_sha256}")
-    click.echo(f"  policy:       {bounty.submission_policy}")
-    click.echo("")
-    click.echo(stylize("Next", fg="cyan"))
-    click.echo(f"  lemma bounty verify {bounty.id} --submission Submission.lean")
-    click.echo(f"  lemma bounty submit {bounty.id} --submission Submission.lean --payout <SS58>")
+    _show_bounty_or_hint(bounty_id)
 
 
 @bounty_group.command("verify")

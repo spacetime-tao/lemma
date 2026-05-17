@@ -89,9 +89,14 @@ class _FakeWallet:
 def test_bounty_list_and_show_use_registry(monkeypatch, tmp_path) -> None:
     digest = _set_registry_env(monkeypatch, tmp_path)
 
+    default = CliRunner().invoke(main, ["bounty"])
     listed = CliRunner().invoke(main, ["bounty", "list"])
     shown = CliRunner().invoke(main, ["bounty", "show", "fc.test"])
+    shown_without_id = CliRunner().invoke(main, ["bounty", "show"])
+    shown_with_flag = CliRunner().invoke(main, ["bounty", "--show"])
 
+    assert default.exit_code == 0
+    assert "lemma bounty show fc.test" in default.output
     assert listed.exit_code == 0
     assert "fc.test" in listed.output
     assert digest in listed.output
@@ -100,6 +105,10 @@ def test_bounty_list_and_show_use_registry(monkeypatch, tmp_path) -> None:
     assert "lemma bounty verify fc.test" in shown.output
     assert "target_sha256" in shown.output
     assert "policy:       restricted_helpers" in shown.output
+    assert shown_without_id.exit_code == 0
+    assert "Test bounty" in shown_without_id.output
+    assert shown_with_flag.exit_code == 0
+    assert "Test bounty" in shown_with_flag.output
 
 
 def test_bounty_registry_hash_pin_mismatch_fails(monkeypatch, tmp_path) -> None:

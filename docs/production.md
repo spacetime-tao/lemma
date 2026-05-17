@@ -1,6 +1,7 @@
 # Production checklist
 
-Prerequisites: [getting-started.md](getting-started.md).
+Prerequisites: complete the role guide for the service you operate:
+[miner.md](miner.md) or [validator.md](validator.md).
 
 ## Lean
 

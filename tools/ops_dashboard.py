@@ -111,6 +111,8 @@ def _ssh(host: str, command: str, *, label: str, timeout: int) -> CommandResult:
             "BatchMode=yes",
             "-o",
             "ConnectTimeout=8",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
             host,
             command,
         ],
@@ -147,7 +149,7 @@ def _collect_host(role: str, host: str, lines: int, timeout: int) -> dict[str, C
         "env": _ssh(host, env_cmd, label="safe env", timeout=timeout),
         "docker": _ssh(
             host,
-            "docker ps --format '{{.Names}}\t{{.Status}}\t{{.Image}}' 2>/dev/null || true",
+            "timeout 5 docker ps --format '{{.Names}}\t{{.Status}}\t{{.Image}}' 2>/dev/null || true",
             label="docker",
             timeout=timeout,
         ),

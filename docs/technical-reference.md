@@ -1,8 +1,9 @@
 # Technical Reference
 
-> **New here:** read [litepaper.md](litepaper.md), then follow
-> [getting-started.md](getting-started.md). This file is the deeper reference for
-> scoring, timeouts, seeds, verifier behavior, model setup, and operations.
+> **New here:** read [litepaper.md](litepaper.md), then use
+> [miner.md](miner.md) or [validator.md](validator.md) for the role you want to
+> run. This file is the deeper reference for scoring, timeouts, seeds, verifier
+> behavior, model setup, and operations.
 
 ## Scoring
 

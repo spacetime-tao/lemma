@@ -6,12 +6,16 @@ rounds, and you do not need to be a registered miner to attempt one.
 ## Flow
 
 ```bash
-uv run lemma bounty list
-uv run lemma bounty show smoke.two_plus_two
-uv run lemma bounty verify smoke.two_plus_two --submission Submission.lean
-uv run lemma bounty package smoke.two_plus_two --submission Submission.lean --payout <SS58>
-uv run lemma bounty submit smoke.two_plus_two --submission Submission.lean --payout <SS58>
+uv run lemma bounty
+uv run lemma bounty show
+uv run lemma bounty verify starter.two_plus_two --submission Submission.lean
+uv run lemma bounty package starter.two_plus_two --submission Submission.lean --payout <SS58>
+uv run lemma bounty submit starter.two_plus_two --submission Submission.lean --payout <SS58>
 ```
+
+`lemma bounty` lists open bounty IDs. `lemma bounty show` opens the only open
+bounty directly; when there are several, pass an ID such as
+`lemma bounty show starter.two_plus_two`.
 
 `verify` runs the same Lean verification path used by validators, against the
 locked target from the bounty registry. `package` verifies, signs with your
@@ -60,23 +64,23 @@ Registry schema v1:
   "schema_version": 1,
   "bounties": [
     {
-      "id": "smoke.two_plus_two",
+      "id": "starter.two_plus_two",
       "kind": "formal_target",
-      "title": "Smoke test: two plus two",
+      "title": "Two plus two",
       "status": "open",
-      "reward": "Demo / no payout",
+      "reward": "No payout",
       "terms_url": "https://lemmasub.net/bounties/",
       "submission_policy": "restricted_helpers",
       "target_sha256": "cfe3cc12caa3ef57ccb6114ca41241c0e6636c4a14d5b30db06745771a67f6f6",
       "source": {
-        "name": "Lemma smoke test",
+        "name": "Lemma bounty",
         "url": "https://lemmasub.net/bounties/"
       },
       "problem": {
-        "id": "smoke.two_plus_two",
+        "id": "starter.two_plus_two",
         "theorem_name": "two_plus_two_eq_four",
         "type_expr": "(2 : Nat) + 2 = 4",
-        "split": "smoke",
+        "split": "starter",
         "lean_toolchain": "leanprover/lean4:v4.30.0-rc2",
         "mathlib_rev": "5450b53e5ddc",
         "imports": ["Mathlib"],

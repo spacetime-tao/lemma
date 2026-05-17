@@ -326,8 +326,9 @@ network and subnet ID.
 
 If you want to understand the project, start with the [litepaper](litepaper.md).
 
-If you want to participate, read the [getting started guide](getting-started.md)
-and run a [miner](miner.md) or [validator](validator.md).
+If you want to participate, run a [miner](miner.md) or a
+[validator](validator.md). Those pages include install, key, setup, and run
+steps.
 
 Miners compete to produce valid proofs. Validators check proofs and publish
 reward weights. Both help test whether AI systems can produce verified reasoning

@@ -3,8 +3,8 @@
 A Lemma validator sends theorem challenges to miners, verifies submitted Lean
 proofs, and publishes weights for eligible work.
 
-Start with [getting-started.md](getting-started.md) if the repo, keys, and
-`.env` are not configured yet.
+This page is the complete validator path: install, keys, `.env`, registration,
+stake, Lean verification, dry run, and live validation.
 
 ## Validator command map
 
@@ -19,19 +19,65 @@ Start with [getting-started.md](getting-started.md) if the repo, keys, and
 | Serve profile hash for peers | `uv run lemma validator profile-attest-serve` |
 | Inspect profile hash | `uv run lemma config meta` |
 
-## Setup checklist
+## Install
 
-1. `uv sync --extra btcli`
-2. Create validator wallet keys with `uv run btcli`.
-3. Run `uv run lemma setup --role validator`.
-4. Register and stake the validator hotkey on the target network/netuid.
-5. Build the Lean sandbox image.
-6. Run `uv run lemma validator check` until it reports ready.
-7. Run `uv run lemma validator dry-run`.
-8. Run `uv run lemma validator start`.
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+git clone https://github.com/spacetime-tao/lemma.git
+cd lemma
+uv sync --extra btcli
+uv run lemma --help
+```
+
+Use one installer and one environment: `uv`. The `btcli` command comes from the
+Bittensor packages installed by the `btcli` extra.
+
+## Keys
+
+Create a coldkey and a validator hotkey:
+
+```bash
+uv run btcli wallet new_coldkey --wallet.name my_wallet --n_words 12
+uv run btcli wallet new_hotkey --wallet.name my_wallet --wallet.hotkey validator
+uv run btcli wallet list
+```
+
+Keep the coldkey local or offline. A server only needs the validator hotkey.
+
+## Configure
+
+```bash
+uv run lemma setup --role validator
+```
+
+The setup flow writes `.env`. For a validator, the important values are:
+
+```text
+SUBTENSOR_NETWORK=test
+NETUID=467
+BT_WALLET_COLD=my_wallet
+BT_WALLET_HOT=validator
+BT_VALIDATOR_WALLET_COLD=my_wallet
+BT_VALIDATOR_WALLET_HOT=validator
+LEAN_SANDBOX_IMAGE=lemma/lean-sandbox:latest
+LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR=.lemma-lean-cache
+```
 
 For the current public test deployment, use Bittensor testnet subnet 467 unless
 a different deployment is explicitly published.
+
+## Register and stake
+
+Use the same network and netuid from `.env`:
+
+```bash
+uv run btcli subnet show --netuid 467 --network test
+uv run btcli subnet register --netuid 467 --network test --wallet.name my_wallet --wallet.hotkey validator
+uv run btcli stake add --wallet-name my_wallet --hotkey validator --network test --netuid 467
+```
+
+Register and stake from the coldkey machine. Copy only the validator hotkey to a
+VPS.
 
 ## Lean verification
 
