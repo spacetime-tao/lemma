@@ -1,10 +1,16 @@
 # Production Verification
 
-Production Lemma needs only three moving pieces: the target registry, Lean verification, and reward custody.
+Production Lemma has three moving pieces: the target registry, Lean verification, and reward custody.
 
-## Verifier
+## 1. Target Registry
 
-Use Docker verification by default. The sandbox image pins the Lean and Mathlib environment used to check `Submission.lean`.
+Publish candidate targets freely, but mark them as candidates. Publish live reward-backed targets only after custody metadata and custody state agree.
+
+Pin source metadata, target hashes, policy versions, and toolchain IDs. Validators should reject mismatches rather than guessing.
+
+## 2. Docker Verifier
+
+Use Docker verification by default. The sandbox image pins the Lean and mathlib environment used to check `Submission.lean`.
 
 ```bash
 docker build -f compose/lean.Dockerfile -t lemma-lean-sandbox:latest .
@@ -13,7 +19,7 @@ LEAN_SANDBOX_IMAGE=lemma-lean-sandbox:latest uv run lemma validate --check
 
 Host Lean is for local debugging only and requires `LEMMA_ALLOW_HOST_LEAN=1`.
 
-## Optional HTTP Worker
+## 3. Optional HTTP Worker
 
 A verifier worker can keep Lean dependencies warm and serve `/verify`:
 
@@ -25,7 +31,7 @@ For any non-loopback bind, set `LEMMA_LEAN_VERIFY_REMOTE_BEARER`. Unauthenticate
 
 Point clients at the worker with `LEMMA_LEAN_VERIFY_REMOTE_URL` and `LEMMA_LEAN_VERIFY_REMOTE_BEARER`.
 
-## Workspace Cache
+## 4. Workspace Cache
 
 Set `LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR` for warm Docker or worker verification. Keep bounds enabled:
 
@@ -34,8 +40,14 @@ Set `LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR` for warm Docker or worker verificati
 
 The cache is disposable. Do not store secrets or operator notes there.
 
-## Reward Custody
+## 5. Reward Custody
 
-Publish a target as a live reward only after the registry row and custody contract state agree on chain id, contract address, and custody reward id.
+Publish a target as a live reward only after the registry row and custody contract state agree on chain id, contract address, custody reward id, and funding confirmation.
 
-The CLI builds unsigned transaction data. Operators should inspect, sign, and submit transactions with their normal wallet tooling.
+The CLI builds unsigned transaction data. Operators should inspect, sign, and submit transactions with normal wallet tooling.
+
+## 6. Security Checklist
+
+Do not publish local environment files, credentials, deployment notes, machine paths, hostnames, network addresses, logs, caches, or local handoff state.
+
+If a sensitive file is already tracked, remove it from Git tracking while keeping the local copy.

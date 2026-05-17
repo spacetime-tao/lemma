@@ -1,19 +1,25 @@
-# Proof Targets And Rewards
+# Targets And Rewards
 
-Lemma rewards proof formalization against published Lean targets. A registry entry is a live reward when it includes the target payload and confirmed custody metadata with:
+This path remains for compatibility with older links. The current concept is targets and rewards.
+
+Lemma rewards proof discovery against published Lean targets. A registry entry is a live reward only when it includes the target payload and confirmed custody metadata.
+
+For the full registry contract, see [target-registry.md](target-registry.md).
+
+For reward flow, see [rewards.md](rewards.md).
+
+## Candidate Targets
+
+Rows without confirmed custody are candidate targets. They may be used for local practice, verification checks, and target review, but they are not live reward offers.
+
+## Live Targets
+
+Live reward-backed targets require:
 
 - `chain_id`
 - `contract_address`
 - `bounty_id`
 - funding confirmation, either `funded: true` or `funding_confirmed_block`
-
-Rows without confirmed custody are candidate targets. They may be useful for local practice or preflight, but they are not live reward offers.
-
-## Registry
-
-The target registry is JSON. Each row contains a Lean problem payload, source metadata, submission policy, toolchain id, policy version, and optional custody metadata. The CLI checks the registry hash when `LEMMA_BOUNTY_REGISTRY_SHA256_EXPECTED` is set.
-
-The target hash is derived from the Lean challenge source. If a row supplies `target_sha256`, it must match the derived value.
 
 ## Claim Flow
 
@@ -31,9 +37,9 @@ The CLI signs an identity-binding message with the configured Bittensor hotkey. 
 
 Live rewards keep proof verification and payout custody separate:
 
-- no manual payout path
-- no unfunded payout claim
-- no subjective proof score
-- no legacy subnet scoring lane
+- no manual payout path,
+- no unfunded payout claim,
+- no subjective proof score,
+- no legacy subnet scoring lane.
 
 Lean verification is binary. A proof passes or fails.

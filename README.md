@@ -1,30 +1,106 @@
 # Lemma
 
-Lemma is a proof formalization subnet. It publishes formal proof targets, checks submissions with Lean, and rewards miners for proofs that pass the exact published statement and policy.
+Lemma is a Bittensor subnet for Lean-verified proof discovery.
+
+It publishes formal proof targets, miners submit Lean proof files, validators check them under a pinned Lean and mathlib environment, and verified proofs become eligible for rewards under the subnet rules.
 
 Reward custody is implementation plumbing. The product story is proof correctness: Lean accepts the proof, or it does not.
 
-## CLI
+## Why Lemma Exists
+
+Mathematics is one of the few AI work domains where correctness can be checked mechanically. A proof is not rewarded because it sounds plausible. It is eligible only when it verifies against the exact published formal statement and policy.
+
+Lemma is being centered on public research-level formal statements from [Formal Conjectures](https://github.com/google-deepmind/formal-conjectures), an open Lean 4 and mathlib repository of formalized conjectures and related statements. Lemma is independent and is not endorsed by Google DeepMind or the Formal Conjectures authors; it uses public statements as target material.
+
+## How The Subnet Works
+
+```text
+Formal Conjectures statement
+        |
+        v
+Lemma target registry
+        |
+        v
+Miner Submission.lean
+        |
+        v
+Pinned Lean verification
+        |
+        v
+Subnet reward eligibility
+```
+
+Validators check the proof artifact. They do not score informal reasoning, private notes, or prose explanations.
+
+## Quick Start
+
+Install `uv`, sync the project, and inspect the CLI:
 
 ```bash
 uv sync
+uv run lemma --help
+```
+
+Configure local registry, wallet, payout, and verifier settings:
+
+```bash
 uv run lemma setup
 uv run lemma status
+```
+
+List targets:
+
+```bash
 uv run lemma mine
+```
+
+Inspect or locally verify a target:
+
+```bash
+uv run lemma mine <target-id>
 uv run lemma mine <target-id> --submission Submission.lean
+```
+
+Check validator readiness:
+
+```bash
 uv run lemma validate --check
 ```
 
-Visible commands are intentionally small:
+## CLI Overview
 
-- `lemma setup` writes target registry, wallet, payout, and Lean verifier settings.
-- `lemma mine` lists available proof targets, verifies a proof, and can build payout transaction data.
-- `lemma status` prints target registry, custody, and verifier configuration status.
-- `lemma validate` checks verifier readiness or runs the optional Lean HTTP worker.
+The visible CLI surface is intentionally small.
 
-## Proof Verification
+| Command | Purpose |
+| --- | --- |
+| `lemma setup` | Writes target registry, wallet, payout, and Lean verifier settings. |
+| `lemma mine` | Lists targets, inspects a target, verifies a proof, and can build reward custody transaction data for live targets. |
+| `lemma status` | Prints target registry, custody, and verifier configuration status. |
+| `lemma validate` | Checks verifier readiness or runs the optional Lean HTTP worker. |
 
-Lemma keeps proof correctness binary: a submission either passes Lean under the published problem, toolchain, and submission policy, or it does not. Informal reasoning and subjective scoring are not part of the live reward path.
+## Target Registry
+
+The target registry is the source of truth for live work. It contains candidate targets and live reward-backed targets.
+
+- Candidate targets are useful for practice, testing, and review. They are not reward offers.
+- Live targets require confirmed reward custody metadata in the registry and matching on-chain custody state.
+- Every target fixes a Lean problem payload, target hash, toolchain, submission policy, policy version, and source metadata.
+
+The checked-in starter registry is deliberately a candidate example, not a fake live Formal Conjectures reward.
+
+See [docs/target-registry.md](docs/target-registry.md).
+
+## Formal Conjectures Focus
+
+Formal Conjectures gives Lemma a public source of real mathematical formalization targets. Lemma should pin exact upstream commits and files, preserve source metadata, and clearly distinguish proof-discovery targets from proof-porting targets.
+
+If a Formal Conjectures source row includes `formal_proof` metadata, Lemma treats it as `kind=proof_porting` rather than a normal proof-discovery target.
+
+See [docs/formal-conjectures.md](docs/formal-conjectures.md).
+
+## Verification Model
+
+Proof verification is binary. A submission either passes Lean under the published problem, toolchain, and submission policy, or it fails.
 
 The verifier core lives in:
 
@@ -35,9 +111,25 @@ The verifier core lives in:
 
 ## Docs
 
-- [Proof targets and rewards](docs/bounties.md)
+- [What is Lemma?](docs/what-is-lemma.md)
+- [Formal Conjectures as target supply](docs/formal-conjectures.md)
+- [Target registry](docs/target-registry.md)
+- [Miner guide](docs/miner.md)
+- [Validator guide](docs/validator.md)
+- [Rewards](docs/rewards.md)
+- [Architecture](docs/architecture.md)
 - [Production verification](docs/production.md)
 - [Testing](docs/testing.md)
+- [FAQ](docs/faq.md)
+- [Targets and rewards](docs/bounties.md)
+
+## Development
+
+```bash
+uv run ruff check lemma tests
+uv run mypy lemma
+uv run pytest tests -q
+```
 
 ## Contracts
 
@@ -54,3 +146,11 @@ npm run compile
 docker build -f compose/lean.Dockerfile -t lemma-lean-sandbox:latest .
 LEAN_SANDBOX_IMAGE=lemma-lean-sandbox:latest uv run pytest tests/test_docker_golden.py -v
 ```
+
+## Security And Operator Notes
+
+Do not publish local environment files, wallets, machine paths, hostnames, private deployment notes, credentials, or local handoff files. Registry and reward metadata should contain only public target and custody information.
+
+## License
+
+Apache-2.0.

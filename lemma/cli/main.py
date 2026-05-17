@@ -278,7 +278,6 @@ def mine_cmd(
         raise click.ClickException(str(e)) from e
 
     settings = LemmaSettings()
-    chain_id, contract, escrow_bounty_id = _bounty_escrow_values(settings, bounty)
     _print_bounty_detail(registry, bounty)
     if submission_path is None:
         click.echo("")
@@ -300,11 +299,16 @@ def mine_cmd(
     if not (make_commit or make_reveal):
         click.echo(
             stylize(
-                "Proof verifies locally. Add --commit or --reveal to build payout transaction data.",
+                (
+                    "Proof verifies locally. Add --commit or --reveal to build payout transaction data."
+                    if bounty.escrow_backed
+                    else "Proof verifies locally. This candidate is not a live reward until custody is confirmed."
+                ),
                 fg="green",
             )
         )
         return
+    chain_id, contract, escrow_bounty_id = _bounty_escrow_values(settings, bounty)
     if not claimant_evm or not payout_evm:
         raise click.UsageError("--claimant-evm and --payout-evm are required for payout packages.")
     if make_reveal and not salt.strip():

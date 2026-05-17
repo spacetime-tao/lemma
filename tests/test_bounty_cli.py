@@ -231,6 +231,60 @@ def test_mine_submission_calls_lean_verify(monkeypatch, tmp_path) -> None:
     assert "Add --commit or --reveal" in result.output
 
 
+def test_candidate_target_can_be_shown_and_verified_without_custody(monkeypatch, tmp_path) -> None:
+    raw = json.dumps(
+        {
+            "schema_version": 2,
+            "reward_custody": "evm_escrow",
+            "bounties": [
+                {
+                    "id": "fc.candidate",
+                    "title": "Candidate target",
+                    "status": "candidate",
+                    "reward": "Reward pending",
+                    "source": {"name": "Formal Conjectures"},
+                    "policy_version": "bounty-policy-v1",
+                    "toolchain_id": "leanprover/lean4:v4.15.0",
+                    "problem": PROBLEM,
+                }
+            ],
+        },
+        sort_keys=True,
+    ).encode()
+    registry_path = tmp_path / "registry.json"
+    registry_path.write_bytes(raw)
+    proof_path = tmp_path / "Submission.lean"
+    _proof(proof_path)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("LEMMA_BOUNTY_REGISTRY_URL", str(registry_path))
+    monkeypatch.setenv("LEMMA_BOUNTY_REGISTRY_SHA256_EXPECTED", hashlib.sha256(raw).hexdigest())
+    monkeypatch.setattr("lemma.bounty.client.verify_bounty_proof", lambda *args, **kwargs: _VerifyResult())
+
+    shown = CliRunner().invoke(main, ["mine", "fc.candidate"])
+    verified = CliRunner().invoke(main, ["mine", "fc.candidate", "--submission", str(proof_path)])
+    commit = CliRunner().invoke(
+        main,
+        [
+            "mine",
+            "fc.candidate",
+            "--submission",
+            str(proof_path),
+            "--commit",
+            "--claimant-evm",
+            "0x" + "88" * 20,
+            "--payout-evm",
+            "0x" + "99" * 20,
+        ],
+    )
+
+    assert shown.exit_code == 0
+    assert "custody         not funded/confirmed" in shown.output
+    assert verified.exit_code == 0
+    assert "not a live reward" in verified.output
+    assert commit.exit_code != 0
+    assert "no confirmed reward custody" in commit.output
+
+
 def test_public_mine_builds_custody_commit_package(monkeypatch, tmp_path) -> None:
     raw = json.dumps(
         {
